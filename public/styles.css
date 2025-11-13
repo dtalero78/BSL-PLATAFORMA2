@@ -27,6 +27,11 @@ body {
     text-align: left;
 }
 
+.logo-img {
+    max-height: 60px;
+    width: auto;
+}
+
 /* Progress bar */
 .progress-container {
     width: 100%;
