@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario Médico - BSL</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="form-header">
+            <h1>Formulario Médico Ocupacional</h1>
+            <p>Por favor completa todos los campos requeridos</p>
+        </div>
+
+        <form id="formularioMedico">
+            <!-- DATOS PERSONALES -->
+            <div class="section">
+                <h2>Datos Personales</h2>
+
+                <div class="form-group">
+                    <label for="primerNombre">Primer Nombre *</label>
+                    <input type="text" id="primerNombre" name="primerNombre" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="segundoNombre">Segundo Nombre</label>
+                    <input type="text" id="segundoNombre" name="segundoNombre">
+                </div>
+
+                <div class="form-group">
+                    <label for="primerApellido">Primer Apellido *</label>
+                    <input type="text" id="primerApellido" name="primerApellido" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="segundoApellido">Segundo Apellido</label>
+                    <input type="text" id="segundoApellido" name="segundoApellido">
+                </div>
+
+                <div class="form-group">
+                    <label for="numeroId">Número de Documento *</label>
+                    <input type="text" id="numeroId" name="numeroId" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="fechaNacimiento">Fecha de Nacimiento *</label>
+                    <input type="date" id="fechaNacimiento" name="fechaNacimiento" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="genero">Género *</label>
+                    <select id="genero" name="genero" required>
+                        <option value="">Seleccione...</option>
+                        <option value="Masculino">Masculino</option>
+                        <option value="Femenino">Femenino</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="estadoCivil">Estado Civil *</label>
+                    <select id="estadoCivil" name="estadoCivil" required>
+                        <option value="">Seleccione...</option>
+                        <option value="Soltero">Soltero/a</option>
+                        <option value="Casado">Casado/a</option>
+                        <option value="Union Libre">Unión Libre</option>
+                        <option value="Divorciado">Divorciado/a</option>
+                        <option value="Viudo">Viudo/a</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- DATOS DE CONTACTO -->
+            <div class="section">
+                <h2>Datos de Contacto</h2>
+
+                <div class="form-group">
+                    <label for="celular">Celular *</label>
+                    <input type="tel" id="celular" name="celular" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Correo Electrónico</label>
+                    <input type="email" id="email" name="email">
+                </div>
+
+                <div class="form-group">
+                    <label for="direccion">Dirección</label>
+                    <input type="text" id="direccion" name="direccion">
+                </div>
+
+                <div class="form-group">
+                    <label for="ciudad">Ciudad *</label>
+                    <input type="text" id="ciudad" name="ciudad" required>
+                </div>
+            </div>
+
+            <!-- DATOS DE SALUD -->
+            <div class="section">
+                <h2>Datos de Salud</h2>
+
+                <div class="form-group">
+                    <label for="eps">EPS *</label>
+                    <input type="text" id="eps" name="eps" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="tipoSangre">Tipo de Sangre</label>
+                    <select id="tipoSangre" name="tipoSangre">
+                        <option value="">Seleccione...</option>
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                        <option value="O+">O+</option>
+                        <option value="O-">O-</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="peso">Peso (kg)</label>
+                    <input type="number" id="peso" name="peso" step="0.1">
+                </div>
+
+                <div class="form-group">
+                    <label for="altura">Altura (cm)</label>
+                    <input type="number" id="altura" name="altura">
+                </div>
+            </div>
+
+            <!-- DATOS LABORALES -->
+            <div class="section">
+                <h2>Datos Laborales</h2>
+
+                <div class="form-group">
+                    <label for="empresa">Empresa</label>
+                    <input type="text" id="empresa" name="empresa">
+                </div>
+
+                <div class="form-group">
+                    <label for="profesion">Profesión u Oficio *</label>
+                    <input type="text" id="profesion" name="profesion" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="cargo">Cargo Actual</label>
+                    <input type="text" id="cargo" name="cargo">
+                </div>
+            </div>
+
+            <!-- ANTECEDENTES DE SALUD -->
+            <div class="section">
+                <h2>Antecedentes de Salud</h2>
+
+                <div class="form-group">
+                    <label>¿Padece alguna enfermedad actualmente?</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="enfermedades" value="Diabetes"> Diabetes</label>
+                        <label><input type="checkbox" name="enfermedades" value="Hipertension"> Hipertensión</label>
+                        <label><input type="checkbox" name="enfermedades" value="Asma"> Asma</label>
+                        <label><input type="checkbox" name="enfermedades" value="Cardiopatia"> Cardiopatía</label>
+                        <label><input type="checkbox" name="enfermedades" value="Epilepsia"> Epilepsia</label>
+                        <label><input type="checkbox" name="enfermedades" value="Ninguna"> Ninguna</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>¿Toma medicamentos actualmente?</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="medicamentos" value="Si"> Sí</label>
+                        <label><input type="radio" name="medicamentos" value="No"> No</label>
+                    </div>
+                </div>
+
+                <div class="form-group" id="medicamentosDetalle" style="display: none;">
+                    <label for="cualesMedicamentos">¿Cuáles medicamentos?</label>
+                    <textarea id="cualesMedicamentos" name="cualesMedicamentos" rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>¿Ha sido operado alguna vez?</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="cirugias" value="Si"> Sí</label>
+                        <label><input type="radio" name="cirugias" value="No"> No</label>
+                    </div>
+                </div>
+
+                <div class="form-group" id="cirugiasDetalle" style="display: none;">
+                    <label for="cualesCirugias">¿Qué cirugías?</label>
+                    <textarea id="cualesCirugias" name="cualesCirugias" rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>¿Tiene alergias?</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="alergias" value="Si"> Sí</label>
+                        <label><input type="radio" name="alergias" value="No"> No</label>
+                    </div>
+                </div>
+
+                <div class="form-group" id="alergiasDetalle" style="display: none;">
+                    <label for="cualesAlergias">¿A qué es alérgico?</label>
+                    <textarea id="cualesAlergias" name="cualesAlergias" rows="3"></textarea>
+                </div>
+            </div>
+
+            <!-- ANTECEDENTES FAMILIARES -->
+            <div class="section">
+                <h2>Antecedentes Familiares</h2>
+
+                <div class="form-group">
+                    <label>¿Algún familiar ha padecido las siguientes enfermedades?</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="antecedentesFamiliares" value="Diabetes"> Diabetes</label>
+                        <label><input type="checkbox" name="antecedentesFamiliares" value="Hipertension"> Hipertensión</label>
+                        <label><input type="checkbox" name="antecedentesFamiliares" value="Cancer"> Cáncer</label>
+                        <label><input type="checkbox" name="antecedentesFamiliares" value="Enfermedad Cardiaca"> Enfermedad Cardíaca</label>
+                        <label><input type="checkbox" name="antecedentesFamiliares" value="Asma"> Asma</label>
+                        <label><input type="checkbox" name="antecedentesFamiliares" value="Ninguna"> Ninguna</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HÁBITOS -->
+            <div class="section">
+                <h2>Hábitos</h2>
+
+                <div class="form-group">
+                    <label>¿Fuma?</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="fuma" value="Si"> Sí</label>
+                        <label><input type="radio" name="fuma" value="No"> No</label>
+                        <label><input type="radio" name="fuma" value="Ocasionalmente"> Ocasionalmente</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>¿Consume alcohol?</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="alcohol" value="Si"> Sí</label>
+                        <label><input type="radio" name="alcohol" value="No"> No</label>
+                        <label><input type="radio" name="alcohol" value="Ocasionalmente"> Ocasionalmente</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>¿Hace ejercicio regularmente?</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="ejercicio" value="Si"> Sí</label>
+                        <label><input type="radio" name="ejercicio" value="No"> No</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- OBSERVACIONES -->
+            <div class="section">
+                <h2>Observaciones Adicionales</h2>
+
+                <div class="form-group">
+                    <label for="observaciones">Información adicional que considere importante</label>
+                    <textarea id="observaciones" name="observaciones" rows="5" placeholder="Escriba aquí cualquier información adicional relevante..."></textarea>
+                </div>
+            </div>
+
+            <!-- BOTONES -->
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">Enviar Formulario</button>
+                <button type="reset" class="btn-secondary">Limpiar</button>
+            </div>
+        </form>
+
+        <div id="mensaje" class="mensaje"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
