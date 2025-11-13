@@ -31,7 +31,7 @@ const initDB = async () => {
                 celular VARCHAR(20),
                 empresa VARCHAR(100),
                 cod_empresa VARCHAR(50),
-                fecha_atencion VARCHAR(20),
+                fecha_atencion VARCHAR(50),
                 genero VARCHAR(20),
                 edad INTEGER,
                 fecha_nacimiento VARCHAR(20),
@@ -92,7 +92,7 @@ const initDB = async () => {
             'celular VARCHAR(20)',
             'empresa VARCHAR(100)',
             'cod_empresa VARCHAR(50)',
-            'fecha_atencion VARCHAR(20)'
+            'fecha_atencion VARCHAR(50)'
         ];
 
         for (const column of columnsToAdd) {
@@ -105,6 +105,16 @@ const initDB = async () => {
             } catch (err) {
                 // Columna ya existe, continuar
             }
+        }
+
+        // Modificar el tipo de columna si ya existe con tamaño menor
+        try {
+            await pool.query(`
+                ALTER TABLE formularios
+                ALTER COLUMN fecha_atencion TYPE VARCHAR(50)
+            `);
+        } catch (err) {
+            // Si falla, es porque la columna no existe o ya tiene el tipo correcto
         }
 
         console.log('✅ Base de datos inicializada correctamente');
