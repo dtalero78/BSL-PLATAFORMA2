@@ -182,13 +182,13 @@
                         </div>
 
                         ${form.foto ? `
-                            <div class="section-title">Foto</div>
+                            <div class="section-title">📷 Foto</div>
                             <div class="foto-container">
                                 <img src="${form.foto}" alt="Foto del paciente">
                             </div>
                         ` : ''}
 
-                        <div class="section-title">Datos Personales</div>
+                        <div class="section-title">👤 Datos Personales</div>
                         <div class="dato">
                             <span class="dato-label">Género:</span>
                             <span class="dato-value">${form.genero || 'N/A'}</span>
@@ -202,15 +202,45 @@
                             <span class="dato-value">${form.fecha_nacimiento || 'N/A'}</span>
                         </div>
                         <div class="dato">
+                            <span class="dato-label">Lugar Nacimiento:</span>
+                            <span class="dato-value">${form.lugar_nacimiento || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Ciudad Residencia:</span>
+                            <span class="dato-value">${form.ciudad_residencia || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Estado Civil:</span>
+                            <span class="dato-value">${form.estado_civil || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Hijos:</span>
+                            <span class="dato-value">${form.hijos || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Nivel Educativo:</span>
+                            <span class="dato-value">${form.nivel_educativo || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
                             <span class="dato-label">Email:</span>
                             <span class="dato-value">${form.email || 'N/A'}</span>
                         </div>
+
+                        <div class="section-title">💼 Datos Laborales</div>
                         <div class="dato">
-                            <span class="dato-label">Ciudad:</span>
-                            <span class="dato-value">${form.ciudad_residencia || 'N/A'}</span>
+                            <span class="dato-label">Profesión/Oficio:</span>
+                            <span class="dato-value">${form.profesion_oficio || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Empresa 1:</span>
+                            <span class="dato-value">${form.empresa1 || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Empresa 2:</span>
+                            <span class="dato-value">${form.empresa2 || 'N/A'}</span>
                         </div>
 
-                        <div class="section-title">Datos de Salud</div>
+                        <div class="section-title">📊 Datos Físicos</div>
                         <div class="dato">
                             <span class="dato-label">Estatura:</span>
                             <span class="dato-value">${form.estatura || 'N/A'} cm</span>
@@ -224,8 +254,134 @@
                             <span class="dato-value">${form.ejercicio || 'N/A'}</span>
                         </div>
 
+                        <div class="section-title">🏥 Condiciones de Salud</div>
+                        <div class="dato">
+                            <span class="dato-label">Cirugía Ocular:</span>
+                            <span class="dato-value">${form.cirugia_ocular || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Consumo de Licor:</span>
+                            <span class="dato-value">${form.consumo_licor || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Cirugía Programada:</span>
+                            <span class="dato-value">${form.cirugia_programada || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Condición Médica:</span>
+                            <span class="dato-value">${form.condicion_medica || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Dolor de Cabeza:</span>
+                            <span class="dato-value">${form.dolor_cabeza || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Dolor de Espalda:</span>
+                            <span class="dato-value">${form.dolor_espalda || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Ruido/Jaqueca:</span>
+                            <span class="dato-value">${form.ruido_jaqueca || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Embarazo:</span>
+                            <span class="dato-value">${form.embarazo || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Enfermedad Hígado:</span>
+                            <span class="dato-value">${form.enfermedad_higado || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Enfermedad Pulmonar:</span>
+                            <span class="dato-value">${form.enfermedad_pulmonar || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Fuma:</span>
+                            <span class="dato-value">${form.fuma || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Hernias:</span>
+                            <span class="dato-value">${form.hernias || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Hormigueos:</span>
+                            <span class="dato-value">${form.hormigueos || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Presión Alta:</span>
+                            <span class="dato-value">${form.presion_alta || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Problemas de Azúcar:</span>
+                            <span class="dato-value">${form.problemas_azucar || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Problemas Cardíacos:</span>
+                            <span class="dato-value">${form.problemas_cardiacos || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Problemas de Sueño:</span>
+                            <span class="dato-value">${form.problemas_sueno || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Usa Anteojos:</span>
+                            <span class="dato-value">${form.usa_anteojos || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Usa Lentes de Contacto:</span>
+                            <span class="dato-value">${form.usa_lentes_contacto || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Varices:</span>
+                            <span class="dato-value">${form.varices || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Hepatitis:</span>
+                            <span class="dato-value">${form.hepatitis || 'N/A'}</span>
+                        </div>
+
+                        <div class="section-title">👨‍👩‍👧‍👦 Antecedentes Familiares</div>
+                        <div class="dato">
+                            <span class="dato-label">Enfermedades Hereditarias:</span>
+                            <span class="dato-value">${form.familia_hereditarias || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Enfermedades Genéticas:</span>
+                            <span class="dato-value">${form.familia_geneticas || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Diabetes:</span>
+                            <span class="dato-value">${form.familia_diabetes || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Hipertensión:</span>
+                            <span class="dato-value">${form.familia_hipertension || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Infartos:</span>
+                            <span class="dato-value">${form.familia_infartos || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Cáncer:</span>
+                            <span class="dato-value">${form.familia_cancer || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Trastornos:</span>
+                            <span class="dato-value">${form.familia_trastornos || 'N/A'}</span>
+                        </div>
+                        <div class="dato">
+                            <span class="dato-label">Enfermedades Infecciosas:</span>
+                            <span class="dato-value">${form.familia_infecciosas || 'N/A'}</span>
+                        </div>
+
+                        <div class="section-title">📧 Otros</div>
+                        <div class="dato">
+                            <span class="dato-label">Inscripción Boletín:</span>
+                            <span class="dato-value">${form.inscripcion_boletin || 'N/A'}</span>
+                        </div>
+
                         ${form.firma ? `
-                            <div class="section-title">Firma</div>
+                            <div class="section-title">✍️ Firma</div>
                             <div class="firma-container">
                                 <img src="${form.firma}" alt="Firma">
                             </div>
