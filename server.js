@@ -527,7 +527,7 @@ app.put('/api/formularios/:id', async (req, res) => {
                 console.log('📦 Payload:', JSON.stringify(wixPayload, null, 2));
 
                 const wixResponse = await fetch('https://www.bsl.com.co/_functions/actualizarFormulario', {
-                    method: 'PUT',
+                    method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
