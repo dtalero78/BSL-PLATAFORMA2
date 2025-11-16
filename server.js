@@ -437,14 +437,16 @@ app.put('/api/formularios/:id', async (req, res) => {
         const { id } = req.params;
         const datos = req.body;
 
-        // Verificar que el formulario existe
-        const checkResult = await pool.query('SELECT id FROM formularios WHERE id = $1', [id]);
+        // Verificar que el formulario existe y obtener todos sus datos
+        const checkResult = await pool.query('SELECT * FROM formularios WHERE id = $1', [id]);
         if (checkResult.rows.length === 0) {
             return res.status(404).json({
                 success: false,
                 message: 'Formulario no encontrado'
             });
         }
+
+        const formularioActual = checkResult.rows[0];
 
         // Actualizar solo los campos que vienen en el body
         const query = `
@@ -488,13 +490,76 @@ app.put('/api/formularios/:id', async (req, res) => {
         ];
 
         const result = await pool.query(query, values);
+        const formularioActualizado = result.rows[0];
 
-        console.log('✅ Formulario actualizado:', id);
+        console.log('✅ Formulario actualizado en PostgreSQL:', id);
+
+        // Actualizar en Wix si tiene wix_id
+        if (formularioActual.wix_id) {
+            try {
+                const fetch = (await import('node-fetch')).default;
+
+                // Preparar payload para Wix usando los datos actualizados
+                const wixPayload = {
+                    _id: formularioActual.wix_id,
+                    numeroId: formularioActualizado.numero_id || formularioActual.numero_id || "",
+                    codEmpresa: formularioActualizado.cod_empresa || formularioActual.cod_empresa || "",
+                    primerNombre: formularioActualizado.primer_nombre || formularioActual.primer_nombre || "",
+                    celular: formularioActualizado.celular || formularioActual.celular || "",
+                    ejercicio: formularioActualizado.ejercicio || "",
+                    estadoCivil: formularioActualizado.estado_civil || "",
+                    hijos: formularioActualizado.hijos || "",
+                    email: formularioActualizado.email || "",
+                    fechaNacimiento: formularioActualizado.fecha_nacimiento || "",
+                    edad: formularioActualizado.edad || "",
+                    genero: formularioActualizado.genero || "",
+                    lugarDeNacimiento: formularioActualizado.lugar_nacimiento || "",
+                    ciudadDeResidencia: formularioActualizado.ciudad_residencia || "",
+                    profesionUOficio: formularioActualizado.profesion_oficio || "",
+                    nivelEducativo: formularioActualizado.nivel_educativo || "",
+                    empresa1: formularioActualizado.empresa1 || "",
+                    empresa2: formularioActualizado.empresa2 || "",
+                    estatura: formularioActualizado.estatura || "",
+                    peso: formularioActualizado.peso || ""
+                };
+
+                console.log('📤 Actualizando datos en Wix...');
+                console.log('📦 Payload:', JSON.stringify(wixPayload, null, 2));
+
+                const wixResponse = await fetch('https://www.bsl.com.co/_functions/actualizarFormulario', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(wixPayload)
+                });
+
+                console.log('📡 Respuesta de Wix - Status:', wixResponse.status);
+
+                if (wixResponse.ok) {
+                    const wixResult = await wixResponse.json();
+                    console.log('✅ Datos actualizados en Wix exitosamente:', wixResult);
+                } else {
+                    const errorText = await wixResponse.text();
+                    console.error('❌ ERROR al actualizar en Wix:');
+                    console.error('   Status:', wixResponse.status);
+                    console.error('   Response:', errorText);
+                }
+
+            } catch (wixError) {
+                console.error('❌ EXCEPCIÓN al actualizar en Wix:');
+                console.error('   Mensaje:', wixError.message);
+                console.error('   Stack:', wixError.stack);
+                // No bloqueamos la respuesta si Wix falla
+            }
+        } else {
+            console.log('⚠️ El formulario no tiene wix_id, no se actualiza en Wix');
+        }
 
         res.json({
             success: true,
             message: 'Formulario actualizado correctamente',
-            data: result.rows[0]
+            data: formularioActualizado
         });
 
     } catch (error) {
