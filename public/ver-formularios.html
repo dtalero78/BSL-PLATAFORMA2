@@ -143,6 +143,159 @@
             margin-bottom: 8px;
             font-size: 16px;
         }
+
+        .btn-editar {
+            background: #00B8E6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 16px;
+            transition: background 0.2s ease;
+        }
+
+        .btn-editar:hover {
+            background: #009FC7;
+        }
+
+        .btn-editar:active {
+            transform: scale(0.98);
+        }
+
+        /* Estilos del modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #E5E7EB;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1F2937;
+        }
+
+        .btn-cerrar {
+            background: #EF4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .btn-cerrar:hover {
+            background: #DC2626;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: #4B5563;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #E5E7EB;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: 'Figtree', sans-serif;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #00B8E6;
+        }
+
+        .form-section {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 2px solid #E5E7EB;
+        }
+
+        .form-section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1F2937;
+            margin-bottom: 16px;
+        }
+
+        .btn-guardar {
+            background: #10B981;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 24px;
+            transition: background 0.2s ease;
+        }
+
+        .btn-guardar:hover {
+            background: #059669;
+        }
+
+        .btn-guardar:disabled {
+            background: #9CA3AF;
+            cursor: not-allowed;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+        }
     </style>
 </head>
 <body>
@@ -151,6 +304,97 @@
         <div id="loading" class="loading">Cargando formularios...</div>
         <div id="error" class="error" style="display: none;"></div>
         <div id="formularios" class="formularios-grid"></div>
+    </div>
+
+    <!-- Modal de edición -->
+    <div id="modalEdicion" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">✏️ Editar Formulario</h2>
+                <button class="btn-cerrar" onclick="cerrarModal()">✕ Cerrar</button>
+            </div>
+            <form id="formEdicion" onsubmit="guardarCambios(event)">
+                <input type="hidden" id="edit-id" name="id">
+
+                <div class="form-section-title">👤 Datos Personales</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Género</label>
+                        <input type="text" class="form-input" id="edit-genero" name="genero">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Edad</label>
+                        <input type="number" class="form-input" id="edit-edad" name="edad">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fecha Nacimiento</label>
+                        <input type="date" class="form-input" id="edit-fecha_nacimiento" name="fecha_nacimiento">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Lugar Nacimiento</label>
+                        <input type="text" class="form-input" id="edit-lugar_nacimiento" name="lugar_nacimiento">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Ciudad Residencia</label>
+                        <input type="text" class="form-input" id="edit-ciudad_residencia" name="ciudad_residencia">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Estado Civil</label>
+                        <input type="text" class="form-input" id="edit-estado_civil" name="estado_civil">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Hijos</label>
+                        <input type="text" class="form-input" id="edit-hijos" name="hijos">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nivel Educativo</label>
+                        <input type="text" class="form-input" id="edit-nivel_educativo" name="nivel_educativo">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" id="edit-email" name="email">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="form-section-title">💼 Datos Laborales</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Profesión/Oficio</label>
+                            <input type="text" class="form-input" id="edit-profesion_oficio" name="profesion_oficio">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Empresa 1</label>
+                            <input type="text" class="form-input" id="edit-empresa1" name="empresa1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Empresa 2</label>
+                            <input type="text" class="form-input" id="edit-empresa2" name="empresa2">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="form-section-title">📊 Datos Físicos</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Estatura (cm)</label>
+                            <input type="number" class="form-input" id="edit-estatura" name="estatura">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Peso (kg)</label>
+                            <input type="number" class="form-input" id="edit-peso" name="peso">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Ejercicio</label>
+                            <input type="text" class="form-input" id="edit-ejercicio" name="ejercicio">
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-guardar" id="btnGuardar">💾 Guardar Cambios</button>
+            </form>
+        </div>
     </div>
 
     <script>
@@ -419,6 +663,10 @@
                                 <img src="${form.firma}" alt="Firma">
                             </div>
                         ` : ''}
+
+                        <button class="btn-editar" onclick="editarFormulario(${form.id})">
+                            ✏️ Editar Formulario
+                        </button>
                     `;
 
                     container.appendChild(card);
@@ -430,6 +678,100 @@
                 const errorDiv = document.getElementById('error');
                 errorDiv.textContent = 'Error al cargar formularios: ' + error.message;
                 errorDiv.style.display = 'block';
+            }
+        }
+
+        let formularioActual = null;
+
+        // Función para editar un formulario
+        async function editarFormulario(id) {
+            try {
+                // Obtener los datos del formulario
+                const response = await fetch(`/api/formularios/${id}`);
+                const result = await response.json();
+
+                if (!result.success) {
+                    alert('Error al cargar el formulario');
+                    return;
+                }
+
+                formularioActual = result.data;
+
+                // Llenar el formulario del modal con los datos
+                document.getElementById('edit-id').value = formularioActual.id || '';
+                document.getElementById('edit-genero').value = formularioActual.genero || '';
+                document.getElementById('edit-edad').value = formularioActual.edad || '';
+                document.getElementById('edit-fecha_nacimiento').value = formularioActual.fecha_nacimiento || '';
+                document.getElementById('edit-lugar_nacimiento').value = formularioActual.lugar_nacimiento || '';
+                document.getElementById('edit-ciudad_residencia').value = formularioActual.ciudad_residencia || '';
+                document.getElementById('edit-estado_civil').value = formularioActual.estado_civil || '';
+                document.getElementById('edit-hijos').value = formularioActual.hijos || '';
+                document.getElementById('edit-nivel_educativo').value = formularioActual.nivel_educativo || '';
+                document.getElementById('edit-email').value = formularioActual.email || '';
+                document.getElementById('edit-profesion_oficio').value = formularioActual.profesion_oficio || '';
+                document.getElementById('edit-empresa1').value = formularioActual.empresa1 || '';
+                document.getElementById('edit-empresa2').value = formularioActual.empresa2 || '';
+                document.getElementById('edit-estatura').value = formularioActual.estatura || '';
+                document.getElementById('edit-peso').value = formularioActual.peso || '';
+                document.getElementById('edit-ejercicio').value = formularioActual.ejercicio || '';
+
+                // Abrir el modal
+                document.getElementById('modalEdicion').classList.add('active');
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al cargar el formulario: ' + error.message);
+            }
+        }
+
+        // Función para cerrar el modal
+        function cerrarModal() {
+            document.getElementById('modalEdicion').classList.remove('active');
+            formularioActual = null;
+        }
+
+        // Cerrar modal al hacer clic fuera de él
+        document.getElementById('modalEdicion').addEventListener('click', function(e) {
+            if (e.target === this) {
+                cerrarModal();
+            }
+        });
+
+        // Función para guardar cambios
+        async function guardarCambios(event) {
+            event.preventDefault();
+
+            const btnGuardar = document.getElementById('btnGuardar');
+            btnGuardar.disabled = true;
+            btnGuardar.textContent = '💾 Guardando...';
+
+            try {
+                const formData = new FormData(event.target);
+                const data = Object.fromEntries(formData.entries());
+
+                const response = await fetch(`/api/formularios/${data.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('✅ Formulario actualizado exitosamente');
+                    cerrarModal();
+                    // Recargar los formularios
+                    cargarFormularios();
+                } else {
+                    alert('❌ Error al actualizar: ' + (result.error || 'Error desconocido'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('❌ Error al guardar: ' + error.message);
+            } finally {
+                btnGuardar.disabled = false;
+                btnGuardar.textContent = '💾 Guardar Cambios';
             }
         }
 

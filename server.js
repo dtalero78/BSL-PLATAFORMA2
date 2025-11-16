@@ -407,6 +407,106 @@ app.get('/api/formulario/:id', async (req, res) => {
     }
 });
 
+// También crear una ruta con /api/formularios/:id para compatibilidad con el frontend
+app.get('/api/formularios/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query('SELECT * FROM formularios WHERE id = $1', [id]);
+
+        if (result.rows.length > 0) {
+            res.json({ success: true, data: result.rows[0] });
+        } else {
+            res.status(404).json({
+                success: false,
+                message: 'Formulario no encontrado'
+            });
+        }
+    } catch (error) {
+        console.error('❌ Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al buscar formulario',
+            error: error.message
+        });
+    }
+});
+
+// Ruta para actualizar un formulario
+app.put('/api/formularios/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const datos = req.body;
+
+        // Verificar que el formulario existe
+        const checkResult = await pool.query('SELECT id FROM formularios WHERE id = $1', [id]);
+        if (checkResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Formulario no encontrado'
+            });
+        }
+
+        // Actualizar solo los campos que vienen en el body
+        const query = `
+            UPDATE formularios SET
+                genero = COALESCE($1, genero),
+                edad = COALESCE($2, edad),
+                fecha_nacimiento = COALESCE($3, fecha_nacimiento),
+                lugar_nacimiento = COALESCE($4, lugar_nacimiento),
+                ciudad_residencia = COALESCE($5, ciudad_residencia),
+                estado_civil = COALESCE($6, estado_civil),
+                hijos = COALESCE($7, hijos),
+                nivel_educativo = COALESCE($8, nivel_educativo),
+                email = COALESCE($9, email),
+                profesion_oficio = COALESCE($10, profesion_oficio),
+                empresa1 = COALESCE($11, empresa1),
+                empresa2 = COALESCE($12, empresa2),
+                estatura = COALESCE($13, estatura),
+                peso = COALESCE($14, peso),
+                ejercicio = COALESCE($15, ejercicio)
+            WHERE id = $16
+            RETURNING *
+        `;
+
+        const values = [
+            datos.genero,
+            datos.edad,
+            datos.fecha_nacimiento,
+            datos.lugar_nacimiento,
+            datos.ciudad_residencia,
+            datos.estado_civil,
+            datos.hijos,
+            datos.nivel_educativo,
+            datos.email,
+            datos.profesion_oficio,
+            datos.empresa1,
+            datos.empresa2,
+            datos.estatura,
+            datos.peso,
+            datos.ejercicio,
+            id
+        ];
+
+        const result = await pool.query(query, values);
+
+        console.log('✅ Formulario actualizado:', id);
+
+        res.json({
+            success: true,
+            message: 'Formulario actualizado correctamente',
+            data: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('❌ Error al actualizar formulario:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al actualizar el formulario',
+            error: error.message
+        });
+    }
+});
+
 // Health check
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', database: 'connected' });
