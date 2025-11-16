@@ -492,16 +492,48 @@ app.put('/api/formularios/:id', async (req, res) => {
         const result = await pool.query(query, values);
         const formularioActualizado = result.rows[0];
 
-        console.log('✅ Formulario actualizado en PostgreSQL:', id);
+        console.log('');
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('✅ POSTGRESQL: Formulario actualizado exitosamente');
+        console.log('   ID:', id);
+        console.log('   Datos actualizados:', {
+            genero: formularioActualizado.genero,
+            edad: formularioActualizado.edad,
+            email: formularioActualizado.email
+        });
+        console.log('═══════════════════════════════════════════════════════════');
 
         // Actualizar en Wix si tiene wix_id
         if (formularioActual.wix_id) {
             try {
                 const fetch = (await import('node-fetch')).default;
 
-                // Preparar payload para Wix usando los datos actualizados
+                console.log('📤 Consultando registro en Wix por idGeneral:', formularioActual.wix_id);
+
+                // PASO 1: Consultar el _id usando idGeneral
+                const queryResponse = await fetch(`https://www.bsl.com.co/_functions/formularioPorIdGeneral?idGeneral=${formularioActual.wix_id}`);
+
+                if (!queryResponse.ok) {
+                    console.error('❌ ERROR al consultar formulario en Wix:');
+                    console.error('   Status:', queryResponse.status);
+                    const errorText = await queryResponse.text();
+                    console.error('   Response:', errorText);
+                    throw new Error('No se pudo consultar el registro en Wix');
+                }
+
+                const queryResult = await queryResponse.json();
+
+                if (!queryResult.success || !queryResult.item) {
+                    console.error('❌ No se encontró el registro en Wix con idGeneral:', formularioActual.wix_id);
+                    throw new Error('Registro no encontrado en Wix');
+                }
+
+                const wixId = queryResult.item._id;
+                console.log('✅ Registro encontrado en Wix. _id:', wixId);
+
+                // PASO 2: Preparar payload para actualizar usando el _id correcto
                 const wixPayload = {
-                    _id: formularioActual.wix_id,
+                    _id: wixId,  // Usar el _id interno de Wix
                     numeroId: formularioActualizado.numero_id || formularioActual.numero_id || "",
                     codEmpresa: formularioActualizado.cod_empresa || formularioActual.cod_empresa || "",
                     primerNombre: formularioActualizado.primer_nombre || formularioActual.primer_nombre || "",
@@ -526,6 +558,7 @@ app.put('/api/formularios/:id', async (req, res) => {
                 console.log('📤 Actualizando datos en Wix...');
                 console.log('📦 Payload:', JSON.stringify(wixPayload, null, 2));
 
+                // PASO 3: Actualizar el registro
                 const wixResponse = await fetch('https://www.bsl.com.co/_functions/actualizarFormulario', {
                     method: 'POST',
                     headers: {
@@ -538,23 +571,46 @@ app.put('/api/formularios/:id', async (req, res) => {
 
                 if (wixResponse.ok) {
                     const wixResult = await wixResponse.json();
-                    console.log('✅ Datos actualizados en Wix exitosamente:', wixResult);
+                    console.log('');
+                    console.log('═══════════════════════════════════════════════════════════');
+                    console.log('✅ WIX: Formulario actualizado exitosamente');
+                    console.log('   _id:', wixId);
+                    console.log('   idGeneral:', formularioActual.wix_id);
+                    console.log('   Respuesta:', JSON.stringify(wixResult, null, 2));
+                    console.log('═══════════════════════════════════════════════════════════');
+                    console.log('');
                 } else {
                     const errorText = await wixResponse.text();
-                    console.error('❌ ERROR al actualizar en Wix:');
+                    console.log('');
+                    console.log('═══════════════════════════════════════════════════════════');
+                    console.error('❌ WIX: ERROR al actualizar');
                     console.error('   Status:', wixResponse.status);
                     console.error('   Response:', errorText);
+                    console.log('═══════════════════════════════════════════════════════════');
+                    console.log('');
                 }
 
             } catch (wixError) {
-                console.error('❌ EXCEPCIÓN al actualizar en Wix:');
+                console.log('');
+                console.log('═══════════════════════════════════════════════════════════');
+                console.error('❌ WIX: EXCEPCIÓN al actualizar');
                 console.error('   Mensaje:', wixError.message);
                 console.error('   Stack:', wixError.stack);
+                console.log('═══════════════════════════════════════════════════════════');
+                console.log('');
                 // No bloqueamos la respuesta si Wix falla
             }
         } else {
+            console.log('');
             console.log('⚠️ El formulario no tiene wix_id, no se actualiza en Wix');
+            console.log('');
         }
+
+        console.log('');
+        console.log('🎉 RESUMEN: Actualización completada');
+        console.log('   ✅ PostgreSQL: OK');
+        console.log('   ✅ Wix:', formularioActual.wix_id ? 'Sincronizado' : 'No aplica');
+        console.log('');
 
         res.json({
             success: true,
