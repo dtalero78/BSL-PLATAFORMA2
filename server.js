@@ -532,27 +532,28 @@ app.put('/api/formularios/:id', async (req, res) => {
                 console.log('✅ Registro encontrado en Wix. _id:', wixId);
 
                 // PASO 2: Preparar payload para actualizar usando el _id correcto
+                // Solo enviar campos que tienen valores en formularioActualizado
                 const wixPayload = {
                     _id: wixId,  // Usar el _id interno de Wix
-                    numeroId: formularioActualizado.numero_id || formularioActual.numero_id || "",
-                    codEmpresa: formularioActualizado.cod_empresa || formularioActual.cod_empresa || "",
-                    primerNombre: formularioActualizado.primer_nombre || formularioActual.primer_nombre || "",
-                    celular: formularioActualizado.celular || formularioActual.celular || "",
-                    ejercicio: formularioActualizado.ejercicio || "",
-                    estadoCivil: formularioActualizado.estado_civil || "",
-                    hijos: formularioActualizado.hijos || "",
-                    email: formularioActualizado.email || "",
-                    fechaNacimiento: formularioActualizado.fecha_nacimiento || "",
-                    edad: formularioActualizado.edad || "",
-                    genero: formularioActualizado.genero || "",
-                    lugarDeNacimiento: formularioActualizado.lugar_nacimiento || "",
-                    ciudadDeResidencia: formularioActualizado.ciudad_residencia || "",
-                    profesionUOficio: formularioActualizado.profesion_oficio || "",
-                    nivelEducativo: formularioActualizado.nivel_educativo || "",
-                    empresa1: formularioActualizado.empresa1 || "",
-                    empresa2: formularioActualizado.empresa2 || "",
-                    estatura: formularioActualizado.estatura || "",
-                    peso: formularioActualizado.peso || ""
+                    numeroId: formularioActualizado.numero_id || formularioActual.numero_id,
+                    codEmpresa: formularioActualizado.cod_empresa || formularioActual.cod_empresa,
+                    primerNombre: formularioActualizado.primer_nombre || formularioActual.primer_nombre,
+                    celular: formularioActualizado.celular || formularioActual.celular,
+                    ejercicio: formularioActualizado.ejercicio || formularioActual.ejercicio,
+                    estadoCivil: formularioActualizado.estado_civil || formularioActual.estado_civil,
+                    hijos: formularioActualizado.hijos || formularioActual.hijos,
+                    email: formularioActualizado.email || formularioActual.email,
+                    fechaNacimiento: formularioActualizado.fecha_nacimiento || formularioActual.fecha_nacimiento,
+                    edad: formularioActualizado.edad || formularioActual.edad,
+                    genero: formularioActualizado.genero || formularioActual.genero,
+                    lugarDeNacimiento: formularioActualizado.lugar_nacimiento || formularioActual.lugar_nacimiento,
+                    ciudadDeResidencia: formularioActualizado.ciudad_residencia || formularioActual.ciudad_residencia,
+                    profesionUOficio: formularioActualizado.profesion_oficio || formularioActual.profesion_oficio,
+                    nivelEducativo: formularioActualizado.nivel_educativo || formularioActual.nivel_educativo,
+                    empresa1: formularioActualizado.empresa1 || formularioActual.empresa1,
+                    empresa2: formularioActualizado.empresa2 || formularioActual.empresa2,
+                    estatura: formularioActualizado.estatura || formularioActual.estatura,
+                    peso: formularioActualizado.peso || formularioActual.peso
                 };
 
                 console.log('📤 Actualizando datos en Wix...');
