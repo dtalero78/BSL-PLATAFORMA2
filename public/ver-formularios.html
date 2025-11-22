@@ -297,19 +297,8 @@
             gap: 16px;
         }
 
-        /* Estilos para vista resumida/expandida */
+        /* Estilos para vista resumida */
         .card-summary {
-            display: block;
-        }
-
-        .card-details {
-            display: none;
-            margin-top: 16px;
-            padding-top: 16px;
-            border-top: 2px solid #E5E7EB;
-        }
-
-        .card-details.expanded {
             display: block;
         }
 
@@ -337,6 +326,165 @@
 
         .btn-expand:active {
             transform: scale(0.98);
+        }
+
+        /* Modal de detalles */
+        .modal-detalles-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 2000;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .modal-detalles-overlay.active {
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 40px;
+            padding-bottom: 40px;
+        }
+
+        .modal-detalles {
+            background: white;
+            border-radius: 16px;
+            padding: 0;
+            max-width: 900px;
+            width: 100%;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+            margin: auto;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-detalles-header {
+            background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+            color: white;
+            padding: 24px 32px;
+            border-radius: 16px 16px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-detalles-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .modal-detalles-subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+
+        .btn-cerrar-detalles {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-size: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .btn-cerrar-detalles:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .modal-detalles-body {
+            padding: 32px;
+            max-height: calc(90vh - 200px);
+            overflow-y: auto;
+        }
+
+        .modal-detalles-foto {
+            text-align: center;
+            margin-bottom: 32px;
+            padding: 24px;
+            background: #F9FAFB;
+            border-radius: 12px;
+        }
+
+        .modal-detalles-foto img {
+            max-width: 200px;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .detalles-section {
+            margin-bottom: 32px;
+        }
+
+        .detalles-section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1F2937;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 3px solid #6366F1;
+            display: inline-block;
+        }
+
+        .detalles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+        }
+
+        .detalle-item {
+            background: #F9FAFB;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border-left: 3px solid #6366F1;
+        }
+
+        .detalle-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #6B7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .detalle-value {
+            font-size: 15px;
+            color: #1F2937;
+            font-weight: 500;
+        }
+
+        .modal-detalles-footer {
+            padding: 24px 32px;
+            background: #F9FAFB;
+            border-radius: 0 0 16px 16px;
+            border-top: 1px solid #E5E7EB;
         }
 
         .summary-info {
@@ -385,6 +533,27 @@
         <div id="loading" class="loading">Cargando formularios...</div>
         <div id="error" class="error" style="display: none;"></div>
         <div id="formularios" class="formularios-grid"></div>
+    </div>
+
+    <!-- Modal de detalles del formulario -->
+    <div id="modalDetalles" class="modal-detalles-overlay">
+        <div class="modal-detalles">
+            <div class="modal-detalles-header">
+                <div>
+                    <h2 class="modal-detalles-title" id="modalDetallesTitulo">Detalles del Formulario</h2>
+                    <div class="modal-detalles-subtitle" id="modalDetallesSubtitulo"></div>
+                </div>
+                <button class="btn-cerrar-detalles" onclick="cerrarModalDetalles()">✕</button>
+            </div>
+            <div class="modal-detalles-body" id="modalDetallesContenido">
+                <!-- El contenido se cargará dinámicamente -->
+            </div>
+            <div class="modal-detalles-footer">
+                <button class="btn-editar" id="btnEditarFromModal" style="margin-top: 0;">
+                    Editar Formulario
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Modal de edición -->
@@ -481,285 +650,255 @@
     <script>
         // Cache para almacenar los detalles cargados
         const detallesCache = {};
+        let formularioActualId = null;
 
-        // Función para expandir/contraer las fichas
-        async function toggleExpand(index, formId) {
-            const detailsDiv = document.getElementById(`details-${index}`);
-            const icon = document.getElementById(`expand-icon-${index}`);
-            const text = document.getElementById(`expand-text-${index}`);
+        // Función para abrir el modal con los detalles
+        async function abrirModalDetalles(formId) {
+            const modal = document.getElementById('modalDetalles');
+            const contenido = document.getElementById('modalDetallesContenido');
 
-            if (detailsDiv.classList.contains('expanded')) {
-                // Contraer
-                detailsDiv.classList.remove('expanded');
-                icon.textContent = '▼';
-                text.textContent = 'Ver más información';
-            } else {
-                // Expandir - cargar detalles si no están en cache
-                if (!detallesCache[formId]) {
-                    // Mostrar loading
-                    detailsDiv.innerHTML = '<div style="text-align: center; padding: 20px; color: #00B8E6;">Cargando información...</div>';
-                    detailsDiv.classList.add('expanded');
+            formularioActualId = formId;
 
-                    try {
-                        const response = await fetch(`/api/formularios/${formId}`);
-                        const result = await response.json();
+            // Mostrar modal con loading
+            modal.classList.add('active');
+            contenido.innerHTML = '<div style="text-align: center; padding: 60px; color: #00B8E6; font-size: 18px;">Cargando información...</div>';
 
-                        if (result.success) {
-                            // Guardar en cache
-                            detallesCache[formId] = result.data;
-                            // Renderizar los detalles
-                            renderizarDetalles(index, result.data);
-                        } else {
-                            detailsDiv.innerHTML = '<div style="text-align: center; padding: 20px; color: #EF4444;">Error al cargar información</div>';
-                        }
-                    } catch (error) {
-                        console.error('Error al cargar detalles:', error);
-                        detailsDiv.innerHTML = '<div style="text-align: center; padding: 20px; color: #EF4444;">Error al cargar información</div>';
+            // Cargar detalles si no están en cache
+            if (!detallesCache[formId]) {
+                try {
+                    const response = await fetch(`/api/formularios/${formId}`);
+                    const result = await response.json();
+
+                    if (result.success) {
+                        detallesCache[formId] = result.data;
+                        renderizarModalDetalles(result.data);
+                    } else {
+                        contenido.innerHTML = '<div style="text-align: center; padding: 60px; color: #EF4444; font-size: 18px;">Error al cargar información</div>';
                     }
-                } else {
-                    // Usar datos del cache
-                    detailsDiv.classList.add('expanded');
+                } catch (error) {
+                    console.error('Error al cargar detalles:', error);
+                    contenido.innerHTML = '<div style="text-align: center; padding: 60px; color: #EF4444; font-size: 18px;">Error al cargar información</div>';
                 }
-
-                icon.textContent = '▲';
-                text.textContent = 'Ver menos información';
+            } else {
+                renderizarModalDetalles(detallesCache[formId]);
             }
         }
 
-        // Función para renderizar los detalles del formulario
-        function renderizarDetalles(index, form) {
-            const detailsDiv = document.getElementById(`details-${index}`);
+        // Función para cerrar el modal de detalles
+        function cerrarModalDetalles() {
+            document.getElementById('modalDetalles').classList.remove('active');
+            formularioActualId = null;
+        }
+
+        // Cerrar modal al hacer clic fuera
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('modalDetalles').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    cerrarModalDetalles();
+                }
+            });
+        });
+
+        // Función para renderizar los detalles en el modal
+        function renderizarModalDetalles(form) {
+            const titulo = document.getElementById('modalDetallesTitulo');
+            const subtitulo = document.getElementById('modalDetallesSubtitulo');
+            const contenido = document.getElementById('modalDetallesContenido');
+            const btnEditar = document.getElementById('btnEditarFromModal');
+
+            // Actualizar título
+            titulo.textContent = `${form.primer_nombre || ''} ${form.primer_apellido || 'Formulario'}`.trim();
+            subtitulo.textContent = `ID: ${form.id} | Cédula: ${form.numero_id || 'N/A'}`;
+
+            // Configurar botón editar
+            btnEditar.onclick = () => {
+                cerrarModalDetalles();
+                editarFormulario(form.id);
+            };
+
             const fecha = new Date(form.fecha_registro).toLocaleString('es-CO');
 
-            detailsDiv.innerHTML = `
-                <div class="formulario-fecha" style="margin-bottom: 16px; text-align: center;">Registrado: ${fecha}</div>
-
-                ${form.wix_id ? `
-                    <div class="section-title">Datos de Wix</div>
-                    <div class="dato">
-                        <span class="dato-label">Primer Nombre:</span>
-                        <span class="dato-value">${form.primer_nombre || 'N/A'}</span>
-                    </div>
-                    <div class="dato">
-                        <span class="dato-label">Primer Apellido:</span>
-                        <span class="dato-value">${form.primer_apellido || 'N/A'}</span>
-                    </div>
-                    <div class="dato">
-                        <span class="dato-label">Empresa:</span>
-                        <span class="dato-value">${form.empresa || 'N/A'}</span>
-                    </div>
-                    <div class="dato">
-                        <span class="dato-label">Código Empresa:</span>
-                        <span class="dato-value">${form.cod_empresa || 'N/A'}</span>
-                    </div>
-                    <div class="dato">
-                        <span class="dato-label">Fecha Atención:</span>
-                        <span class="dato-value">${form.fecha_atencion || 'N/A'}</span>
+            contenido.innerHTML = `
+                ${form.foto ? `
+                    <div class="modal-detalles-foto">
+                        <img src="${form.foto}" alt="Foto del paciente">
                     </div>
                 ` : ''}
 
-                <div class="section-title">Datos Personales</div>
-                <div class="dato">
-                    <span class="dato-label">Género:</span>
-                    <span class="dato-value">${form.genero || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Edad:</span>
-                    <span class="dato-value">${form.edad || 'N/A'} años</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Fecha Nacimiento:</span>
-                    <span class="dato-value">${form.fecha_nacimiento || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Lugar Nacimiento:</span>
-                    <span class="dato-value">${form.lugar_nacimiento || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Ciudad Residencia:</span>
-                    <span class="dato-value">${form.ciudad_residencia || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Estado Civil:</span>
-                    <span class="dato-value">${form.estado_civil || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Hijos:</span>
-                    <span class="dato-value">${form.hijos || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Nivel Educativo:</span>
-                    <span class="dato-value">${form.nivel_educativo || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Email:</span>
-                    <span class="dato-value">${form.email || 'N/A'}</span>
+                <div style="text-align: center; margin-bottom: 32px; padding: 12px; background: #EEF2FF; border-radius: 8px;">
+                    <div style="font-size: 14px; color: #6366F1; font-weight: 600;">Fecha de Registro</div>
+                    <div style="font-size: 16px; color: #1F2937; font-weight: 500; margin-top: 4px;">${fecha}</div>
                 </div>
 
-                <div class="section-title">Datos Laborales</div>
-                <div class="dato">
-                    <span class="dato-label">Profesión/Oficio:</span>
-                    <span class="dato-value">${form.profesion_oficio || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Empresa 1:</span>
-                    <span class="dato-value">${form.empresa1 || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Empresa 2:</span>
-                    <span class="dato-value">${form.empresa2 || 'N/A'}</span>
+                ${form.wix_id ? `
+                    <div class="detalles-section">
+                        <div class="detalles-section-title">Datos de Wix</div>
+                        <div class="detalles-grid">
+                            <div class="detalle-item">
+                                <div class="detalle-label">Wix ID</div>
+                                <div class="detalle-value">${form.wix_id}</div>
+                            </div>
+                            <div class="detalle-item">
+                                <div class="detalle-label">Primer Nombre</div>
+                                <div class="detalle-value">${form.primer_nombre || 'N/A'}</div>
+                            </div>
+                            <div class="detalle-item">
+                                <div class="detalle-label">Primer Apellido</div>
+                                <div class="detalle-value">${form.primer_apellido || 'N/A'}</div>
+                            </div>
+                            <div class="detalle-item">
+                                <div class="detalle-label">Empresa</div>
+                                <div class="detalle-value">${form.empresa || 'N/A'}</div>
+                            </div>
+                            <div class="detalle-item">
+                                <div class="detalle-label">Código Empresa</div>
+                                <div class="detalle-value">${form.cod_empresa || 'N/A'}</div>
+                            </div>
+                            <div class="detalle-item">
+                                <div class="detalle-label">Fecha Atención</div>
+                                <div class="detalle-value">${form.fecha_atencion || 'N/A'}</div>
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+
+                <div class="detalles-section">
+                    <div class="detalles-section-title">Datos Personales</div>
+                    <div class="detalles-grid">
+                        <div class="detalle-item">
+                            <div class="detalle-label">Género</div>
+                            <div class="detalle-value">${form.genero || 'N/A'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Edad</div>
+                            <div class="detalle-value">${form.edad || 'N/A'} años</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Fecha Nacimiento</div>
+                            <div class="detalle-value">${form.fecha_nacimiento || 'N/A'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Lugar Nacimiento</div>
+                            <div class="detalle-value">${form.lugar_nacimiento || 'N/A'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Ciudad Residencia</div>
+                            <div class="detalle-value">${form.ciudad_residencia || 'N/A'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Estado Civil</div>
+                            <div class="detalle-value">${form.estado_civil || 'N/A'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Hijos</div>
+                            <div class="detalle-value">${form.hijos || 'N/A'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Nivel Educativo</div>
+                            <div class="detalle-value">${form.nivel_educativo || 'N/A'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Email</div>
+                            <div class="detalle-value">${form.email || 'N/A'}</div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="section-title">Datos Físicos</div>
-                <div class="dato">
-                    <span class="dato-label">Estatura:</span>
-                    <span class="dato-value">${form.estatura || 'N/A'} cm</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Peso:</span>
-                    <span class="dato-value">${form.peso || 'N/A'} kg</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Ejercicio:</span>
-                    <span class="dato-value">${form.ejercicio || 'N/A'}</span>
-                </div>
-
-                <div class="section-title">Condiciones de Salud</div>
-                <div class="dato">
-                    <span class="dato-label">Cirugía Ocular:</span>
-                    <span class="dato-value">${form.cirugia_ocular || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Consumo de Licor:</span>
-                    <span class="dato-value">${form.consumo_licor || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Cirugía Programada:</span>
-                    <span class="dato-value">${form.cirugia_programada || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Condición Médica:</span>
-                    <span class="dato-value">${form.condicion_medica || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Dolor de Cabeza:</span>
-                    <span class="dato-value">${form.dolor_cabeza || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Dolor de Espalda:</span>
-                    <span class="dato-value">${form.dolor_espalda || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Ruido/Jaqueca:</span>
-                    <span class="dato-value">${form.ruido_jaqueca || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Embarazo:</span>
-                    <span class="dato-value">${form.embarazo || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Enfermedad Hígado:</span>
-                    <span class="dato-value">${form.enfermedad_higado || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Enfermedad Pulmonar:</span>
-                    <span class="dato-value">${form.enfermedad_pulmonar || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Fuma:</span>
-                    <span class="dato-value">${form.fuma || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Hernias:</span>
-                    <span class="dato-value">${form.hernias || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Hormigueos:</span>
-                    <span class="dato-value">${form.hormigueos || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Presión Alta:</span>
-                    <span class="dato-value">${form.presion_alta || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Problemas de Azúcar:</span>
-                    <span class="dato-value">${form.problemas_azucar || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Problemas Cardíacos:</span>
-                    <span class="dato-value">${form.problemas_cardiacos || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Problemas de Sueño:</span>
-                    <span class="dato-value">${form.problemas_sueno || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Usa Anteojos:</span>
-                    <span class="dato-value">${form.usa_anteojos || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Usa Lentes de Contacto:</span>
-                    <span class="dato-value">${form.usa_lentes_contacto || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Varices:</span>
-                    <span class="dato-value">${form.varices || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Hepatitis:</span>
-                    <span class="dato-value">${form.hepatitis || 'N/A'}</span>
+                <div class="detalles-section">
+                    <div class="detalles-section-title">Datos Laborales</div>
+                    <div class="detalles-grid">
+                        <div class="detalle-item">
+                            <div class="detalle-label">Profesión/Oficio</div>
+                            <div class="detalle-value">${form.profesion_oficio || 'N/A'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Empresa 1</div>
+                            <div class="detalle-value">${form.empresa1 || 'N/A'}</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Empresa 2</div>
+                            <div class="detalle-value">${form.empresa2 || 'N/A'}</div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="section-title">Antecedentes Familiares</div>
-                <div class="dato">
-                    <span class="dato-label">Enfermedades Hereditarias:</span>
-                    <span class="dato-value">${form.familia_hereditarias || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Enfermedades Genéticas:</span>
-                    <span class="dato-value">${form.familia_geneticas || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Diabetes:</span>
-                    <span class="dato-value">${form.familia_diabetes || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Hipertensión:</span>
-                    <span class="dato-value">${form.familia_hipertension || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Infartos:</span>
-                    <span class="dato-value">${form.familia_infartos || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Cáncer:</span>
-                    <span class="dato-value">${form.familia_cancer || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Trastornos:</span>
-                    <span class="dato-value">${form.familia_trastornos || 'N/A'}</span>
-                </div>
-                <div class="dato">
-                    <span class="dato-label">Enfermedades Infecciosas:</span>
-                    <span class="dato-value">${form.familia_infecciosas || 'N/A'}</span>
+                <div class="detalles-section">
+                    <div class="detalles-section-title">Datos Físicos</div>
+                    <div class="detalles-grid">
+                        <div class="detalle-item">
+                            <div class="detalle-label">Estatura</div>
+                            <div class="detalle-value">${form.estatura || 'N/A'} cm</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Peso</div>
+                            <div class="detalle-value">${form.peso || 'N/A'} kg</div>
+                        </div>
+                        <div class="detalle-item">
+                            <div class="detalle-label">Ejercicio</div>
+                            <div class="detalle-value">${form.ejercicio || 'N/A'}</div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="section-title">Otros</div>
-                <div class="dato">
-                    <span class="dato-label">Inscripción Boletín:</span>
-                    <span class="dato-value">${form.inscripcion_boletin || 'N/A'}</span>
+                <div class="detalles-section">
+                    <div class="detalles-section-title">Condiciones de Salud</div>
+                    <div class="detalles-grid">
+                        <div class="detalle-item"><div class="detalle-label">Cirugía Ocular</div><div class="detalle-value">${form.cirugia_ocular || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Consumo de Licor</div><div class="detalle-value">${form.consumo_licor || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Cirugía Programada</div><div class="detalle-value">${form.cirugia_programada || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Condición Médica</div><div class="detalle-value">${form.condicion_medica || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Dolor de Cabeza</div><div class="detalle-value">${form.dolor_cabeza || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Dolor de Espalda</div><div class="detalle-value">${form.dolor_espalda || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Ruido/Jaqueca</div><div class="detalle-value">${form.ruido_jaqueca || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Embarazo</div><div class="detalle-value">${form.embarazo || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Enfermedad Hígado</div><div class="detalle-value">${form.enfermedad_higado || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Enfermedad Pulmonar</div><div class="detalle-value">${form.enfermedad_pulmonar || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Fuma</div><div class="detalle-value">${form.fuma || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Hernias</div><div class="detalle-value">${form.hernias || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Hormigueos</div><div class="detalle-value">${form.hormigueos || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Presión Alta</div><div class="detalle-value">${form.presion_alta || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Problemas de Azúcar</div><div class="detalle-value">${form.problemas_azucar || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Problemas Cardíacos</div><div class="detalle-value">${form.problemas_cardiacos || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Problemas de Sueño</div><div class="detalle-value">${form.problemas_sueno || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Usa Anteojos</div><div class="detalle-value">${form.usa_anteojos || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Usa Lentes de Contacto</div><div class="detalle-value">${form.usa_lentes_contacto || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Varices</div><div class="detalle-value">${form.varices || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Hepatitis</div><div class="detalle-value">${form.hepatitis || 'N/A'}</div></div>
+                    </div>
+                </div>
+
+                <div class="detalles-section">
+                    <div class="detalles-section-title">Antecedentes Familiares</div>
+                    <div class="detalles-grid">
+                        <div class="detalle-item"><div class="detalle-label">Enfermedades Hereditarias</div><div class="detalle-value">${form.familia_hereditarias || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Enfermedades Genéticas</div><div class="detalle-value">${form.familia_geneticas || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Diabetes</div><div class="detalle-value">${form.familia_diabetes || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Hipertensión</div><div class="detalle-value">${form.familia_hipertension || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Infartos</div><div class="detalle-value">${form.familia_infartos || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Cáncer</div><div class="detalle-value">${form.familia_cancer || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Trastornos</div><div class="detalle-value">${form.familia_trastornos || 'N/A'}</div></div>
+                        <div class="detalle-item"><div class="detalle-label">Enfermedades Infecciosas</div><div class="detalle-value">${form.familia_infecciosas || 'N/A'}</div></div>
+                    </div>
+                </div>
+
+                <div class="detalles-section">
+                    <div class="detalles-section-title">Otros</div>
+                    <div class="detalles-grid">
+                        <div class="detalle-item">
+                            <div class="detalle-label">Inscripción Boletín</div>
+                            <div class="detalle-value">${form.inscripcion_boletin || 'N/A'}</div>
+                        </div>
+                    </div>
                 </div>
 
                 ${form.firma ? `
-                    <div class="section-title">Firma</div>
-                    <div class="firma-container">
-                        <img src="${form.firma}" alt="Firma">
+                    <div class="detalles-section">
+                        <div class="detalles-section-title">Firma</div>
+                        <div style="text-align: center; padding: 24px; background: #F9FAFB; border-radius: 12px;">
+                            <img src="${form.firma}" alt="Firma" style="max-width: 300px; border-radius: 8px; border: 2px solid #E5E7EB;">
+                        </div>
                     </div>
                 ` : ''}
-
-                <button class="btn-editar" onclick="editarFormulario(${form.id})">
-                    Editar Formulario
-                </button>
             `;
         }
 
@@ -807,13 +946,10 @@
                                 </div>
                             </div>
 
-                            <button class="btn-expand" onclick="toggleExpand(${index}, ${form.id})">
-                                <span id="expand-icon-${index}">▼</span>
-                                <span id="expand-text-${index}">Ver más información</span>
+                            <button class="btn-expand" onclick="abrirModalDetalles(${form.id})">
+                                Ver detalles completos
                             </button>
                         </div>
-
-                        <div class="card-details" id="details-${index}"></div>
                     `;
 
                     container.appendChild(card);
