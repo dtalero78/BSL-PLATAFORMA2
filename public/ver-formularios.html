@@ -607,6 +607,24 @@
                 </div>
 
                 <div class="form-section">
+                    <div class="form-section-title">🏥 Seguridad Social</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">EPS</label>
+                            <input type="text" class="form-input" id="edit-eps" name="eps">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">ARL</label>
+                            <input type="text" class="form-input" id="edit-arl" name="arl">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Fondo de Pensiones</label>
+                            <input type="text" class="form-input" id="edit-pensiones" name="pensiones">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
                     <div class="form-section-title">💼 Datos Laborales</div>
                     <div class="form-grid">
                         <div class="form-group">
@@ -803,6 +821,32 @@
                         </div>
                     </div>
                 </div>
+
+                ${form.eps || form.arl || form.pensiones ? `
+                    <div class="detalles-section">
+                        <div class="detalles-section-title">Seguridad Social</div>
+                        <div class="detalles-grid">
+                            ${form.eps ? `
+                                <div class="detalle-item">
+                                    <div class="detalle-label">EPS</div>
+                                    <div class="detalle-value">${form.eps}</div>
+                                </div>
+                            ` : ''}
+                            ${form.arl ? `
+                                <div class="detalle-item">
+                                    <div class="detalle-label">ARL</div>
+                                    <div class="detalle-value">${form.arl}</div>
+                                </div>
+                            ` : ''}
+                            ${form.pensiones ? `
+                                <div class="detalle-item">
+                                    <div class="detalle-label">Fondo de Pensiones</div>
+                                    <div class="detalle-value">${form.pensiones}</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                ` : ''}
 
                 <div class="detalles-section">
                     <div class="detalles-section-title">Datos Laborales</div>
@@ -1197,6 +1241,9 @@
                 document.getElementById('edit-hijos').value = formularioActual.hijos || '';
                 document.getElementById('edit-nivel_educativo').value = formularioActual.nivel_educativo || '';
                 document.getElementById('edit-email').value = formularioActual.email || '';
+                document.getElementById('edit-eps').value = formularioActual.eps || '';
+                document.getElementById('edit-arl').value = formularioActual.arl || '';
+                document.getElementById('edit-pensiones').value = formularioActual.pensiones || '';
                 document.getElementById('edit-profesion_oficio').value = formularioActual.profesion_oficio || '';
                 document.getElementById('edit-empresa1').value = formularioActual.empresa1 || '';
                 document.getElementById('edit-empresa2').value = formularioActual.empresa2 || '';

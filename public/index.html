@@ -23,7 +23,7 @@
 
         <!-- Question counter -->
         <div class="question-counter">
-            <span id="currentQuestion">1</span> → <span id="totalQuestions">48</span>
+            <span id="currentQuestion">1</span> → <span id="totalQuestions">50</span>
         </div>
 
         <form id="formularioMedico">
@@ -133,16 +133,40 @@
                 </div>
             </div>
 
-            <!-- 12. Email -->
+            <!-- 12. EPS -->
             <div class="question-slide" data-question="12">
+                <div class="question-content">
+                    <label class="question-label">¿Cuál es tu EPS? (opcional)</label>
+                    <input type="text" name="eps" class="question-input" placeholder="Ej: Sura, Sanitas, etc.">
+                </div>
+            </div>
+
+            <!-- 13. ARL -->
+            <div class="question-slide" data-question="13">
+                <div class="question-content">
+                    <label class="question-label">¿Cuál es tu ARL? (opcional)</label>
+                    <input type="text" name="arl" class="question-input" placeholder="Ej: Sura, Positiva, etc.">
+                </div>
+            </div>
+
+            <!-- 14. Pensiones -->
+            <div class="question-slide" data-question="14">
+                <div class="question-content">
+                    <label class="question-label">¿Cuál es tu fondo de pensiones? (opcional)</label>
+                    <input type="text" name="pensiones" class="question-input" placeholder="Ej: Colpensiones, Porvenir, etc.">
+                </div>
+            </div>
+
+            <!-- 15. Email -->
+            <div class="question-slide" data-question="15">
                 <div class="question-content">
                     <label class="question-label">Escribe tu email</label>
                     <input type="email" name="email" class="question-input" required placeholder="tucorreo@ejemplo.com">
                 </div>
             </div>
 
-            <!-- 13. Estatura -->
-            <div class="question-slide" data-question="13">
+            <!-- 16. Estatura -->
+            <div class="question-slide" data-question="16">
                 <div class="question-content">
                     <label class="question-label">¿Cuál es tu estatura?</label>
                     <select name="estatura" class="question-select" required>
@@ -164,16 +188,16 @@
                 </div>
             </div>
 
-            <!-- 14. Peso -->
-            <div class="question-slide" data-question="14">
+            <!-- 17. Peso -->
+            <div class="question-slide" data-question="17">
                 <div class="question-content">
                     <label class="question-label">¿Cuánto pesas? (solo números)</label>
                     <input type="number" name="peso" class="question-input" required placeholder="Ej: 70" min="0" max="300">
                 </div>
             </div>
 
-            <!-- 15. Ejercicio -->
-            <div class="question-slide" data-question="15">
+            <!-- 18. Ejercicio -->
+            <div class="question-slide" data-question="18">
                 <div class="question-content">
                     <label class="question-label">¿Con qué frecuencia haces ejercicio?</label>
                     <div class="options-grid">
@@ -197,8 +221,8 @@
                 </div>
             </div>
 
-            <!-- 16. Cirugía Ocular -->
-            <div class="question-slide" data-question="16">
+            <!-- 19. Cirugía Ocular -->
+            <div class="question-slide" data-question="19">
                 <div class="question-content">
                     <label class="question-label">¿Has tenido alguna cirugía ocular?</label>
                     <div class="options-grid options-si-no">
@@ -214,8 +238,8 @@
                 </div>
             </div>
 
-            <!-- 17. Consumo Licor -->
-            <div class="question-slide" data-question="17">
+            <!-- 20. Consumo Licor -->
+            <div class="question-slide" data-question="20">
                 <div class="question-content">
                     <label class="question-label">¿Con qué frecuencia consumes licor?</label>
                     <div class="options-grid">
@@ -240,38 +264,38 @@
             </div>
 
             <!-- Preguntas Sí/No de Encuesta de Salud -->
-            <!-- 18 --> <div class="question-slide" data-question="18"><div class="question-content"><label class="question-label">¿Tienes alguna cirugía programada?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="cirugiaProgramada" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="cirugiaProgramada" value="NO" required><span>No</span></label></div></div></div>
-            <!-- 19 --> <div class="question-slide" data-question="19"><div class="question-content"><label class="question-label">¿Tienes alguna condición médica con tratamiento actual?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="condicionMedica" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="condicionMedica" value="NO" required><span>No</span></label></div></div></div>
-            <!-- 20 --> <div class="question-slide" data-question="20"><div class="question-content"><label class="question-label">¿Sufres de dolor de cabeza?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="dolorCabeza" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="dolorCabeza" value="NO" required><span>No</span></label></div></div></div>
-            <!-- 21 --> <div class="question-slide" data-question="21"><div class="question-content"><label class="question-label">¿Sufres de dolor de espalda?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="dolorEspalda" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="dolorEspalda" value="NO" required><span>No</span></label></div></div></div>
-            <!-- 22 --> <div class="question-slide" data-question="22"><div class="question-content"><label class="question-label">¿El ruido te produce jaqueca?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="ruidoJaqueca" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="ruidoJaqueca" value="NO" required><span>No</span></label></div></div></div>
-            <!-- 23 --> <div class="question-slide" data-question="23"><div class="question-content"><label class="question-label">¿Estás en embarazo actualmente?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="embarazo" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="embarazo" value="NO" required><span>No</span></label></div></div></div>
-            <!-- 24 --> <div class="question-slide" data-question="24"><div class="question-content"><label class="question-label">¿Has tenido enfermedades de hígado?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="enfermedadHigado" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="enfermedadHigado" value="NO" required><span>No</span></label></div></div></div>
-            <!-- 25 --> <div class="question-slide" data-question="25"><div class="question-content"><label class="question-label">¿Has tenido enfermedades pulmonares?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="enfermedadPulmonar" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="enfermedadPulmonar" value="NO" required><span>No</span></label></div></div></div>
-            <!-- 26 --> <div class="question-slide" data-question="26"><div class="question-content"><label class="question-label">¿Fumas o fumabas?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="fuma" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="fuma" value="NO" required><span>No</span></label></div></div></div>
-            <!-- 27 --> <div class="question-slide" data-question="27"><div class="question-content"><label class="question-label">¿Has tenido o tienes hernias?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="hernias" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="hernias" value="NO" required><span>No</span></label></div></div></div>
-            <!-- 28 --> <div class="question-slide" data-question="28"><div class="question-content"><label class="question-label">¿Tienes hormigueos musculares?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="hormigueos" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="hormigueos" value="NO" required><span>No</span></label></div></div></div>
-            <!-- 29 --> <div class="question-slide" data-question="29"><div class="question-content"><label class="question-label">¿Sufres de presión arterial alta?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="presionAlta" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="presionAlta" value="NO" required><span>No</span></label></div></div></div>
-            <!-- 30 --> <div class="question-slide" data-question="30"><div class="question-content"><label class="question-label">¿Tienes problemas azúcar?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="problemasAzucar" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="problemasAzucar" value="NO" required><span>No</span></label></div></div></div>
-            <!-- 31 --> <div class="question-slide" data-question="31"><div class="question-content"><label class="question-label">¿Tienes problemas cardíacos?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="problemasCardiacos" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="problemasCardiacos" value="NO" required><span>No</span></label></div></div></div>
-            <!-- 32 --> <div class="question-slide" data-question="32"><div class="question-content"><label class="question-label">¿Tienes problemas de sueño?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="problemasSueno" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="problemasSueno" value="NO" required><span>No</span></label></div></div></div>
-            <!-- 33 --> <div class="question-slide" data-question="33"><div class="question-content"><label class="question-label">¿Usas anteojos?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="usaAnteojos" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="usaAnteojos" value="NO" required><span>No</span></label></div></div></div>
-            <!-- 34 --> <div class="question-slide" data-question="34"><div class="question-content"><label class="question-label">¿Usas lentes de contacto?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="usaLentesContacto" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="usaLentesContacto" value="NO" required><span>No</span></label></div></div></div>
-            <!-- 35 --> <div class="question-slide" data-question="35"><div class="question-content"><label class="question-label">¿Tienes várices?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="varices" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="varices" value="NO" required><span>No</span></label></div></div></div>
-            <!-- 36 --> <div class="question-slide" data-question="36"><div class="question-content"><label class="question-label">¿Has tenido hepatitis?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="hepatitis" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="hepatitis" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 18 --> <div class="question-slide" data-question="21"><div class="question-content"><label class="question-label">¿Tienes alguna cirugía programada?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="cirugiaProgramada" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="cirugiaProgramada" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 19 --> <div class="question-slide" data-question="22"><div class="question-content"><label class="question-label">¿Tienes alguna condición médica con tratamiento actual?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="condicionMedica" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="condicionMedica" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 20 --> <div class="question-slide" data-question="23"><div class="question-content"><label class="question-label">¿Sufres de dolor de cabeza?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="dolorCabeza" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="dolorCabeza" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 21 --> <div class="question-slide" data-question="24"><div class="question-content"><label class="question-label">¿Sufres de dolor de espalda?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="dolorEspalda" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="dolorEspalda" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 22 --> <div class="question-slide" data-question="25"><div class="question-content"><label class="question-label">¿El ruido te produce jaqueca?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="ruidoJaqueca" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="ruidoJaqueca" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 23 --> <div class="question-slide" data-question="26"><div class="question-content"><label class="question-label">¿Estás en embarazo actualmente?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="embarazo" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="embarazo" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 24 --> <div class="question-slide" data-question="27"><div class="question-content"><label class="question-label">¿Has tenido enfermedades de hígado?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="enfermedadHigado" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="enfermedadHigado" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 25 --> <div class="question-slide" data-question="28"><div class="question-content"><label class="question-label">¿Has tenido enfermedades pulmonares?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="enfermedadPulmonar" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="enfermedadPulmonar" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 26 --> <div class="question-slide" data-question="29"><div class="question-content"><label class="question-label">¿Fumas o fumabas?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="fuma" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="fuma" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 27 --> <div class="question-slide" data-question="30"><div class="question-content"><label class="question-label">¿Has tenido o tienes hernias?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="hernias" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="hernias" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 28 --> <div class="question-slide" data-question="31"><div class="question-content"><label class="question-label">¿Tienes hormigueos musculares?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="hormigueos" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="hormigueos" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 29 --> <div class="question-slide" data-question="32"><div class="question-content"><label class="question-label">¿Sufres de presión arterial alta?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="presionAlta" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="presionAlta" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 30 --> <div class="question-slide" data-question="33"><div class="question-content"><label class="question-label">¿Tienes problemas azúcar?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="problemasAzucar" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="problemasAzucar" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 31 --> <div class="question-slide" data-question="34"><div class="question-content"><label class="question-label">¿Tienes problemas cardíacos?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="problemasCardiacos" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="problemasCardiacos" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 32 --> <div class="question-slide" data-question="35"><div class="question-content"><label class="question-label">¿Tienes problemas de sueño?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="problemasSueno" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="problemasSueno" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 33 --> <div class="question-slide" data-question="36"><div class="question-content"><label class="question-label">¿Usas anteojos?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="usaAnteojos" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="usaAnteojos" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 34 --> <div class="question-slide" data-question="37"><div class="question-content"><label class="question-label">¿Usas lentes de contacto?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="usaLentesContacto" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="usaLentesContacto" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 35 --> <div class="question-slide" data-question="38"><div class="question-content"><label class="question-label">¿Tienes várices?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="varices" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="varices" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 36 --> <div class="question-slide" data-question="39"><div class="question-content"><label class="question-label">¿Has tenido hepatitis?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="hepatitis" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="hepatitis" value="NO" required><span>No</span></label></div></div></div>
 
             <!-- Antecedentes Familiares -->
-            <!-- 37 --> <div class="question-slide" data-question="37"><div class="question-content"><label class="question-label">¿En tu familia hay enfermedades hereditarias?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="familiaHereditarias" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="familiaHereditarias" value="NO" required><span>No</span></label></div></div></div>
-            <!-- 38 --> <div class="question-slide" data-question="38"><div class="question-content"><label class="question-label">¿En tu familia hay enfermedades genéticas?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="familiaGeneticas" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="familiaGeneticas" value="NO" required><span>No</span></label></div></div></div>
-            <!-- 39 --> <div class="question-slide" data-question="39"><div class="question-content"><label class="question-label">¿En tu familia hay diabetes?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="familiaDiabetes" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="familiaDiabetes" value="NO" required><span>No</span></label></div></div></div>
-            <!-- 40 --> <div class="question-slide" data-question="40"><div class="question-content"><label class="question-label">¿En tu familia hay hipertensión?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="familiaHipertension" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="familiaHipertension" value="NO" required><span>No</span></label></div></div></div>
-            <!-- 41 --> <div class="question-slide" data-question="41"><div class="question-content"><label class="question-label">¿En tu familia ha habido infartos?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="familiaInfartos" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="familiaInfartos" value="NO" required><span>No</span></label></div></div></div>
-            <!-- 42 --> <div class="question-slide" data-question="42"><div class="question-content"><label class="question-label">¿En tu familia hay antecedentes de cáncer?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="familiaCancer" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="familiaCancer" value="NO" required><span>No</span></label></div></div></div>
-            <!-- 43 --> <div class="question-slide" data-question="43"><div class="question-content"><label class="question-label">¿En tu familia ha habido trastornos mentales o psicológicos?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="familiaTrastornos" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="familiaTrastornos" value="NO" required><span>No</span></label></div></div></div>
-            <!-- 44 --> <div class="question-slide" data-question="44"><div class="question-content"><label class="question-label">¿En tu familia ha habido enfermedades infecciosas?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="familiaInfecciosas" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="familiaInfecciosas" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 37 --> <div class="question-slide" data-question="40"><div class="question-content"><label class="question-label">¿En tu familia hay enfermedades hereditarias?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="familiaHereditarias" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="familiaHereditarias" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 38 --> <div class="question-slide" data-question="41"><div class="question-content"><label class="question-label">¿En tu familia hay enfermedades genéticas?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="familiaGeneticas" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="familiaGeneticas" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 39 --> <div class="question-slide" data-question="42"><div class="question-content"><label class="question-label">¿En tu familia hay diabetes?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="familiaDiabetes" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="familiaDiabetes" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 40 --> <div class="question-slide" data-question="43"><div class="question-content"><label class="question-label">¿En tu familia hay hipertensión?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="familiaHipertension" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="familiaHipertension" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 41 --> <div class="question-slide" data-question="44"><div class="question-content"><label class="question-label">¿En tu familia ha habido infartos?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="familiaInfartos" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="familiaInfartos" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 42 --> <div class="question-slide" data-question="45"><div class="question-content"><label class="question-label">¿En tu familia hay antecedentes de cáncer?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="familiaCancer" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="familiaCancer" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 43 --> <div class="question-slide" data-question="46"><div class="question-content"><label class="question-label">¿En tu familia ha habido trastornos mentales o psicológicos?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="familiaTrastornos" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="familiaTrastornos" value="NO" required><span>No</span></label></div></div></div>
+            <!-- 44 --> <div class="question-slide" data-question="47"><div class="question-content"><label class="question-label">¿En tu familia ha habido enfermedades infecciosas?</label><div class="options-grid options-si-no"><label class="option-card"><input type="radio" name="familiaInfecciosas" value="SI" required><span>Sí</span></label><label class="option-card"><input type="radio" name="familiaInfecciosas" value="NO" required><span>No</span></label></div></div></div>
 
-            <!-- 45. Firma -->
-            <div class="question-slide" data-question="45">
+            <!-- 48. Firma -->
+            <div class="question-slide" data-question="48">
                 <div class="question-content">
                     <label class="question-label">Firma con tu dedo o con el mouse</label>
                     <div class="signature-container">
@@ -282,8 +306,8 @@
                 </div>
             </div>
 
-            <!-- 46. Boletín WhatsApp -->
-            <div class="question-slide" data-question="46">
+            <!-- 49. Boletín WhatsApp -->
+            <div class="question-slide" data-question="49">
                 <div class="question-content">
                     <label class="question-label">¿Te gustaría recibir consejos de tu médico directamente en tu WhatsApp SIN costo? (Recomendado)</label>
                     <select name="inscripcionBoletin" class="question-select" required>
@@ -294,8 +318,8 @@
                 </div>
             </div>
 
-            <!-- 47. Upload Foto -->
-            <div class="question-slide" data-question="47">
+            <!-- 50. Upload Foto -->
+            <div class="question-slide" data-question="50">
                 <div class="question-content">
                     <label class="question-label">Sube una foto de tu cara</label>
                     <div class="upload-container">

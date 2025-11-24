@@ -199,7 +199,7 @@ app.post('/api/formulario', async (req, res) => {
                 empresa, cod_empresa, fecha_atencion,
                 genero, edad, fecha_nacimiento, lugar_nacimiento, ciudad_residencia,
                 hijos, profesion_oficio, empresa1, empresa2, estado_civil,
-                nivel_educativo, email, estatura, peso, ejercicio,
+                nivel_educativo, email, eps, arl, pensiones, estatura, peso, ejercicio,
                 cirugia_ocular, consumo_licor, cirugia_programada, condicion_medica,
                 dolor_cabeza, dolor_espalda, ruido_jaqueca, embarazo,
                 enfermedad_higado, enfermedad_pulmonar, fuma, hernias,
@@ -214,7 +214,7 @@ app.post('/api/formulario', async (req, res) => {
                 $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
                 $31, $32, $33, $34, $35, $36, $37, $38, $39, $40,
                 $41, $42, $43, $44, $45, $46, $47, $48, $49, $50,
-                $51, $52, $53, $54, $55
+                $51, $52, $53, $54, $55, $56, $57, $58
             ) RETURNING id
         `;
 
@@ -223,7 +223,7 @@ app.post('/api/formulario', async (req, res) => {
             datos.empresa, datos.codEmpresa, datos.fechaAtencion,
             datos.genero, datos.edad, datos.fechaNacimiento, datos.lugarDeNacimiento, datos.ciudadDeResidencia,
             datos.hijos, datos.profesionUOficio, datos.empresa1, datos.empresa2, datos.estadoCivil,
-            datos.nivelEducativo, datos.email, datos.estatura, datos.peso, datos.ejercicio,
+            datos.nivelEducativo, datos.email, datos.eps, datos.arl, datos.pensiones, datos.estatura, datos.peso, datos.ejercicio,
             datos.cirugiaOcular, datos.consumoLicor, datos.cirugiaProgramada, datos.condicionMedica,
             datos.dolorCabeza, datos.dolorEspalda, datos.ruidoJaqueca, datos.embarazo,
             datos.enfermedadHigado, datos.enfermedadPulmonar, datos.fuma, datos.hernias,
@@ -500,13 +500,16 @@ app.put('/api/formularios/:id', async (req, res) => {
                 hijos = COALESCE($7, hijos),
                 nivel_educativo = COALESCE($8, nivel_educativo),
                 email = COALESCE($9, email),
-                profesion_oficio = COALESCE($10, profesion_oficio),
-                empresa1 = COALESCE($11, empresa1),
-                empresa2 = COALESCE($12, empresa2),
-                estatura = COALESCE($13, estatura),
-                peso = COALESCE($14, peso),
-                ejercicio = COALESCE($15, ejercicio)
-            WHERE id = $16
+                eps = COALESCE($10, eps),
+                arl = COALESCE($11, arl),
+                pensiones = COALESCE($12, pensiones),
+                profesion_oficio = COALESCE($13, profesion_oficio),
+                empresa1 = COALESCE($14, empresa1),
+                empresa2 = COALESCE($15, empresa2),
+                estatura = COALESCE($16, estatura),
+                peso = COALESCE($17, peso),
+                ejercicio = COALESCE($18, ejercicio)
+            WHERE id = $19
             RETURNING *
         `;
 
@@ -520,6 +523,9 @@ app.put('/api/formularios/:id', async (req, res) => {
             datos.hijos,
             datos.nivel_educativo,
             datos.email,
+            datos.eps,
+            datos.arl,
+            datos.pensiones,
             datos.profesion_oficio,
             datos.empresa1,
             datos.empresa2,
