@@ -946,28 +946,62 @@
 
                 ${form.historiaClinica ? `
                     <div style="margin: 32px 0; padding: 16px; background: linear-gradient(135deg, #10B981 0%, #059669 100%); border-radius: 12px; text-align: center;">
-                        <h3 style="color: white; font-size: 20px; font-weight: 700; margin: 0;">📋 Datos de la Consulta Médica</h3>
+                        <h3 style="color: white; font-size: 20px; font-weight: 700; margin: 0;">📋 Datos de Historia Clínica</h3>
                     </div>
 
-                    ${form.historiaClinica.motivoConsulta || form.historiaClinica.fechaAtencion ? `
-                        <div class="detalles-section">
-                            <div class="detalles-section-title">Información General</div>
-                            <div class="detalles-grid">
-                                ${form.historiaClinica.fechaAtencion ? `
-                                    <div class="detalle-item">
-                                        <div class="detalle-label">Fecha de Atención</div>
-                                        <div class="detalle-value">${form.historiaClinica.fechaAtencion}</div>
-                                    </div>
-                                ` : ''}
-                                ${form.historiaClinica.motivoConsulta ? `
-                                    <div class="detalle-item" style="grid-column: 1 / -1;">
-                                        <div class="detalle-label">Motivo de Consulta</div>
-                                        <div class="detalle-value">${form.historiaClinica.motivoConsulta}</div>
-                                    </div>
-                                ` : ''}
-                            </div>
+                    <div class="detalles-section">
+                        <div class="detalles-section-title">Información de la Consulta</div>
+                        <div class="detalles-grid">
+                            ${form.historiaClinica.tipoExamen ? `
+                                <div class="detalle-item">
+                                    <div class="detalle-label">Tipo de Examen</div>
+                                    <div class="detalle-value">${form.historiaClinica.tipoExamen}</div>
+                                </div>
+                            ` : ''}
+                            ${form.historiaClinica.cargo ? `
+                                <div class="detalle-item">
+                                    <div class="detalle-label">Cargo</div>
+                                    <div class="detalle-value">${form.historiaClinica.cargo}</div>
+                                </div>
+                            ` : ''}
+                            ${form.historiaClinica.medico ? `
+                                <div class="detalle-item">
+                                    <div class="detalle-label">Médico</div>
+                                    <div class="detalle-value">${form.historiaClinica.medico}</div>
+                                </div>
+                            ` : ''}
+                            ${form.historiaClinica.atendido ? `
+                                <div class="detalle-item">
+                                    <div class="detalle-label">Estado Atención</div>
+                                    <div class="detalle-value">${form.historiaClinica.atendido}</div>
+                                </div>
+                            ` : ''}
+                            ${form.historiaClinica.pvEstado ? `
+                                <div class="detalle-item">
+                                    <div class="detalle-label">Estado PV</div>
+                                    <div class="detalle-value">${form.historiaClinica.pvEstado}</div>
+                                </div>
+                            ` : ''}
+                            ${form.historiaClinica.fechaAtencion ? `
+                                <div class="detalle-item">
+                                    <div class="detalle-label">Fecha de Atención</div>
+                                    <div class="detalle-value">${new Date(form.historiaClinica.fechaAtencion).toLocaleString('es-CO')}</div>
+                                </div>
+                            ` : ''}
+                            ${form.historiaClinica.fechaConsulta ? `
+                                <div class="detalle-item">
+                                    <div class="detalle-label">Fecha de Consulta</div>
+                                    <div class="detalle-value">${new Date(form.historiaClinica.fechaConsulta).toLocaleString('es-CO')}</div>
+                                </div>
+                            ` : ''}
+                            ${form.historiaClinica.motivoConsulta ? `
+                                <div class="detalle-item" style="grid-column: 1 / -1;">
+                                    <div class="detalle-label">Motivo de Consulta</div>
+                                    <div class="detalle-value">${form.historiaClinica.motivoConsulta}</div>
+                                </div>
+                            ` : ''}
                         </div>
-                    ` : ''}
+                    </div>
 
                     ${form.historiaClinica.talla || form.historiaClinica.peso ? `
                         <div class="detalles-section">
