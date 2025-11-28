@@ -36,8 +36,14 @@ function sendWhatsAppMessage(toNumber, messageBody) {
     });
 }
 
-// Función para enviar alertas de preguntas críticas
+// Función para enviar alertas de preguntas críticas (solo para empresa SIIGO)
 async function enviarAlertasPreguntasCriticas(datos) {
+    // Solo enviar alertas si la empresa es SIIGO
+    if (datos.codEmpresa !== "SIIGO") {
+        console.log('ℹ️ Alertas WhatsApp omitidas - Empresa:', datos.codEmpresa || 'No especificada', '(solo aplica para SIIGO)');
+        return;
+    }
+
     const alertas = [];
 
     // Verificar cada pregunta nueva y agregar alertas si es afirmativa
