@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const videoModal = document.getElementById('videoModal');
     const introVideo = document.getElementById('introVideo');
     const skipVideoBtn = document.getElementById('skipVideoBtn');
+    const playVideoBtn = document.getElementById('playVideoBtn');
 
     // Función para cerrar el modal de video
     function closeVideoModal() {
@@ -14,6 +15,26 @@ document.addEventListener('DOMContentLoaded', async function() {
         setTimeout(() => {
             videoModal.style.display = 'none';
         }, 500);
+    }
+
+    // Botón de play para iniciar el video
+    if (playVideoBtn && introVideo) {
+        playVideoBtn.addEventListener('click', function() {
+            introVideo.play();
+            playVideoBtn.classList.add('hidden');
+        });
+
+        // Mostrar botón de play si el video se pausa
+        introVideo.addEventListener('pause', function() {
+            if (!videoModal.classList.contains('hidden')) {
+                playVideoBtn.classList.remove('hidden');
+            }
+        });
+
+        // Ocultar botón de play cuando el video está reproduciéndose
+        introVideo.addEventListener('play', function() {
+            playVideoBtn.classList.add('hidden');
+        });
     }
 
     // Cerrar modal cuando termina el video

@@ -41,6 +41,41 @@
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
+.play-video-btn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80px;
+    height: 80px;
+    background: rgba(0, 184, 230, 0.9);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+.play-video-btn svg {
+    width: 40px;
+    height: 40px;
+    color: white;
+    margin-left: 5px;
+}
+
+.play-video-btn:hover {
+    background: rgba(0, 184, 230, 1);
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
+.play-video-btn.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
 .skip-video-btn {
     margin-top: 20px;
     padding: 12px 32px;
