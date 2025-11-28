@@ -1040,18 +1040,76 @@ app.put('/api/historia-clinica/:id', async (req, res) => {
         `;
 
         const result = await pool.query(query, values);
+        const historiaActualizada = result.rows[0];
 
-        console.log('✅ HistoriaClinica actualizada exitosamente');
-        console.log('   _id:', result.rows[0]._id);
-        console.log('   numeroId:', result.rows[0].numeroId);
-        console.log('   primerNombre:', result.rows[0].primerNombre);
+        console.log('✅ POSTGRESQL: HistoriaClinica actualizada exitosamente');
+        console.log('   _id:', historiaActualizada._id);
+        console.log('   numeroId:', historiaActualizada.numeroId);
+        console.log('   primerNombre:', historiaActualizada.primerNombre);
         console.log('═══════════════════════════════════════════════════════════');
+
+        // Sincronizar con Wix
+        try {
+            const fetch = (await import('node-fetch')).default;
+
+            // Preparar payload para Wix (el _id de PostgreSQL es el mismo que el de Wix)
+            const wixPayload = {
+                _id: id,
+                ...datos
+            };
+
+            console.log('📤 Sincronizando HistoriaClinica con Wix...');
+            console.log('📦 Payload:', JSON.stringify(wixPayload, null, 2));
+
+            const wixResponse = await fetch('https://www.bsl.com.co/_functions/actualizarHistoriaClinica', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(wixPayload)
+            });
+
+            console.log('📡 Respuesta de Wix - Status:', wixResponse.status);
+
+            if (wixResponse.ok) {
+                const wixResult = await wixResponse.json();
+                console.log('');
+                console.log('═══════════════════════════════════════════════════════════');
+                console.log('✅ WIX: HistoriaClinica sincronizada exitosamente');
+                console.log('   _id:', id);
+                console.log('   Respuesta:', JSON.stringify(wixResult, null, 2));
+                console.log('═══════════════════════════════════════════════════════════');
+                console.log('');
+            } else {
+                const errorText = await wixResponse.text();
+                console.log('');
+                console.log('═══════════════════════════════════════════════════════════');
+                console.error('❌ WIX: ERROR al sincronizar HistoriaClinica');
+                console.error('   Status:', wixResponse.status);
+                console.error('   Response:', errorText);
+                console.log('═══════════════════════════════════════════════════════════');
+                console.log('');
+            }
+        } catch (wixError) {
+            console.log('');
+            console.log('═══════════════════════════════════════════════════════════');
+            console.error('❌ WIX: EXCEPCIÓN al sincronizar HistoriaClinica');
+            console.error('   Mensaje:', wixError.message);
+            console.log('═══════════════════════════════════════════════════════════');
+            console.log('');
+            // No bloqueamos la respuesta si Wix falla
+        }
+
+        console.log('');
+        console.log('🎉 RESUMEN: Actualización de HistoriaClinica completada');
+        console.log('   ✅ PostgreSQL: OK');
+        console.log('   ✅ Wix: Sincronizado');
         console.log('');
 
         res.json({
             success: true,
             message: 'HistoriaClinica actualizada correctamente',
-            data: result.rows[0]
+            data: historiaActualizada
         });
 
     } catch (error) {
