@@ -808,10 +808,36 @@ app.put('/api/formularios/:id', async (req, res) => {
     }
 });
 
-// Endpoint para marcar como atendido desde Wix (actualiza HistoriaClinica)
+// Endpoint para marcar como atendido desde Wix (upsert en HistoriaClinica)
 app.post('/api/marcar-atendido', async (req, res) => {
     try {
-        const { wixId, atendido, fechaConsulta, mdConceptoFinal, mdRecomendacionesMedicasAdicionales, mdObservacionesCertificado } = req.body;
+        const {
+            wixId,
+            atendido,
+            fechaConsulta,
+            mdConceptoFinal,
+            mdRecomendacionesMedicasAdicionales,
+            mdObservacionesCertificado,
+            // Campos adicionales para INSERT
+            numeroId,
+            primerNombre,
+            segundoNombre,
+            primerApellido,
+            segundoApellido,
+            celular,
+            email,
+            fechaNacimiento,
+            edad,
+            genero,
+            estadoCivil,
+            hijos,
+            ejercicio,
+            codEmpresa,
+            empresa,
+            cargo,
+            tipoExamen,
+            fechaAtencion
+        } = req.body;
 
         console.log('');
         console.log('═══════════════════════════════════════════════════════════');
@@ -831,39 +857,92 @@ app.post('/api/marcar-atendido', async (req, res) => {
         // Buscar en HistoriaClinica por _id (que es el wixId)
         const checkResult = await pool.query('SELECT "_id" FROM "HistoriaClinica" WHERE "_id" = $1', [wixId]);
 
-        if (checkResult.rows.length === 0) {
-            console.log('⚠️ No se encontró registro en HistoriaClinica con _id:', wixId);
-            return res.status(404).json({
-                success: false,
-                message: 'Registro no encontrado en HistoriaClinica con el wixId proporcionado'
-            });
+        let result;
+        let operacion;
+
+        if (checkResult.rows.length > 0) {
+            // UPDATE - El registro existe
+            operacion = 'UPDATE';
+            const updateQuery = `
+                UPDATE "HistoriaClinica" SET
+                    "atendido" = $1,
+                    "fechaConsulta" = $2,
+                    "mdConceptoFinal" = $3,
+                    "mdRecomendacionesMedicasAdicionales" = $4,
+                    "mdObservacionesCertificado" = $5,
+                    "_updatedDate" = NOW()
+                WHERE "_id" = $6
+                RETURNING "_id", "numeroId", "primerNombre"
+            `;
+
+            const updateValues = [
+                atendido || 'ATENDIDO',
+                fechaConsulta ? new Date(fechaConsulta) : new Date(),
+                mdConceptoFinal || null,
+                mdRecomendacionesMedicasAdicionales || null,
+                mdObservacionesCertificado || null,
+                wixId
+            ];
+
+            result = await pool.query(updateQuery, updateValues);
+        } else {
+            // INSERT - El registro no existe
+            operacion = 'INSERT';
+
+            // Validar campos mínimos requeridos para INSERT
+            if (!numeroId || !primerNombre || !primerApellido || !celular) {
+                console.log('⚠️ Faltan campos requeridos para INSERT');
+                return res.status(400).json({
+                    success: false,
+                    message: 'Para crear un nuevo registro se requieren: numeroId, primerNombre, primerApellido, celular'
+                });
+            }
+
+            const insertQuery = `
+                INSERT INTO "HistoriaClinica" (
+                    "_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
+                    "celular", "email", "fechaNacimiento", "edad", "genero", "estadoCivil", "hijos",
+                    "ejercicio", "codEmpresa", "empresa", "cargo", "tipoExamen", "fechaAtencion",
+                    "atendido", "fechaConsulta", "mdConceptoFinal", "mdRecomendacionesMedicasAdicionales",
+                    "mdObservacionesCertificado", "_createdDate", "_updatedDate"
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
+                    $20, $21, $22, $23, $24, NOW(), NOW()
+                )
+                RETURNING "_id", "numeroId", "primerNombre"
+            `;
+
+            const insertValues = [
+                wixId,
+                numeroId,
+                primerNombre,
+                segundoNombre || null,
+                primerApellido,
+                segundoApellido || null,
+                celular,
+                email || null,
+                fechaNacimiento ? new Date(fechaNacimiento) : null,
+                edad || null,
+                genero || null,
+                estadoCivil || null,
+                hijos || null,
+                ejercicio || null,
+                codEmpresa || null,
+                empresa || null,
+                cargo || null,
+                tipoExamen || null,
+                fechaAtencion ? new Date(fechaAtencion) : null,
+                atendido || 'ATENDIDO',
+                fechaConsulta ? new Date(fechaConsulta) : new Date(),
+                mdConceptoFinal || null,
+                mdRecomendacionesMedicasAdicionales || null,
+                mdObservacionesCertificado || null
+            ];
+
+            result = await pool.query(insertQuery, insertValues);
         }
 
-        // Actualizar HistoriaClinica
-        const query = `
-            UPDATE "HistoriaClinica" SET
-                "atendido" = $1,
-                "fechaConsulta" = $2,
-                "mdConceptoFinal" = $3,
-                "mdRecomendacionesMedicasAdicionales" = $4,
-                "mdObservacionesCertificado" = $5,
-                "_updatedDate" = NOW()
-            WHERE "_id" = $6
-            RETURNING "_id", "numeroId", "primerNombre"
-        `;
-
-        const values = [
-            atendido || 'ATENDIDO',
-            fechaConsulta ? new Date(fechaConsulta) : new Date(),
-            mdConceptoFinal || null,
-            mdRecomendacionesMedicasAdicionales || null,
-            mdObservacionesCertificado || null,
-            wixId
-        ];
-
-        const result = await pool.query(query, values);
-
-        console.log('✅ HistoriaClinica marcada como ATENDIDO');
+        console.log(`✅ HistoriaClinica ${operacion === 'INSERT' ? 'CREADA' : 'ACTUALIZADA'} como ATENDIDO`);
         console.log('   _id:', result.rows[0]._id);
         console.log('   numeroId:', result.rows[0].numeroId);
         console.log('   primerNombre:', result.rows[0].primerNombre);
@@ -872,7 +951,8 @@ app.post('/api/marcar-atendido', async (req, res) => {
 
         res.json({
             success: true,
-            message: 'HistoriaClinica actualizada como ATENDIDO',
+            message: `HistoriaClinica ${operacion === 'INSERT' ? 'creada' : 'actualizada'} como ATENDIDO`,
+            operacion: operacion,
             data: {
                 _id: result.rows[0]._id,
                 numeroId: result.rows[0].numeroId,
