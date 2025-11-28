@@ -449,6 +449,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         for (let [key, value] of formData.entries()) {
             // Saltar el campo de foto (file) por ahora
             if (key !== 'foto') {
+                // Normalizar peso: convertir coma a punto para decimales
+                if (key === 'peso' && typeof value === 'string') {
+                    value = value.replace(',', '.');
+                }
                 datos[key] = value;
             }
         }
