@@ -808,10 +808,10 @@ app.put('/api/formularios/:id', async (req, res) => {
     }
 });
 
-// Endpoint para marcar como atendido desde Wix
+// Endpoint para marcar como atendido desde Wix (actualiza HistoriaClinica)
 app.post('/api/marcar-atendido', async (req, res) => {
     try {
-        const { wixId, atendido, fechaConsulta, mdConceptoFinal, mdRecomendacionesMedicasAdicionales, mdObservacionesCertificado, certificadoEnviado } = req.body;
+        const { wixId, atendido, fechaConsulta, mdConceptoFinal, mdRecomendacionesMedicasAdicionales, mdObservacionesCertificado } = req.body;
 
         console.log('');
         console.log('═══════════════════════════════════════════════════════════');
@@ -828,47 +828,28 @@ app.post('/api/marcar-atendido', async (req, res) => {
             });
         }
 
-        // Verificar si necesitamos agregar columnas nuevas
-        const columnsToAdd = [
-            'atendido VARCHAR(50)',
-            'fecha_consulta TIMESTAMP',
-            'md_concepto_final TEXT',
-            'md_recomendaciones_medicas TEXT',
-            'md_observaciones_certificado TEXT',
-            'certificado_enviado BOOLEAN'
-        ];
-
-        for (const column of columnsToAdd) {
-            const columnName = column.split(' ')[0];
-            try {
-                await pool.query(`ALTER TABLE formularios ADD COLUMN IF NOT EXISTS ${column}`);
-            } catch (err) {
-                // Columna ya existe
-            }
-        }
-
-        // Buscar el formulario por wix_id
-        const checkResult = await pool.query('SELECT id FROM formularios WHERE wix_id = $1', [wixId]);
+        // Buscar en HistoriaClinica por _id (que es el wixId)
+        const checkResult = await pool.query('SELECT "_id" FROM "HistoriaClinica" WHERE "_id" = $1', [wixId]);
 
         if (checkResult.rows.length === 0) {
-            console.log('⚠️ No se encontró formulario con wix_id:', wixId);
+            console.log('⚠️ No se encontró registro en HistoriaClinica con _id:', wixId);
             return res.status(404).json({
                 success: false,
-                message: 'Formulario no encontrado con el wixId proporcionado'
+                message: 'Registro no encontrado en HistoriaClinica con el wixId proporcionado'
             });
         }
 
-        // Actualizar el formulario
+        // Actualizar HistoriaClinica
         const query = `
-            UPDATE formularios SET
-                atendido = $1,
-                fecha_consulta = $2,
-                md_concepto_final = $3,
-                md_recomendaciones_medicas = $4,
-                md_observaciones_certificado = $5,
-                certificado_enviado = $6
-            WHERE wix_id = $7
-            RETURNING id
+            UPDATE "HistoriaClinica" SET
+                "atendido" = $1,
+                "fechaConsulta" = $2,
+                "mdConceptoFinal" = $3,
+                "mdRecomendacionesMedicasAdicionales" = $4,
+                "mdObservacionesCertificado" = $5,
+                "_updatedDate" = NOW()
+            WHERE "_id" = $6
+            RETURNING "_id", "numeroId", "primerNombre"
         `;
 
         const values = [
@@ -877,21 +858,26 @@ app.post('/api/marcar-atendido', async (req, res) => {
             mdConceptoFinal || null,
             mdRecomendacionesMedicasAdicionales || null,
             mdObservacionesCertificado || null,
-            certificadoEnviado || false,
             wixId
         ];
 
         const result = await pool.query(query, values);
 
-        console.log('✅ Formulario marcado como ATENDIDO');
-        console.log('   ID:', result.rows[0].id);
+        console.log('✅ HistoriaClinica marcada como ATENDIDO');
+        console.log('   _id:', result.rows[0]._id);
+        console.log('   numeroId:', result.rows[0].numeroId);
+        console.log('   primerNombre:', result.rows[0].primerNombre);
         console.log('═══════════════════════════════════════════════════════════');
         console.log('');
 
         res.json({
             success: true,
-            message: 'Formulario actualizado como ATENDIDO',
-            data: { id: result.rows[0].id }
+            message: 'HistoriaClinica actualizada como ATENDIDO',
+            data: {
+                _id: result.rows[0]._id,
+                numeroId: result.rows[0].numeroId,
+                primerNombre: result.rows[0].primerNombre
+            }
         });
 
     } catch (error) {
