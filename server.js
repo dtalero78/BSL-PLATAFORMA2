@@ -494,16 +494,22 @@ app.get('/api/formularios', async (req, res) => {
         // Solo seleccionar los campos necesarios para la vista resumida
         // IMPORTANTE: No incluir 'foto' aquí porque son imágenes base64 muy grandes
         // que pueden causar errores de memoria cuando hay muchos registros
+        // LEFT JOIN con HistoriaClinica para obtener fechaConsulta y atendido
         const result = await pool.query(`
             SELECT
-                id,
-                numero_id,
-                celular,
-                primer_nombre,
-                primer_apellido,
-                cod_empresa
-            FROM formularios
-            ORDER BY fecha_registro DESC
+                f.id,
+                f.numero_id,
+                f.celular,
+                f.primer_nombre,
+                f.primer_apellido,
+                f.cod_empresa,
+                f.wix_id,
+                f.fecha_registro,
+                hc."fechaConsulta" as fecha_consulta,
+                hc."atendido" as estado_atencion
+            FROM formularios f
+            LEFT JOIN "HistoriaClinica" hc ON f.wix_id = hc."_id"
+            ORDER BY f.fecha_registro DESC
         `);
 
         res.json({

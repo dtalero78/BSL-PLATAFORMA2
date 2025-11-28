@@ -525,11 +525,94 @@
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
+
+        /* Estilos del buscador */
+        .search-container {
+            margin-bottom: 32px;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-input-wrapper {
+            flex: 1;
+            min-width: 280px;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 14px 20px 14px 50px;
+            border: 2px solid #E5E7EB;
+            border-radius: 12px;
+            font-size: 16px;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s ease;
+            background: white;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #00B8E6;
+            box-shadow: 0 0 0 4px rgba(0, 184, 230, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+            color: #9CA3AF;
+        }
+
+        .search-stats {
+            background: #EEF2FF;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #4F46E5;
+            font-weight: 500;
+        }
+
+        .fecha-consulta-badge {
+            display: inline-block;
+            background: #10B981;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .fecha-consulta-badge.pendiente {
+            background: #F59E0B;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6B7280;
+            font-size: 18px;
+            grid-column: 1 / -1;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>📋 Formularios Guardados</h1>
+
+        <!-- Buscador -->
+        <div class="search-container">
+            <div class="search-input-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchInput" class="search-input" placeholder="Buscar por nombre, cédula, teléfono o empresa..." oninput="filtrarFormularios()">
+            </div>
+            <div class="search-stats" id="searchStats">Total: 0 registros</div>
+        </div>
+
         <div id="loading" class="loading">Cargando formularios...</div>
         <div id="error" class="error" style="display: none;"></div>
         <div id="formularios" class="formularios-grid"></div>
@@ -1285,6 +1368,115 @@
             `;
         }
 
+        // Variable global para almacenar todos los formularios
+        let todosLosFormularios = [];
+
+        // Función para formatear fecha
+        function formatearFecha(fecha) {
+            if (!fecha) return null;
+            const date = new Date(fecha);
+            return date.toLocaleDateString('es-CO', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Función para renderizar las cards
+        function renderizarCards(formularios) {
+            const container = document.getElementById('formularios');
+            container.innerHTML = '';
+
+            if (formularios.length === 0) {
+                container.innerHTML = '<div class="no-results">No se encontraron resultados para tu búsqueda</div>';
+                return;
+            }
+
+            formularios.forEach((form, index) => {
+                const card = document.createElement('div');
+                card.className = 'formulario-card';
+                card.id = `card-${form.id}`;
+                card.dataset.nombre = (form.primer_nombre || '').toLowerCase();
+                card.dataset.apellido = (form.primer_apellido || '').toLowerCase();
+                card.dataset.cedula = form.numero_id || '';
+                card.dataset.telefono = form.celular || '';
+                card.dataset.empresa = (form.cod_empresa || '').toLowerCase();
+
+                const fechaConsultaFormateada = formatearFecha(form.fecha_consulta);
+                const estadoAtencion = form.estado_atencion || 'PENDIENTE';
+
+                card.innerHTML = `
+                    <div class="card-summary">
+                        <div class="formulario-header">
+                            <div class="formulario-id">${form.primer_nombre || ''} ${form.primer_apellido || ''}</div>
+                        </div>
+
+                        <div class="summary-info">
+                            <div class="summary-dato">
+                                <span class="summary-dato-label">Cédula:</span>
+                                <span class="summary-dato-value">${form.numero_id || 'N/A'}</span>
+                            </div>
+                            <div class="summary-dato">
+                                <span class="summary-dato-label">Teléfono:</span>
+                                <span class="summary-dato-value">${form.celular || 'N/A'}</span>
+                            </div>
+                            <div class="summary-dato">
+                                <span class="summary-dato-label">Empresa:</span>
+                                <span class="summary-dato-value">${form.cod_empresa || 'N/A'}</span>
+                            </div>
+                        </div>
+
+                        ${fechaConsultaFormateada ? `
+                            <div class="fecha-consulta-badge ${estadoAtencion === 'ATENDIDO' ? '' : 'pendiente'}">
+                                📅 Consulta: ${fechaConsultaFormateada}
+                            </div>
+                        ` : `
+                            <div class="fecha-consulta-badge pendiente">
+                                ⏳ Sin fecha de consulta
+                            </div>
+                        `}
+
+                        <button class="btn-expand" onclick="abrirModalDetalles(${form.id})">
+                            Ver detalles completos
+                        </button>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        // Función para filtrar formularios
+        function filtrarFormularios() {
+            const busqueda = document.getElementById('searchInput').value.toLowerCase().trim();
+
+            if (!busqueda) {
+                renderizarCards(todosLosFormularios);
+                document.getElementById('searchStats').textContent = `Total: ${todosLosFormularios.length} registros`;
+                return;
+            }
+
+            const resultados = todosLosFormularios.filter(form => {
+                const nombre = (form.primer_nombre || '').toLowerCase();
+                const apellido = (form.primer_apellido || '').toLowerCase();
+                const cedula = (form.numero_id || '').toString();
+                const telefono = (form.celular || '').toString();
+                const empresa = (form.cod_empresa || '').toLowerCase();
+
+                return nombre.includes(busqueda) ||
+                       apellido.includes(busqueda) ||
+                       cedula.includes(busqueda) ||
+                       telefono.includes(busqueda) ||
+                       empresa.includes(busqueda) ||
+                       `${nombre} ${apellido}`.includes(busqueda);
+            });
+
+            renderizarCards(resultados);
+            document.getElementById('searchStats').textContent = `Mostrando: ${resultados.length} de ${todosLosFormularios.length} registros`;
+        }
+
         async function cargarFormularios() {
             try {
                 const response = await fetch('/api/formularios');
@@ -1299,46 +1491,18 @@
 
                 if (!result.success || result.total === 0) {
                     document.getElementById('formularios').innerHTML = '<div class="no-data">No hay formularios guardados</div>';
+                    document.getElementById('searchStats').textContent = 'Total: 0 registros';
                     return;
                 }
 
-                const container = document.getElementById('formularios');
-                container.innerHTML = '';
+                // Guardar todos los formularios
+                todosLosFormularios = result.data;
 
-                result.data.forEach((form, index) => {
-                    const card = document.createElement('div');
-                    card.className = 'formulario-card';
-                    card.id = `card-${index}`;
+                // Actualizar stats
+                document.getElementById('searchStats').textContent = `Total: ${todosLosFormularios.length} registros`;
 
-                    card.innerHTML = `
-                        <div class="card-summary">
-                            <div class="formulario-header">
-                                <div class="formulario-id">${form.primer_nombre || ''} ${form.primer_apellido || ''}</div>
-                            </div>
-
-                            <div class="summary-info">
-                                <div class="summary-dato">
-                                    <span class="summary-dato-label">Cédula:</span>
-                                    <span class="summary-dato-value">${form.numero_id || 'N/A'}</span>
-                                </div>
-                                <div class="summary-dato">
-                                    <span class="summary-dato-label">Teléfono:</span>
-                                    <span class="summary-dato-value">${form.celular || 'N/A'}</span>
-                                </div>
-                                <div class="summary-dato">
-                                    <span class="summary-dato-label">Empresa:</span>
-                                    <span class="summary-dato-value">${form.cod_empresa || 'N/A'}</span>
-                                </div>
-                            </div>
-
-                            <button class="btn-expand" onclick="abrirModalDetalles(${form.id})">
-                                Ver detalles completos
-                            </button>
-                        </div>
-                    `;
-
-                    container.appendChild(card);
-                });
+                // Renderizar las cards
+                renderizarCards(todosLosFormularios);
 
             } catch (error) {
                 console.error('Error:', error);
