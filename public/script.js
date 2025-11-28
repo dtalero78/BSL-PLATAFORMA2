@@ -379,26 +379,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         e.preventDefault();
         console.log('📝 Formulario submit iniciado');
 
-        if (!validateCurrentSlide()) {
-            console.log('❌ Validación falló');
-            // El alert ya se muestra dentro de validateCurrentSlide()
-            // Asegurar que el botón esté habilitado para reintentar
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Enviar';
-            return;
-        }
-
-        // Forzar validación de campos críticos antes de verificar errores
-        // Esto dispara el evento blur en campos que el usuario pudo no haber tocado
-        const camposCriticos = form.querySelectorAll('[name="email"], [name="edad"], [name="peso"], [name="estatura"], [name="fechaNacimiento"]');
-        camposCriticos.forEach(campo => {
-            if (campo && campo.value) {
-                campo.dispatchEvent(new Event('blur'));
+        try {
+            if (!validateCurrentSlide()) {
+                console.log('❌ Validación falló');
+                // El alert ya se muestra dentro de validateCurrentSlide()
+                // Asegurar que el botón esté habilitado para reintentar
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Enviar';
+                return;
             }
-        });
 
-        // Verificar si hay campos con errores de validación
-        const camposConError = form.querySelectorAll('[data-valid="false"]');
+            // Verificar si hay campos con errores de validación previos
+            const camposConError = form.querySelectorAll('[data-valid="false"]');
         if (camposConError.length > 0) {
             console.log('❌ Hay campos con errores de validación:', camposConError.length);
 
@@ -417,6 +409,8 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             alert('Por favor corrige los errores en el formulario antes de enviar. Revisa el campo: ' + nombreCampo);
             primerCampoError.focus();
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Enviar';
             return;
         }
 
@@ -550,6 +544,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             } else {
                 alert('Por favor sube una foto antes de enviar.');
             }
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Enviar';
+        }
+
+        } catch (submitError) {
+            console.error('❌ Error inesperado en submit:', submitError);
+            alert('Ocurrió un error inesperado: ' + submitError.message + '. Por favor intenta de nuevo.');
             submitBtn.disabled = false;
             submitBtn.textContent = 'Enviar';
         }
