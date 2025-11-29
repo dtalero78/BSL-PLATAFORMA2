@@ -824,6 +824,90 @@ app.put('/api/formularios/:id', async (req, res) => {
     }
 });
 
+// Endpoint para eliminar un formulario y su historia clínica asociada
+app.delete('/api/formularios/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { numeroId } = req.body;
+
+        console.log('');
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('🗑️  ELIMINANDO REGISTRO');
+        console.log('   ID Formulario:', id);
+        console.log('   Número ID (Cédula):', numeroId);
+        console.log('═══════════════════════════════════════════════════════════');
+
+        // Verificar que el formulario existe
+        const checkResult = await pool.query('SELECT * FROM formularios WHERE id = $1', [id]);
+        if (checkResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Formulario no encontrado'
+            });
+        }
+
+        let historiaClinicaEliminada = false;
+
+        // Intentar eliminar la historia clínica asociada (si existe)
+        if (numeroId) {
+            try {
+                const hcResult = await pool.query(
+                    'DELETE FROM "HistoriaClinica" WHERE "numeroId" = $1 RETURNING *',
+                    [numeroId]
+                );
+                if (hcResult.rowCount > 0) {
+                    historiaClinicaEliminada = true;
+                    console.log('   ✅ Historia Clínica eliminada:', hcResult.rowCount, 'registro(s)');
+                } else {
+                    console.log('   ℹ️  No se encontró Historia Clínica asociada');
+                }
+            } catch (hcError) {
+                console.error('   ⚠️ Error al eliminar Historia Clínica:', hcError.message);
+                // Continuamos con la eliminación del formulario aunque falle la HC
+            }
+        }
+
+        // Eliminar el formulario
+        const deleteResult = await pool.query(
+            'DELETE FROM formularios WHERE id = $1 RETURNING *',
+            [id]
+        );
+
+        if (deleteResult.rowCount === 0) {
+            return res.status(500).json({
+                success: false,
+                message: 'No se pudo eliminar el formulario'
+            });
+        }
+
+        console.log('   ✅ Formulario eliminado correctamente');
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('');
+
+        let mensaje = 'Formulario eliminado correctamente';
+        if (historiaClinicaEliminada) {
+            mensaje += ' junto con su Historia Clínica asociada';
+        }
+
+        res.json({
+            success: true,
+            message: mensaje,
+            data: {
+                formularioEliminado: deleteResult.rows[0],
+                historiaClinicaEliminada: historiaClinicaEliminada
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Error al eliminar formulario:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al eliminar el formulario',
+            error: error.message
+        });
+    }
+});
+
 // Endpoint para marcar como atendido desde Wix (upsert en HistoriaClinica)
 app.post('/api/marcar-atendido', async (req, res) => {
     try {

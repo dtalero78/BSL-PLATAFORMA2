@@ -166,6 +166,26 @@
             transform: scale(0.98);
         }
 
+        .btn-eliminar {
+            background: #EF4444;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .btn-eliminar:hover {
+            background: #DC2626;
+        }
+
+        .btn-eliminar:active {
+            transform: scale(0.98);
+        }
+
         /* Estilos del modal */
         .modal-overlay {
             display: none;
@@ -897,9 +917,14 @@
                 <!-- El contenido se cargará dinámicamente -->
             </div>
             <div class="modal-detalles-footer">
-                <button class="btn-editar" id="btnEditarFromModal" style="margin-top: 0;">
-                    Editar Formulario
-                </button>
+                <div style="display: flex; gap: 12px;">
+                    <button class="btn-editar" id="btnEditarFromModal" style="margin-top: 0; flex: 1;">
+                        Editar Formulario
+                    </button>
+                    <button class="btn-eliminar" id="btnEliminarFromModal" style="margin-top: 0;">
+                        Eliminar
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -1179,6 +1204,7 @@
             const subtitulo = document.getElementById('modalDetallesSubtitulo');
             const contenido = document.getElementById('modalDetallesContenido');
             const btnEditar = document.getElementById('btnEditarFromModal');
+            const btnEliminar = document.getElementById('btnEliminarFromModal');
 
             // Actualizar título
             titulo.textContent = `${form.primer_nombre || ''} ${form.primer_apellido || 'Formulario'}`.trim();
@@ -1188,6 +1214,11 @@
             btnEditar.onclick = () => {
                 cerrarModalDetalles();
                 editarFormulario(form.id);
+            };
+
+            // Configurar botón eliminar
+            btnEliminar.onclick = () => {
+                eliminarFormulario(form.id, form.numero_id, form.primer_nombre, form.primer_apellido);
             };
 
             const fecha = new Date(form.fecha_registro).toLocaleString('es-CO');
@@ -1957,6 +1988,59 @@
             } finally {
                 btnGuardar.disabled = false;
                 btnGuardar.textContent = '💾 Guardar Cambios';
+            }
+        }
+
+        // Función para eliminar un formulario
+        async function eliminarFormulario(id, numeroId, primerNombre, primerApellido) {
+            const nombreCompleto = `${primerNombre || ''} ${primerApellido || ''}`.trim() || 'Sin nombre';
+
+            const confirmacion = confirm(
+                `¿Estás seguro de que deseas eliminar el registro de "${nombreCompleto}" (Cédula: ${numeroId || 'N/A'})?\n\n` +
+                `Esta acción eliminará:\n` +
+                `• El formulario de PostgreSQL\n` +
+                `• La historia clínica asociada (si existe)\n\n` +
+                `Esta acción NO se puede deshacer.`
+            );
+
+            if (!confirmacion) {
+                return;
+            }
+
+            // Segunda confirmación para mayor seguridad
+            const confirmacion2 = confirm(
+                `⚠️ ÚLTIMA CONFIRMACIÓN ⚠️\n\n` +
+                `¿Realmente deseas eliminar PERMANENTEMENTE el registro de "${nombreCompleto}"?`
+            );
+
+            if (!confirmacion2) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/formularios/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ numeroId: numeroId })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(`✅ Registro eliminado exitosamente.\n\n${result.message}`);
+                    cerrarModalDetalles();
+                    // Limpiar cache
+                    delete detallesCache[id];
+                    // Recargar los formularios
+                    cargarFormularios();
+                } else {
+                    alert('❌ Error al eliminar: ' + (result.error || 'Error desconocido'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('❌ Error al eliminar: ' + error.message);
             }
         }
 
