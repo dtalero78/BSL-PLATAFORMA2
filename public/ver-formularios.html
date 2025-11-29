@@ -186,6 +186,53 @@
             transform: scale(0.98);
         }
 
+        /* Botones de acciones rápidas en cards */
+        .card-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .btn-action {
+            background: transparent;
+            border: 1px solid #E5E7EB;
+            color: #6B7280;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            text-decoration: none;
+        }
+
+        .btn-action:hover {
+            background: #F3F4F6;
+            border-color: #D1D5DB;
+            color: #374151;
+        }
+
+        .btn-action.whatsapp:hover {
+            background: #DCFCE7;
+            border-color: #22C55E;
+            color: #16A34A;
+        }
+
+        .btn-action.download:hover {
+            background: #DBEAFE;
+            border-color: #3B82F6;
+            color: #2563EB;
+        }
+
+        .btn-action.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
         /* Estilos del modal */
         .modal-overlay {
             display: none;
@@ -1712,8 +1759,25 @@
                 const fechaConsultaFormateada = formatearFecha(form.fecha_consulta);
                 const estadoAtencion = form.estado_atencion || 'PENDIENTE';
 
+                const wixId = form.wix_id || '';
+                const hasWixId = wixId && wixId.trim() !== '';
+
                 card.innerHTML = `
                     <div class="card-summary">
+                        <div class="card-actions">
+                            <a href="https://bsl-utilidades-yp78a.ondigitalocean.app/static/solicitar-certificado.html?id=${wixId}"
+                               target="_blank"
+                               class="btn-action whatsapp ${!hasWixId ? 'disabled' : ''}"
+                               title="${hasWixId ? 'Enviar certificado por WhatsApp' : 'Sin Wix ID'}">
+                                📱 WhatsApp
+                            </a>
+                            <a href="https://bsl-utilidades-yp78a.ondigitalocean.app/generar-certificado-desde-wix/${wixId}"
+                               target="_blank"
+                               class="btn-action download ${!hasWixId ? 'disabled' : ''}"
+                               title="${hasWixId ? 'Descargar certificado' : 'Sin Wix ID'}">
+                                📥 Descargar
+                            </a>
+                        </div>
                         <div class="formulario-header">
                             <div class="formulario-id">${form.primer_nombre || ''} ${form.primer_apellido || ''}</div>
                         </div>
