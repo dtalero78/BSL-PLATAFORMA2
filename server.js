@@ -1408,33 +1408,99 @@ app.put('/api/historia-clinica/:id', async (req, res) => {
     }
 });
 
-// Endpoint para listar todas las HistoriaClinica (órdenes)
+// Endpoint para listar todas las HistoriaClinica (órdenes) + formularios sin sincronizar
 app.get('/api/historia-clinica/list', async (req, res) => {
     try {
-        console.log('📋 Listando todas las órdenes de HistoriaClinica...');
+        console.log('📋 Listando órdenes de HistoriaClinica + formularios...');
 
-        const result = await pool.query(`
+        // Obtener registros de HistoriaClinica
+        const historiaResult = await pool.query(`
             SELECT "_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
                    "celular", "cargo", "ciudad", "tipoExamen", "codEmpresa", "empresa", "medico",
-                   "atendido", "examenes", "_createdDate", "fechaConsulta"
+                   "atendido", "examenes", "_createdDate", "fechaConsulta", 'historia' as origen
             FROM "HistoriaClinica"
             ORDER BY "_createdDate" DESC
             LIMIT 500
         `);
 
-        console.log(`✅ Se encontraron ${result.rows.length} órdenes`);
+        // Obtener cédulas que ya están en HistoriaClinica
+        const cedulasHistoria = historiaResult.rows.map(r => r.numeroId).filter(Boolean);
+
+        // Obtener registros de formularios que NO están en HistoriaClinica
+        let formulariosResult = { rows: [] };
+        if (cedulasHistoria.length > 0) {
+            formulariosResult = await pool.query(`
+                SELECT
+                    id::text as "_id",
+                    numero_id as "numeroId",
+                    primer_nombre as "primerNombre",
+                    NULL as "segundoNombre",
+                    primer_apellido as "primerApellido",
+                    NULL as "segundoApellido",
+                    celular,
+                    NULL as "cargo",
+                    ciudad_residencia as "ciudad",
+                    NULL as "tipoExamen",
+                    cod_empresa as "codEmpresa",
+                    empresa,
+                    NULL as "medico",
+                    atendido,
+                    NULL as "examenes",
+                    fecha_registro as "_createdDate",
+                    fecha_consulta as "fechaConsulta",
+                    'formulario' as origen
+                FROM formularios
+                WHERE numero_id IS NOT NULL
+                AND numero_id NOT IN (${cedulasHistoria.map((_, i) => `$${i + 1}`).join(',')})
+                ORDER BY fecha_registro DESC
+                LIMIT 100
+            `, cedulasHistoria);
+        } else {
+            // Si no hay registros en HistoriaClinica, traer todos los formularios
+            formulariosResult = await pool.query(`
+                SELECT
+                    id::text as "_id",
+                    numero_id as "numeroId",
+                    primer_nombre as "primerNombre",
+                    NULL as "segundoNombre",
+                    primer_apellido as "primerApellido",
+                    NULL as "segundoApellido",
+                    celular,
+                    NULL as "cargo",
+                    ciudad_residencia as "ciudad",
+                    NULL as "tipoExamen",
+                    cod_empresa as "codEmpresa",
+                    empresa,
+                    NULL as "medico",
+                    atendido,
+                    NULL as "examenes",
+                    fecha_registro as "_createdDate",
+                    fecha_consulta as "fechaConsulta",
+                    'formulario' as origen
+                FROM formularios
+                WHERE numero_id IS NOT NULL
+                ORDER BY fecha_registro DESC
+                LIMIT 100
+            `);
+        }
+
+        // Combinar y ordenar por fecha
+        const todosLosRegistros = [...historiaResult.rows, ...formulariosResult.rows]
+            .sort((a, b) => new Date(b._createdDate) - new Date(a._createdDate));
+
+        console.log(`✅ HistoriaClinica: ${historiaResult.rows.length}, Formularios sin sincronizar: ${formulariosResult.rows.length}`);
 
         res.json({
             success: true,
-            total: result.rows.length,
-            data: result.rows
+            total: todosLosRegistros.length,
+            data: todosLosRegistros
         });
 
     } catch (error) {
-        console.error('❌ Error al listar HistoriaClinica:', error);
+        console.error('❌ Error al listar registros:', error);
         res.status(500).json({
             success: false,
-            message: 'Error al listar HistoriaClinica',
+            message: 'Error al listar registros',
             error: error.message
         });
     }
