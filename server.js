@@ -1506,30 +1506,67 @@ app.get('/api/historia-clinica/list', async (req, res) => {
     }
 });
 
-// Endpoint para obtener HistoriaClinica por _id
+// Endpoint para obtener HistoriaClinica o Formulario por _id
 app.get('/api/historia-clinica/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
-        const result = await pool.query('SELECT * FROM "HistoriaClinica" WHERE "_id" = $1', [id]);
+        // Primero buscar en HistoriaClinica
+        const historiaResult = await pool.query('SELECT *, \'historia\' as origen FROM "HistoriaClinica" WHERE "_id" = $1', [id]);
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Registro no encontrado en HistoriaClinica'
+        if (historiaResult.rows.length > 0) {
+            return res.json({
+                success: true,
+                data: historiaResult.rows[0]
             });
         }
 
-        res.json({
-            success: true,
-            data: result.rows[0]
+        // Si no está en HistoriaClinica, buscar en formularios (el id es numérico)
+        const formResult = await pool.query(`
+            SELECT
+                id::text as "_id",
+                numero_id as "numeroId",
+                primer_nombre as "primerNombre",
+                NULL as "segundoNombre",
+                primer_apellido as "primerApellido",
+                NULL as "segundoApellido",
+                celular,
+                NULL as "cargo",
+                ciudad_residencia as "ciudad",
+                NULL as "tipoExamen",
+                cod_empresa as "codEmpresa",
+                empresa,
+                NULL as "medico",
+                atendido,
+                NULL as "examenes",
+                fecha_registro as "_createdDate",
+                fecha_consulta as "fechaConsulta",
+                genero, edad, fecha_nacimiento as "fechaNacimiento", lugar_nacimiento as "lugarNacimiento",
+                hijos, profesion_oficio as "profesionOficio", estado_civil as "estadoCivil",
+                nivel_educativo as "nivelEducativo", email, estatura, peso, ejercicio,
+                eps, arl, pensiones,
+                'formulario' as origen
+            FROM formularios
+            WHERE id = $1
+        `, [id]);
+
+        if (formResult.rows.length > 0) {
+            return res.json({
+                success: true,
+                data: formResult.rows[0]
+            });
+        }
+
+        return res.status(404).json({
+            success: false,
+            message: 'Registro no encontrado'
         });
 
     } catch (error) {
-        console.error('❌ Error al obtener HistoriaClinica:', error);
+        console.error('❌ Error al obtener registro:', error);
         res.status(500).json({
             success: false,
-            message: 'Error al obtener HistoriaClinica',
+            message: 'Error al obtener registro',
             error: error.message
         });
     }
