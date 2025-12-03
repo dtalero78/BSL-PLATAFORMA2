@@ -1587,10 +1587,11 @@ app.get('/api/historia-clinica/:id', async (req, res) => {
             });
         }
 
-        // Si no está en HistoriaClinica, buscar en formularios (el id es numérico)
+        // Si no está en HistoriaClinica, buscar en formularios por wix_id o id numérico
         const formResult = await pool.query(`
             SELECT
-                id::text as "_id",
+                COALESCE(wix_id, id::text) as "_id",
+                id as "formId",
                 numero_id as "numeroId",
                 primer_nombre as "primerNombre",
                 NULL as "segundoNombre",
@@ -1613,7 +1614,7 @@ app.get('/api/historia-clinica/:id', async (req, res) => {
                 eps, arl, pensiones,
                 'formulario' as origen
             FROM formularios
-            WHERE id = $1
+            WHERE wix_id = $1 OR ($1 ~ '^[0-9]+$' AND id = $1::integer)
         `, [id]);
 
         if (formResult.rows.length > 0) {
