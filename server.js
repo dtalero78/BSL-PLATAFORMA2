@@ -1495,7 +1495,8 @@ app.get('/api/historia-clinica/list', async (req, res) => {
         if (cedulasHistoria.length > 0) {
             formulariosResult = await pool.query(`
                 SELECT
-                    id::text as "_id",
+                    COALESCE(wix_id, id::text) as "_id",
+                    id as "formId",
                     numero_id as "numeroId",
                     primer_nombre as "primerNombre",
                     NULL as "segundoNombre",
@@ -1523,7 +1524,8 @@ app.get('/api/historia-clinica/list', async (req, res) => {
             // Si no hay registros en HistoriaClinica, traer todos los formularios
             formulariosResult = await pool.query(`
                 SELECT
-                    id::text as "_id",
+                    COALESCE(wix_id, id::text) as "_id",
+                    id as "formId",
                     numero_id as "numeroId",
                     primer_nombre as "primerNombre",
                     NULL as "segundoNombre",
