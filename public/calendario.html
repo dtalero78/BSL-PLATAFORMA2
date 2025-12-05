@@ -383,6 +383,13 @@
             font-size: 11px;
             background: #EFF6FF;
             border-left: 3px solid #2563EB;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .event-badge:hover {
+            transform: scale(1.02);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
 
         .event-badge.atendido {
@@ -484,6 +491,38 @@
         .day-view-subtitle {
             font-size: 14px;
             color: #64748B;
+        }
+
+        .medico-filter-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #2563EB;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            margin-left: 12px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .medico-filter-badge:hover {
+            background: #1D4ED8;
+        }
+
+        .medico-filter-badge svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .medico-filter-badge svg:last-child {
+            opacity: 0.7;
+        }
+
+        .medico-filter-badge svg:last-child:hover {
+            opacity: 1;
         }
 
         .day-view-stats {
@@ -1086,8 +1125,11 @@
                         estadoClass = 'atendido';
                     }
 
+                    // Escapar el nombre del médico para usarlo en onclick
+                    const medicoEscapado = medico.replace(/'/g, "\\'");
+
                     html += `
-                        <div class="event-badge ${estadoClass}">
+                        <div class="event-badge ${estadoClass}" onclick="event.stopPropagation(); abrirVistaAgendaMedico('${fecha}', '${medicoEscapado}')">
                             <span class="doctor-name">${nombreCorto}</span>
                             <span class="count">${total}</span>
                         </div>
@@ -1116,52 +1158,77 @@
 
         // ========== VISTA AGENDA DEL DIA ==========
 
-        function abrirVistaAgenda(date) {
+        let medicoFiltrado = null;
+
+        function abrirVistaAgenda(date, medico = null) {
             selectedDate = new Date(date);
+            medicoFiltrado = medico;
             document.getElementById('calendarView').classList.add('hidden');
             document.getElementById('dayView').classList.add('active');
-            actualizarTitulosAgenda(selectedDate);
-            cargarCitasDia(selectedDate);
+            actualizarTitulosAgenda(selectedDate, medico);
+            cargarCitasDia(selectedDate, medico);
             feather.replace();
+        }
+
+        function abrirVistaAgendaMedico(fechaStr, medico) {
+            const date = new Date(fechaStr + 'T12:00:00');
+            abrirVistaAgenda(date, medico);
         }
 
         function volverACalendario() {
             document.getElementById('dayView').classList.remove('active');
             document.getElementById('calendarView').classList.remove('hidden');
             selectedDate = null;
+            medicoFiltrado = null;
             feather.replace();
+        }
+
+        function quitarFiltroMedico() {
+            medicoFiltrado = null;
+            actualizarTitulosAgenda(selectedDate, null);
+            cargarCitasDia(selectedDate, null);
         }
 
         function cambiarDia(delta) {
             selectedDate.setDate(selectedDate.getDate() + delta);
-            actualizarTitulosAgenda(selectedDate);
-            cargarCitasDia(selectedDate);
+            actualizarTitulosAgenda(selectedDate, medicoFiltrado);
+            cargarCitasDia(selectedDate, medicoFiltrado);
         }
 
         function irAHoyAgenda() {
             selectedDate = new Date();
-            actualizarTitulosAgenda(selectedDate);
-            cargarCitasDia(selectedDate);
+            actualizarTitulosAgenda(selectedDate, medicoFiltrado);
+            cargarCitasDia(selectedDate, medicoFiltrado);
         }
 
-        function actualizarTitulosAgenda(date) {
+        function actualizarTitulosAgenda(date, medico = null) {
             const diaSemana = diasSemana[date.getDay()];
             const dia = date.getDate();
             const mes = meses[date.getMonth()];
             const year = date.getFullYear();
 
             document.getElementById('dayViewPageTitle').textContent = `${dia} de ${mes}`;
-            document.getElementById('dayViewTitle').textContent = `${diaSemana} ${dia} de ${mes} de ${year}`;
+
+            let titulo = `${diaSemana} ${dia} de ${mes} de ${year}`;
+            if (medico) {
+                titulo += ` <span class="medico-filter-badge" onclick="quitarFiltroMedico()"><i data-feather="user"></i> ${medico} <i data-feather="x"></i></span>`;
+            }
+            document.getElementById('dayViewTitle').innerHTML = titulo;
+            feather.replace();
         }
 
-        async function cargarCitasDia(date) {
+        async function cargarCitasDia(date, medico = null) {
             const dateStr = formatDate(date);
             const timeline = document.getElementById('timeline');
 
             timeline.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><p>Cargando agenda...</p></div>';
 
             try {
-                const response = await fetch(`/api/calendario/dia?fecha=${dateStr}`);
+                let url = `/api/calendario/dia?fecha=${dateStr}`;
+                if (medico) {
+                    url += `&medico=${encodeURIComponent(medico)}`;
+                }
+                const response = await fetch(url);
                 const result = await response.json();
 
                 if (result.success) {
