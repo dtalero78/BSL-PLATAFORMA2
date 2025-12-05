@@ -1342,38 +1342,48 @@
                 return;
             }
 
+            // Agrupar citas por hora (solo HH, sin minutos)
             const citasPorHora = {};
             citas.forEach(cita => {
-                const hora = cita.hora || 'Sin hora';
-                if (!citasPorHora[hora]) citasPorHora[hora] = [];
-                citasPorHora[hora].push(cita);
+                let horaKey = 'Sin hora';
+                if (cita.hora) {
+                    // Extraer solo la hora (primeros 2 caracteres) para agrupar
+                    const horaNum = parseInt(cita.hora.split(':')[0]);
+                    horaKey = `${String(horaNum).padStart(2, '0')}:00`;
+                }
+                if (!citasPorHora[horaKey]) citasPorHora[horaKey] = [];
+                citasPorHora[horaKey].push(cita);
             });
 
             let html = '';
-            for (let h = 6; h <= 18; h++) {
+            // Mostrar desde las 6am hasta las 11pm (23:00)
+            for (let h = 6; h <= 23; h++) {
                 const horaStr = `${String(h).padStart(2, '0')}:00`;
                 const citasHora = citasPorHora[horaStr] || [];
 
-                html += `
-                    <div class="timeline-hour">
-                        <div class="timeline-hour-label">${horaStr}</div>
-                        <div class="timeline-hour-content">
-                            ${citasHora.length > 0 ?
-                                citasHora.map(cita => `
-                                    <div class="appointment-card ${getEstadoClase(cita, selectedDate)}">
-                                        <div class="patient-name">${cita.nombre}</div>
-                                        <div class="patient-info">CC: ${cita.cedula} ${cita.empresa ? `• ${cita.empresa}` : ''}</div>
-                                        <div class="appointment-meta">
-                                            <span class="doctor-name"><i data-feather="user"></i> ${cita.medico || 'Sin médico'}</span>
-                                            <span class="exam-type">${cita.tipoExamen || 'Examen'}</span>
+                // Solo mostrar la hora si tiene citas o está en horario laboral típico (6-18)
+                if (citasHora.length > 0 || h <= 18) {
+                    html += `
+                        <div class="timeline-hour">
+                            <div class="timeline-hour-label">${horaStr}</div>
+                            <div class="timeline-hour-content">
+                                ${citasHora.length > 0 ?
+                                    citasHora.map(cita => `
+                                        <div class="appointment-card ${getEstadoClase(cita, selectedDate)}">
+                                            <div class="patient-name">${cita.nombre}</div>
+                                            <div class="patient-info">CC: ${cita.cedula} ${cita.empresa ? `• ${cita.empresa}` : ''}</div>
+                                            <div class="appointment-meta">
+                                                <span class="doctor-name"><i data-feather="user"></i> ${cita.medico || 'Sin médico'}</span>
+                                                <span class="exam-type">${cita.tipoExamen || 'Examen'}${cita.hora ? ` • ${cita.hora}` : ''}</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                `).join('') :
-                                '<div class="empty-hour">—</div>'
-                            }
+                                    `).join('') :
+                                    '<div class="empty-hour">—</div>'
+                                }
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
+                }
             }
 
             const sinHora = citasPorHora['Sin hora'] || [];
