@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Empresas - BSL Sistema Médico</title>
+    <title>Exámenes - BSL Sistema Médico</title>
     <style>
         * {
             margin: 0;
@@ -44,14 +44,6 @@
         .sidebar-logo img {
             max-width: 140px;
             height: auto;
-        }
-
-        .sidebar-logo span {
-            display: block;
-            font-size: 11px;
-            color: #6B7280;
-            font-weight: 400;
-            margin-top: 8px;
         }
 
         .sidebar-nav {
@@ -156,10 +148,21 @@
             margin-bottom: 32px;
         }
 
+        .page-header-left {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
         .page-title {
             font-size: 24px;
             font-weight: 600;
             color: #111827;
+        }
+
+        .page-subtitle {
+            font-size: 14px;
+            color: #6B7280;
         }
 
         .btn {
@@ -216,14 +219,14 @@
         }
 
         th, td {
-            padding: 14px 20px;
+            padding: 16px 20px;
             text-align: left;
         }
 
         th {
             background: #F9FAFB;
-            font-size: 12px;
             font-weight: 600;
+            font-size: 13px;
             color: #6B7280;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -231,9 +234,9 @@
         }
 
         td {
-            font-size: 14px;
-            color: #1F2937;
             border-bottom: 1px solid #F3F4F6;
+            font-size: 14px;
+            color: #374151;
         }
 
         tr:last-child td {
@@ -244,24 +247,89 @@
             background: #F9FAFB;
         }
 
-        .empresa-code {
-            font-family: monospace;
-            background: #E6F7FA;
-            color: #0099B2;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 13px;
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
             font-weight: 500;
         }
 
-        .table-actions {
+        .badge-active {
+            background: #DCFCE7;
+            color: #166534;
+        }
+
+        .badge-inactive {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        .actions {
             display: flex;
             gap: 8px;
         }
 
-        .table-actions .btn {
-            padding: 6px 12px;
-            font-size: 13px;
+        .btn-icon {
+            padding: 8px;
+            border-radius: 6px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: #6B7280;
+            transition: all 0.15s ease;
+        }
+
+        .btn-icon:hover {
+            background: #F3F4F6;
+            color: #111827;
+        }
+
+        .btn-icon.delete:hover {
+            background: #FEE2E2;
+            color: #DC2626;
+        }
+
+        .btn-icon svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Loading and Empty states */
+        .loading-state, .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #E5E7EB;
+            border-top-color: #2563EB;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state-icon {
+            margin-bottom: 16px;
+        }
+
+        .empty-state-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .empty-state-text {
+            color: #6B7280;
+            margin-bottom: 24px;
         }
 
         /* Modal */
@@ -272,7 +340,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.5);
             z-index: 1000;
             align-items: center;
             justify-content: center;
@@ -284,9 +352,9 @@
 
         .modal-content {
             background: white;
-            border-radius: 16px;
+            border-radius: 12px;
             width: 90%;
-            max-width: 600px;
+            max-width: 450px;
             max-height: 90vh;
             overflow-y: auto;
         }
@@ -309,14 +377,14 @@
             background: none;
             border: none;
             font-size: 24px;
-            color: #6B7280;
+            color: #9CA3AF;
             cursor: pointer;
             padding: 4px;
             line-height: 1;
         }
 
         .modal-close:hover {
-            color: #111827;
+            color: #374151;
         }
 
         .modal-body {
@@ -331,110 +399,53 @@
             gap: 12px;
         }
 
-        /* Form */
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-        }
-
         .form-group {
-            display: flex;
-            flex-direction: column;
+            margin-bottom: 20px;
         }
 
-        .form-group.full-width {
-            grid-column: 1 / -1;
+        .form-group:last-child {
+            margin-bottom: 0;
         }
 
         .form-label {
-            font-size: 13px;
+            display: block;
+            font-size: 14px;
             font-weight: 500;
             color: #374151;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
         }
 
-        .form-label .required {
-            color: #EF4444;
-            margin-left: 2px;
-        }
-
-        .form-input,
-        .form-select,
-        .form-textarea {
+        .form-input {
+            width: 100%;
             padding: 10px 14px;
             border: 1px solid #D1D5DB;
             border-radius: 8px;
             font-size: 14px;
             color: #1F2937;
             transition: all 0.15s ease;
-            font-family: inherit;
         }
 
-        .form-input:focus,
-        .form-select:focus,
-        .form-textarea:focus {
+        .form-input:focus {
             outline: none;
-            border-color: #0099B2;
-            box-shadow: 0 0 0 3px rgba(0, 153, 178, 0.1);
+            border-color: #2563EB;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
-        .form-textarea {
-            min-height: 100px;
-            resize: vertical;
-        }
-
-        /* Empty state */
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        .empty-state-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
-        }
-
-        .empty-state-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #111827;
-            margin-bottom: 8px;
-        }
-
-        .empty-state-text {
-            color: #6B7280;
-            font-size: 14px;
-            margin-bottom: 24px;
-        }
-
-        /* Loading */
-        .loading-state {
-            text-align: center;
-            padding: 60px 20px;
-        }
-
-        .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid #E5E7EB;
-            border-top-color: #0099B2;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin: 0 auto 16px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .page-header-left {
+        .form-checkbox {
             display: flex;
-            flex-direction: column;
-            gap: 12px;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-checkbox input {
+            width: 18px;
+            height: 18px;
+            accent-color: #2563EB;
+        }
+
+        .form-checkbox label {
+            font-size: 14px;
+            color: #374151;
         }
 
         /* Responsive */
@@ -443,28 +454,28 @@
                 display: none;
             }
 
+            .top-bar {
+                left: 0;
+            }
+
             .main-content {
                 margin-left: 0;
                 padding: 20px;
+                padding-top: 84px;
             }
 
             .page-header {
                 flex-direction: column;
-                gap: 16px;
                 align-items: flex-start;
-            }
-
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .modal-content {
-                width: 95%;
-                margin: 20px;
+                gap: 16px;
             }
 
             .table-container {
                 overflow-x: auto;
+            }
+
+            table {
+                min-width: 500px;
             }
         }
     </style>
@@ -476,7 +487,6 @@
         <aside class="sidebar">
             <div class="sidebar-logo">
                 <img src="/bsl-logo.png" alt="BSL - Bienestar & Salud Laboral">
-                <span>Sistema Médico</span>
             </div>
             <nav class="sidebar-nav">
                 <a href="/" class="nav-item">
@@ -496,16 +506,16 @@
                     Calendario
                 </a>
                 <a href="/medicos.html" class="nav-item">
-                    <i data-feather="users"></i>
+                    <i data-feather="user-check"></i>
                     Médicos
                 </a>
-                <a href="/examenes.html" class="nav-item">
-                    <i data-feather="activity"></i>
-                    Exámenes
-                </a>
-                <a href="/empresas.html" class="nav-item active">
+                <a href="/empresas.html" class="nav-item">
                     <i data-feather="briefcase"></i>
                     Empresas
+                </a>
+                <a href="/examenes.html" class="nav-item active">
+                    <i data-feather="activity"></i>
+                    Exámenes
                 </a>
             </nav>
         </aside>
@@ -522,24 +532,27 @@
         <main class="main-content">
             <div class="page-header">
                 <div class="page-header-left">
-                    <h1 class="page-title">Gestión de Empresas</h1>
+                    <h1 class="page-title">Gestión de Exámenes</h1>
+                    <p class="page-subtitle">Administra los tipos de exámenes médicos disponibles</p>
                 </div>
                 <button class="btn btn-primary" onclick="abrirModalNuevo()">
-                    <i data-feather="plus"></i> Nueva Empresa
+                    <i data-feather="plus"></i> Nuevo Examen
                 </button>
             </div>
 
             <div id="loadingState" class="loading-state">
                 <div class="loading-spinner"></div>
-                <p>Cargando empresas...</p>
+                <p>Cargando exámenes...</p>
             </div>
 
             <div id="emptyState" class="empty-state" style="display: none;">
-                <div class="empty-state-icon"><i data-feather="briefcase" style="width:48px;height:48px;stroke:#9CA3AF;"></i></div>
-                <h3 class="empty-state-title">No hay empresas registradas</h3>
-                <p class="empty-state-text">Agrega la primera empresa para comenzar</p>
+                <div class="empty-state-icon">
+                    <i data-feather="activity" style="width: 48px; height: 48px; stroke: #9CA3AF;"></i>
+                </div>
+                <h3 class="empty-state-title">No hay exámenes registrados</h3>
+                <p class="empty-state-text">Agrega el primer examen para comenzar</p>
                 <button class="btn btn-primary" onclick="abrirModalNuevo()">
-                    <i data-feather="plus"></i> Nueva Empresa
+                    <i data-feather="plus"></i> Nuevo Examen
                 </button>
             </div>
 
@@ -547,58 +560,50 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Código</th>
-                            <th>Empresa</th>
-                            <th>NIT</th>
-                            <th>Profesiograma</th>
+                            <th>Nombre del Examen</th>
+                            <th>Estado</th>
+                            <th>Fecha Creación</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
-                    <tbody id="empresasBody"></tbody>
+                    <tbody id="tableBody">
+                    </tbody>
                 </table>
             </div>
         </main>
     </div>
 
     <!-- Modal Crear/Editar -->
-    <div class="modal" id="modalEmpresa">
+    <div id="modalExamen" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title" id="modalTitle">Nueva Empresa</h2>
+                <h2 class="modal-title" id="modalTitle">Nuevo Examen</h2>
                 <button class="modal-close" onclick="cerrarModal()">&times;</button>
             </div>
-            <form id="formEmpresa">
-                <div class="modal-body">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label">Código Empresa <span class="required">*</span></label>
-                            <input type="text" class="form-input" name="codEmpresa" required placeholder="Ej: SIIGO">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">NIT</label>
-                            <input type="text" class="form-input" name="nit" placeholder="Ej: 900.123.456-7">
-                        </div>
-                        <div class="form-group full-width">
-                            <label class="form-label">Nombre Empresa <span class="required">*</span></label>
-                            <input type="text" class="form-input" name="empresa" required placeholder="Nombre completo de la empresa">
-                        </div>
-                        <div class="form-group full-width">
-                            <label class="form-label">Profesiograma</label>
-                            <textarea class="form-textarea" name="profesiograma" placeholder="Descripción del profesiograma o requerimientos especiales..."></textarea>
+            <div class="modal-body">
+                <form id="formExamen">
+                    <div class="form-group">
+                        <label class="form-label">Nombre del Examen *</label>
+                        <input type="text" class="form-input" id="inputNombre" required placeholder="Ej: Audiometría">
+                    </div>
+                    <div class="form-group">
+                        <div class="form-checkbox">
+                            <input type="checkbox" id="inputActivo" checked>
+                            <label for="inputActivo">Examen activo</label>
                         </div>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
-                    <button type="submit" class="btn btn-primary" id="btnGuardar">Guardar</button>
-                </div>
-            </form>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="guardarExamen()">Guardar</button>
+            </div>
         </div>
     </div>
 
     <script>
-        let empresas = [];
-        let empresaEditando = null;
+        let examenes = [];
+        let examenEditando = null;
 
         // Buscar órdenes globalmente
         function buscarGlobal(event) {
@@ -610,167 +615,152 @@
             }
         }
 
-        // Cargar empresas al iniciar
+        // Cargar exámenes al iniciar
         document.addEventListener('DOMContentLoaded', () => {
             feather.replace();
-            cargarEmpresas();
+            cargarExamenes();
         });
 
-        async function cargarEmpresas() {
+        async function cargarExamenes() {
             try {
-                const response = await fetch('/api/empresas');
-                const result = await response.json();
+                const response = await fetch('/api/examenes');
+                const data = await response.json();
 
                 document.getElementById('loadingState').style.display = 'none';
 
-                if (!result.success || result.total === 0) {
+                if (data.length > 0) {
+                    examenes = data;
+                    renderExamenes();
+                } else {
                     document.getElementById('emptyState').style.display = 'block';
-                    document.getElementById('tableContainer').style.display = 'none';
-                    return;
                 }
-
-                empresas = result.data;
-                renderEmpresas();
-
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Error al cargar exámenes:', error);
                 document.getElementById('loadingState').innerHTML = `
-                    <div class="empty-state-icon">⚠️</div>
-                    <p>Error al cargar empresas</p>
+                    <p style="color: #EF4444;">Error al cargar los exámenes</p>
                 `;
             }
         }
 
-        function renderEmpresas() {
-            const tbody = document.getElementById('empresasBody');
+        function renderExamenes() {
+            const tbody = document.getElementById('tableBody');
             document.getElementById('emptyState').style.display = 'none';
             document.getElementById('tableContainer').style.display = 'block';
 
-            tbody.innerHTML = empresas.map(empresa => `
+            tbody.innerHTML = examenes.map(examen => `
                 <tr>
-                    <td><span class="empresa-code">${empresa.cod_empresa}</span></td>
-                    <td>${empresa.empresa}</td>
-                    <td>${empresa.nit || '—'}</td>
-                    <td>${empresa.profesiograma ? empresa.profesiograma.substring(0, 50) + (empresa.profesiograma.length > 50 ? '...' : '') : '—'}</td>
+                    <td><strong>${examen.nombre}</strong></td>
                     <td>
-                        <div class="table-actions">
-                            <button class="btn btn-secondary" onclick="editarEmpresa(${empresa.id})">✏️ Editar</button>
-                            <button class="btn btn-danger" onclick="eliminarEmpresa(${empresa.id}, '${empresa.empresa}')">🗑️</button>
+                        <span class="badge ${examen.activo ? 'badge-active' : 'badge-inactive'}">
+                            ${examen.activo ? 'Activo' : 'Inactivo'}
+                        </span>
+                    </td>
+                    <td>${new Date(examen.created_at).toLocaleDateString('es-CO')}</td>
+                    <td>
+                        <div class="actions">
+                            <button class="btn-icon" onclick="editarExamen(${examen.id})" title="Editar">
+                                <i data-feather="edit-2"></i>
+                            </button>
+                            <button class="btn-icon delete" onclick="eliminarExamen(${examen.id}, '${examen.nombre.replace(/'/g, "\\'")}')" title="Eliminar">
+                                <i data-feather="trash-2"></i>
+                            </button>
                         </div>
                     </td>
                 </tr>
             `).join('');
+
+            feather.replace();
         }
 
         function abrirModalNuevo() {
-            empresaEditando = null;
-            document.getElementById('modalTitle').textContent = 'Nueva Empresa';
-            document.getElementById('formEmpresa').reset();
-            document.getElementById('modalEmpresa').classList.add('active');
+            examenEditando = null;
+            document.getElementById('modalTitle').textContent = 'Nuevo Examen';
+            document.getElementById('inputNombre').value = '';
+            document.getElementById('inputActivo').checked = true;
+            document.getElementById('modalExamen').classList.add('active');
         }
 
-        async function editarEmpresa(id) {
-            try {
-                const response = await fetch(`/api/empresas/${id}`);
-                const result = await response.json();
+        function editarExamen(id) {
+            const examen = examenes.find(e => e.id === id);
+            if (!examen) return;
 
-                if (!result.success) {
-                    alert('Error al cargar empresa');
-                    return;
-                }
-
-                const empresa = result.data;
-                empresaEditando = id;
-
-                document.getElementById('modalTitle').textContent = 'Editar Empresa';
-
-                const form = document.getElementById('formEmpresa');
-                form.codEmpresa.value = empresa.cod_empresa || '';
-                form.empresa.value = empresa.empresa || '';
-                form.nit.value = empresa.nit || '';
-                form.profesiograma.value = empresa.profesiograma || '';
-
-                document.getElementById('modalEmpresa').classList.add('active');
-
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error al cargar empresa');
-            }
+            examenEditando = examen;
+            document.getElementById('modalTitle').textContent = 'Editar Examen';
+            document.getElementById('inputNombre').value = examen.nombre;
+            document.getElementById('inputActivo').checked = examen.activo;
+            document.getElementById('modalExamen').classList.add('active');
         }
 
         function cerrarModal() {
-            document.getElementById('modalEmpresa').classList.remove('active');
+            document.getElementById('modalExamen').classList.remove('active');
+            examenEditando = null;
         }
 
-        document.getElementById('formEmpresa').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        async function guardarExamen() {
+            const nombre = document.getElementById('inputNombre').value.trim();
+            const activo = document.getElementById('inputActivo').checked;
 
-            const form = e.target;
-            const datos = {
-                codEmpresa: form.codEmpresa.value,
-                empresa: form.empresa.value,
-                nit: form.nit.value || null,
-                profesiograma: form.profesiograma.value || null
-            };
-
-            const btnGuardar = document.getElementById('btnGuardar');
-            btnGuardar.disabled = true;
-            btnGuardar.textContent = 'Guardando...';
-
-            try {
-                const url = empresaEditando ? `/api/empresas/${empresaEditando}` : '/api/empresas';
-                const method = empresaEditando ? 'PUT' : 'POST';
-
-                const response = await fetch(url, {
-                    method: method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(datos)
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    cerrarModal();
-                    cargarEmpresas();
-                } else {
-                    alert(result.message || 'Error al guardar');
-                }
-
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error al guardar empresa');
-            } finally {
-                btnGuardar.disabled = false;
-                btnGuardar.textContent = 'Guardar';
-            }
-        });
-
-        async function eliminarEmpresa(id, nombre) {
-            if (!confirm(`¿Estás seguro de eliminar la empresa "${nombre}"?`)) {
+            if (!nombre) {
+                alert('El nombre del examen es requerido');
                 return;
             }
 
             try {
-                const response = await fetch(`/api/empresas/${id}`, {
-                    method: 'DELETE'
-                });
+                let response;
+                if (examenEditando) {
+                    // Actualizar
+                    response = await fetch(`/api/examenes/${examenEditando.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ nombre, activo })
+                    });
+                } else {
+                    // Crear nuevo
+                    response = await fetch('/api/examenes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ nombre })
+                    });
+                }
 
                 const result = await response.json();
 
-                if (result.success) {
-                    cargarEmpresas();
+                if (response.ok) {
+                    cerrarModal();
+                    cargarExamenes();
                 } else {
-                    alert(result.message || 'Error al eliminar');
+                    alert(result.error || 'Error al guardar');
                 }
-
             } catch (error) {
                 console.error('Error:', error);
-                alert('Error al eliminar empresa');
+                alert('Error al guardar el examen');
+            }
+        }
+
+        async function eliminarExamen(id, nombre) {
+            if (!confirm(`¿Está seguro de eliminar el examen "${nombre}"?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/examenes/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    cargarExamenes();
+                } else {
+                    const result = await response.json();
+                    alert(result.error || 'Error al eliminar');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al eliminar el examen');
             }
         }
 
         // Cerrar modal al hacer clic fuera
-        document.getElementById('modalEmpresa').addEventListener('click', (e) => {
+        document.getElementById('modalExamen').addEventListener('click', (e) => {
             if (e.target.classList.contains('modal')) {
                 cerrarModal();
             }
