@@ -364,9 +364,9 @@
                     <span class="nav-icon">➕</span>
                     Nueva Orden
                 </a>
-                <a href="/ver-historia-clinica.html" class="nav-item">
-                    <span class="nav-icon">🏥</span>
-                    Historia Clínica
+                <a href="/medicos.html" class="nav-item">
+                    <span class="nav-icon">👨‍⚕️</span>
+                    Médicos
                 </a>
             </nav>
         </aside>
@@ -465,7 +465,9 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Médico</label>
-                                <input type="text" class="form-input" name="medico" placeholder="Nombre del médico">
+                                <select class="form-select" name="medico" id="selectMedico">
+                                    <option value="">Seleccionar médico...</option>
+                                </select>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Fecha de Atención</label>
@@ -498,6 +500,29 @@
         const errorMessage = document.getElementById('errorMessage');
         const successText = document.getElementById('successText');
         const errorText = document.getElementById('errorText');
+
+        // Cargar médicos al iniciar
+        document.addEventListener('DOMContentLoaded', cargarMedicos);
+
+        async function cargarMedicos() {
+            try {
+                const response = await fetch('/api/medicos');
+                const result = await response.json();
+
+                if (result.success && result.data.length > 0) {
+                    const select = document.getElementById('selectMedico');
+                    result.data.forEach(medico => {
+                        const nombreCompleto = `${medico.primer_nombre} ${medico.primer_apellido}`;
+                        const option = document.createElement('option');
+                        option.value = nombreCompleto;
+                        option.textContent = `${nombreCompleto} - ${medico.numero_licencia}`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error al cargar médicos:', error);
+            }
+        }
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();

@@ -1851,6 +1851,211 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', database: 'connected' });
 });
 
+// ============================================
+// ENDPOINTS PARA MÉDICOS
+// ============================================
+
+// Listar todos los médicos activos
+app.get('/api/medicos', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido,
+                   numero_licencia, tipo_licencia, fecha_vencimiento_licencia, especialidad,
+                   activo, created_at
+            FROM medicos
+            WHERE activo = true
+            ORDER BY primer_apellido, primer_nombre
+        `);
+
+        res.json({
+            success: true,
+            total: result.rows.length,
+            data: result.rows
+        });
+    } catch (error) {
+        console.error('❌ Error al listar médicos:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al listar médicos',
+            error: error.message
+        });
+    }
+});
+
+// Obtener un médico por ID (incluye firma)
+app.get('/api/medicos/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query('SELECT * FROM medicos WHERE id = $1', [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Médico no encontrado'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: result.rows[0]
+        });
+    } catch (error) {
+        console.error('❌ Error al obtener médico:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener médico',
+            error: error.message
+        });
+    }
+});
+
+// Crear un nuevo médico
+app.post('/api/medicos', async (req, res) => {
+    try {
+        const {
+            primerNombre, segundoNombre, primerApellido, segundoApellido,
+            numeroLicencia, tipoLicencia, fechaVencimientoLicencia, especialidad, firma
+        } = req.body;
+
+        if (!primerNombre || !primerApellido || !numeroLicencia) {
+            return res.status(400).json({
+                success: false,
+                message: 'Campos requeridos: primerNombre, primerApellido, numeroLicencia'
+            });
+        }
+
+        const result = await pool.query(`
+            INSERT INTO medicos (
+                primer_nombre, segundo_nombre, primer_apellido, segundo_apellido,
+                numero_licencia, tipo_licencia, fecha_vencimiento_licencia, especialidad, firma
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            RETURNING *
+        `, [
+            primerNombre,
+            segundoNombre || null,
+            primerApellido,
+            segundoApellido || null,
+            numeroLicencia,
+            tipoLicencia || null,
+            fechaVencimientoLicencia ? new Date(fechaVencimientoLicencia) : null,
+            especialidad || null,
+            firma || null
+        ]);
+
+        console.log(`✅ Médico creado: ${primerNombre} ${primerApellido} (Licencia: ${numeroLicencia})`);
+
+        res.json({
+            success: true,
+            message: 'Médico creado exitosamente',
+            data: result.rows[0]
+        });
+    } catch (error) {
+        console.error('❌ Error al crear médico:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al crear médico',
+            error: error.message
+        });
+    }
+});
+
+// Actualizar un médico
+app.put('/api/medicos/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            primerNombre, segundoNombre, primerApellido, segundoApellido,
+            numeroLicencia, tipoLicencia, fechaVencimientoLicencia, especialidad, firma, activo
+        } = req.body;
+
+        const result = await pool.query(`
+            UPDATE medicos SET
+                primer_nombre = COALESCE($1, primer_nombre),
+                segundo_nombre = COALESCE($2, segundo_nombre),
+                primer_apellido = COALESCE($3, primer_apellido),
+                segundo_apellido = COALESCE($4, segundo_apellido),
+                numero_licencia = COALESCE($5, numero_licencia),
+                tipo_licencia = COALESCE($6, tipo_licencia),
+                fecha_vencimiento_licencia = COALESCE($7, fecha_vencimiento_licencia),
+                especialidad = COALESCE($8, especialidad),
+                firma = COALESCE($9, firma),
+                activo = COALESCE($10, activo),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $11
+            RETURNING *
+        `, [
+            primerNombre,
+            segundoNombre,
+            primerApellido,
+            segundoApellido,
+            numeroLicencia,
+            tipoLicencia,
+            fechaVencimientoLicencia ? new Date(fechaVencimientoLicencia) : null,
+            especialidad,
+            firma,
+            activo,
+            id
+        ]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Médico no encontrado'
+            });
+        }
+
+        console.log(`✅ Médico actualizado: ID ${id}`);
+
+        res.json({
+            success: true,
+            message: 'Médico actualizado exitosamente',
+            data: result.rows[0]
+        });
+    } catch (error) {
+        console.error('❌ Error al actualizar médico:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al actualizar médico',
+            error: error.message
+        });
+    }
+});
+
+// Eliminar (desactivar) un médico
+app.delete('/api/medicos/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const result = await pool.query(`
+            UPDATE medicos SET activo = false, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $1
+            RETURNING id, primer_nombre, primer_apellido
+        `, [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Médico no encontrado'
+            });
+        }
+
+        console.log(`✅ Médico desactivado: ID ${id}`);
+
+        res.json({
+            success: true,
+            message: 'Médico desactivado exitosamente',
+            data: result.rows[0]
+        });
+    } catch (error) {
+        console.error('❌ Error al desactivar médico:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al desactivar médico',
+            error: error.message
+        });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
     console.log(`📊 Base de datos: PostgreSQL en Digital Ocean`);
