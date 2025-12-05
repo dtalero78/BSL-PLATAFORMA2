@@ -101,7 +101,12 @@
 
         /* ========== HEADER ========== */
         .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 32px;
+            flex-wrap: wrap;
+            gap: 16px;
         }
 
         .page-title {
@@ -114,6 +119,43 @@
         .page-subtitle {
             font-size: 14px;
             color: #6B7280;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            border: none;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: #0099B2;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #007A8C;
+        }
+
+        .btn-secondary {
+            background: #F3F4F6;
+            color: #374151;
+        }
+
+        .btn-secondary:hover {
+            background: #E5E7EB;
         }
 
         /* ========== TABS & FILTERS ========== */
@@ -1190,21 +1232,17 @@
                     <span class="nav-icon">📝</span>
                     Formulario Médico
                 </a>
-                <a href="/ver-formularios.html" class="nav-item active">
+                <a href="/ordenes.html" class="nav-item active">
                     <span class="nav-icon">📋</span>
-                    Formularios
+                    Ordenes
                 </a>
                 <a href="/nueva-orden.html" class="nav-item">
                     <span class="nav-icon">➕</span>
                     Nueva Orden
                 </a>
-                <a href="/ver-historia-clinica.html" class="nav-item">
-                    <span class="nav-icon">🏥</span>
-                    Historia Clínica
-                </a>
-                <a href="/actualizar-foto.html" class="nav-item">
-                    <span class="nav-icon">📷</span>
-                    Actualizar Foto
+                <a href="/medicos.html" class="nav-item">
+                    <span class="nav-icon">👨‍⚕️</span>
+                    Médicos
                 </a>
             </nav>
         </aside>
@@ -1212,8 +1250,14 @@
         <!-- Main Content -->
         <main class="main-content">
             <div class="page-header">
-                <h1 class="page-title">Órdenes</h1>
-                <p class="page-subtitle">Gestiona las órdenes y pacientes del sistema</p>
+                <div>
+                    <h1 class="page-title">Órdenes</h1>
+                    <p class="page-subtitle">Gestiona las órdenes y pacientes del sistema</p>
+                </div>
+                <div class="header-actions">
+                    <a href="/nueva-orden.html" class="btn btn-primary">➕ Nueva Orden</a>
+                    <a href="/medicos.html" class="btn btn-secondary">👨‍⚕️ Médicos</a>
+                </div>
             </div>
 
             <!-- Filters Bar -->
