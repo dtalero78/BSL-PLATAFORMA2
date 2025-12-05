@@ -90,6 +90,95 @@
             stroke-width: 2;
         }
 
+        .nav-subitem {
+            padding-left: 44px;
+            font-size: 13px;
+            color: #64748B;
+        }
+
+        .nav-subitem:hover {
+            color: #2563EB;
+        }
+
+        /* Lista médicos tiempo consulta */
+        .medico-tiempo-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: #F8FAFC;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .medico-tiempo-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .medico-tiempo-nombre {
+            font-weight: 500;
+            color: #1E293B;
+            font-size: 14px;
+        }
+
+        .medico-tiempo-especialidad {
+            font-size: 12px;
+            color: #64748B;
+        }
+
+        .medico-tiempo-input {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .medico-tiempo-input input {
+            width: 60px;
+            padding: 8px 10px;
+            border: 1px solid #D1D5DB;
+            border-radius: 6px;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .medico-tiempo-input input:focus {
+            outline: none;
+            border-color: #2563EB;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .medico-tiempo-input span {
+            font-size: 13px;
+            color: #64748B;
+        }
+
+        .btn-guardar-tiempo {
+            padding: 6px 12px;
+            background: #10B981;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .btn-guardar-tiempo:hover {
+            background: #059669;
+        }
+
+        .btn-guardar-tiempo:disabled {
+            background: #9CA3AF;
+            cursor: not-allowed;
+        }
+
+        .tiempo-guardado {
+            color: #10B981;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+
         /* Top Bar Fijo */
         .top-bar {
             position: fixed;
@@ -992,6 +1081,10 @@
                     <i data-feather="calendar"></i>
                     Calendario
                 </a>
+                <a href="#" class="nav-item nav-subitem" onclick="abrirModalTiempoConsulta(); return false;">
+                    <i data-feather="clock"></i>
+                    Fijar Tiempo Consulta
+                </a>
                 <a href="/medicos.html" class="nav-item">
                     <i data-feather="user-check"></i>
                     Médicos
@@ -1214,6 +1307,30 @@
             <div class="modal-footer">
                 <button type="button" class="btn-modal secondary" onclick="cerrarModalEditar()">Cancelar</button>
                 <button type="button" class="btn-modal primary" onclick="guardarOrden()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Tiempo Consulta -->
+    <div id="modalTiempoConsulta" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Fijar Tiempo de Consulta</h2>
+                <button class="modal-close" onclick="cerrarModalTiempoConsulta()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="color: #64748B; margin-bottom: 20px; font-size: 14px;">
+                    Configure el tiempo de duración de cada consulta por médico. Este tiempo se usará para calcular la disponibilidad de horarios.
+                </p>
+                <div id="listaMedicosTiempo">
+                    <div class="loading-state">
+                        <div class="loading-spinner"></div>
+                        <p>Cargando médicos...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-modal secondary" onclick="cerrarModalTiempoConsulta()">Cerrar</button>
             </div>
         </div>
     </div>
@@ -1741,6 +1858,116 @@
         document.getElementById('modalEditarOrden').addEventListener('click', (e) => {
             if (e.target.classList.contains('modal')) {
                 cerrarModalEditar();
+            }
+        });
+
+        // ========== MODAL TIEMPO CONSULTA ==========
+
+        function abrirModalTiempoConsulta() {
+            document.getElementById('modalTiempoConsulta').classList.add('active');
+            cargarMedicosTiempo();
+        }
+
+        function cerrarModalTiempoConsulta() {
+            document.getElementById('modalTiempoConsulta').classList.remove('active');
+        }
+
+        async function cargarMedicosTiempo() {
+            const container = document.getElementById('listaMedicosTiempo');
+
+            try {
+                const response = await fetch('/api/medicos');
+                const result = await response.json();
+
+                if (result.success && result.data.length > 0) {
+                    container.innerHTML = result.data.map(medico => `
+                        <div class="medico-tiempo-item" id="medico-tiempo-${medico.id}">
+                            <div class="medico-tiempo-info">
+                                <span class="medico-tiempo-nombre">${medico.primer_nombre} ${medico.primer_apellido}</span>
+                                <span class="medico-tiempo-especialidad">${medico.especialidad || 'Sin especialidad'}</span>
+                            </div>
+                            <div class="medico-tiempo-input">
+                                <input type="number"
+                                       id="tiempo-${medico.id}"
+                                       value="${medico.tiempo_consulta || 10}"
+                                       min="5"
+                                       max="120"
+                                       onchange="marcarCambio(${medico.id})">
+                                <span>min</span>
+                                <button class="btn-guardar-tiempo" onclick="guardarTiempoConsulta(${medico.id})">
+                                    Guardar
+                                </button>
+                                <span id="guardado-${medico.id}" class="tiempo-guardado" style="display: none;">✓</span>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = `
+                        <div style="text-align: center; color: #64748B; padding: 20px;">
+                            No hay médicos registrados
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error al cargar médicos:', error);
+                container.innerHTML = `
+                    <div style="text-align: center; color: #EF4444; padding: 20px;">
+                        Error al cargar médicos
+                    </div>
+                `;
+            }
+        }
+
+        function marcarCambio(medicoId) {
+            document.getElementById(`guardado-${medicoId}`).style.display = 'none';
+        }
+
+        async function guardarTiempoConsulta(medicoId) {
+            const input = document.getElementById(`tiempo-${medicoId}`);
+            const tiempo = parseInt(input.value);
+            const boton = input.parentElement.querySelector('.btn-guardar-tiempo');
+            const guardadoIndicator = document.getElementById(`guardado-${medicoId}`);
+
+            if (tiempo < 5 || tiempo > 120) {
+                alert('El tiempo debe estar entre 5 y 120 minutos');
+                return;
+            }
+
+            boton.disabled = true;
+            boton.textContent = 'Guardando...';
+
+            try {
+                const response = await fetch(`/api/medicos/${medicoId}/tiempo-consulta`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tiempoConsulta: tiempo })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    guardadoIndicator.style.display = 'inline';
+                    // Actualizar la lista de médicos en memoria
+                    const medicoIndex = medicos.findIndex(m => m.id === medicoId);
+                    if (medicoIndex !== -1) {
+                        medicos[medicoIndex].tiempo_consulta = tiempo;
+                    }
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al guardar');
+            } finally {
+                boton.disabled = false;
+                boton.textContent = 'Guardar';
+            }
+        }
+
+        // Cerrar modal tiempo consulta al hacer clic fuera
+        document.getElementById('modalTiempoConsulta').addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                cerrarModalTiempoConsulta();
             }
         });
     </script>

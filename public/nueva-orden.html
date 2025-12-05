@@ -541,7 +541,7 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Médico</label>
-                                <select class="form-select" name="medico" id="selectMedico">
+                                <select class="form-select" name="medico" id="selectMedico" onchange="actualizarHorariosDisponibles()">
                                     <option value="">Seleccionar médico...</option>
                                 </select>
                             </div>
@@ -551,13 +551,14 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Fecha de Atención</label>
-                                <input type="date" class="form-input" name="fechaAtencion">
+                                <input type="date" class="form-input" name="fechaAtencion" id="inputFechaAtencion" onchange="actualizarHorariosDisponibles()">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Hora de Atención</label>
                                 <select class="form-select" name="horaAtencion" id="selectHora">
                                     <option value="">Seleccionar hora...</option>
                                 </select>
+                                <small id="infoTiempoConsulta" style="color: #64748B; font-size: 12px; margin-top: 4px; display: none;"></small>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Estado</label>
@@ -598,18 +599,20 @@
         const errorText = document.getElementById('errorText');
 
         let empresasData = [];
+        let medicosData = [];
 
         // Cargar datos al iniciar
         document.addEventListener('DOMContentLoaded', () => {
             feather.replace();
             cargarMedicos();
             cargarEmpresas();
-            generarOpcionesHora();
+            generarOpcionesHoraDefault();
         });
 
-        function generarOpcionesHora() {
+        function generarOpcionesHoraDefault() {
             const select = document.getElementById('selectHora');
-            // Desde las 6:00 AM (6) hasta las 11:00 PM (23)
+            select.innerHTML = '<option value="">Seleccionar hora...</option>';
+            // Por defecto, intervalos de 10 minutos
             for (let hora = 6; hora <= 23; hora++) {
                 for (let minuto = 0; minuto < 60; minuto += 10) {
                     const horaStr = String(hora).padStart(2, '0');
@@ -626,6 +629,59 @@
                     option.textContent = texto;
                     select.appendChild(option);
                 }
+            }
+            document.getElementById('infoTiempoConsulta').style.display = 'none';
+        }
+
+        async function actualizarHorariosDisponibles() {
+            const medico = document.getElementById('selectMedico').value;
+            const fecha = document.getElementById('inputFechaAtencion').value;
+            const select = document.getElementById('selectHora');
+            const infoTiempo = document.getElementById('infoTiempoConsulta');
+
+            // Si no hay médico o fecha, mostrar horarios por defecto
+            if (!medico || !fecha) {
+                generarOpcionesHoraDefault();
+                return;
+            }
+
+            select.innerHTML = '<option value="">Cargando horarios...</option>';
+
+            try {
+                const response = await fetch(`/api/horarios-disponibles?fecha=${fecha}&medico=${encodeURIComponent(medico)}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    select.innerHTML = '<option value="">Seleccionar hora...</option>';
+
+                    result.horarios.forEach(h => {
+                        const [hora, minuto] = h.hora.split(':').map(Number);
+                        const hora12 = hora > 12 ? hora - 12 : (hora === 0 ? 12 : hora);
+                        const ampm = hora >= 12 ? 'PM' : 'AM';
+                        const texto = `${hora12}:${minuto.toString().padStart(2, '0')} ${ampm}`;
+
+                        const option = document.createElement('option');
+                        option.value = h.hora;
+
+                        if (h.disponible) {
+                            option.textContent = texto;
+                        } else {
+                            option.textContent = `${texto} (ocupado)`;
+                            option.disabled = true;
+                            option.style.color = '#9CA3AF';
+                        }
+                        select.appendChild(option);
+                    });
+
+                    // Mostrar info del tiempo de consulta
+                    infoTiempo.textContent = `Duración consulta: ${result.tiempoConsulta} min`;
+                    infoTiempo.style.display = 'block';
+                } else {
+                    generarOpcionesHoraDefault();
+                }
+            } catch (error) {
+                console.error('Error al cargar horarios:', error);
+                generarOpcionesHoraDefault();
             }
         }
 

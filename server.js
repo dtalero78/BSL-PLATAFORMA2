@@ -1983,7 +1983,7 @@ app.get('/api/medicos', async (req, res) => {
         const result = await pool.query(`
             SELECT id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido,
                    numero_licencia, tipo_licencia, fecha_vencimiento_licencia, especialidad,
-                   firma, activo, created_at
+                   firma, activo, created_at, COALESCE(tiempo_consulta, 10) as tiempo_consulta
             FROM medicos
             WHERE activo = true
             ORDER BY primer_apellido, primer_nombre
@@ -2173,6 +2173,51 @@ app.delete('/api/medicos/:id', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error al desactivar médico',
+            error: error.message
+        });
+    }
+});
+
+// Actualizar tiempo de consulta de un médico
+app.put('/api/medicos/:id/tiempo-consulta', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { tiempoConsulta } = req.body;
+
+        if (!tiempoConsulta || tiempoConsulta < 5 || tiempoConsulta > 120) {
+            return res.status(400).json({
+                success: false,
+                message: 'El tiempo de consulta debe estar entre 5 y 120 minutos'
+            });
+        }
+
+        const result = await pool.query(`
+            UPDATE medicos SET
+                tiempo_consulta = $1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $2
+            RETURNING id, primer_nombre, primer_apellido, tiempo_consulta
+        `, [tiempoConsulta, id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Médico no encontrado'
+            });
+        }
+
+        console.log(`✅ Tiempo de consulta actualizado para médico ID ${id}: ${tiempoConsulta} min`);
+
+        res.json({
+            success: true,
+            message: 'Tiempo de consulta actualizado',
+            data: result.rows[0]
+        });
+    } catch (error) {
+        console.error('❌ Error al actualizar tiempo de consulta:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al actualizar tiempo de consulta',
             error: error.message
         });
     }
@@ -2576,6 +2621,80 @@ app.get('/api/calendario/dia', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error al obtener citas del día',
+            error: error.message
+        });
+    }
+});
+
+// GET /api/horarios-disponibles - Obtener horarios disponibles para un médico en una fecha
+app.get('/api/horarios-disponibles', async (req, res) => {
+    try {
+        const { fecha, medico } = req.query;
+
+        if (!fecha || !medico) {
+            return res.status(400).json({
+                success: false,
+                message: 'Se requiere fecha (YYYY-MM-DD) y medico'
+            });
+        }
+
+        // Obtener tiempo de consulta del médico
+        const medicoResult = await pool.query(`
+            SELECT COALESCE(tiempo_consulta, 10) as tiempo_consulta
+            FROM medicos
+            WHERE CONCAT(primer_nombre, ' ', primer_apellido) = $1
+            AND activo = true
+        `, [medico]);
+
+        const tiempoConsulta = medicoResult.rows.length > 0 ? medicoResult.rows[0].tiempo_consulta : 10;
+
+        // Obtener citas existentes del médico para esa fecha
+        const citasResult = await pool.query(`
+            SELECT "horaAtencion" as hora
+            FROM "HistoriaClinica"
+            WHERE "fechaAtencion" >= $1::timestamp
+              AND "fechaAtencion" < ($1::timestamp + interval '1 day')
+              AND "medico" = $2
+              AND "horaAtencion" IS NOT NULL
+        `, [fecha, medico]);
+
+        const horasOcupadas = citasResult.rows.map(r => r.hora);
+
+        // Generar todos los horarios posibles (6:00 - 23:00)
+        const horariosDisponibles = [];
+        for (let hora = 6; hora <= 23; hora++) {
+            for (let minuto = 0; minuto < 60; minuto += tiempoConsulta) {
+                if (hora === 23 && minuto > 0) break; // No pasar de 23:00
+
+                const horaStr = `${String(hora).padStart(2, '0')}:${String(minuto).padStart(2, '0')}`;
+
+                // Verificar si este horario está ocupado
+                const ocupado = horasOcupadas.some(horaOcupada => {
+                    if (!horaOcupada) return false;
+                    // Comparar solo HH:MM
+                    const horaOcupadaNorm = horaOcupada.substring(0, 5);
+                    return horaOcupadaNorm === horaStr;
+                });
+
+                horariosDisponibles.push({
+                    hora: horaStr,
+                    disponible: !ocupado
+                });
+            }
+        }
+
+        res.json({
+            success: true,
+            fecha,
+            medico,
+            tiempoConsulta,
+            horarios: horariosDisponibles
+        });
+    } catch (error) {
+        console.error('❌ Error al obtener horarios disponibles:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener horarios disponibles',
             error: error.message
         });
     }
