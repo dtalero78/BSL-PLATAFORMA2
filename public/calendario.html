@@ -419,8 +419,8 @@
             padding: 6px 10px;
             border-radius: 6px;
             font-size: 11px;
-            background: white;
-            border-left: 4px solid #2563EB;
+            background: #EFF6FF;
+            border-left: 4px solid #3B82F6;
             cursor: pointer;
             transition: transform 0.15s ease, box-shadow 0.15s ease;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
@@ -431,36 +431,15 @@
             box-shadow: 0 2px 6px rgba(0,0,0,0.12);
         }
 
-        .event-badge.atendido {
-            border-left-color: #22C55E;
-        }
-
-        .event-badge.pendiente {
-            border-left-color: #EAB308;
-        }
-
-        .event-badge.vencido {
-            border-left-color: #EF4444;
-        }
-
-        .event-badge .event-time {
-            font-size: 11px;
-            font-weight: 600;
-            color: #2563EB;
-            margin-bottom: 2px;
-        }
-
-        .event-badge.atendido .event-time {
-            color: #22C55E;
-        }
-
-        .event-badge.pendiente .event-time {
-            color: #EAB308;
-        }
-
-        .event-badge.vencido .event-time {
-            color: #EF4444;
-        }
+        /* Colores pastel para médicos */
+        .event-badge.color-0 { background: #DBEAFE; border-left-color: #3B82F6; }
+        .event-badge.color-1 { background: #F3E8FF; border-left-color: #A855F7; }
+        .event-badge.color-2 { background: #FCE7F3; border-left-color: #EC4899; }
+        .event-badge.color-3 { background: #CCFBF1; border-left-color: #14B8A6; }
+        .event-badge.color-4 { background: #FEF3C7; border-left-color: #F59E0B; }
+        .event-badge.color-5 { background: #E0E7FF; border-left-color: #6366F1; }
+        .event-badge.color-6 { background: #CFFAFE; border-left-color: #06B6D4; }
+        .event-badge.color-7 { background: #D1FAE5; border-left-color: #10B981; }
 
         .event-badge .doctor-name {
             color: #374151;
@@ -1173,32 +1152,24 @@
                 const maxShow = 2;
                 let html = '';
 
-                doctorEntries.slice(0, maxShow).forEach(([medico, stats]) => {
+                doctorEntries.slice(0, maxShow).forEach(([medico, stats], index) => {
                     const total = (stats.atendidos || 0) + (stats.pendientes || 0) + (stats.vencidos || 0);
-
-                    // Determinar clase según estado predominante
-                    let estadoClass = 'pendiente';
-                    if (stats.vencidos > 0 && stats.vencidos >= stats.pendientes) {
-                        estadoClass = 'vencido';
-                    } else if (stats.atendidos > 0 && stats.atendidos >= stats.pendientes && stats.atendidos >= stats.vencidos) {
-                        estadoClass = 'atendido';
-                    }
 
                     // Escapar el nombre del médico para usarlo en onclick
                     const medicoEscapado = medico.replace(/'/g, "\\'");
 
+                    // Color pastel basado en hash del nombre del médico
+                    const colorIndex = Math.abs(medico.split('').reduce((a, c) => a + c.charCodeAt(0), 0)) % 8;
+
                     // Mostrar estadísticas detalladas
                     const atendidos = stats.atendidos || 0;
-                    const pendientes = (stats.pendientes || 0) + (stats.vencidos || 0);
 
                     html += `
-                        <div class="event-badge ${estadoClass}" onclick="event.stopPropagation(); abrirVistaAgendaMedico('${fecha}', '${medicoEscapado}')">
-                            <span class="event-time">SESSION</span>
+                        <div class="event-badge color-${colorIndex}" onclick="event.stopPropagation(); abrirVistaAgendaMedico('${fecha}', '${medicoEscapado}')">
                             <span class="doctor-name">${medico}</span>
                             <div class="event-stats">
                                 <i data-feather="users"></i>
                                 <span>${atendidos}/${total}</span>
-                                <span class="count">✓ ${atendidos}</span>
                             </div>
                         </div>
                     `;
