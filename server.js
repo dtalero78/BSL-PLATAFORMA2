@@ -238,6 +238,20 @@ const initDB = async () => {
             // Columna ya existe o tabla no existe
         }
 
+        // Crear tabla medicos_disponibilidad si no existe
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS medicos_disponibilidad (
+                id SERIAL PRIMARY KEY,
+                medico_id INTEGER NOT NULL REFERENCES medicos(id) ON DELETE CASCADE,
+                dia_semana INTEGER NOT NULL CHECK (dia_semana >= 0 AND dia_semana <= 6),
+                hora_inicio TIME NOT NULL,
+                hora_fin TIME NOT NULL,
+                activo BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(medico_id, dia_semana)
+            )
+        `);
+
         console.log('✅ Base de datos inicializada correctamente');
     } catch (error) {
         console.error('❌ Error al inicializar la base de datos:', error);
@@ -2304,6 +2318,114 @@ app.put('/api/medicos/:id/tiempo-consulta', async (req, res) => {
 });
 
 // ============================================
+// ENDPOINTS PARA DISPONIBILIDAD DE MÉDICOS
+// ============================================
+
+// GET - Obtener disponibilidad de un médico
+app.get('/api/medicos/:id/disponibilidad', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const result = await pool.query(`
+            SELECT id, medico_id, dia_semana,
+                   TO_CHAR(hora_inicio, 'HH24:MI') as hora_inicio,
+                   TO_CHAR(hora_fin, 'HH24:MI') as hora_fin,
+                   activo
+            FROM medicos_disponibilidad
+            WHERE medico_id = $1
+            ORDER BY dia_semana
+        `, [id]);
+
+        res.json({
+            success: true,
+            data: result.rows
+        });
+    } catch (error) {
+        console.error('❌ Error al obtener disponibilidad:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener disponibilidad',
+            error: error.message
+        });
+    }
+});
+
+// POST - Guardar disponibilidad de un médico (reemplaza toda la configuración)
+app.post('/api/medicos/:id/disponibilidad', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { disponibilidad } = req.body; // Array de { dia_semana, hora_inicio, hora_fin, activo }
+
+        if (!Array.isArray(disponibilidad)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Se requiere un array de disponibilidad'
+            });
+        }
+
+        // Verificar que el médico existe
+        const medicoCheck = await pool.query('SELECT id FROM medicos WHERE id = $1', [id]);
+        if (medicoCheck.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Médico no encontrado'
+            });
+        }
+
+        // Eliminar disponibilidad existente
+        await pool.query('DELETE FROM medicos_disponibilidad WHERE medico_id = $1', [id]);
+
+        // Insertar nueva disponibilidad
+        for (const dia of disponibilidad) {
+            if (dia.activo && dia.hora_inicio && dia.hora_fin) {
+                await pool.query(`
+                    INSERT INTO medicos_disponibilidad (medico_id, dia_semana, hora_inicio, hora_fin, activo)
+                    VALUES ($1, $2, $3, $4, $5)
+                `, [id, dia.dia_semana, dia.hora_inicio, dia.hora_fin, dia.activo]);
+            }
+        }
+
+        console.log(`✅ Disponibilidad actualizada para médico ID ${id}`);
+
+        res.json({
+            success: true,
+            message: 'Disponibilidad guardada correctamente'
+        });
+    } catch (error) {
+        console.error('❌ Error al guardar disponibilidad:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al guardar disponibilidad',
+            error: error.message
+        });
+    }
+});
+
+// DELETE - Eliminar disponibilidad de un día específico
+app.delete('/api/medicos/:id/disponibilidad/:dia', async (req, res) => {
+    try {
+        const { id, dia } = req.params;
+
+        await pool.query(`
+            DELETE FROM medicos_disponibilidad
+            WHERE medico_id = $1 AND dia_semana = $2
+        `, [id, dia]);
+
+        res.json({
+            success: true,
+            message: 'Disponibilidad eliminada'
+        });
+    } catch (error) {
+        console.error('❌ Error al eliminar disponibilidad:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al eliminar disponibilidad',
+            error: error.message
+        });
+    }
+});
+
+// ============================================
 // ENDPOINTS PARA EMPRESAS
 // ============================================
 
@@ -2718,15 +2840,71 @@ app.get('/api/horarios-disponibles', async (req, res) => {
             });
         }
 
-        // Obtener tiempo de consulta del médico
+        // Obtener día de la semana (0=Domingo, 1=Lunes, etc.)
+        const fechaObj = new Date(fecha + 'T12:00:00');
+        const diaSemana = fechaObj.getDay();
+
+        // Obtener tiempo de consulta y ID del médico
         const medicoResult = await pool.query(`
-            SELECT COALESCE(tiempo_consulta, 10) as tiempo_consulta
+            SELECT id, COALESCE(tiempo_consulta, 10) as tiempo_consulta
             FROM medicos
             WHERE CONCAT(primer_nombre, ' ', primer_apellido) = $1
             AND activo = true
         `, [medico]);
 
-        const tiempoConsulta = medicoResult.rows.length > 0 ? medicoResult.rows[0].tiempo_consulta : 10;
+        if (medicoResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Médico no encontrado'
+            });
+        }
+
+        const medicoId = medicoResult.rows[0].id;
+        const tiempoConsulta = medicoResult.rows[0].tiempo_consulta;
+
+        // Obtener disponibilidad configurada para este día de la semana
+        const disponibilidadResult = await pool.query(`
+            SELECT TO_CHAR(hora_inicio, 'HH24:MI') as hora_inicio,
+                   TO_CHAR(hora_fin, 'HH24:MI') as hora_fin
+            FROM medicos_disponibilidad
+            WHERE medico_id = $1 AND dia_semana = $2 AND activo = true
+        `, [medicoId, diaSemana]);
+
+        // Si no hay disponibilidad configurada para este día, el médico no trabaja
+        let horaInicio = 6;
+        let horaFin = 23;
+        let medicoDisponible = true;
+
+        if (disponibilidadResult.rows.length > 0) {
+            const config = disponibilidadResult.rows[0];
+            const [hiH, hiM] = config.hora_inicio.split(':').map(Number);
+            const [hfH, hfM] = config.hora_fin.split(':').map(Number);
+            horaInicio = hiH;
+            horaFin = hfH;
+        } else {
+            // Verificar si tiene alguna disponibilidad configurada (en otros días)
+            const tieneConfigResult = await pool.query(`
+                SELECT COUNT(*) as total FROM medicos_disponibilidad WHERE medico_id = $1
+            `, [medicoId]);
+
+            // Si tiene configuración pero no para este día, no está disponible
+            if (tieneConfigResult.rows[0].total > 0) {
+                medicoDisponible = false;
+            }
+            // Si no tiene ninguna configuración, usar horario por defecto (6-23)
+        }
+
+        if (!medicoDisponible) {
+            return res.json({
+                success: true,
+                fecha,
+                medico,
+                tiempoConsulta,
+                disponible: false,
+                mensaje: 'El médico no trabaja este día',
+                horarios: []
+            });
+        }
 
         // Obtener citas existentes del médico para esa fecha
         const citasResult = await pool.query(`
@@ -2740,18 +2918,17 @@ app.get('/api/horarios-disponibles', async (req, res) => {
 
         const horasOcupadas = citasResult.rows.map(r => r.hora);
 
-        // Generar todos los horarios posibles (6:00 - 23:00)
+        // Generar horarios dentro del rango configurado
         const horariosDisponibles = [];
-        for (let hora = 6; hora <= 23; hora++) {
+        for (let hora = horaInicio; hora <= horaFin; hora++) {
             for (let minuto = 0; minuto < 60; minuto += tiempoConsulta) {
-                if (hora === 23 && minuto > 0) break; // No pasar de 23:00
+                if (hora === horaFin && minuto > 0) break; // No pasar de la hora de fin
 
                 const horaStr = `${String(hora).padStart(2, '0')}:${String(minuto).padStart(2, '0')}`;
 
                 // Verificar si este horario está ocupado
                 const ocupado = horasOcupadas.some(horaOcupada => {
                     if (!horaOcupada) return false;
-                    // Comparar solo HH:MM
                     const horaOcupadaNorm = horaOcupada.substring(0, 5);
                     return horaOcupadaNorm === horaStr;
                 });
@@ -2768,6 +2945,9 @@ app.get('/api/horarios-disponibles', async (req, res) => {
             fecha,
             medico,
             tiempoConsulta,
+            disponible: true,
+            horaInicio: `${String(horaInicio).padStart(2, '0')}:00`,
+            horaFin: `${String(horaFin).padStart(2, '0')}:00`,
             horarios: horariosDisponibles
         });
     } catch (error) {
