@@ -700,6 +700,346 @@
                 font-size: 28px;
             }
         }
+
+        /* Modal Nueva Orden */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #E2E8F0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 10;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1E293B;
+        }
+
+        .modal-close {
+            background: #F1F5F9;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background: #E2E8F0;
+        }
+
+        .modal-close svg {
+            width: 20px;
+            height: 20px;
+            stroke: #64748B;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .form-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #64748B;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #E2E8F0;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 6px;
+        }
+
+        .form-label .required {
+            color: #EF4444;
+            margin-left: 2px;
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #E2E8F0;
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: inherit;
+            color: #1E293B;
+            background: white;
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: #00B8E6;
+            box-shadow: 0 0 0 3px rgba(0, 184, 230, 0.1);
+        }
+
+        .form-input:disabled,
+        .form-select:disabled {
+            background: #F8FAFC;
+            color: #64748B;
+            cursor: not-allowed;
+        }
+
+        .form-input::placeholder {
+            color: #9CA3AF;
+        }
+
+        /* Modalidad tabs */
+        .modalidad-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            background: #F1F5F9;
+            padding: 4px;
+            border-radius: 10px;
+        }
+
+        .modalidad-tab {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 16px;
+            border: none;
+            background: transparent;
+            color: #64748B;
+            font-size: 14px;
+            font-weight: 500;
+            font-family: inherit;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .modalidad-tab:hover {
+            color: #374151;
+        }
+
+        .modalidad-tab.active {
+            background: white;
+            color: #00B8E6;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .modalidad-tab svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Exámenes multi-select */
+        .examenes-container {
+            border: 1px solid #E2E8F0;
+            border-radius: 10px;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+
+        .examen-option {
+            display: flex;
+            align-items: center;
+            padding: 12px 14px;
+            border-bottom: 1px solid #F1F5F9;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .examen-option:last-child {
+            border-bottom: none;
+        }
+
+        .examen-option:hover {
+            background: #F8FAFC;
+        }
+
+        .examen-option input {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+            accent-color: #00B8E6;
+        }
+
+        .examen-option label {
+            font-size: 14px;
+            color: #1E293B;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .examenes-selected {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .examen-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #E0F7FA;
+            color: #0097A7;
+            padding: 4px 10px;
+            border-radius: 16px;
+            font-size: 12px;
+        }
+
+        .examen-tag button {
+            background: none;
+            border: none;
+            color: #0097A7;
+            cursor: pointer;
+            padding: 0;
+            font-size: 16px;
+            line-height: 1;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #E2E8F0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            position: sticky;
+            bottom: 0;
+            background: white;
+        }
+
+        .btn-modal {
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+        }
+
+        .btn-modal-secondary {
+            background: #F1F5F9;
+            color: #64748B;
+        }
+
+        .btn-modal-secondary:hover {
+            background: #E2E8F0;
+        }
+
+        .btn-modal-primary {
+            background: #00B8E6;
+            color: white;
+        }
+
+        .btn-modal-primary:hover {
+            background: #0099B2;
+        }
+
+        .btn-modal-primary:disabled {
+            background: #94A3B8;
+            cursor: not-allowed;
+        }
+
+        .info-tiempo {
+            font-size: 12px;
+            color: #64748B;
+            margin-top: 4px;
+        }
+
+        /* Alert en modal */
+        .modal-alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            display: none;
+            font-size: 14px;
+        }
+
+        .modal-alert.show {
+            display: block;
+        }
+
+        .modal-alert.error {
+            background: #FEF2F2;
+            color: #DC2626;
+            border: 1px solid #FECACA;
+        }
+
+        .modal-alert.success {
+            background: #ECFDF5;
+            color: #065F46;
+            border: 1px solid #A7F3D0;
+        }
+
+        @media (max-width: 600px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-content {
+                max-height: 95vh;
+            }
+        }
     </style>
 </head>
 <body>
@@ -773,13 +1113,13 @@
         <!-- Actions Bar -->
         <div class="actions-bar">
             <div class="actions-content">
-                <a href="/nuevaorden1.html" target="_blank" class="btn-action primary">
+                <button class="btn-action primary" onclick="abrirModalNuevaOrden()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="12" y1="5" x2="12" y2="19"></line>
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                     </svg>
                     Nueva Orden
-                </a>
+                </button>
             </div>
         </div>
 
@@ -851,6 +1191,152 @@
                         </svg>
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Nueva Orden -->
+    <div class="modal-overlay" id="modalNuevaOrden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Nueva Orden</h2>
+                <button class="modal-close" onclick="cerrarModalNuevaOrden()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-alert" id="modalAlert"></div>
+
+                <!-- Empresa (no editable) -->
+                <div class="form-group">
+                    <label class="form-label">Empresa</label>
+                    <input type="text" class="form-input" id="modalEmpresa" disabled>
+                </div>
+
+                <!-- Datos del Paciente -->
+                <div class="form-section-title">Datos del Paciente</div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Número de Identificación <span class="required">*</span></label>
+                        <input type="text" class="form-input" id="modalNumeroId" placeholder="Cédula">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Celular <span class="required">*</span></label>
+                        <input type="tel" class="form-input" id="modalCelular" placeholder="Número de celular">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Primer Nombre <span class="required">*</span></label>
+                        <input type="text" class="form-input" id="modalPrimerNombre" placeholder="Primer nombre">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Segundo Nombre</label>
+                        <input type="text" class="form-input" id="modalSegundoNombre" placeholder="Segundo nombre">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Primer Apellido <span class="required">*</span></label>
+                        <input type="text" class="form-input" id="modalPrimerApellido" placeholder="Primer apellido">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Segundo Apellido</label>
+                        <input type="text" class="form-input" id="modalSegundoApellido" placeholder="Segundo apellido">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Cargo <span class="required">*</span></label>
+                        <input type="text" class="form-input" id="modalCargo" placeholder="Cargo del trabajador">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Ciudad <span class="required">*</span></label>
+                        <input type="text" class="form-input" id="modalCiudad" placeholder="Ciudad">
+                    </div>
+                </div>
+
+                <!-- Datos del Examen -->
+                <div class="form-section-title">Datos del Examen</div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Tipo de Examen <span class="required">*</span></label>
+                        <select class="form-select" id="modalTipoExamen">
+                            <option value="">Seleccionar...</option>
+                            <option value="INGRESO">Ingreso</option>
+                            <option value="PERIODICO">Periódico</option>
+                            <option value="RETIRO">Retiro</option>
+                            <option value="REUBICACION">Reubicación</option>
+                            <option value="POST-INCAPACIDAD">Post-incapacidad</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Modalidad tabs -->
+                <div class="form-group">
+                    <label class="form-label">Modalidad</label>
+                    <div class="modalidad-tabs">
+                        <button type="button" class="modalidad-tab active" data-modalidad="presencial" onclick="cambiarModalidadOrden('presencial')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                            Presencial
+                        </button>
+                        <button type="button" class="modalidad-tab" data-modalidad="virtual" onclick="cambiarModalidadOrden('virtual')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                            </svg>
+                            Virtual
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Médico</label>
+                        <select class="form-select" id="modalMedico" onchange="actualizarHorariosModal()">
+                            <option value="">Seleccionar médico...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Fecha de Atención</label>
+                        <input type="date" class="form-input" id="modalFechaAtencion" onchange="actualizarMedicosModal()">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Hora de Atención</label>
+                        <select class="form-select" id="modalHoraAtencion">
+                            <option value="">Seleccionar hora...</option>
+                        </select>
+                        <div class="info-tiempo" id="modalInfoTiempo" style="display: none;"></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Exámenes</label>
+                    <div class="examenes-container" id="modalExamenesContainer">
+                        <div style="padding: 14px; color: #9CA3AF; font-size: 14px;">Cargando exámenes...</div>
+                    </div>
+                    <div class="examenes-selected" id="modalExamenesSelected"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-modal btn-modal-secondary" onclick="cerrarModalNuevaOrden()">Cancelar</button>
+                <button type="button" class="btn-modal btn-modal-primary" id="btnCrearOrden" onclick="crearOrdenEmpresa()">Crear Orden</button>
             </div>
         </div>
     </div>
@@ -1152,6 +1638,362 @@
                 pagination.style.display = 'none';
             }
         }
+
+        // ========== MODAL NUEVA ORDEN ==========
+
+        let modalidadActual = 'presencial';
+        let medicosData = [];
+        let examenesDataModal = [];
+        let examenesSeleccionadosModal = [];
+
+        function abrirModalNuevaOrden() {
+            document.getElementById('modalNuevaOrden').classList.add('active');
+            document.getElementById('modalEmpresa').value = codEmpresa;
+            modalidadActual = 'presencial';
+            actualizarTabsModalidad();
+            cargarMedicosModal();
+            cargarExamenesModal();
+            generarHorasDefault();
+            limpiarFormularioModal();
+        }
+
+        function cerrarModalNuevaOrden() {
+            document.getElementById('modalNuevaOrden').classList.remove('active');
+            ocultarAlertaModal();
+        }
+
+        function limpiarFormularioModal() {
+            document.getElementById('modalNumeroId').value = '';
+            document.getElementById('modalCelular').value = '';
+            document.getElementById('modalPrimerNombre').value = '';
+            document.getElementById('modalSegundoNombre').value = '';
+            document.getElementById('modalPrimerApellido').value = '';
+            document.getElementById('modalSegundoApellido').value = '';
+            document.getElementById('modalCargo').value = '';
+            document.getElementById('modalCiudad').value = '';
+            document.getElementById('modalTipoExamen').value = '';
+            document.getElementById('modalMedico').value = '';
+            document.getElementById('modalFechaAtencion').value = '';
+            document.getElementById('modalHoraAtencion').value = '';
+            examenesSeleccionadosModal = [];
+            actualizarExamenesUIModal();
+        }
+
+        function cambiarModalidadOrden(modalidad) {
+            modalidadActual = modalidad;
+            actualizarTabsModalidad();
+            actualizarMedicosModal();
+        }
+
+        function actualizarTabsModalidad() {
+            document.querySelectorAll('.modalidad-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.modalidad === modalidadActual);
+            });
+        }
+
+        async function cargarMedicosModal() {
+            try {
+                const response = await fetch('/api/medicos');
+                const result = await response.json();
+
+                if (result.success && result.data.length > 0) {
+                    // Excluir NUBIA de la lista
+                    medicosData = result.data.filter(m => {
+                        const nombre = `${m.primer_nombre} ${m.primer_apellido}`.toUpperCase();
+                        return !nombre.includes('NUBIA');
+                    });
+                    actualizarMedicosModal();
+                }
+            } catch (error) {
+                console.error('Error al cargar médicos:', error);
+            }
+        }
+
+        async function actualizarMedicosModal() {
+            const fecha = document.getElementById('modalFechaAtencion').value;
+            const select = document.getElementById('modalMedico');
+
+            select.innerHTML = '<option value="">Cargando médicos...</option>';
+
+            try {
+                // Intentar obtener médicos que tienen disponibilidad para esta modalidad
+                let url = `/api/medicos-por-modalidad?modalidad=${modalidadActual}`;
+                if (fecha) {
+                    url += `&fecha=${fecha}`;
+                }
+
+                const response = await fetch(url);
+                const result = await response.json();
+
+                select.innerHTML = '<option value="">Seleccionar médico...</option>';
+
+                if (result.success && result.data.length > 0) {
+                    // Filtrar para excluir NUBIA
+                    const medicosFiltrados = result.data.filter(m => {
+                        const nombre = `${m.primer_nombre} ${m.primer_apellido}`.toUpperCase();
+                        return !nombre.includes('NUBIA');
+                    });
+
+                    medicosFiltrados.forEach(medico => {
+                        const nombreCompleto = `${medico.primer_nombre} ${medico.primer_apellido}`;
+                        const option = document.createElement('option');
+                        option.value = nombreCompleto;
+                        option.textContent = nombreCompleto;
+                        select.appendChild(option);
+                    });
+                } else {
+                    // Si no hay médicos con disponibilidad configurada, mostrar todos (excepto NUBIA)
+                    medicosData.forEach(medico => {
+                        const nombreCompleto = `${medico.primer_nombre} ${medico.primer_apellido}`;
+                        const option = document.createElement('option');
+                        option.value = nombreCompleto;
+                        option.textContent = nombreCompleto;
+                        select.appendChild(option);
+                    });
+                }
+
+                // Actualizar horarios
+                actualizarHorariosModal();
+
+            } catch (error) {
+                console.error('Error al filtrar médicos:', error);
+                // En caso de error, mostrar todos los médicos (excepto NUBIA)
+                select.innerHTML = '<option value="">Seleccionar médico...</option>';
+                medicosData.forEach(medico => {
+                    const nombreCompleto = `${medico.primer_nombre} ${medico.primer_apellido}`;
+                    const option = document.createElement('option');
+                    option.value = nombreCompleto;
+                    option.textContent = nombreCompleto;
+                    select.appendChild(option);
+                });
+            }
+        }
+
+        async function actualizarHorariosModal() {
+            const medico = document.getElementById('modalMedico').value;
+            const fecha = document.getElementById('modalFechaAtencion').value;
+            const select = document.getElementById('modalHoraAtencion');
+            const infoTiempo = document.getElementById('modalInfoTiempo');
+
+            // Si no hay médico o fecha, mostrar horarios por defecto
+            if (!medico || !fecha) {
+                generarHorasDefault();
+                return;
+            }
+
+            select.innerHTML = '<option value="">Cargando horarios...</option>';
+
+            try {
+                const response = await fetch(`/api/horarios-disponibles?fecha=${fecha}&medico=${encodeURIComponent(medico)}&modalidad=${modalidadActual}`);
+                const result = await response.json();
+
+                if (result.success && result.horarios && result.horarios.length > 0) {
+                    select.innerHTML = '<option value="">Seleccionar hora...</option>';
+
+                    result.horarios.forEach(h => {
+                        const [hora, minuto] = h.hora.split(':').map(Number);
+                        const hora12 = hora > 12 ? hora - 12 : (hora === 0 ? 12 : hora);
+                        const ampm = hora >= 12 ? 'PM' : 'AM';
+                        const texto = `${hora12}:${minuto.toString().padStart(2, '0')} ${ampm}`;
+
+                        const option = document.createElement('option');
+                        option.value = h.hora;
+
+                        if (h.disponible) {
+                            option.textContent = texto;
+                        } else {
+                            option.textContent = `${texto} (ocupado)`;
+                            option.disabled = true;
+                            option.style.color = '#9CA3AF';
+                        }
+                        select.appendChild(option);
+                    });
+
+                    // Mostrar info del tiempo de consulta
+                    infoTiempo.textContent = `Duración consulta: ${result.tiempoConsulta} min`;
+                    infoTiempo.style.display = 'block';
+                } else {
+                    generarHorasDefault();
+                }
+            } catch (error) {
+                console.error('Error al cargar horarios:', error);
+                generarHorasDefault();
+            }
+        }
+
+        function generarHorasDefault() {
+            const select = document.getElementById('modalHoraAtencion');
+            const infoTiempo = document.getElementById('modalInfoTiempo');
+            infoTiempo.style.display = 'none';
+
+            select.innerHTML = '<option value="">Seleccionar hora...</option>';
+            // Por defecto, intervalos de 10 minutos de 6am a 11pm
+            for (let hora = 6; hora <= 23; hora++) {
+                for (let minuto = 0; minuto < 60; minuto += 10) {
+                    const horaStr = String(hora).padStart(2, '0');
+                    const minutoStr = String(minuto).padStart(2, '0');
+                    const valor = `${horaStr}:${minutoStr}`;
+
+                    // Formato 12 horas para mostrar
+                    const hora12 = hora > 12 ? hora - 12 : (hora === 0 ? 12 : hora);
+                    const ampm = hora >= 12 ? 'PM' : 'AM';
+                    const texto = `${hora12}:${minutoStr} ${ampm}`;
+
+                    const option = document.createElement('option');
+                    option.value = valor;
+                    option.textContent = texto;
+                    select.appendChild(option);
+                }
+            }
+        }
+
+        async function cargarExamenesModal() {
+            try {
+                const response = await fetch('/api/examenes');
+                const data = await response.json();
+                examenesDataModal = data.filter(e => e.activo !== false);
+                renderExamenesModal();
+            } catch (error) {
+                console.error('Error al cargar exámenes:', error);
+                document.getElementById('modalExamenesContainer').innerHTML =
+                    '<div style="padding: 14px; color: #EF4444; font-size: 14px;">Error al cargar exámenes</div>';
+            }
+        }
+
+        function renderExamenesModal() {
+            const container = document.getElementById('modalExamenesContainer');
+
+            if (examenesDataModal.length === 0) {
+                container.innerHTML = '<div style="padding: 14px; color: #9CA3AF; font-size: 14px;">No hay exámenes disponibles</div>';
+                return;
+            }
+
+            container.innerHTML = examenesDataModal.map(examen => `
+                <div class="examen-option" onclick="toggleExamenModal(${examen.id}, '${examen.nombre.replace(/'/g, "\\'")}')">
+                    <input type="checkbox" id="modal-examen-${examen.id}" ${examenesSeleccionadosModal.includes(examen.nombre) ? 'checked' : ''}>
+                    <label for="modal-examen-${examen.id}">${examen.nombre}</label>
+                </div>
+            `).join('');
+        }
+
+        function toggleExamenModal(id, nombre) {
+            const index = examenesSeleccionadosModal.indexOf(nombre);
+            if (index === -1) {
+                examenesSeleccionadosModal.push(nombre);
+            } else {
+                examenesSeleccionadosModal.splice(index, 1);
+            }
+            actualizarExamenesUIModal();
+        }
+
+        function quitarExamenModal(nombre) {
+            const index = examenesSeleccionadosModal.indexOf(nombre);
+            if (index !== -1) {
+                examenesSeleccionadosModal.splice(index, 1);
+            }
+            actualizarExamenesUIModal();
+        }
+
+        function actualizarExamenesUIModal() {
+            // Actualizar checkboxes
+            examenesDataModal.forEach(examen => {
+                const checkbox = document.getElementById(`modal-examen-${examen.id}`);
+                if (checkbox) {
+                    checkbox.checked = examenesSeleccionadosModal.includes(examen.nombre);
+                }
+            });
+
+            // Actualizar tags seleccionados
+            const selectedContainer = document.getElementById('modalExamenesSelected');
+            selectedContainer.innerHTML = examenesSeleccionadosModal.map(nombre => `
+                <span class="examen-tag">
+                    ${nombre}
+                    <button type="button" onclick="quitarExamenModal('${nombre.replace(/'/g, "\\'")}')">&times;</button>
+                </span>
+            `).join('');
+        }
+
+        function mostrarAlertaModal(mensaje, tipo = 'error') {
+            const alert = document.getElementById('modalAlert');
+            alert.textContent = mensaje;
+            alert.className = `modal-alert show ${tipo}`;
+        }
+
+        function ocultarAlertaModal() {
+            document.getElementById('modalAlert').className = 'modal-alert';
+        }
+
+        async function crearOrdenEmpresa() {
+            ocultarAlertaModal();
+
+            // Validaciones
+            const numeroId = document.getElementById('modalNumeroId').value.trim();
+            const celular = document.getElementById('modalCelular').value.trim();
+            const primerNombre = document.getElementById('modalPrimerNombre').value.trim();
+            const primerApellido = document.getElementById('modalPrimerApellido').value.trim();
+            const cargo = document.getElementById('modalCargo').value.trim();
+            const ciudad = document.getElementById('modalCiudad').value.trim();
+            const tipoExamen = document.getElementById('modalTipoExamen').value;
+
+            if (!numeroId || !celular || !primerNombre || !primerApellido || !cargo || !ciudad || !tipoExamen) {
+                mostrarAlertaModal('Por favor complete todos los campos obligatorios');
+                return;
+            }
+
+            const btn = document.getElementById('btnCrearOrden');
+            btn.disabled = true;
+            btn.textContent = 'Creando...';
+
+            const datos = {
+                codEmpresa: codEmpresa,
+                empresa: codEmpresa,
+                numeroId: numeroId,
+                celular: celular,
+                primerNombre: primerNombre,
+                segundoNombre: document.getElementById('modalSegundoNombre').value.trim() || null,
+                primerApellido: primerApellido,
+                segundoApellido: document.getElementById('modalSegundoApellido').value.trim() || null,
+                cargo: cargo,
+                ciudad: ciudad,
+                tipoExamen: tipoExamen,
+                medico: document.getElementById('modalMedico').value || null,
+                fechaAtencion: document.getElementById('modalFechaAtencion').value || null,
+                horaAtencion: document.getElementById('modalHoraAtencion').value || null,
+                examenes: examenesSeleccionadosModal.join(', '),
+                atendido: 'PENDIENTE'
+            };
+
+            try {
+                const response = await fetch('/api/ordenes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(datos)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    cerrarModalNuevaOrden();
+                    actualizarDatos(); // Refrescar la tabla
+                    alert('Orden creada exitosamente');
+                } else {
+                    mostrarAlertaModal(result.message || 'Error al crear la orden');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarAlertaModal('Error de conexión. Intente de nuevo.');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Crear Orden';
+            }
+        }
+
+        // Cerrar modal al hacer clic fuera
+        document.getElementById('modalNuevaOrden').addEventListener('click', function(e) {
+            if (e.target === this) {
+                cerrarModalNuevaOrden();
+            }
+        });
     </script>
 </body>
 </html>
