@@ -1143,7 +1143,9 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    mostrarExito(datos);
+                    // Redirigir al formulario de historia clínica (Paso 2)
+                    const ordenId = result.data._id;
+                    window.location.href = `/?_id=${ordenId}`;
                 } else {
                     throw new Error(result.message || 'Error al registrar la cita');
                 }
