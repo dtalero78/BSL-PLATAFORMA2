@@ -821,12 +821,57 @@
             document.getElementById('horaSelect').innerHTML = '<option value="">Primero selecciona un día</option>';
         }
 
-        function actualizarHoras() {
+        async function actualizarHoras() {
             const fecha = document.getElementById('dia').value;
             if (!fecha) return;
 
-            // NUBIA no tiene restricción de cupo - genera horas directamente sin verificar ocupación
-            generarHorasDisponibles(fecha);
+            // Determinar la modalidad basada en tipo de consulta
+            const tipoConsulta = document.getElementById('tipoConsulta').value;
+            const modalidad = tipoConsulta === 'Telemedicina' ? 'virtual' : 'presencial';
+
+            // Intentar obtener horarios disponibles desde el servidor basado en la modalidad
+            await cargarHorariosDesdeServidor(fecha, modalidad);
+        }
+
+        async function cargarHorariosDesdeServidor(fecha, modalidad) {
+            const select = document.getElementById('horaSelect');
+            select.innerHTML = '<option value="">Cargando horarios...</option>';
+
+            try {
+                // Intentar cargar horarios configurados para NUBIA según la modalidad
+                const response = await fetch(`/api/horarios-disponibles?fecha=${fecha}&medico=NUBIA&modalidad=${modalidad}`);
+                const result = await response.json();
+
+                if (result.success && result.horarios && result.horarios.length > 0) {
+                    select.innerHTML = '<option value="">Seleccionar hora...</option>';
+
+                    result.horarios.forEach(h => {
+                        const [hora, minuto] = h.hora.split(':').map(Number);
+                        const hora12 = hora > 12 ? hora - 12 : (hora === 0 ? 12 : hora);
+                        const ampm = hora >= 12 ? 'PM' : 'AM';
+                        const texto = `${hora12}:${minuto.toString().padStart(2, '0')} ${ampm}`;
+
+                        const option = document.createElement('option');
+                        option.value = h.hora;
+
+                        if (h.disponible) {
+                            option.textContent = texto;
+                        } else {
+                            option.textContent = `${texto} (ocupado)`;
+                            option.disabled = true;
+                            option.style.color = '#9CA3AF';
+                        }
+                        select.appendChild(option);
+                    });
+                } else {
+                    // Si no hay configuración, generar horas por defecto
+                    generarHorasDisponibles(fecha);
+                }
+            } catch (error) {
+                console.error('Error al cargar horarios:', error);
+                // En caso de error, generar horas por defecto
+                generarHorasDisponibles(fecha);
+            }
         }
 
         function generarHorasDisponibles(fecha) {
@@ -955,6 +1000,7 @@
             });
             element.classList.add('selected');
 
+            // Cuando cambia el tipo de consulta, actualizar horarios según la modalidad
             const dia = document.getElementById('dia').value;
             if (dia) {
                 actualizarHoras();

@@ -352,6 +352,48 @@
             display: flex;
         }
 
+        /* Tabs de Modalidad */
+        .modalidad-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            background: #F1F5F9;
+            padding: 4px;
+            border-radius: 10px;
+        }
+
+        .modalidad-tab {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border: none;
+            background: transparent;
+            color: #64748B;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .modalidad-tab:hover {
+            color: #374151;
+        }
+
+        .modalidad-tab.active {
+            background: white;
+            color: #2563EB;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .modalidad-tab svg {
+            width: 18px;
+            height: 18px;
+        }
+
         /* Top Bar Fijo */
         .top-bar {
             position: fixed;
@@ -1596,9 +1638,19 @@
                         <span>minutos</span>
                     </div>
 
+                    <!-- Tabs de Modalidad -->
+                    <div class="modalidad-tabs">
+                        <button type="button" class="modalidad-tab active" data-modalidad="presencial" onclick="cambiarModalidad('presencial')">
+                            <i data-feather="users"></i> Presencial
+                        </button>
+                        <button type="button" class="modalidad-tab" data-modalidad="virtual" onclick="cambiarModalidad('virtual')">
+                            <i data-feather="video"></i> Virtual
+                        </button>
+                    </div>
+
                     <!-- Días de la semana -->
                     <div class="disponibilidad-section">
-                        <h4>Días y horarios de trabajo</h4>
+                        <h4>Días y horarios de trabajo <span id="modalidadActualLabel" style="font-weight: normal; color: #2563EB;">(Presencial)</span></h4>
 
                         <div class="dia-row" data-dia="1">
                             <div class="dia-checkbox">
@@ -2310,12 +2362,21 @@
         // ========== MODAL DISPONIBILIDAD MÉDICOS ==========
 
         let medicoSeleccionadoId = null;
+        let modalidadActual = 'presencial';
+        // Almacenar la configuración de disponibilidad por modalidad
+        let disponibilidadPorModalidad = {
+            presencial: {},
+            virtual: {}
+        };
 
         function abrirModalTiempoConsulta() {
             document.getElementById('modalTiempoConsulta').classList.add('active');
             document.getElementById('disponibilidadGuardada').classList.remove('show');
             poblarSelectMedicosDisponibilidad();
             inicializarSelectoresHora();
+            modalidadActual = 'presencial';
+            actualizarTabsModalidad();
+            feather.replace();
         }
 
         function cerrarModalTiempoConsulta() {
@@ -2323,6 +2384,69 @@
             document.getElementById('selectMedicoDisponibilidad').value = '';
             document.getElementById('contenidoDisponibilidad').style.display = 'none';
             medicoSeleccionadoId = null;
+            modalidadActual = 'presencial';
+            disponibilidadPorModalidad = { presencial: {}, virtual: {} };
+        }
+
+        function cambiarModalidad(modalidad) {
+            // Guardar configuración actual antes de cambiar
+            guardarConfiguracionEnMemoria(modalidadActual);
+
+            // Cambiar modalidad
+            modalidadActual = modalidad;
+            actualizarTabsModalidad();
+
+            // Cargar configuración de la nueva modalidad
+            cargarConfiguracionDesdeMemoria(modalidad);
+        }
+
+        function actualizarTabsModalidad() {
+            document.querySelectorAll('.modalidad-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.modalidad === modalidadActual);
+            });
+            const label = modalidadActual === 'presencial' ? '(Presencial)' : '(Virtual)';
+            document.getElementById('modalidadActualLabel').textContent = label;
+            feather.replace();
+        }
+
+        function guardarConfiguracionEnMemoria(modalidad) {
+            disponibilidadPorModalidad[modalidad] = {};
+            for (let dia = 0; dia <= 6; dia++) {
+                const activo = document.getElementById(`dia-${dia}`).checked;
+                const horaInicio = document.getElementById(`inicio-${dia}`).value;
+                const horaFin = document.getElementById(`fin-${dia}`).value;
+
+                disponibilidadPorModalidad[modalidad][dia] = {
+                    activo,
+                    hora_inicio: horaInicio,
+                    hora_fin: horaFin
+                };
+            }
+        }
+
+        function cargarConfiguracionDesdeMemoria(modalidad) {
+            const config = disponibilidadPorModalidad[modalidad];
+
+            for (let dia = 0; dia <= 6; dia++) {
+                const checkbox = document.getElementById(`dia-${dia}`);
+                const selectInicio = document.getElementById(`inicio-${dia}`);
+                const selectFin = document.getElementById(`fin-${dia}`);
+
+                if (config && config[dia]) {
+                    checkbox.checked = config[dia].activo;
+                    selectInicio.disabled = !config[dia].activo;
+                    selectFin.disabled = !config[dia].activo;
+                    selectInicio.value = config[dia].hora_inicio;
+                    selectFin.value = config[dia].hora_fin;
+                } else {
+                    // Valores por defecto
+                    checkbox.checked = false;
+                    selectInicio.disabled = true;
+                    selectFin.disabled = true;
+                    selectInicio.value = '08:00';
+                    selectFin.value = '17:00';
+                }
+            }
         }
 
         function poblarSelectMedicosDisponibilidad() {
@@ -2382,7 +2506,10 @@
             const option = select.options[select.selectedIndex];
             document.getElementById('inputTiempoConsulta').value = option.dataset.tiempoConsulta || 10;
 
-            // Resetear todos los días
+            // Resetear configuración en memoria
+            disponibilidadPorModalidad = { presencial: {}, virtual: {} };
+
+            // Resetear todos los días en UI
             for (let dia = 0; dia <= 6; dia++) {
                 document.getElementById(`dia-${dia}`).checked = false;
                 document.getElementById(`inicio-${dia}`).disabled = true;
@@ -2391,21 +2518,43 @@
                 document.getElementById(`fin-${dia}`).value = '17:00';
             }
 
-            // Cargar disponibilidad existente
+            // Cargar disponibilidad existente para AMBAS modalidades
             try {
-                const response = await fetch(`/api/medicos/${medicoId}/disponibilidad`);
-                const result = await response.json();
+                // Cargar presencial
+                const responsePresencial = await fetch(`/api/medicos/${medicoId}/disponibilidad?modalidad=presencial`);
+                const resultPresencial = await responsePresencial.json();
 
-                if (result.success && result.data.length > 0) {
-                    result.data.forEach(config => {
+                if (resultPresencial.success && resultPresencial.data.length > 0) {
+                    resultPresencial.data.forEach(config => {
                         const dia = config.dia_semana;
-                        document.getElementById(`dia-${dia}`).checked = true;
-                        document.getElementById(`inicio-${dia}`).disabled = false;
-                        document.getElementById(`fin-${dia}`).disabled = false;
-                        document.getElementById(`inicio-${dia}`).value = config.hora_inicio;
-                        document.getElementById(`fin-${dia}`).value = config.hora_fin;
+                        disponibilidadPorModalidad.presencial[dia] = {
+                            activo: true,
+                            hora_inicio: config.hora_inicio,
+                            hora_fin: config.hora_fin
+                        };
                     });
                 }
+
+                // Cargar virtual
+                const responseVirtual = await fetch(`/api/medicos/${medicoId}/disponibilidad?modalidad=virtual`);
+                const resultVirtual = await responseVirtual.json();
+
+                if (resultVirtual.success && resultVirtual.data.length > 0) {
+                    resultVirtual.data.forEach(config => {
+                        const dia = config.dia_semana;
+                        disponibilidadPorModalidad.virtual[dia] = {
+                            activo: true,
+                            hora_inicio: config.hora_inicio,
+                            hora_fin: config.hora_fin
+                        };
+                    });
+                }
+
+                // Mostrar la modalidad actual (presencial por defecto)
+                modalidadActual = 'presencial';
+                actualizarTabsModalidad();
+                cargarConfiguracionDesdeMemoria('presencial');
+
             } catch (error) {
                 console.error('Error al cargar disponibilidad:', error);
             }
@@ -2430,6 +2579,9 @@
             btn.disabled = true;
             btn.textContent = 'Guardando...';
 
+            // Guardar configuración actual en memoria antes de enviar
+            guardarConfiguracionEnMemoria(modalidadActual);
+
             try {
                 // 1. Guardar tiempo de consulta
                 const tiempoConsulta = parseInt(document.getElementById('inputTiempoConsulta').value);
@@ -2440,26 +2592,58 @@
                     body: JSON.stringify({ tiempoConsulta })
                 });
 
-                // 2. Construir array de disponibilidad
-                const disponibilidad = [];
+                // 2. Guardar disponibilidad PRESENCIAL
+                const disponibilidadPresencial = [];
                 for (let dia = 0; dia <= 6; dia++) {
-                    const activo = document.getElementById(`dia-${dia}`).checked;
-                    const horaInicio = document.getElementById(`inicio-${dia}`).value;
-                    const horaFin = document.getElementById(`fin-${dia}`).value;
-
-                    disponibilidad.push({
-                        dia_semana: dia,
-                        hora_inicio: horaInicio,
-                        hora_fin: horaFin,
-                        activo: activo
-                    });
+                    const config = disponibilidadPorModalidad.presencial[dia];
+                    if (config) {
+                        disponibilidadPresencial.push({
+                            dia_semana: dia,
+                            hora_inicio: config.hora_inicio,
+                            hora_fin: config.hora_fin,
+                            activo: config.activo
+                        });
+                    } else {
+                        disponibilidadPresencial.push({
+                            dia_semana: dia,
+                            hora_inicio: '08:00',
+                            hora_fin: '17:00',
+                            activo: false
+                        });
+                    }
                 }
 
-                // 3. Guardar disponibilidad
+                await fetch(`/api/medicos/${medicoSeleccionadoId}/disponibilidad`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ disponibilidad: disponibilidadPresencial, modalidad: 'presencial' })
+                });
+
+                // 3. Guardar disponibilidad VIRTUAL
+                const disponibilidadVirtual = [];
+                for (let dia = 0; dia <= 6; dia++) {
+                    const config = disponibilidadPorModalidad.virtual[dia];
+                    if (config) {
+                        disponibilidadVirtual.push({
+                            dia_semana: dia,
+                            hora_inicio: config.hora_inicio,
+                            hora_fin: config.hora_fin,
+                            activo: config.activo
+                        });
+                    } else {
+                        disponibilidadVirtual.push({
+                            dia_semana: dia,
+                            hora_inicio: '08:00',
+                            hora_fin: '17:00',
+                            activo: false
+                        });
+                    }
+                }
+
                 const response = await fetch(`/api/medicos/${medicoSeleccionadoId}/disponibilidad`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ disponibilidad })
+                    body: JSON.stringify({ disponibilidad: disponibilidadVirtual, modalidad: 'virtual' })
                 });
 
                 const result = await response.json();

@@ -616,6 +616,13 @@
                                 </select>
                             </div>
                             <div class="form-group">
+                                <label class="form-label">Modalidad</label>
+                                <select class="form-select" name="modalidad" id="selectModalidad" onchange="actualizarMedicosPorModalidad()">
+                                    <option value="presencial">Presencial</option>
+                                    <option value="virtual">Virtual</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
                                 <label class="form-label">Médico</label>
                                 <select class="form-select" name="medico" id="selectMedico" onchange="actualizarHorariosDisponibles()">
                                     <option value="">Seleccionar médico...</option>
@@ -631,7 +638,7 @@
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Fecha de Atención</label>
-                                <input type="date" class="form-input" name="fechaAtencion" id="inputFechaAtencion" onchange="actualizarHorariosDisponibles()">
+                                <input type="date" class="form-input" name="fechaAtencion" id="inputFechaAtencion" onchange="actualizarMedicosPorModalidad()">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Hora de Atención</label>
@@ -788,6 +795,7 @@
         async function actualizarHorariosDisponibles() {
             const medico = document.getElementById('selectMedico').value;
             const fecha = document.getElementById('inputFechaAtencion').value;
+            const modalidad = document.getElementById('selectModalidad').value;
             const select = document.getElementById('selectHora');
             const infoTiempo = document.getElementById('infoTiempoConsulta');
 
@@ -800,7 +808,7 @@
             select.innerHTML = '<option value="">Cargando horarios...</option>';
 
             try {
-                const response = await fetch(`/api/horarios-disponibles?fecha=${fecha}&medico=${encodeURIComponent(medico)}`);
+                const response = await fetch(`/api/horarios-disponibles?fecha=${fecha}&medico=${encodeURIComponent(medico)}&modalidad=${modalidad}`);
                 const result = await response.json();
 
                 if (result.success) {
@@ -843,7 +851,35 @@
                 const result = await response.json();
 
                 if (result.success && result.data.length > 0) {
-                    const select = document.getElementById('selectMedico');
+                    medicosData = result.data;
+                    // Cargar médicos según la modalidad seleccionada
+                    actualizarMedicosPorModalidad();
+                }
+            } catch (error) {
+                console.error('Error al cargar médicos:', error);
+            }
+        }
+
+        async function actualizarMedicosPorModalidad() {
+            const modalidad = document.getElementById('selectModalidad').value;
+            const fecha = document.getElementById('inputFechaAtencion').value;
+            const select = document.getElementById('selectMedico');
+
+            select.innerHTML = '<option value="">Cargando médicos...</option>';
+
+            try {
+                // Intentar obtener médicos que tienen disponibilidad para esta modalidad
+                let url = `/api/medicos-por-modalidad?modalidad=${modalidad}`;
+                if (fecha) {
+                    url += `&fecha=${fecha}`;
+                }
+
+                const response = await fetch(url);
+                const result = await response.json();
+
+                select.innerHTML = '<option value="">Seleccionar médico...</option>';
+
+                if (result.success && result.data.length > 0) {
                     result.data.forEach(medico => {
                         const nombreCompleto = `${medico.primer_nombre} ${medico.primer_apellido}`;
                         const option = document.createElement('option');
@@ -851,9 +887,31 @@
                         option.textContent = nombreCompleto;
                         select.appendChild(option);
                     });
+                } else {
+                    // Si no hay médicos con disponibilidad configurada, mostrar todos
+                    medicosData.forEach(medico => {
+                        const nombreCompleto = `${medico.primer_nombre} ${medico.primer_apellido}`;
+                        const option = document.createElement('option');
+                        option.value = nombreCompleto;
+                        option.textContent = nombreCompleto;
+                        select.appendChild(option);
+                    });
                 }
+
+                // Limpiar horarios
+                actualizarHorariosDisponibles();
+
             } catch (error) {
-                console.error('Error al cargar médicos:', error);
+                console.error('Error al filtrar médicos:', error);
+                // En caso de error, mostrar todos los médicos
+                select.innerHTML = '<option value="">Seleccionar médico...</option>';
+                medicosData.forEach(medico => {
+                    const nombreCompleto = `${medico.primer_nombre} ${medico.primer_apellido}`;
+                    const option = document.createElement('option');
+                    option.value = nombreCompleto;
+                    option.textContent = nombreCompleto;
+                    select.appendChild(option);
+                });
             }
         }
 
