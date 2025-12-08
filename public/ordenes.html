@@ -197,49 +197,88 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
 
-        .search-box {
+        /* Search Container */
+        .search-container {
+            background: white;
+            border: 1px solid #E5E7EB;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+        }
+
+        .search-bar {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .search-input-wrapper {
             flex: 1;
-            max-width: 320px;
             position: relative;
+            max-width: 400px;
+        }
+
+        .search-input-wrapper svg {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            stroke: #94A3B8;
         }
 
         .search-input {
             width: 100%;
-            padding: 10px 16px 10px 40px;
+            padding: 12px 16px 12px 44px;
             border: 1px solid #E5E7EB;
-            border-radius: 8px;
-            font-size: 14px;
+            border-radius: 10px;
+            font-size: 15px;
             font-family: inherit;
             background: white;
-            transition: all 0.15s ease;
+            transition: all 0.2s ease;
         }
 
         .search-input:focus {
             outline: none;
             border-color: #0099B2;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            box-shadow: 0 0 0 3px rgba(0, 153, 178, 0.1);
         }
 
         .search-input::placeholder {
             color: #9CA3AF;
         }
 
-        .search-icon {
-            position: absolute;
-            left: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #9CA3AF;
-            font-size: 16px;
+        .btn-clear {
+            padding: 12px 20px;
+            background: #F1F5F9;
+            color: #64748B;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: none;
+        }
+
+        .btn-clear.show {
+            display: block;
+        }
+
+        .btn-clear:hover {
+            background: #E2E8F0;
         }
 
         .stats-badge {
-            padding: 8px 16px;
-            background: white;
+            padding: 10px 16px;
+            background: #F8FAFC;
             border: 1px solid #E5E7EB;
-            border-radius: 8px;
-            font-size: 13px;
+            border-radius: 10px;
+            font-size: 14px;
             color: #6B7280;
+            margin-left: auto;
         }
 
         .stats-badge strong {
@@ -1271,10 +1310,22 @@
                     <h1 class="page-title">Órdenes</h1>
                     <p class="page-subtitle">Gestiona las órdenes y pacientes del sistema</p>
                 </div>
-                <div class="header-actions">
-                    <a href="/nueva-orden.html" class="btn btn-primary"><i data-feather="plus"></i> Nueva Orden</a>
-                    <a href="/medicos.html" class="btn btn-secondary"><i data-feather="users"></i> Médicos</a>
-                    <a href="/empresas.html" class="btn btn-secondary"><i data-feather="briefcase"></i> Empresas</a>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="search-container">
+                <div class="search-bar">
+                    <div class="search-input-wrapper">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="M21 21l-4.35-4.35"></path>
+                        </svg>
+                        <input type="text" class="search-input" id="searchInput" placeholder="Buscar por nombre, cédula o empresa...">
+                    </div>
+                    <button class="btn-clear" id="btnClear">Limpiar</button>
+                    <div class="stats-badge" id="statsCounter">
+                        <strong>0</strong> registros
+                    </div>
                 </div>
             </div>
 
@@ -1284,13 +1335,6 @@
                     <button class="tab active" data-filter="todos">Todos</button>
                     <button class="tab" data-filter="atendido">Atendidos</button>
                     <button class="tab" data-filter="pendiente">Pendientes</button>
-                </div>
-                <div class="search-box">
-                    <i data-feather="search" class="search-icon" style="width:18px;height:18px;stroke:#9CA3AF;"></i>
-                    <input type="text" class="search-input" id="searchInput" placeholder="Buscar por nombre, cédula o empresa...">
-                </div>
-                <div class="stats-badge" id="statsCounter">
-                    <strong>0</strong> registros
                 </div>
             </div>
 
@@ -2890,11 +2934,20 @@
             cargarFormularios();
 
             // Search - Búsqueda server-side con debounce
+            const btnClear = document.getElementById('btnClear');
+
             document.getElementById('searchInput').addEventListener('input', async function(e) {
                 busquedaActual = e.target.value.trim();
 
                 // Cancelar búsqueda anterior
                 clearTimeout(searchTimeout);
+
+                // Mostrar/ocultar botón limpiar
+                if (busquedaActual.length > 0) {
+                    btnClear.classList.add('show');
+                } else {
+                    btnClear.classList.remove('show');
+                }
 
                 // Si tiene menos de 2 caracteres, filtrar localmente
                 if (busquedaActual.length < 2) {
@@ -2944,6 +2997,15 @@
                         document.getElementById('statsCounter').innerHTML = '<strong>Error en búsqueda</strong>';
                     }
                 }, 300);
+            });
+
+            // Botón Limpiar búsqueda
+            btnClear.addEventListener('click', function() {
+                document.getElementById('searchInput').value = '';
+                busquedaActual = '';
+                buscandoEnServidor = false;
+                btnClear.classList.remove('show');
+                actualizarVista();
             });
 
             // Tabs
