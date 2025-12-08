@@ -3731,6 +3731,219 @@ app.get('/api/barrido-nubia', async (req, res) => {
 });
 
 // ==========================================
+// API para Panel NUBIA - Listar pacientes del día
+// ==========================================
+app.get('/api/nubia/pacientes', async (req, res) => {
+    try {
+        // Obtener fecha de hoy (inicio y fin del día)
+        const hoy = new Date();
+        const inicioDelDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 0, 0, 0);
+        const finDelDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59);
+
+        console.log(`📋 [API NUBIA] Buscando pacientes del día ${inicioDelDia.toISOString()} a ${finDelDia.toISOString()}`);
+
+        const result = await pool.query(`
+            SELECT "_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
+                   "celular", "cargo", "ciudad", "tipoExamen", "codEmpresa", "empresa", "medico",
+                   "atendido", "examenes", "_createdDate", "fechaConsulta", "fechaAtencion", "horaAtencion",
+                   "pvEstado", "mdConceptoFinal", "mdRecomendacionesMedicasAdicionales", "mdObservacionesCertificado"
+            FROM "HistoriaClinica"
+            WHERE "medico" ILIKE '%NUBIA%'
+              AND "fechaAtencion" >= $1
+              AND "fechaAtencion" <= $2
+            ORDER BY "fechaAtencion" ASC
+            LIMIT 100
+        `, [inicioDelDia.toISOString(), finDelDia.toISOString()]);
+
+        // Contar atendidos y pagados
+        const atendidos = result.rows.filter(r => r.atendido === 'ATENDIDO').length;
+        const pagados = result.rows.filter(r => r.pvEstado === 'Pagado').length;
+
+        res.json({
+            success: true,
+            data: result.rows,
+            total: result.rows.length,
+            atendidos,
+            pagados
+        });
+    } catch (error) {
+        console.error('❌ Error listando pacientes NUBIA:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// API para cambiar estado a ATENDIDO (Panel NUBIA)
+app.post('/api/nubia/atender/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Valores por defecto
+        const RECOMENDACIONES_DEFAULT = `1. PAUSAS ACTIVAS
+2. HIGIENE POSTURAL
+3. MEDIDAS ERGONOMICAS
+4. TÉCNICAS DE MANEJO DE ESTRÉS
+5. EJERCICIO AEROBICO
+6. MANTENER MEDIDAS DE BIOSEGURIDAD PARA COVID.
+7. ALIMENTACIÓN BALANCEADA`;
+
+        const OBSERVACIONES_DEFAULT = `Basándonos en los resultados obtenidos de la evaluación osteomuscular, certificamos que el paciente presenta un sistema osteomuscular en condiciones óptimas de salud. Esta condición le permite llevar a cabo una variedad de actividades físicas y cotidianas sin restricciones notables y con un riesgo mínimo de lesiones osteomusculares.`;
+
+        // Actualizar el registro
+        const result = await pool.query(`
+            UPDATE "HistoriaClinica"
+            SET "atendido" = 'ATENDIDO',
+                "fechaConsulta" = NOW(),
+                "mdConceptoFinal" = 'ELEGIBLE PARA EL CARGO SIN RECOMENDACIONES LABORALES',
+                "mdRecomendacionesMedicasAdicionales" = $2,
+                "mdObservacionesCertificado" = $3
+            WHERE "_id" = $1
+            RETURNING *
+        `, [id, RECOMENDACIONES_DEFAULT, OBSERVACIONES_DEFAULT]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Registro no encontrado' });
+        }
+
+        const paciente = result.rows[0];
+
+        // Enviar mensaje de WhatsApp si tiene celular
+        if (paciente.celular) {
+            const telefonoLimpio = paciente.celular.replace(/\s+/g, '').replace(/[^\d]/g, '');
+            const toNumber = telefonoLimpio.startsWith('57') ? telefonoLimpio : `57${telefonoLimpio}`;
+
+            const mensaje = `👋 Hola ${paciente.primerNombre}. Te escribimos de BSL. 🏥 Tu certificado médico ya está listo. 📄\n\nRevísalo haciendo clic en este link: 👉 www.bsl.com.co/descargar`;
+
+            try {
+                await sendWhatsAppMessage(toNumber, mensaje);
+                console.log(`📱 [NUBIA] Mensaje de certificado enviado a ${paciente.primerNombre} (${toNumber})`);
+            } catch (sendError) {
+                console.error(`Error enviando mensaje:`, sendError);
+            }
+        }
+
+        res.json({ success: true, data: paciente, message: 'Estado actualizado correctamente' });
+    } catch (error) {
+        console.error('❌ Error marcando como atendido:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// API para marcar como PAGADO (Panel NUBIA)
+app.post('/api/nubia/cobrar/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Actualizar estado a Pagado
+        const result = await pool.query(`
+            UPDATE "HistoriaClinica"
+            SET "pvEstado" = 'Pagado'
+            WHERE "_id" = $1
+            RETURNING *
+        `, [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Registro no encontrado' });
+        }
+
+        const paciente = result.rows[0];
+
+        // Enviar mensaje con link de descarga
+        if (paciente.celular) {
+            const telefonoLimpio = paciente.celular.replace(/\s+/g, '').replace(/[^\d]/g, '');
+            const toNumber = telefonoLimpio.startsWith('57') ? telefonoLimpio : `57${telefonoLimpio}`;
+
+            const mensaje = `Descargalo del siguiente link: https://www.bsl.com.co/descargar`;
+
+            try {
+                await sendWhatsAppMessage(toNumber, mensaje);
+                console.log(`📱 [NUBIA] Link de descarga enviado a ${paciente.primerNombre} (${toNumber})`);
+            } catch (sendError) {
+                console.error(`Error enviando mensaje:`, sendError);
+            }
+        }
+
+        res.json({ success: true, data: paciente, message: 'Marcado como pagado y mensaje enviado' });
+    } catch (error) {
+        console.error('❌ Error marcando como pagado:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// API para enviar mensaje de bienvenida (Panel NUBIA)
+app.post('/api/nubia/enviar-mensaje/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Obtener datos del paciente
+        const result = await pool.query(`
+            SELECT * FROM "HistoriaClinica" WHERE "_id" = $1
+        `, [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Registro no encontrado' });
+        }
+
+        const paciente = result.rows[0];
+
+        if (!paciente.celular) {
+            return res.status(400).json({ success: false, message: 'El paciente no tiene celular registrado' });
+        }
+
+        const telefonoLimpio = paciente.celular.replace(/\s+/g, '').replace(/[^\d]/g, '');
+        const toNumber = telefonoLimpio.startsWith('57') ? telefonoLimpio : `57${telefonoLimpio}`;
+
+        const mensaje = `Hola ${paciente.primerNombre}! Te escribimos de BSL.
+Estás realizando con nosotros el examen médico virtual.
+
+Debes realizar las siguientes pruebas:
+
+https://www.bsl.com.co/historia-clinica2/${id}
+
+Puedes hacerlo desde celular o computador.
+
+¡Gracias!`;
+
+        await sendWhatsAppMessage(toNumber, mensaje);
+
+        res.json({ success: true, message: 'Mensaje enviado correctamente' });
+    } catch (error) {
+        console.error('❌ Error enviando mensaje:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// API para buscar paciente por cédula (Panel NUBIA)
+app.get('/api/nubia/buscar', async (req, res) => {
+    try {
+        const { q } = req.query;
+
+        if (!q) {
+            return res.status(400).json({ success: false, message: 'Parámetro de búsqueda requerido' });
+        }
+
+        const result = await pool.query(`
+            SELECT "_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
+                   "celular", "cargo", "ciudad", "tipoExamen", "codEmpresa", "empresa", "medico",
+                   "atendido", "examenes", "_createdDate", "fechaConsulta", "fechaAtencion", "horaAtencion",
+                   "pvEstado"
+            FROM "HistoriaClinica"
+            WHERE ("numeroId" ILIKE $1 OR "_id" ILIKE $1)
+            ORDER BY "_createdDate" DESC
+            LIMIT 20
+        `, [`%${q}%`]);
+
+        res.json({
+            success: true,
+            data: result.rows,
+            total: result.rows.length
+        });
+    } catch (error) {
+        console.error('❌ Error buscando paciente:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ==========================================
 // CRON JOB - Barrido NUBIA cada 5 minutos
 // ==========================================
 cron.schedule('*/5 * * * *', async () => {

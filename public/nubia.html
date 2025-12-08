@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel NUBIA - BSL</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #FAFAFA;
+            color: #1F2937;
+            min-height: 100vh;
+        }
+
+        /* ========== LAYOUT ========== */
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* ========== HEADER ========== */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #E5E7EB;
+        }
+
+        .page-header-left h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #111827;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 4px;
+        }
+
+        .page-header-left p {
+            font-size: 14px;
+            color: #6B7280;
+        }
+
+        .stats-container {
+            display: flex;
+            gap: 16px;
+        }
+
+        .stat-badge {
+            padding: 12px 20px;
+            background: #F8FAFC;
+            border: 1px solid #E5E7EB;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-badge.primary {
+            background: #EFF6FF;
+            border-color: #BFDBFE;
+        }
+
+        .stat-badge.success {
+            background: #ECFDF5;
+            border-color: #A7F3D0;
+        }
+
+        .stat-badge .number {
+            font-size: 24px;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .stat-badge .label {
+            font-size: 12px;
+            color: #6B7280;
+        }
+
+        /* ========== SEARCH BAR ========== */
+        .search-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .search-input-container {
+            position: relative;
+            flex: 1;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 16px 12px 44px;
+            border: 1px solid #E5E7EB;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            background: white;
+            transition: all 0.2s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #0099B2;
+            box-shadow: 0 0 0 3px rgba(0, 153, 178, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9CA3AF;
+            font-size: 18px;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #0099B2;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #007A8C;
+        }
+
+        .btn-secondary {
+            background: #F3F4F6;
+            color: #374151;
+        }
+
+        .btn-secondary:hover {
+            background: #E5E7EB;
+        }
+
+        /* ========== TABLE ========== */
+        .table-container {
+            background: white;
+            border: 1px solid #E5E7EB;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table thead {
+            background: #F9FAFB;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        .data-table th {
+            padding: 14px 16px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: #6B7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .data-table tbody tr {
+            border-bottom: 1px solid #F3F4F6;
+            transition: background 0.15s ease;
+        }
+
+        .data-table tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        .data-table tbody tr:hover {
+            background: #F9FAFB;
+        }
+
+        .data-table td {
+            padding: 16px;
+            font-size: 14px;
+            color: #374151;
+            vertical-align: middle;
+        }
+
+        .cell-name {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .name-primary {
+            font-weight: 600;
+            color: #111827;
+            cursor: pointer;
+        }
+
+        .name-primary:hover {
+            color: #0099B2;
+            text-decoration: underline;
+        }
+
+        .name-secondary {
+            font-size: 12px;
+            color: #9CA3AF;
+        }
+
+        .cell-fecha {
+            font-size: 13px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-badge.atendido {
+            background: #DCFCE7;
+            color: #166534;
+        }
+
+        .status-badge.pendiente {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+
+        .status-badge.pagado {
+            background: #DBEAFE;
+            color: #1E40AF;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        /* ========== ACTION BUTTONS ========== */
+        .actions-cell {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .btn-action {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid #E5E7EB;
+            background: white;
+            color: #374151;
+            transition: all 0.15s ease;
+        }
+
+        .btn-action:hover {
+            background: #F3F4F6;
+        }
+
+        .btn-action.whatsapp {
+            background: #25D366;
+            border-color: #25D366;
+            color: white;
+        }
+
+        .btn-action.whatsapp:hover {
+            background: #1da851;
+        }
+
+        .btn-action.atender {
+            background: #0099B2;
+            border-color: #0099B2;
+            color: white;
+        }
+
+        .btn-action.atender:hover {
+            background: #007A8C;
+        }
+
+        .btn-action.cobrar {
+            background: #F59E0B;
+            border-color: #F59E0B;
+            color: white;
+        }
+
+        .btn-action.cobrar:hover {
+            background: #D97706;
+        }
+
+        .btn-action:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* ========== STATES ========== */
+        .loading-state, .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6B7280;
+        }
+
+        .loading-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #E5E7EB;
+            border-top-color: #0099B2;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 4px;
+        }
+
+        /* ========== CONSOLE / TOAST ========== */
+        .console-message {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background: #111827;
+            color: white;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 1000;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        .console-message.show {
+            display: block;
+        }
+
+        .console-message.success {
+            background: #059669;
+        }
+
+        .console-message.error {
+            background: #DC2626;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ========== MOBILE ========== */
+        @media (max-width: 768px) {
+            .app-container {
+                padding: 12px;
+            }
+
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .stats-container {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .stat-badge {
+                flex: 1;
+                padding: 10px;
+            }
+
+            .stat-badge .number {
+                font-size: 20px;
+            }
+
+            .search-bar {
+                flex-direction: column;
+            }
+
+            .data-table {
+                display: block;
+                overflow-x: auto;
+            }
+
+            .data-table th, .data-table td {
+                padding: 12px 10px;
+                font-size: 13px;
+            }
+
+            .actions-cell {
+                flex-direction: column;
+            }
+        }
+
+        /* ========== MOBILE CARDS ========== */
+        .mobile-cards {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .table-container {
+                display: none;
+            }
+
+            .mobile-cards {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .mobile-card {
+                background: white;
+                border: 1px solid #E5E7EB;
+                border-radius: 12px;
+                padding: 16px;
+            }
+
+            .mobile-card-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                margin-bottom: 12px;
+            }
+
+            .mobile-card-name {
+                font-weight: 600;
+                color: #111827;
+                margin-bottom: 4px;
+            }
+
+            .mobile-card-meta {
+                font-size: 13px;
+                color: #6B7280;
+            }
+
+            .mobile-card-info {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                margin-bottom: 12px;
+            }
+
+            .mobile-card-info-item {
+                background: #F9FAFB;
+                padding: 8px 10px;
+                border-radius: 6px;
+            }
+
+            .mobile-card-info-label {
+                font-size: 11px;
+                color: #9CA3AF;
+                text-transform: uppercase;
+            }
+
+            .mobile-card-info-value {
+                font-size: 13px;
+                color: #111827;
+                font-weight: 500;
+            }
+
+            .mobile-card-actions {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+
+            .mobile-card-actions .btn-action {
+                flex: 1;
+                min-width: 80px;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <div class="page-header">
+            <div class="page-header-left">
+                <h1>Panel NUBIA</h1>
+                <p>Pacientes asignados a la Dra. NUBIA - Hoy</p>
+            </div>
+            <div class="stats-container">
+                <div class="stat-badge primary">
+                    <div class="number" id="totalAgendados">0</div>
+                    <div class="label">Agendados</div>
+                </div>
+                <div class="stat-badge success">
+                    <div class="number" id="totalAtendidos">0</div>
+                    <div class="label">Atendidos</div>
+                </div>
+                <div class="stat-badge">
+                    <div class="number" id="totalPagados">0</div>
+                    <div class="label">Pagados</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="search-bar">
+            <div class="search-input-container">
+                <span class="search-icon">🔍</span>
+                <input type="text" class="search-input" id="searchInput" placeholder="Buscar por cédula o nombre...">
+            </div>
+            <button class="btn btn-secondary" onclick="cargarPacientes()">🔄 Actualizar</button>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="loading-state">
+            <div class="loading-spinner"></div>
+            <p>Cargando pacientes...</p>
+        </div>
+
+        <!-- Table Container (Desktop) -->
+        <div class="table-container" id="tableContainer" style="display: none;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Paciente</th>
+                        <th>Cédula</th>
+                        <th>Celular</th>
+                        <th>Empresa</th>
+                        <th>Hora Cita</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile Cards -->
+        <div class="mobile-cards" id="mobileCards">
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-state-icon">📋</div>
+            <p class="empty-state-title">No hay pacientes</p>
+            <p>No se encontraron pacientes para hoy</p>
+        </div>
+    </div>
+
+    <!-- Console Message -->
+    <div class="console-message" id="consoleMessage"></div>
+
+    <script>
+        // ========== STATE ==========
+        let pacientes = [];
+        let pacientesFiltrados = [];
+
+        // ========== UTILITY ==========
+        function showMessage(message, type = 'info') {
+            const el = document.getElementById('consoleMessage');
+            el.textContent = message;
+            el.className = 'console-message show ' + type;
+            setTimeout(() => {
+                el.classList.remove('show');
+            }, 3000);
+        }
+
+        function formatHora(fecha) {
+            if (!fecha) return '—';
+            const date = new Date(fecha);
+            return date.toLocaleTimeString('es-CO', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+        }
+
+        function getStatusInfo(paciente) {
+            if (paciente.pvEstado === 'Pagado') {
+                return { class: 'pagado', text: 'ATENDIDO - PAGADO' };
+            }
+            if (paciente.atendido === 'ATENDIDO') {
+                return { class: 'atendido', text: 'ATENDIDO' };
+            }
+            return { class: 'pendiente', text: 'PENDIENTE' };
+        }
+
+        // ========== RENDER ==========
+        function renderTable(data) {
+            const tbody = document.getElementById('tableBody');
+
+            if (data.length === 0) {
+                tbody.innerHTML = '';
+                return;
+            }
+
+            tbody.innerHTML = data.map(p => {
+                const status = getStatusInfo(p);
+                const isAtendido = p.atendido === 'ATENDIDO';
+                const isPagado = p.pvEstado === 'Pagado';
+
+                return `
+                    <tr>
+                        <td>
+                            <div class="cell-name">
+                                <span class="name-primary" onclick="enviarMensaje('${p._id}')">${p.primerNombre || ''} ${p.primerApellido || ''}</span>
+                                <span class="name-secondary">${p.empresa || '—'}</span>
+                            </div>
+                        </td>
+                        <td>${p.numeroId || '—'}</td>
+                        <td>${p.celular || '—'}</td>
+                        <td>${p.codEmpresa || '—'}</td>
+                        <td class="cell-fecha">${formatHora(p.fechaAtencion)}</td>
+                        <td>
+                            <span class="status-badge ${status.class}">
+                                <span class="status-dot"></span>
+                                ${status.text}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="actions-cell">
+                                <button class="btn-action atender" onclick="marcarAtendido('${p._id}')" ${isAtendido ? 'disabled' : ''}>
+                                    ✓ Atender
+                                </button>
+                                <button class="btn-action cobrar" onclick="marcarCobrar('${p._id}')" ${isPagado || !isAtendido ? 'disabled' : ''}>
+                                    💰 Cobrar
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderMobileCards(data) {
+            const container = document.getElementById('mobileCards');
+
+            if (data.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = data.map(p => {
+                const status = getStatusInfo(p);
+                const isAtendido = p.atendido === 'ATENDIDO';
+                const isPagado = p.pvEstado === 'Pagado';
+
+                return `
+                    <div class="mobile-card">
+                        <div class="mobile-card-header">
+                            <div>
+                                <div class="mobile-card-name">${p.primerNombre || ''} ${p.primerApellido || ''}</div>
+                                <div class="mobile-card-meta">${p.numeroId || '—'}</div>
+                            </div>
+                            <span class="status-badge ${status.class}">
+                                <span class="status-dot"></span>
+                                ${status.text}
+                            </span>
+                        </div>
+                        <div class="mobile-card-info">
+                            <div class="mobile-card-info-item">
+                                <div class="mobile-card-info-label">Celular</div>
+                                <div class="mobile-card-info-value">${p.celular || '—'}</div>
+                            </div>
+                            <div class="mobile-card-info-item">
+                                <div class="mobile-card-info-label">Empresa</div>
+                                <div class="mobile-card-info-value">${p.codEmpresa || '—'}</div>
+                            </div>
+                            <div class="mobile-card-info-item">
+                                <div class="mobile-card-info-label">Hora Cita</div>
+                                <div class="mobile-card-info-value">${formatHora(p.fechaAtencion)}</div>
+                            </div>
+                            <div class="mobile-card-info-item">
+                                <div class="mobile-card-info-label">Tipo</div>
+                                <div class="mobile-card-info-value">${p.tipoExamen || '—'}</div>
+                            </div>
+                        </div>
+                        <div class="mobile-card-actions">
+                            <button class="btn-action whatsapp" onclick="enviarMensaje('${p._id}')">📩 Mensaje</button>
+                            <button class="btn-action atender" onclick="marcarAtendido('${p._id}')" ${isAtendido ? 'disabled' : ''}>✓ Atender</button>
+                            <button class="btn-action cobrar" onclick="marcarCobrar('${p._id}')" ${isPagado || !isAtendido ? 'disabled' : ''}>💰 Cobrar</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function actualizarVista() {
+            let data = [...pacientes];
+
+            // Filtrar por búsqueda
+            const busqueda = document.getElementById('searchInput').value.trim().toLowerCase();
+            if (busqueda) {
+                data = data.filter(p => {
+                    const nombre = `${p.primerNombre || ''} ${p.primerApellido || ''}`.toLowerCase();
+                    const cedula = (p.numeroId || '').toLowerCase();
+                    const celular = (p.celular || '').toLowerCase();
+                    return nombre.includes(busqueda) || cedula.includes(busqueda) || celular.includes(busqueda);
+                });
+            }
+
+            // Ordenar: primero pendientes, luego atendidos, luego pagados
+            data.sort((a, b) => {
+                const getOrder = (p) => {
+                    if (p.pvEstado === 'Pagado') return 2;
+                    if (p.atendido === 'ATENDIDO') return 1;
+                    return 0;
+                };
+                const orderDiff = getOrder(a) - getOrder(b);
+                if (orderDiff !== 0) return orderDiff;
+
+                // Si mismo estado, ordenar por hora de atención
+                const fechaA = new Date(a.fechaAtencion || 0);
+                const fechaB = new Date(b.fechaAtencion || 0);
+                return fechaA - fechaB;
+            });
+
+            pacientesFiltrados = data;
+
+            // Actualizar UI
+            const tableContainer = document.getElementById('tableContainer');
+            const emptyState = document.getElementById('emptyState');
+
+            if (data.length === 0) {
+                tableContainer.style.display = 'none';
+                emptyState.style.display = 'block';
+            } else {
+                tableContainer.style.display = 'block';
+                emptyState.style.display = 'none';
+            }
+
+            renderTable(data);
+            renderMobileCards(data);
+        }
+
+        // ========== DATA LOADING ==========
+        async function cargarPacientes() {
+            try {
+                document.getElementById('loadingState').style.display = 'block';
+                document.getElementById('tableContainer').style.display = 'none';
+                document.getElementById('emptyState').style.display = 'none';
+
+                const response = await fetch('/api/nubia/pacientes');
+                const result = await response.json();
+
+                document.getElementById('loadingState').style.display = 'none';
+
+                if (!result.success) {
+                    showMessage('Error al cargar pacientes', 'error');
+                    return;
+                }
+
+                pacientes = result.data;
+
+                // Actualizar stats
+                document.getElementById('totalAgendados').textContent = result.total;
+                document.getElementById('totalAtendidos').textContent = result.atendidos;
+                document.getElementById('totalPagados').textContent = result.pagados;
+
+                actualizarVista();
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('loadingState').innerHTML = `
+                    <div class="empty-state-icon">⚠️</div>
+                    <p class="empty-state-title">Error al cargar</p>
+                    <p>${error.message}</p>
+                `;
+                showMessage('Error de conexión', 'error');
+            }
+        }
+
+        // ========== ACTIONS ==========
+        async function enviarMensaje(id) {
+            try {
+                showMessage('Enviando mensaje...');
+
+                const response = await fetch(`/api/nubia/enviar-mensaje/${id}`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('Mensaje enviado correctamente', 'success');
+                } else {
+                    showMessage(result.message || 'Error al enviar mensaje', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error al enviar mensaje', 'error');
+            }
+        }
+
+        async function marcarAtendido(id) {
+            try {
+                showMessage('Marcando como atendido...');
+
+                const response = await fetch(`/api/nubia/atender/${id}`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('Marcado como ATENDIDO y mensaje enviado', 'success');
+                    await cargarPacientes();
+                } else {
+                    showMessage(result.message || 'Error al actualizar', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error al actualizar estado', 'error');
+            }
+        }
+
+        async function marcarCobrar(id) {
+            try {
+                showMessage('Procesando cobro...');
+
+                const response = await fetch(`/api/nubia/cobrar/${id}`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('Marcado como PAGADO y link enviado', 'success');
+                    await cargarPacientes();
+                } else {
+                    showMessage(result.message || 'Error al procesar', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error al procesar cobro', 'error');
+            }
+        }
+
+        // ========== SEARCH ==========
+        let searchTimeout = null;
+        document.getElementById('searchInput').addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                actualizarVista();
+            }, 300);
+        });
+
+        // ========== INIT ==========
+        cargarPacientes();
+
+        // Auto-refresh cada 60 segundos
+        setInterval(cargarPacientes, 60000);
+    </script>
+</body>
+</html>
