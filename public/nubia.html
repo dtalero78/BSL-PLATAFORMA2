@@ -180,6 +180,210 @@
             border-color: #0099B2;
         }
 
+        /* ========== MODAL ========== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 40px 20px;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 640px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            animation: modalSlide 0.2s ease-out;
+        }
+
+        @keyframes modalSlide {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 24px;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .btn-close {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: #F3F4F6;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #6B7280;
+            transition: all 0.15s ease;
+        }
+
+        .btn-close:hover {
+            background: #E5E7EB;
+            color: #374151;
+        }
+
+        .modal-body {
+            padding: 24px;
+            max-height: calc(80vh - 140px);
+            overflow-y: auto;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 12px;
+            padding: 16px 24px;
+            border-top: 1px solid #E5E7EB;
+            background: #F9FAFB;
+            border-radius: 0 0 12px 12px;
+            flex-wrap: wrap;
+        }
+
+        .modal-footer .btn {
+            flex: 1;
+            min-width: 100px;
+            justify-content: center;
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #E5E7EB;
+            margin-bottom: 20px;
+        }
+
+        .profile-avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #0099B2, #007A8C);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .profile-info {
+            flex: 1;
+        }
+
+        .profile-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 4px;
+        }
+
+        .profile-meta {
+            font-size: 14px;
+            color: #6B7280;
+        }
+
+        .detail-card {
+            background: #F9FAFB;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .detail-card:last-child {
+            margin-bottom: 0;
+        }
+
+        .detail-card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 12px;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .detail-field {
+            padding: 8px 0;
+        }
+
+        .detail-field-label {
+            font-size: 12px;
+            color: #6B7280;
+            margin-bottom: 2px;
+        }
+
+        .detail-field-value {
+            font-size: 14px;
+            color: #111827;
+            font-weight: 500;
+        }
+
+        .btn-success {
+            background: #10B981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-warning {
+            background: #F59E0B;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #D97706;
+        }
+
+        @media (max-width: 768px) {
+            .modal-overlay {
+                padding: 16px;
+            }
+
+            .modal-footer {
+                flex-direction: column;
+            }
+
+            .detail-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         /* ========== TABLE ========== */
         .table-container {
             background: white;
@@ -615,6 +819,22 @@
         </div>
     </div>
 
+    <!-- Modal: Ver Detalles -->
+    <div id="modalDetalles" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Detalles del Paciente</h2>
+                <button class="btn-close" onclick="cerrarModalDetalles()">✕</button>
+            </div>
+            <div class="modal-body" id="modalDetallesBody">
+                <!-- Content loaded dynamically -->
+            </div>
+            <div class="modal-footer" id="modalDetallesFooter">
+                <!-- Buttons loaded dynamically -->
+            </div>
+        </div>
+    </div>
+
     <!-- Console Message -->
     <div class="console-message" id="consoleMessage"></div>
 
@@ -668,10 +888,10 @@
                 const isPagado = p.pvEstado === 'Pagado';
 
                 return `
-                    <tr>
+                    <tr onclick="abrirModalDetalles('${p._id}')" style="cursor: pointer;">
                         <td>
                             <div class="cell-name">
-                                <span class="name-primary" onclick="enviarMensaje('${p._id}')">${p.primerNombre || ''} ${p.primerApellido || ''}</span>
+                                <span class="name-primary">${p.primerNombre || ''} ${p.primerApellido || ''}</span>
                                 <span class="name-secondary">${p.empresa || '—'}</span>
                             </div>
                         </td>
@@ -686,7 +906,7 @@
                             </span>
                         </td>
                         <td>
-                            <div class="actions-cell">
+                            <div class="actions-cell" onclick="event.stopPropagation()">
                                 <button class="btn-action atender" onclick="marcarAtendido('${p._id}')" ${isAtendido ? 'disabled' : ''}>
                                     ✓ Atender
                                 </button>
@@ -714,7 +934,7 @@
                 const isPagado = p.pvEstado === 'Pagado';
 
                 return `
-                    <div class="mobile-card">
+                    <div class="mobile-card" onclick="abrirModalDetalles('${p._id}')" style="cursor: pointer;">
                         <div class="mobile-card-header">
                             <div>
                                 <div class="mobile-card-name">${p.primerNombre || ''} ${p.primerApellido || ''}</div>
@@ -743,7 +963,7 @@
                                 <div class="mobile-card-info-value">${p.tipoExamen || '—'}</div>
                             </div>
                         </div>
-                        <div class="mobile-card-actions">
+                        <div class="mobile-card-actions" onclick="event.stopPropagation()">
                             <button class="btn-action whatsapp" onclick="enviarMensaje('${p._id}')">📩 Mensaje</button>
                             <button class="btn-action atender" onclick="marcarAtendido('${p._id}')" ${isAtendido ? 'disabled' : ''}>✓ Atender</button>
                             <button class="btn-action cobrar" onclick="marcarCobrar('${p._id}')" ${isPagado || !isAtendido ? 'disabled' : ''}>💰 Cobrar</button>
@@ -800,6 +1020,171 @@
             renderTable(data);
             renderMobileCards(data);
         }
+
+        // ========== MODAL DETALLES ==========
+        let pacienteActual = null;
+
+        function abrirModalDetalles(id) {
+            const paciente = pacientes.find(p => p._id === id);
+            if (!paciente) {
+                showMessage('Paciente no encontrado', 'error');
+                return;
+            }
+
+            pacienteActual = paciente;
+            const modal = document.getElementById('modalDetalles');
+            const body = document.getElementById('modalDetallesBody');
+            const footer = document.getElementById('modalDetallesFooter');
+
+            const nombreCompleto = `${paciente.primerNombre || ''} ${paciente.segundoNombre || ''} ${paciente.primerApellido || ''} ${paciente.segundoApellido || ''}`.replace(/\s+/g, ' ').trim() || 'Sin nombre';
+            const initials = ((paciente.primerNombre || '')[0] || '') + ((paciente.primerApellido || '')[0] || '');
+            const status = getStatusInfo(paciente);
+            const isAtendido = paciente.atendido === 'ATENDIDO';
+            const isPagado = paciente.pvEstado === 'Pagado';
+
+            body.innerHTML = `
+                <div class="profile-header">
+                    <div class="profile-avatar">${initials.toUpperCase()}</div>
+                    <div class="profile-info">
+                        <div class="profile-name">${nombreCompleto}</div>
+                        <div class="profile-meta">${paciente.cargo || 'Sin cargo'} - ${paciente.codEmpresa || 'Sin empresa'}</div>
+                        <span class="status-badge ${status.class}" style="margin-top: 8px;">
+                            <span class="status-dot"></span>
+                            ${status.text}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="detail-card">
+                    <div class="detail-card-title">Datos Personales</div>
+                    <div class="detail-grid">
+                        <div class="detail-field">
+                            <div class="detail-field-label">Cédula</div>
+                            <div class="detail-field-value">${paciente.numeroId || '—'}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="detail-field-label">Celular</div>
+                            <div class="detail-field-value">${paciente.celular || '—'}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="detail-field-label">Ciudad</div>
+                            <div class="detail-field-value">${paciente.ciudad || '—'}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="detail-field-label">Médico</div>
+                            <div class="detail-field-value">${paciente.medico || '—'}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-card">
+                    <div class="detail-card-title">Información Laboral</div>
+                    <div class="detail-grid">
+                        <div class="detail-field">
+                            <div class="detail-field-label">Empresa</div>
+                            <div class="detail-field-value">${paciente.empresa || '—'}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="detail-field-label">Código Empresa</div>
+                            <div class="detail-field-value">${paciente.codEmpresa || '—'}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="detail-field-label">Cargo</div>
+                            <div class="detail-field-value">${paciente.cargo || '—'}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="detail-field-label">Tipo Examen</div>
+                            <div class="detail-field-value">${paciente.tipoExamen || '—'}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-card">
+                    <div class="detail-card-title">Información de la Cita</div>
+                    <div class="detail-grid">
+                        <div class="detail-field">
+                            <div class="detail-field-label">Fecha Atención</div>
+                            <div class="detail-field-value">${paciente.fechaAtencion ? new Date(paciente.fechaAtencion).toLocaleString('es-CO') : '—'}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="detail-field-label">Hora Atención</div>
+                            <div class="detail-field-value">${paciente.horaAtencion || formatHora(paciente.fechaAtencion)}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="detail-field-label">Fecha Consulta</div>
+                            <div class="detail-field-value">${paciente.fechaConsulta ? new Date(paciente.fechaConsulta).toLocaleString('es-CO') : '—'}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="detail-field-label">Estado</div>
+                            <div class="detail-field-value">${paciente.atendido || 'PENDIENTE'}</div>
+                        </div>
+                    </div>
+                    ${paciente.examenes ? `
+                        <div class="detail-field" style="margin-top: 12px;">
+                            <div class="detail-field-label">Exámenes</div>
+                            <div class="detail-field-value">${paciente.examenes}</div>
+                        </div>
+                    ` : ''}
+                </div>
+
+                ${paciente.mdConceptoFinal || paciente.mdRecomendacionesMedicasAdicionales ? `
+                    <div class="detail-card">
+                        <div class="detail-card-title">Concepto Médico</div>
+                        ${paciente.mdConceptoFinal ? `
+                            <div class="detail-field">
+                                <div class="detail-field-label">Concepto Final</div>
+                                <div class="detail-field-value">${paciente.mdConceptoFinal}</div>
+                            </div>
+                        ` : ''}
+                        ${paciente.mdRecomendacionesMedicasAdicionales ? `
+                            <div class="detail-field" style="margin-top: 12px;">
+                                <div class="detail-field-label">Recomendaciones</div>
+                                <div class="detail-field-value" style="white-space: pre-line;">${paciente.mdRecomendacionesMedicasAdicionales}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                ` : ''}
+            `;
+
+            footer.innerHTML = `
+                <button class="btn btn-primary" onclick="enviarMensajeModal()">📩 Enviar Mensaje</button>
+                <button class="btn btn-success" onclick="marcarAtendidoModal()" ${isAtendido ? 'disabled' : ''}>✓ Atender</button>
+                <button class="btn btn-warning" onclick="marcarCobrarModal()" ${isPagado || !isAtendido ? 'disabled' : ''}>💰 Cobrar</button>
+                <button class="btn btn-secondary" onclick="cerrarModalDetalles()">Cerrar</button>
+            `;
+
+            modal.classList.add('active');
+        }
+
+        function cerrarModalDetalles() {
+            document.getElementById('modalDetalles').classList.remove('active');
+            pacienteActual = null;
+        }
+
+        async function enviarMensajeModal() {
+            if (!pacienteActual) return;
+            cerrarModalDetalles();
+            await enviarMensaje(pacienteActual._id);
+        }
+
+        async function marcarAtendidoModal() {
+            if (!pacienteActual) return;
+            cerrarModalDetalles();
+            await marcarAtendido(pacienteActual._id);
+        }
+
+        async function marcarCobrarModal() {
+            if (!pacienteActual) return;
+            cerrarModalDetalles();
+            await marcarCobrar(pacienteActual._id);
+        }
+
+        // Cerrar modal al hacer clic fuera
+        document.getElementById('modalDetalles').addEventListener('click', function(e) {
+            if (e.target === this) {
+                cerrarModalDetalles();
+            }
+        });
 
         // ========== DATA LOADING ==========
         async function cargarPacientes() {
