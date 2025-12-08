@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
 const { Pool } = require('pg');
+const cron = require('node-cron');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -3331,6 +3332,141 @@ app.delete('/api/examenes/:id', async (req, res) => {
         res.status(500).json({ error: 'Error al eliminar examen' });
     }
 });
+
+// ==========================================
+// BARRIDO NUBIA - Marcar como ATENDIDO citas pasadas
+// Para consultas presenciales con médico NUBIA
+// ==========================================
+async function barridoNubiaMarcarAtendido() {
+    console.log("🚀 [barridoNubiaMarcarAtendido] Iniciando ejecución...");
+    try {
+        const ahora = new Date();
+        // Buscar citas desde 2 horas atrás hasta 5 minutos atrás (ya pasaron)
+        const dosHorasAtras = new Date(ahora.getTime() - 120 * 60 * 1000);
+        const cincoMinAtras = new Date(ahora.getTime() - 5 * 60 * 1000);
+
+        console.log(`📅 [barridoNubiaMarcarAtendido] Buscando citas de NUBIA entre ${dosHorasAtras.toISOString()} y ${cincoMinAtras.toISOString()}`);
+
+        // Busca registros en HistoriaClinica con médico NUBIA que no estén atendidos
+        // y cuya fecha de atención ya pasó (entre 2 horas atrás y 5 min atrás)
+        const result = await pool.query(`
+            SELECT * FROM "HistoriaClinica"
+            WHERE "fechaAtencion" >= $1
+              AND "fechaAtencion" <= $2
+              AND "medico" ILIKE '%NUBIA%'
+              AND ("atendido" IS NULL OR "atendido" != 'ATENDIDO')
+            LIMIT 20
+        `, [dosHorasAtras.toISOString(), cincoMinAtras.toISOString()]);
+
+        console.log(`📊 [barridoNubiaMarcarAtendido] Registros encontrados: ${result.rows.length}`);
+
+        if (result.rows.length === 0) {
+            console.log("⚠️ [barridoNubiaMarcarAtendido] No hay registros de NUBIA pendientes por marcar");
+            return { mensaje: 'No hay registros de NUBIA pendientes.', procesados: 0 };
+        }
+
+        let procesados = 0;
+
+        for (const registro of result.rows) {
+            await procesarRegistroNubia(registro);
+            procesados++;
+            // Pequeño delay entre registros
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        console.log(`✅ [barridoNubiaMarcarAtendido] Procesados ${procesados} registros`);
+        return { mensaje: `Procesados ${procesados} registros de NUBIA.`, procesados };
+    } catch (error) {
+        console.error("❌ Error en barridoNubiaMarcarAtendido:", error.message);
+        throw error;
+    }
+}
+
+async function procesarRegistroNubia(registro) {
+    const {
+        primerNombre,
+        primerApellido,
+        celular,
+        _id: historiaId,
+        fechaAtencion,
+        medico
+    } = registro;
+
+    const ahora = new Date();
+    const fechaAtencionDate = new Date(fechaAtencion);
+    const minutosDesdesCita = (ahora.getTime() - fechaAtencionDate.getTime()) / 60000;
+
+    console.log(`👤 [procesarRegistroNubia] ${primerNombre} ${primerApellido || ''} - Médico: ${medico} - Minutos desde cita: ${minutosDesdesCita.toFixed(1)}`);
+
+    // Si ya pasó la cita (más de 5 minutos), marcar como ATENDIDO
+    if (minutosDesdesCita >= 5) {
+        try {
+            // Actualizar el registro en HistoriaClinica
+            await pool.query(`
+                UPDATE "HistoriaClinica"
+                SET "atendido" = 'ATENDIDO'
+                WHERE "_id" = $1
+            `, [historiaId]);
+
+            console.log(`✅ [procesarRegistroNubia] Marcado como ATENDIDO: ${primerNombre} ${primerApellido || ''} (ID: ${historiaId})`);
+
+            // Enviar mensaje de confirmación si tiene celular
+            if (celular) {
+                const telefonoLimpio = celular.replace(/\s+/g, '');
+                const toNumber = telefonoLimpio.startsWith('57') ? telefonoLimpio : `57${telefonoLimpio}`;
+
+                // Enviar mensaje de WhatsApp al paciente
+                const messageBody = `Hola ${primerNombre}, gracias por asistir a tu cita médico ocupacional con la Dra. Nubia. Tu certificado será enviado pronto. ¡Que tengas un excelente día!`;
+
+                try {
+                    await sendWhatsAppMessage(toNumber, messageBody);
+                    console.log(`📱 [procesarRegistroNubia] Mensaje enviado a ${primerNombre} (${toNumber})`);
+                } catch (sendError) {
+                    console.error(`Error enviando mensaje a ${toNumber}:`, sendError);
+                }
+            }
+        } catch (updateError) {
+            console.error(`Error actualizando registro de NUBIA ${historiaId}:`, updateError);
+        }
+    } else {
+        console.log(`⏳ [procesarRegistroNubia] ${primerNombre} - Aún no han pasado 5 minutos desde la cita`);
+    }
+}
+
+// Endpoint para ejecutar el barrido de NUBIA manualmente o via cron
+app.post('/api/barrido-nubia', async (req, res) => {
+    try {
+        const resultado = await barridoNubiaMarcarAtendido();
+        res.json({ success: true, ...resultado });
+    } catch (error) {
+        console.error('Error en barrido NUBIA:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/barrido-nubia', async (req, res) => {
+    try {
+        const resultado = await barridoNubiaMarcarAtendido();
+        res.json({ success: true, ...resultado });
+    } catch (error) {
+        console.error('Error en barrido NUBIA:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ==========================================
+// CRON JOB - Barrido NUBIA cada 5 minutos
+// ==========================================
+cron.schedule('*/5 * * * *', async () => {
+    console.log('⏰ [CRON] Ejecutando barrido NUBIA automático...');
+    try {
+        await barridoNubiaMarcarAtendido();
+    } catch (error) {
+        console.error('❌ [CRON] Error en barrido NUBIA:', error);
+    }
+});
+
+console.log('✅ Cron job configurado: Barrido NUBIA cada 5 minutos');
 
 app.listen(PORT, () => {
     console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
