@@ -656,61 +656,77 @@
 
             <div class="form-card">
                 <form id="ordenForm">
-                    <!-- Datos de la Empresa -->
-                    <div class="form-section">
-                        <h3 class="section-title">Datos de la Empresa</h3>
+                    <!-- PASO 1: Verificación de Documento -->
+                    <div class="form-section" id="paso1">
+                        <h3 class="section-title">Paso 1: Verificar Documento</h3>
                         <div class="form-grid">
-                            <div class="form-group">
-                                <label class="form-label">Código Empresa <span class="required">*</span></label>
-                                <select class="form-select" name="codEmpresa" id="selectEmpresa" required>
-                                    <option value="">Seleccionar empresa...</option>
-                                </select>
+                            <div class="form-group full-width">
+                                <label class="form-label">Número de Identificación <span class="required">*</span></label>
+                                <input type="text" class="form-input" name="numeroId" id="inputNumeroId" required placeholder="Ingrese la cédula o documento del paciente">
                             </div>
-                            <div class="form-group">
-                                <label class="form-label">Nombre Empresa</label>
-                                <input type="text" class="form-input" name="empresa" id="inputEmpresa" readonly placeholder="Se llena automáticamente">
-                            </div>
+                        </div>
+                        <div class="form-actions" style="border-top: none; margin-top: 16px; padding-top: 0;">
+                            <button type="button" class="btn btn-primary" id="btnVerificarDoc" onclick="verificarDocumento()">Siguiente</button>
                         </div>
                     </div>
 
-                    <!-- Datos del Paciente -->
-                    <div class="form-section">
-                        <h3 class="section-title">Datos del Paciente</h3>
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label class="form-label">Número de Identificación <span class="required">*</span></label>
-                                <input type="text" class="form-input" name="numeroId" required placeholder="Cédula o documento">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Celular <span class="required">*</span></label>
-                                <input type="tel" class="form-input" name="celular" required placeholder="Número de celular">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Primer Nombre <span class="required">*</span></label>
-                                <input type="text" class="form-input" name="primerNombre" required placeholder="Primer nombre">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Segundo Nombre</label>
-                                <input type="text" class="form-input" name="segundoNombre" placeholder="Segundo nombre">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Primer Apellido <span class="required">*</span></label>
-                                <input type="text" class="form-input" name="primerApellido" required placeholder="Primer apellido">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Segundo Apellido</label>
-                                <input type="text" class="form-input" name="segundoApellido" placeholder="Segundo apellido">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Cargo <span class="required">*</span></label>
-                                <input type="text" class="form-input" name="cargo" required placeholder="Cargo del trabajador">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Ciudad <span class="required">*</span></label>
-                                <input type="text" class="form-input" name="ciudad" required placeholder="Ciudad">
+                    <!-- PASO 2: Resto del Formulario (oculto inicialmente) -->
+                    <div id="paso2" style="display: none;">
+                        <!-- Datos de la Empresa -->
+                        <div class="form-section">
+                            <h3 class="section-title">Datos de la Empresa</h3>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Código Empresa <span class="required">*</span></label>
+                                    <select class="form-select" name="codEmpresa" id="selectEmpresa" required>
+                                        <option value="">Seleccionar empresa...</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Nombre Empresa</label>
+                                    <input type="text" class="form-input" name="empresa" id="inputEmpresa" readonly placeholder="Se llena automáticamente">
+                                </div>
                             </div>
                         </div>
-                    </div>
+
+                        <!-- Datos del Paciente -->
+                        <div class="form-section">
+                            <h3 class="section-title">Datos del Paciente</h3>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Número de Identificación</label>
+                                    <input type="text" class="form-input" id="displayNumeroId" readonly style="background: #F3F4F6;">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Celular <span class="required">*</span></label>
+                                    <input type="tel" class="form-input" name="celular" required placeholder="Número de celular">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Primer Nombre <span class="required">*</span></label>
+                                    <input type="text" class="form-input" name="primerNombre" required placeholder="Primer nombre">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Segundo Nombre</label>
+                                    <input type="text" class="form-input" name="segundoNombre" placeholder="Segundo nombre">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Primer Apellido <span class="required">*</span></label>
+                                    <input type="text" class="form-input" name="primerApellido" required placeholder="Primer apellido">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Segundo Apellido</label>
+                                    <input type="text" class="form-input" name="segundoApellido" placeholder="Segundo apellido">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Cargo <span class="required">*</span></label>
+                                    <input type="text" class="form-input" name="cargo" required placeholder="Cargo del trabajador">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Ciudad <span class="required">*</span></label>
+                                    <input type="text" class="form-input" name="ciudad" required placeholder="Ciudad">
+                                </div>
+                            </div>
+                        </div>
 
                     <!-- Datos del Examen -->
                     <div class="form-section">
@@ -769,11 +785,12 @@
                         </div>
                     </div>
 
-                    <!-- Actions -->
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-secondary" onclick="limpiarFormulario()">Limpiar</button>
-                        <button type="submit" class="btn btn-primary" id="submitBtn">Crear Orden</button>
-                    </div>
+                        <!-- Actions -->
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="volverPaso1()">← Volver</button>
+                            <button type="submit" class="btn btn-primary" id="submitBtn">Crear Orden</button>
+                        </div>
+                    </div><!-- Cierre paso2 -->
                 </form>
             </div>
         </main>
@@ -1094,6 +1111,60 @@
         let datosFormularioActual = null;
         let ordenExistenteActual = null;
 
+        // Función para verificar documento (Paso 1 -> Paso 2)
+        async function verificarDocumento() {
+            const numeroId = document.getElementById('inputNumeroId').value.trim();
+
+            if (!numeroId) {
+                errorText.textContent = 'Por favor ingrese el número de documento';
+                errorMessage.classList.add('show');
+                return;
+            }
+
+            const btn = document.getElementById('btnVerificarDoc');
+            btn.classList.add('btn-loading');
+            btn.disabled = true;
+            errorMessage.classList.remove('show');
+
+            try {
+                const checkResponse = await fetch(`/api/ordenes/verificar-duplicado/${encodeURIComponent(numeroId)}`);
+                const checkResult = await checkResponse.json();
+
+                if (checkResult.success && checkResult.hayDuplicado) {
+                    // Hay duplicado, mostrar modal
+                    btn.classList.remove('btn-loading');
+                    btn.disabled = false;
+                    mostrarModalDuplicado(checkResult.ordenExistente);
+                } else {
+                    // No hay duplicado, pasar al paso 2
+                    mostrarPaso2();
+                }
+            } catch (error) {
+                console.error('Error al verificar:', error);
+                errorText.textContent = 'Error al verificar el documento. Intente de nuevo.';
+                errorMessage.classList.add('show');
+            } finally {
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+            }
+        }
+
+        function mostrarPaso2() {
+            const numeroId = document.getElementById('inputNumeroId').value.trim();
+            document.getElementById('displayNumeroId').value = numeroId;
+            document.getElementById('paso1').style.display = 'none';
+            document.getElementById('paso2').style.display = 'block';
+            successMessage.classList.remove('show');
+            errorMessage.classList.remove('show');
+        }
+
+        function volverPaso1() {
+            document.getElementById('paso1').style.display = 'block';
+            document.getElementById('paso2').style.display = 'none';
+            successMessage.classList.remove('show');
+            errorMessage.classList.remove('show');
+        }
+
         // Función para crear la orden
         async function crearOrden(datos) {
             try {
@@ -1177,13 +1248,8 @@
 
         document.getElementById('btnCrearNueva').addEventListener('click', async () => {
             cerrarModalDuplicado();
-            if (datosFormularioActual) {
-                submitBtn.classList.add('btn-loading');
-                submitBtn.disabled = true;
-                await crearOrden(datosFormularioActual);
-                submitBtn.classList.remove('btn-loading');
-                submitBtn.disabled = false;
-            }
+            // Pasar al paso 2 para llenar el resto de datos
+            mostrarPaso2();
         });
 
         document.getElementById('btnCancelarModal').addEventListener('click', () => {
@@ -1205,25 +1271,12 @@
 
             const formData = new FormData(form);
             const datos = Object.fromEntries(formData.entries());
+            // Asegurar que el numeroId venga del paso 1
+            datos.numeroId = document.getElementById('inputNumeroId').value.trim();
             datosFormularioActual = datos;
 
             try {
-                // Verificar si hay duplicados
-                const numeroId = datos.numeroId;
-                if (numeroId) {
-                    const checkResponse = await fetch(`/api/ordenes/verificar-duplicado/${encodeURIComponent(numeroId)}`);
-                    const checkResult = await checkResponse.json();
-
-                    if (checkResult.success && checkResult.hayDuplicado) {
-                        // Mostrar modal de duplicado
-                        submitBtn.classList.remove('btn-loading');
-                        submitBtn.disabled = false;
-                        mostrarModalDuplicado(checkResult.ordenExistente);
-                        return;
-                    }
-                }
-
-                // Si no hay duplicado, crear la orden
+                // Ya se verificó duplicados en el paso 1, crear directamente
                 await crearOrden(datos);
             } catch (error) {
                 console.error('Error:', error);
@@ -1241,6 +1294,11 @@
             actualizarExamenesUI();
             successMessage.classList.remove('show');
             errorMessage.classList.remove('show');
+            // Volver al paso 1
+            document.getElementById('paso1').style.display = 'block';
+            document.getElementById('paso2').style.display = 'none';
+            document.getElementById('inputNumeroId').value = '';
+            document.getElementById('displayNumeroId').value = '';
         }
     </script>
 </body>

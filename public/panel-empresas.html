@@ -1210,61 +1210,75 @@
             <div class="modal-body">
                 <div class="modal-alert" id="modalAlert"></div>
 
-                <!-- Empresa (no editable) -->
-                <div class="form-group">
-                    <label class="form-label">Empresa</label>
-                    <input type="text" class="form-input" id="modalEmpresa" disabled>
-                </div>
+                <!-- PASO 1: Verificar Documento -->
+                <div id="modalPaso1">
+                    <div class="form-section-title">Paso 1: Verificar Documento</div>
 
-                <!-- Datos del Paciente -->
-                <div class="form-section-title">Datos del Paciente</div>
-
-                <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Número de Identificación <span class="required">*</span></label>
-                        <input type="text" class="form-input" id="modalNumeroId" placeholder="Cédula">
+                        <input type="text" class="form-input" id="modalNumeroId" placeholder="Ingrese la cédula del paciente">
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Celular <span class="required">*</span></label>
-                        <input type="tel" class="form-input" id="modalCelular" placeholder="Número de celular">
-                    </div>
+
+                    <button type="button" class="btn-modal btn-modal-primary" id="btnVerificarDocModal" onclick="verificarDocumentoModal()" style="width: 100%; margin-top: 16px;">Verificar y Continuar</button>
                 </div>
 
-                <div class="form-row">
+                <!-- PASO 2: Resto del Formulario -->
+                <div id="modalPaso2" style="display: none;">
+                    <!-- Empresa (no editable) -->
                     <div class="form-group">
-                        <label class="form-label">Primer Nombre <span class="required">*</span></label>
-                        <input type="text" class="form-input" id="modalPrimerNombre" placeholder="Primer nombre">
+                        <label class="form-label">Empresa</label>
+                        <input type="text" class="form-input" id="modalEmpresa" disabled>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Segundo Nombre</label>
-                        <input type="text" class="form-input" id="modalSegundoNombre" placeholder="Segundo nombre">
-                    </div>
-                </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Primer Apellido <span class="required">*</span></label>
-                        <input type="text" class="form-input" id="modalPrimerApellido" placeholder="Primer apellido">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Segundo Apellido</label>
-                        <input type="text" class="form-input" id="modalSegundoApellido" placeholder="Segundo apellido">
-                    </div>
-                </div>
+                    <!-- Datos del Paciente -->
+                    <div class="form-section-title">Datos del Paciente</div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Cargo <span class="required">*</span></label>
-                        <input type="text" class="form-input" id="modalCargo" placeholder="Cargo del trabajador">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Número de Identificación</label>
+                            <input type="text" class="form-input" id="modalNumeroIdDisplay" disabled style="background: #F1F5F9;">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Celular <span class="required">*</span></label>
+                            <input type="tel" class="form-input" id="modalCelular" placeholder="Número de celular">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Ciudad <span class="required">*</span></label>
-                        <input type="text" class="form-input" id="modalCiudad" placeholder="Ciudad">
-                    </div>
-                </div>
 
-                <!-- Datos del Examen -->
-                <div class="form-section-title">Datos del Examen</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Primer Nombre <span class="required">*</span></label>
+                            <input type="text" class="form-input" id="modalPrimerNombre" placeholder="Primer nombre">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Segundo Nombre</label>
+                            <input type="text" class="form-input" id="modalSegundoNombre" placeholder="Segundo nombre">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Primer Apellido <span class="required">*</span></label>
+                            <input type="text" class="form-input" id="modalPrimerApellido" placeholder="Primer apellido">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Segundo Apellido</label>
+                            <input type="text" class="form-input" id="modalSegundoApellido" placeholder="Segundo apellido">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Cargo <span class="required">*</span></label>
+                            <input type="text" class="form-input" id="modalCargo" placeholder="Cargo del trabajador">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Ciudad <span class="required">*</span></label>
+                            <input type="text" class="form-input" id="modalCiudad" placeholder="Ciudad">
+                        </div>
+                    </div>
+
+                    <!-- Datos del Examen -->
+                    <div class="form-section-title">Datos del Examen</div>
 
                 <div class="form-row">
                     <div class="form-group">
@@ -1317,17 +1331,60 @@
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label">Exámenes</label>
-                    <div class="examenes-container" id="modalExamenesContainer">
-                        <div style="padding: 14px; color: #9CA3AF; font-size: 14px;">Cargando exámenes...</div>
+                    <div class="form-group">
+                        <label class="form-label">Exámenes</label>
+                        <div class="examenes-container" id="modalExamenesContainer">
+                            <div style="padding: 14px; color: #9CA3AF; font-size: 14px;">Cargando exámenes...</div>
+                        </div>
+                        <div class="examenes-selected" id="modalExamenesSelected"></div>
                     </div>
-                    <div class="examenes-selected" id="modalExamenesSelected"></div>
-                </div>
+                </div><!-- Cierre modalPaso2 -->
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn-modal btn-modal-secondary" onclick="cerrarModalNuevaOrden()">Cancelar</button>
+            <div class="modal-footer" id="modalFooterPaso2" style="display: none;">
+                <button type="button" class="btn-modal btn-modal-secondary" onclick="volverPaso1Modal()">← Volver</button>
                 <button type="button" class="btn-modal btn-modal-primary" id="btnCrearOrden" onclick="crearOrdenEmpresa()">Crear Orden</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de orden duplicada -->
+    <div class="modal-overlay" id="modalDuplicado">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2 class="modal-title" style="display: flex; align-items: center; gap: 12px;">
+                    <span style="width: 40px; height: 40px; background: #FEF3C7; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" width="20" height="20">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                    </span>
+                    Orden existente
+                </h2>
+                <button class="modal-close" onclick="cerrarModalDuplicado()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p style="color: #4B5563; margin-bottom: 16px;">Ya existe una orden <strong>pendiente</strong> para este número de documento.</p>
+                <div id="ordenExistenteInfo" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 16px;">
+                    <!-- Se llena dinámicamente -->
+                </div>
+                <p id="mensajeFormulario" style="margin-top: 12px; font-size: 14px; color: #64748B;"></p>
+            </div>
+            <div class="modal-footer" style="flex-direction: column; gap: 8px;">
+                <button type="button" class="btn-modal btn-modal-primary" id="btnUsarExistente" style="width: 100%;">
+                    Usar orden existente
+                </button>
+                <button type="button" class="btn-modal" id="btnCrearNuevaModal" style="width: 100%; background: #F59E0B; color: white;">
+                    Crear nueva de todos modos
+                </button>
+                <button type="button" class="btn-modal btn-modal-secondary" onclick="cerrarModalDuplicado()" style="width: 100%;">
+                    Cancelar
+                </button>
             </div>
         </div>
     </div>
@@ -1669,6 +1726,8 @@
         let examenesDataModal = [];
         let examenesSeleccionadosModal = [];
 
+        let ordenExistenteActual = null;
+
         function abrirModalNuevaOrden() {
             document.getElementById('modalNuevaOrden').classList.add('active');
             document.getElementById('modalEmpresa').value = codEmpresa;
@@ -1676,10 +1735,15 @@
             actualizarTabsModalidad();
             cargarExamenesModal();
             limpiarFormularioModal();
+            // Mostrar paso 1, ocultar paso 2
+            document.getElementById('modalPaso1').style.display = 'block';
+            document.getElementById('modalPaso2').style.display = 'none';
+            document.getElementById('modalFooterPaso2').style.display = 'none';
         }
 
         function cerrarModalNuevaOrden() {
             document.getElementById('modalNuevaOrden').classList.remove('active');
+            ordenExistenteActual = null;
             ocultarAlertaModal();
         }
 
@@ -1913,6 +1977,110 @@
         document.getElementById('modalNuevaOrden').addEventListener('click', function(e) {
             if (e.target === this) {
                 cerrarModalNuevaOrden();
+            }
+        });
+
+        // ========== FUNCIONES PARA VERIFICACIÓN DE DUPLICADOS ==========
+
+        async function verificarDocumentoModal() {
+            const numeroId = document.getElementById('modalNumeroId').value.trim();
+
+            if (!numeroId) {
+                mostrarAlertaModal('Por favor ingrese el número de documento');
+                return;
+            }
+
+            const btn = document.getElementById('btnVerificarDocModal');
+            btn.disabled = true;
+            btn.textContent = 'Verificando...';
+            ocultarAlertaModal();
+
+            try {
+                const response = await fetch(`/api/ordenes/verificar-duplicado/${encodeURIComponent(numeroId)}`);
+                const result = await response.json();
+
+                if (result.success && result.hayDuplicado) {
+                    // Hay duplicado, mostrar modal de duplicados
+                    btn.disabled = false;
+                    btn.textContent = 'Verificar y Continuar';
+                    mostrarModalDuplicado(result.ordenExistente);
+                } else {
+                    // No hay duplicado, pasar al paso 2
+                    mostrarPaso2Modal();
+                }
+            } catch (error) {
+                console.error('Error al verificar:', error);
+                mostrarAlertaModal('Error al verificar el documento. Intente de nuevo.');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Verificar y Continuar';
+            }
+        }
+
+        function mostrarPaso2Modal() {
+            const numeroId = document.getElementById('modalNumeroId').value.trim();
+            document.getElementById('modalNumeroIdDisplay').value = numeroId;
+            document.getElementById('modalPaso1').style.display = 'none';
+            document.getElementById('modalPaso2').style.display = 'block';
+            document.getElementById('modalFooterPaso2').style.display = 'flex';
+            ocultarAlertaModal();
+        }
+
+        function volverPaso1Modal() {
+            document.getElementById('modalPaso1').style.display = 'block';
+            document.getElementById('modalPaso2').style.display = 'none';
+            document.getElementById('modalFooterPaso2').style.display = 'none';
+            ocultarAlertaModal();
+        }
+
+        function mostrarModalDuplicado(ordenExistente) {
+            ordenExistenteActual = ordenExistente;
+            const fechaCreacion = new Date(ordenExistente.fechaCreacion).toLocaleDateString('es-CO', {
+                year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+            });
+
+            document.getElementById('ordenExistenteInfo').innerHTML = `
+                <p style="margin: 4px 0;"><strong>Nombre:</strong> ${ordenExistente.nombre}</p>
+                <p style="margin: 4px 0;"><strong>Empresa:</strong> ${ordenExistente.empresa}</p>
+                <p style="margin: 4px 0;"><strong>Tipo examen:</strong> ${ordenExistente.tipoExamen || 'No especificado'}</p>
+                <p style="margin: 4px 0;"><strong>Creada:</strong> ${fechaCreacion}</p>
+            `;
+
+            const mensajeFormulario = document.getElementById('mensajeFormulario');
+            if (ordenExistente.tieneFormulario) {
+                mensajeFormulario.innerHTML = 'Esta orden <strong>ya tiene</strong> un formulario médico completado.';
+            } else {
+                mensajeFormulario.innerHTML = 'Esta orden <strong>no tiene</strong> formulario médico completado aún.';
+            }
+
+            document.getElementById('modalDuplicado').classList.add('active');
+        }
+
+        function cerrarModalDuplicado() {
+            document.getElementById('modalDuplicado').classList.remove('active');
+        }
+
+        // Event listeners para botones del modal de duplicados
+        document.getElementById('btnUsarExistente').addEventListener('click', () => {
+            if (ordenExistenteActual) {
+                const formUrl = `${window.location.origin}/?_id=${ordenExistenteActual._id}`;
+                window.open(formUrl, '_blank');
+                cerrarModalDuplicado();
+                cerrarModalNuevaOrden();
+                alert('Usando orden existente. Se abrió el formulario en una nueva pestaña.');
+            }
+        });
+
+        document.getElementById('btnCrearNuevaModal').addEventListener('click', () => {
+            cerrarModalDuplicado();
+            // Continuar al paso 2 para llenar datos
+            mostrarPaso2Modal();
+        });
+
+        // Cerrar modal de duplicados al hacer clic fuera
+        document.getElementById('modalDuplicado').addEventListener('click', function(e) {
+            if (e.target === this) {
+                cerrarModalDuplicado();
             }
         });
     </script>

@@ -537,10 +537,37 @@
         <div id="alertContainer" class="alert alert-error"></div>
 
         <form id="formCita">
-            <!-- Step 1: Datos Personales -->
+            <!-- Step 1: Verificación de Documento -->
             <div class="question-slide active" data-step="1">
+                <div class="question-content" id="step1-verificar">
+                    <label class="question-label">Ingresa tu número de cédula</label>
+
+                    <div class="form-group">
+                        <label>Número de Cédula <span class="required">*</span></label>
+                        <input type="text" class="question-input" id="numeroId" placeholder="Ej: 1234567890" required>
+                    </div>
+                </div>
+
+                <div class="navigation" id="nav-step1-verificar">
+                    <button type="button" class="nav-btn next-btn" id="btnVerificarCedula" onclick="verificarCedulaYContinuar()">Continuar →</button>
+                </div>
+            </div>
+
+            <!-- Step 1b: Resto de Datos Personales (oculto hasta verificación) -->
+            <div class="question-slide" data-step="1b">
                 <div class="question-content">
                     <label class="question-label">¿Cuáles son tus datos personales?</label>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Número de Cédula</label>
+                            <input type="text" class="question-input" id="displayNumeroId" readonly style="background: #F3F4F6;">
+                        </div>
+                        <div class="form-group">
+                            <label>Celular <span class="required">*</span></label>
+                            <input type="tel" class="question-input" id="celular" placeholder="Ej: 3001234567" required>
+                        </div>
+                    </div>
 
                     <div class="form-row">
                         <div class="form-group">
@@ -563,20 +590,10 @@
                             <input type="text" class="question-input" id="segundoApellido" placeholder="Ej: López">
                         </div>
                     </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Número de Cédula <span class="required">*</span></label>
-                            <input type="text" class="question-input" id="numeroId" placeholder="Ej: 1234567890" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Celular <span class="required">*</span></label>
-                            <input type="tel" class="question-input" id="celular" placeholder="Ej: 3001234567" required>
-                        </div>
-                    </div>
                 </div>
 
                 <div class="navigation">
+                    <button type="button" class="nav-btn prev-btn" onclick="volverAVerificarCedula()">← Atrás</button>
                     <button type="button" class="nav-btn next-btn" onclick="siguientePaso()">Continuar →</button>
                 </div>
             </div>
@@ -968,7 +985,13 @@
             const slides = document.querySelectorAll('.question-slide');
             slides.forEach(s => s.classList.remove('active'));
 
-            pasoActual++;
+            // Si estamos en paso 1b, pasar a paso 2
+            if (enPaso1b) {
+                pasoActual = 2;
+                enPaso1b = false;
+            } else {
+                pasoActual++;
+            }
 
             if (pasoActual === 5) {
                 generarResumen();
@@ -992,11 +1015,14 @@
         function validarPasoActual() {
             let camposFaltantes = [];
 
-            if (pasoActual === 1) {
+            // Si estamos en paso 1b (datos personales después de verificar cédula)
+            if (enPaso1b) {
                 if (!document.getElementById('primerNombre').value.trim()) camposFaltantes.push('Primer Nombre');
                 if (!document.getElementById('primerApellido').value.trim()) camposFaltantes.push('Primer Apellido');
-                if (!document.getElementById('numeroId').value.trim()) camposFaltantes.push('Número de Cédula');
                 if (!document.getElementById('celular').value.trim()) camposFaltantes.push('Celular');
+            } else if (pasoActual === 1) {
+                // Paso 1 original ya no se usa para validación (se usa verificarCedulaYContinuar)
+                if (!document.getElementById('numeroId').value.trim()) camposFaltantes.push('Número de Cédula');
             } else if (pasoActual === 2) {
                 if (!document.getElementById('tipoConsulta').value) camposFaltantes.push('Tipo de Consulta');
                 if (!document.getElementById('aNombreDe').value) camposFaltantes.push('A nombre de');
@@ -1199,6 +1225,156 @@
                 </div>
             `;
         }
+
+        // ========== VERIFICACIÓN DE CÉDULA Y DUPLICADOS ==========
+
+        let ordenExistenteActual = null;
+        let enPaso1b = false;
+
+        async function verificarCedulaYContinuar() {
+            const numeroId = document.getElementById('numeroId').value.trim();
+
+            if (!numeroId) {
+                mostrarAlerta('Por favor ingrese su número de cédula');
+                return;
+            }
+
+            const btn = document.getElementById('btnVerificarCedula');
+            btn.disabled = true;
+            btn.textContent = 'Verificando...';
+            ocultarAlerta();
+
+            try {
+                const response = await fetch(`/api/ordenes/verificar-duplicado/${encodeURIComponent(numeroId)}`);
+                const result = await response.json();
+
+                if (result.success && result.hayDuplicado) {
+                    // Hay una orden existente
+                    btn.disabled = false;
+                    btn.textContent = 'Continuar →';
+                    mostrarModalDuplicado(result.ordenExistente);
+                } else {
+                    // No hay duplicado, pasar al paso 1b
+                    mostrarPaso1b();
+                }
+            } catch (error) {
+                console.error('Error al verificar:', error);
+                mostrarAlerta('Error al verificar. Intente de nuevo.');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Continuar →';
+            }
+        }
+
+        function mostrarPaso1b() {
+            const numeroId = document.getElementById('numeroId').value.trim();
+            document.getElementById('displayNumeroId').value = numeroId;
+
+            // Ocultar step 1, mostrar step 1b
+            document.querySelectorAll('.question-slide').forEach(s => s.classList.remove('active'));
+            document.querySelector('.question-slide[data-step="1b"]').classList.add('active');
+            enPaso1b = true;
+            ocultarAlerta();
+        }
+
+        function volverAVerificarCedula() {
+            // Volver al paso 1
+            document.querySelectorAll('.question-slide').forEach(s => s.classList.remove('active'));
+            document.querySelector('.question-slide[data-step="1"]').classList.add('active');
+            enPaso1b = false;
+            pasoActual = 1;
+            actualizarProgreso();
+            ocultarAlerta();
+        }
+
+        function mostrarModalDuplicado(ordenExistente) {
+            ordenExistenteActual = ordenExistente;
+
+            const fechaCreacion = new Date(ordenExistente.fechaCreacion).toLocaleDateString('es-CO', {
+                year: 'numeric', month: 'long', day: 'numeric'
+            });
+
+            document.getElementById('ordenExistenteInfo').innerHTML = `
+                <div class="resumen-item">
+                    <span class="resumen-label">Nombre</span>
+                    <span class="resumen-value">${ordenExistente.nombre}</span>
+                </div>
+                <div class="resumen-item">
+                    <span class="resumen-label">Empresa</span>
+                    <span class="resumen-value">${ordenExistente.empresa || 'No especificada'}</span>
+                </div>
+                <div class="resumen-item">
+                    <span class="resumen-label">Creada</span>
+                    <span class="resumen-value">${fechaCreacion}</span>
+                </div>
+            `;
+
+            const mensajeFormulario = document.getElementById('mensajeFormularioDup');
+            if (ordenExistente.tieneFormulario) {
+                mensajeFormulario.innerHTML = 'Esta orden <strong>ya tiene</strong> formulario completado.';
+            } else {
+                mensajeFormulario.innerHTML = 'Esta orden <strong>no tiene</strong> formulario completado.';
+            }
+
+            document.getElementById('modalDuplicado').classList.add('show');
+        }
+
+        function cerrarModalDuplicado() {
+            document.getElementById('modalDuplicado').classList.remove('show');
+            ordenExistenteActual = null;
+        }
+
+        function usarOrdenExistente() {
+            if (ordenExistenteActual) {
+                window.location.href = `/?_id=${ordenExistenteActual._id}`;
+            }
+        }
+
+        function crearNuevaOrden() {
+            cerrarModalDuplicado();
+            mostrarPaso1b();
+        }
     </script>
+
+    <!-- Modal de orden duplicada -->
+    <div class="modal-overlay" id="modalDuplicado" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 16px; max-width: 450px; width: 90%; padding: 32px; margin: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.2);">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <div style="width: 64px; height: 64px; background: #FEF3C7; border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" width="32" height="32">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                </div>
+                <h3 style="font-size: 20px; font-weight: 600; color: #1F2937; margin-bottom: 8px;">Ya tienes una cita pendiente</h3>
+                <p style="color: #6B7280; font-size: 14px;">Encontramos una orden existente con tu número de cédula.</p>
+            </div>
+
+            <div class="resumen-container" id="ordenExistenteInfo" style="background: #F9FAFB; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+                <!-- Se llena dinámicamente -->
+            </div>
+
+            <p id="mensajeFormularioDup" style="text-align: center; font-size: 14px; color: #64748B; margin-bottom: 24px;"></p>
+
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <button type="button" class="nav-btn" onclick="usarOrdenExistente()" style="width: 100%;">
+                    Continuar con mi cita existente
+                </button>
+                <button type="button" class="nav-btn prev-btn" onclick="crearNuevaOrden()" style="width: 100%; background: #F59E0B; color: white; border-color: #F59E0B;">
+                    Crear nueva cita de todos modos
+                </button>
+                <button type="button" class="nav-btn prev-btn" onclick="cerrarModalDuplicado()" style="width: 100%;">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        #modalDuplicado.show {
+            display: flex !important;
+        }
+    </style>
 </body>
 </html>
