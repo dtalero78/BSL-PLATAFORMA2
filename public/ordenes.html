@@ -92,11 +92,66 @@
             stroke-width: 2;
         }
 
+        /* Top Bar Fijo */
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 240px;
+            right: 0;
+            height: 64px;
+            background: white;
+            border-bottom: 1px solid #E5E7EB;
+            display: flex;
+            align-items: center;
+            padding: 0 32px;
+            z-index: 100;
+        }
+
+        .top-bar-search {
+            position: relative;
+            width: 400px;
+        }
+
+        .top-bar-search input {
+            width: 100%;
+            padding: 10px 16px 10px 42px;
+            border: 1px solid #E5E7EB;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            background: #F8FAFC;
+            transition: all 0.2s ease;
+        }
+
+        .top-bar-search input:focus {
+            outline: none;
+            border-color: #0099B2;
+            box-shadow: 0 0 0 3px rgba(0, 153, 178, 0.1);
+            background: white;
+        }
+
+        .top-bar-search input::placeholder {
+            color: #94A3B8;
+        }
+
+        .top-bar-search svg,
+        .top-bar-search i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94A3B8;
+            width: 18px;
+            height: 18px;
+            pointer-events: none;
+        }
+
         /* Main Content */
         .main-content {
             flex: 1;
             margin-left: 240px;
             padding: 32px 40px;
+            padding-top: 96px; /* 64px top-bar + 32px padding */
         }
 
         /* ========== HEADER ========== */
@@ -104,9 +159,33 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 32px;
+            margin-bottom: 24px;
             flex-wrap: wrap;
             gap: 16px;
+        }
+
+        .page-header-left h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #111827;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 4px;
+        }
+
+        .page-header-left h1 svg,
+        .page-header-left h1 i {
+            width: 24px;
+            height: 24px;
+            stroke: #0099B2;
+            color: #0099B2;
+        }
+
+        .page-header-left p {
+            font-size: 14px;
+            color: #6B7280;
+            margin-left: 34px;
         }
 
         .page-title {
@@ -195,80 +274,6 @@
             background: white;
             color: #111827;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-        }
-
-        /* Search Container */
-        .search-container {
-            background: white;
-            border: 1px solid #E5E7EB;
-            border-radius: 12px;
-            padding: 16px 20px;
-            margin-bottom: 20px;
-        }
-
-        .search-bar {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-        .search-input-wrapper {
-            flex: 1;
-            position: relative;
-            max-width: 400px;
-        }
-
-        .search-input-wrapper svg {
-            position: absolute;
-            left: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 20px;
-            height: 20px;
-            stroke: #94A3B8;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 12px 16px 12px 44px;
-            border: 1px solid #E5E7EB;
-            border-radius: 10px;
-            font-size: 15px;
-            font-family: inherit;
-            background: white;
-            transition: all 0.2s ease;
-        }
-
-        .search-input:focus {
-            outline: none;
-            border-color: #0099B2;
-            box-shadow: 0 0 0 3px rgba(0, 153, 178, 0.1);
-        }
-
-        .search-input::placeholder {
-            color: #9CA3AF;
-        }
-
-        .btn-clear {
-            padding: 12px 20px;
-            background: #F1F5F9;
-            color: #64748B;
-            border: none;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 500;
-            font-family: inherit;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: none;
-        }
-
-        .btn-clear.show {
-            display: block;
-        }
-
-        .btn-clear:hover {
-            background: #E2E8F0;
         }
 
         .stats-badge {
@@ -1062,9 +1067,19 @@
                 display: none;
             }
 
+            .top-bar {
+                left: 0;
+                padding: 0 16px;
+            }
+
+            .top-bar-search {
+                width: 100%;
+            }
+
             .main-content {
                 margin-left: 0;
                 padding: 20px 16px;
+                padding-top: 84px;
             }
         }
 
@@ -1265,7 +1280,6 @@
         <aside class="sidebar">
             <div class="sidebar-logo">
                 <img src="/bsl-logo.png" alt="BSL - Bienestar & Salud Laboral">
-                <span>Sistema Médico</span>
             </div>
             <nav class="sidebar-nav">
                 <a href="/" class="nav-item">
@@ -1303,29 +1317,23 @@
             </nav>
         </aside>
 
+        <!-- Top Bar con buscador global -->
+        <div class="top-bar">
+            <div class="top-bar-search">
+                <i data-feather="search"></i>
+                <input type="text" id="searchInput" placeholder="Buscar órdenes por nombre, cédula o empresa...">
+            </div>
+        </div>
+
         <!-- Main Content -->
         <main class="main-content">
             <div class="page-header">
-                <div>
-                    <h1 class="page-title">Órdenes</h1>
-                    <p class="page-subtitle">Gestiona las órdenes y pacientes del sistema</p>
+                <div class="page-header-left">
+                    <h1><i data-feather="clipboard"></i> Órdenes</h1>
+                    <p>Gestión de órdenes y pacientes</p>
                 </div>
-            </div>
-
-            <!-- Search Bar -->
-            <div class="search-container">
-                <div class="search-bar">
-                    <div class="search-input-wrapper">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <path d="M21 21l-4.35-4.35"></path>
-                        </svg>
-                        <input type="text" class="search-input" id="searchInput" placeholder="Buscar por nombre, cédula o empresa...">
-                    </div>
-                    <button class="btn-clear" id="btnClear">Limpiar</button>
-                    <div class="stats-badge" id="statsCounter">
-                        <strong>0</strong> registros
-                    </div>
+                <div class="stats-badge" id="statsCounter">
+                    <strong>0</strong> registros
                 </div>
             </div>
 
@@ -2934,20 +2942,11 @@
             cargarFormularios();
 
             // Search - Búsqueda server-side con debounce
-            const btnClear = document.getElementById('btnClear');
-
             document.getElementById('searchInput').addEventListener('input', async function(e) {
                 busquedaActual = e.target.value.trim();
 
                 // Cancelar búsqueda anterior
                 clearTimeout(searchTimeout);
-
-                // Mostrar/ocultar botón limpiar
-                if (busquedaActual.length > 0) {
-                    btnClear.classList.add('show');
-                } else {
-                    btnClear.classList.remove('show');
-                }
 
                 // Si tiene menos de 2 caracteres, filtrar localmente
                 if (busquedaActual.length < 2) {
@@ -2997,15 +2996,6 @@
                         document.getElementById('statsCounter').innerHTML = '<strong>Error en búsqueda</strong>';
                     }
                 }, 300);
-            });
-
-            // Botón Limpiar búsqueda
-            btnClear.addEventListener('click', function() {
-                document.getElementById('searchInput').value = '';
-                busquedaActual = '';
-                buscandoEnServidor = false;
-                btnClear.classList.remove('show');
-                actualizarVista();
             });
 
             // Tabs
