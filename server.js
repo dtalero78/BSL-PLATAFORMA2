@@ -3917,7 +3917,8 @@ app.get('/api/nubia/pacientes', async (req, res) => {
             SELECT "_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
                    "celular", "cargo", "ciudad", "tipoExamen", "codEmpresa", "empresa", "medico",
                    "atendido", "examenes", "_createdDate", "fechaConsulta", "fechaAtencion", "horaAtencion",
-                   "pvEstado", "mdConceptoFinal", "mdRecomendacionesMedicasAdicionales", "mdObservacionesCertificado"
+                   "pvEstado", "mdConceptoFinal", "mdRecomendacionesMedicasAdicionales", "mdObservacionesCertificado",
+                   "pagado"
             FROM "HistoriaClinica"
             WHERE "medico" ILIKE '%NUBIA%'
               AND "fechaAtencion" >= $1
@@ -3928,7 +3929,7 @@ app.get('/api/nubia/pacientes', async (req, res) => {
 
         // Contar atendidos y pagados
         const atendidos = result.rows.filter(r => r.atendido === 'ATENDIDO').length;
-        const pagados = result.rows.filter(r => r.pvEstado === 'Pagado').length;
+        const pagados = result.rows.filter(r => r.pagado === true).length;
 
         res.json({
             success: true,
