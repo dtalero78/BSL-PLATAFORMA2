@@ -1,6 +1,6 @@
-# Formulario Médico Ocupacional
+# BSL Plataforma
 
-Formulario moderno en Node.js con Express y PostgreSQL para capturar información médica de pacientes.
+Sistema médico ocupacional en Node.js con Express y PostgreSQL para capturar información médica de pacientes.
 
 ## Instalación
 
@@ -44,7 +44,7 @@ npm run dev
 ## Estructura del proyecto
 
 ```
-formulario/
+bsl-plataforma/
 ├── server.js           # Servidor Express
 ├── package.json        # Dependencias
 ├── public/

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Medical occupational form application (Formulario Médico Ocupacional) built with Node.js/Express backend and vanilla JavaScript frontend. The system captures patient medical information, stores it in PostgreSQL, and syncs data bidirectionally with an external Wix CMS.
+BSL Plataforma - Medical occupational system built with Node.js/Express backend and vanilla JavaScript frontend. The system captures patient medical information, stores it in PostgreSQL, and syncs data bidirectionally with an external Wix CMS.
 
 ## Development Commands
 

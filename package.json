@@ -1,15 +1,17 @@
 {
-  "name": "formulario-medico",
+  "name": "bsl-plataforma",
   "version": "1.0.0",
-  "description": "Formulario médico simple con Node.js",
+  "description": "BSL Plataforma - Sistema médico ocupacional con Node.js",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
   "keywords": [
-    "formulario",
+    "bsl",
+    "plataforma",
     "medico",
+    "ocupacional",
     "nodejs"
   ],
   "author": "",
