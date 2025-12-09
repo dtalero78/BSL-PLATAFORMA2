@@ -1119,13 +1119,14 @@
             const fechaHora = new Date(fecha + 'T' + hora + ':00');
 
             const aNombreDe = document.getElementById('aNombreDe').value;
-            // Siempre SANITHELP-JJ excepto empresas especiales
+            // Siempre SANITHELP-JJ para codEmpresa
             let codEmpresa = 'SANITHELP-JJ';
-            let empresaNombre = 'SANITHELP-JJ';
+            let empresaNombre = '';
 
-            if (aNombreDe === 'EMPRESA') {
-                empresaNombre = document.getElementById('empresa').value.trim();
-                // codEmpresa sigue siendo SANITHELP-JJ
+            if (aNombreDe === 'PARTICULAR') {
+                empresaNombre = 'PARTICULAR';
+            } else if (aNombreDe === 'EMPRESA') {
+                empresaNombre = document.getElementById('empresa').value.trim() || '';
             }
 
             // Solo empresas especiales tienen su propio codEmpresa
