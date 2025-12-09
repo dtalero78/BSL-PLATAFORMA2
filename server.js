@@ -3664,7 +3664,7 @@ async function barridoNubiaEnviarLink() {
 
             // URL del formulario médico virtual
             const url = `https://sea-lion-app-qcttp.ondigitalocean.app/?_id=${historiaId}`;
-            const messageBody = `Hola ${primerNombre}, tu cita con la Dra. Nubia está próxima.\n\nComunícate ya haciendo clic en este link:\n\n${url}`;
+            const messageBody = `Hola ${primerNombre}, tu cita está próxima..\n\nComunícate ya haciendo clic en este link:\n\n${url}`;
 
             try {
                 await sendWhatsAppMessage(toNumber, messageBody);
