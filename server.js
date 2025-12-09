@@ -2236,6 +2236,33 @@ app.get('/api/historia-clinica/:id', async (req, res) => {
     }
 });
 
+// Endpoint para toggle de estado de pago
+app.patch('/api/historia-clinica/:id/pago', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Obtener estado actual
+        const currentResult = await pool.query('SELECT "pagado" FROM "HistoriaClinica" WHERE "_id" = $1', [id]);
+
+        if (currentResult.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Orden no encontrada' });
+        }
+
+        const estadoActual = currentResult.rows[0].pagado || false;
+        const nuevoEstado = !estadoActual;
+
+        // Actualizar estado
+        await pool.query('UPDATE "HistoriaClinica" SET "pagado" = $1 WHERE "_id" = $2', [nuevoEstado, id]);
+
+        console.log(`💰 Pago ${nuevoEstado ? 'marcado' : 'desmarcado'} para orden ${id}`);
+
+        res.json({ success: true, pagado: nuevoEstado });
+    } catch (error) {
+        console.error('❌ Error al actualizar pago:', error);
+        res.status(500).json({ success: false, message: 'Error al actualizar pago' });
+    }
+});
+
 // Endpoint para eliminar HistoriaClinica por _id
 app.delete('/api/historia-clinica/:id', async (req, res) => {
     try {

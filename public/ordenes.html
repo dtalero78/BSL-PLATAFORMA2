@@ -1424,6 +1424,29 @@
         .examen-tag button:hover {
             color: #1E3A8A;
         }
+
+        /* ========== BOTÓN DE PAGO ========== */
+        .btn-pago {
+            transition: all 0.2s ease;
+        }
+
+        .btn-pago.sin-pago {
+            background: #F59E0B;
+            color: white;
+        }
+
+        .btn-pago.sin-pago:hover {
+            background: #D97706;
+        }
+
+        .btn-pago.pagado {
+            background: #10B981;
+            color: white;
+        }
+
+        .btn-pago.pagado:hover {
+            background: #059669;
+        }
     </style>
     <script src="https://unpkg.com/feather-icons"></script>
 </head>
@@ -1574,6 +1597,10 @@
                     Descargar
                 </a>
                 <button class="btn btn-secondary btn-flex" id="btnEditarFromModal">Editar</button>
+                <button class="btn btn-pago btn-flex" id="btnPagoFromModal">
+                    <span id="btnPagoIcon"></span>
+                    <span id="btnPagoText">Marcar Pago</span>
+                </button>
                 <button class="btn btn-danger" id="btnEliminarFromModal">Eliminar</button>
             </div>
         </div>
@@ -2510,6 +2537,10 @@
                 eliminarOrden(orden._id, orden.numeroId, orden.primerNombre, orden.primerApellido);
             };
 
+            // Configurar botón de pago
+            actualizarBotonPago(orden.pagado || false);
+            document.getElementById('btnPagoFromModal').onclick = () => togglePago(orden._id);
+
             const body = document.getElementById('modalDetallesBody');
 
             // Build formulario section
@@ -2895,6 +2926,47 @@
 
             // Actualizar input hidden
             document.getElementById('edit-hc-examenes').value = editExamenesSeleccionados.join(', ');
+        }
+
+        // ========== FUNCIONES DE PAGO ==========
+        function actualizarBotonPago(pagado) {
+            const btn = document.getElementById('btnPagoFromModal');
+            const icon = document.getElementById('btnPagoIcon');
+            const text = document.getElementById('btnPagoText');
+
+            if (pagado) {
+                btn.classList.remove('sin-pago');
+                btn.classList.add('pagado');
+                icon.innerHTML = '✓';
+                text.textContent = 'Pagado';
+            } else {
+                btn.classList.remove('pagado');
+                btn.classList.add('sin-pago');
+                icon.innerHTML = '';
+                text.textContent = 'Sin Pago';
+            }
+        }
+
+        async function togglePago(ordenId) {
+            try {
+                const response = await fetch(`/api/historia-clinica/${ordenId}/pago`, {
+                    method: 'PATCH'
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    actualizarBotonPago(result.pagado);
+                    // Actualizar caché
+                    if (detallesCache[ordenId]) {
+                        detallesCache[ordenId].orden.pagado = result.pagado;
+                    }
+                } else {
+                    alert('Error al actualizar el pago');
+                }
+            } catch (error) {
+                console.error('Error al toggle pago:', error);
+                alert('Error al actualizar el pago');
+            }
         }
 
         // ========== MODAL: EDITAR ==========
