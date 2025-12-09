@@ -1119,15 +1119,16 @@
             const fechaHora = new Date(fecha + 'T' + hora + ':00');
 
             const aNombreDe = document.getElementById('aNombreDe').value;
-            // Por defecto para NUBIA usar SANITHELP-JJ
+            // Siempre SANITHELP-JJ excepto empresas especiales
             let codEmpresa = 'SANITHELP-JJ';
             let empresaNombre = 'SANITHELP-JJ';
 
             if (aNombreDe === 'EMPRESA') {
                 empresaNombre = document.getElementById('empresa').value.trim();
-                codEmpresa = empresaNombre.toUpperCase().replace(/\s+/g, '_');
+                // codEmpresa sigue siendo SANITHELP-JJ
             }
 
+            // Solo empresas especiales tienen su propio codEmpresa
             if (refEmpresa) {
                 const empresasEspeciales = {
                     'DeStori': { codEmpresa: 'STORI', empresa: 'Stori Card' },
