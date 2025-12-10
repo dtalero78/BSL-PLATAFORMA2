@@ -3931,16 +3931,17 @@ app.get('/api/nubia/pacientes', async (req, res) => {
         console.log(`📋 [API NUBIA] Buscando pacientes del ${inicioDelDia.toISOString()} a ${finDelDia.toISOString()}`);
 
         const result = await pool.query(`
-            SELECT "_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
-                   "celular", "cargo", "ciudad", "tipoExamen", "codEmpresa", "empresa", "medico",
-                   "atendido", "examenes", "_createdDate", "fechaConsulta", "fechaAtencion", "horaAtencion",
-                   "pvEstado", "mdConceptoFinal", "mdRecomendacionesMedicasAdicionales", "mdObservacionesCertificado",
-                   "pagado"
-            FROM "HistoriaClinica"
-            WHERE "medico" ILIKE '%NUBIA%'
-              AND "fechaAtencion" >= $1
-              AND "fechaAtencion" <= $2
-            ORDER BY "fechaAtencion" ASC
+            SELECT h."_id", h."numeroId", h."primerNombre", h."segundoNombre", h."primerApellido", h."segundoApellido",
+                   h."celular", h."cargo", h."ciudad", h."tipoExamen", h."codEmpresa", h."empresa", h."medico",
+                   h."atendido", h."examenes", h."_createdDate", h."fechaConsulta", h."fechaAtencion", h."horaAtencion",
+                   h."pvEstado", h."mdConceptoFinal", h."mdRecomendacionesMedicasAdicionales", h."mdObservacionesCertificado",
+                   h."pagado",
+                   (SELECT f.foto FROM formularios f WHERE f.numero_id = h."numeroId" ORDER BY f.fecha_registro DESC LIMIT 1) as foto
+            FROM "HistoriaClinica" h
+            WHERE h."medico" ILIKE '%NUBIA%'
+              AND h."fechaAtencion" >= $1
+              AND h."fechaAtencion" <= $2
+            ORDER BY h."fechaAtencion" ASC
             LIMIT 100
         `, [inicioDelDia.toISOString(), finDelDia.toISOString()]);
 
@@ -4054,6 +4055,40 @@ app.post('/api/nubia/cobrar/:id', async (req, res) => {
         res.json({ success: true, data: paciente, message: 'Marcado como pagado y mensaje enviado' });
     } catch (error) {
         console.error('❌ Error marcando como pagado:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// API para eliminar registro (Panel NUBIA)
+app.delete('/api/nubia/eliminar/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Verificar que el registro existe
+        const checkResult = await pool.query(`
+            SELECT "_id", "primerNombre", "primerApellido", "numeroId"
+            FROM "HistoriaClinica" WHERE "_id" = $1
+        `, [id]);
+
+        if (checkResult.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Registro no encontrado' });
+        }
+
+        const paciente = checkResult.rows[0];
+
+        // Eliminar el registro
+        await pool.query(`
+            DELETE FROM "HistoriaClinica" WHERE "_id" = $1
+        `, [id]);
+
+        console.log(`🗑️ [NUBIA] Registro eliminado: ${paciente.primerNombre} ${paciente.primerApellido} (${paciente.numeroId})`);
+
+        res.json({
+            success: true,
+            message: `Registro de ${paciente.primerNombre} ${paciente.primerApellido} eliminado correctamente`
+        });
+    } catch (error) {
+        console.error('❌ Error eliminando registro:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
