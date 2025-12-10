@@ -1875,7 +1875,7 @@ app.put('/api/historia-clinica/:id', async (req, res) => {
                 'atendido', 'fechaConsulta', 'mdConceptoFinal', 'mdRecomendacionesMedicasAdicionales',
                 'mdObservacionesCertificado', 'mdAntecedentes', 'mdObsParaMiDocYa', 'mdDx1', 'mdDx2',
                 'talla', 'peso', 'motivoConsulta', 'diagnostico', 'tratamiento', 'pvEstado', 'medico',
-                'encuestaSalud', 'antecedentesFamiliares', 'empresa1'
+                'encuestaSalud', 'antecedentesFamiliares', 'empresa1', 'examenes'
             ];
 
             const setClauses = [];
