@@ -864,6 +864,7 @@
         // ========== STATE ==========
         let pacientes = [];
         let pacientesFiltrados = [];
+        let buscandoEnServidor = false;
 
         // ========== UTILITY ==========
         function showMessage(message, type = 'info') {
@@ -1364,10 +1365,56 @@
 
         // ========== SEARCH ==========
         let searchTimeout = null;
-        document.getElementById('searchInput').addEventListener('input', () => {
+        document.getElementById('searchInput').addEventListener('input', async function(e) {
+            const busqueda = e.target.value.trim();
+
             clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
+
+            // Si tiene menos de 2 caracteres, filtrar localmente
+            if (busqueda.length < 2) {
+                buscandoEnServidor = false;
                 actualizarVista();
+                return;
+            }
+
+            // Búsqueda server-side con debounce de 300ms
+            searchTimeout = setTimeout(async () => {
+                try {
+                    buscandoEnServidor = true;
+                    document.getElementById('totalRegistros').textContent = 'Buscando...';
+
+                    const response = await fetch(`/api/historia-clinica/buscar?q=${encodeURIComponent(busqueda)}`);
+                    const result = await response.json();
+
+                    if (result.success) {
+                        // Filtrar solo los de NUBIA de los resultados
+                        let resultados = result.data.filter(p =>
+                            p.medico && p.medico.toUpperCase().includes('NUBIA')
+                        );
+
+                        pacientesFiltrados = resultados;
+
+                        // Actualizar UI
+                        const tableContainer = document.getElementById('tableContainer');
+                        const emptyState = document.getElementById('emptyState');
+
+                        if (resultados.length === 0) {
+                            tableContainer.style.display = 'none';
+                            emptyState.style.display = 'block';
+                        } else {
+                            tableContainer.style.display = 'block';
+                            emptyState.style.display = 'none';
+                        }
+
+                        renderTable(resultados);
+                        renderMobileCards(resultados);
+                        document.getElementById('totalRegistros').textContent = `${resultados.length} resultados (búsqueda global)`;
+                    }
+                } catch (error) {
+                    console.error('Error en búsqueda:', error);
+                    buscandoEnServidor = false;
+                    actualizarVista();
+                }
             }, 300);
         });
 
