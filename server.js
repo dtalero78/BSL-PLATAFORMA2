@@ -3815,6 +3815,81 @@ async function barridoNubiaMarcarAtendido() {
     }
 }
 
+// ==========================================
+// BARRIDO NUBIA - Recordatorio de pago (1 hora después de consulta)
+// Para pacientes SANITHELP-JJ que no han pagado
+// ==========================================
+async function barridoNubiaRecordatorioPago() {
+    console.log("💰 [barridoNubiaRecordatorioPago] Iniciando ejecución...");
+    try {
+        const ahora = new Date();
+        // Buscar citas que fueron hace 1 hora (entre 55 y 65 minutos atrás)
+        const cincuentaCincoMinAtras = new Date(ahora.getTime() - 55 * 60 * 1000);
+        const sesentaCincoMinAtras = new Date(ahora.getTime() - 65 * 60 * 1000);
+
+        console.log(`📅 [barridoNubiaRecordatorioPago] Buscando citas SANITHELP-JJ entre ${sesentaCincoMinAtras.toISOString()} y ${cincuentaCincoMinAtras.toISOString()}`);
+
+        // Busca registros de SANITHELP-JJ que no han pagado y cuya cita fue hace ~1 hora
+        const result = await pool.query(`
+            SELECT * FROM "HistoriaClinica"
+            WHERE "fechaAtencion" >= $1
+              AND "fechaAtencion" <= $2
+              AND "codEmpresa" = 'SANITHELP-JJ'
+              AND ("pagado" IS NULL OR "pagado" = false)
+              AND ("recordatorioPagoEnviado" IS NULL OR "recordatorioPagoEnviado" = false)
+            LIMIT 20
+        `, [sesentaCincoMinAtras.toISOString(), cincuentaCincoMinAtras.toISOString()]);
+
+        console.log(`📊 [barridoNubiaRecordatorioPago] Registros encontrados: ${result.rows.length}`);
+
+        if (result.rows.length === 0) {
+            console.log("⚠️ [barridoNubiaRecordatorioPago] No hay pacientes pendientes de pago");
+            return { mensaje: 'No hay pacientes pendientes de pago.', enviados: 0 };
+        }
+
+        let enviados = 0;
+
+        for (const registro of result.rows) {
+            const { primerNombre, celular, _id: historiaId } = registro;
+
+            if (!celular) {
+                console.log(`⚠️ [barridoNubiaRecordatorioPago] ${primerNombre} no tiene celular`);
+                continue;
+            }
+
+            const telefonoLimpio = celular.replace(/\s+/g, '').replace(/[^\d]/g, '');
+            const toNumber = telefonoLimpio.startsWith('57') ? telefonoLimpio : `57${telefonoLimpio}`;
+
+            const messageBody = `Hola! Revisaste tu certificado médico?`;
+
+            try {
+                await sendWhatsAppMessage(toNumber, messageBody);
+
+                // Marcar que ya se envió el recordatorio de pago
+                await pool.query(`
+                    UPDATE "HistoriaClinica"
+                    SET "recordatorioPagoEnviado" = true
+                    WHERE "_id" = $1
+                `, [historiaId]);
+
+                console.log(`✅ [barridoNubiaRecordatorioPago] Recordatorio enviado a ${primerNombre} (${toNumber})`);
+                enviados++;
+            } catch (sendError) {
+                console.error(`Error enviando recordatorio de pago a ${toNumber}:`, sendError);
+            }
+
+            // Pequeño delay entre mensajes
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        console.log(`✅ [barridoNubiaRecordatorioPago] Enviados ${enviados} recordatorios de pago`);
+        return { mensaje: `Enviados ${enviados} recordatorios de pago.`, enviados };
+    } catch (error) {
+        console.error("❌ Error en barridoNubiaRecordatorioPago:", error.message);
+        throw error;
+    }
+}
+
 async function procesarRegistroNubia(registro) {
     const {
         primerNombre,
@@ -4178,6 +4253,9 @@ cron.schedule('*/5 * * * *', async () => {
 
         // 2. Marcar como ATENDIDO citas que ya pasaron
         await barridoNubiaMarcarAtendido();
+
+        // 3. Enviar recordatorio de pago a SANITHELP-JJ (1 hora después de consulta)
+        await barridoNubiaRecordatorioPago();
     } catch (error) {
         console.error('❌ [CRON] Error en barrido NUBIA:', error);
     }
