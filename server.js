@@ -2356,11 +2356,35 @@ app.patch('/api/historia-clinica/:id/pago', async (req, res) => {
 
         const estadoActual = currentResult.rows[0].pagado || false;
         const nuevoEstado = !estadoActual;
+        const pvEstado = nuevoEstado ? 'Pagado' : '';
 
-        // Actualizar estado
-        await pool.query('UPDATE "HistoriaClinica" SET "pagado" = $1 WHERE "_id" = $2', [nuevoEstado, id]);
+        // Actualizar estado en PostgreSQL (pagado y pvEstado)
+        await pool.query(
+            'UPDATE "HistoriaClinica" SET "pagado" = $1, "pvEstado" = $2 WHERE "_id" = $3',
+            [nuevoEstado, pvEstado, id]
+        );
 
         console.log(`💰 Pago ${nuevoEstado ? 'marcado' : 'desmarcado'} para orden ${id}`);
+
+        // Sincronizar con Wix
+        try {
+            const wixResponse = await fetch('https://www.bsl.com.co/_functions/actualizarFormulario', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    idGeneral: id,
+                    pvEstado: pvEstado
+                })
+            });
+
+            if (wixResponse.ok) {
+                console.log('✅ WIX: pvEstado sincronizado');
+            } else {
+                console.log('⚠️ WIX: No se pudo sincronizar pvEstado');
+            }
+        } catch (wixError) {
+            console.log('⚠️ WIX: Error al sincronizar pvEstado:', wixError.message);
+        }
 
         res.json({ success: true, pagado: nuevoEstado });
     } catch (error) {
