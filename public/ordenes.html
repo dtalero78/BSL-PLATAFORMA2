@@ -3163,11 +3163,17 @@
                 document.getElementById('edit-hc-atendido').value = orden.atendido || '';
                 document.getElementById('edit-hc-medico').value = orden.medico || '';
                 document.getElementById('edit-hc-pvEstado').value = orden.pvEstado || '';
-                // Fecha de atención (formato datetime-local: YYYY-MM-DDTHH:MM)
+                // Fecha de atención (formato datetime-local: YYYY-MM-DDTHH:MM) - siempre en hora Colombia
                 if (orden.fechaAtencion) {
                     const fa = new Date(orden.fechaAtencion);
-                    const fechaLocal = new Date(fa.getTime() - fa.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-                    document.getElementById('edit-hc-fechaAtencion').value = fechaLocal;
+                    // Convertir a hora Colombia (UTC-5)
+                    const colombiaTime = new Date(fa.toLocaleString('en-US', { timeZone: 'America/Bogota' }));
+                    const year = colombiaTime.getFullYear();
+                    const month = String(colombiaTime.getMonth() + 1).padStart(2, '0');
+                    const day = String(colombiaTime.getDate()).padStart(2, '0');
+                    const hours = String(colombiaTime.getHours()).padStart(2, '0');
+                    const minutes = String(colombiaTime.getMinutes()).padStart(2, '0');
+                    document.getElementById('edit-hc-fechaAtencion').value = `${year}-${month}-${day}T${hours}:${minutes}`;
                 } else {
                     document.getElementById('edit-hc-fechaAtencion').value = '';
                 }
