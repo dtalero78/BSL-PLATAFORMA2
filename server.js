@@ -1778,11 +1778,6 @@ app.post('/api/marcar-atendido', async (req, res) => {
             celular,
             email,
             fechaNacimiento,
-            edad,
-            genero,
-            estadoCivil,
-            hijos,
-            ejercicio,
             codEmpresa,
             empresa,
             cargo,
@@ -1852,13 +1847,11 @@ app.post('/api/marcar-atendido', async (req, res) => {
             const insertQuery = `
                 INSERT INTO "HistoriaClinica" (
                     "_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
-                    "celular", "email", "fechaNacimiento", "edad", "genero", "estadoCivil", "hijos",
-                    "ejercicio", "codEmpresa", "empresa", "cargo", "tipoExamen", "fechaAtencion",
-                    "atendido", "fechaConsulta", "mdConceptoFinal", "mdRecomendacionesMedicasAdicionales",
-                    "mdObservacionesCertificado", "_createdDate", "_updatedDate"
+                    "celular", "email", "fechaNacimiento", "codEmpresa", "empresa", "cargo", "tipoExamen",
+                    "fechaAtencion", "atendido", "fechaConsulta", "mdConceptoFinal",
+                    "mdRecomendacionesMedicasAdicionales", "mdObservacionesCertificado", "_createdDate", "_updatedDate"
                 ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
-                    $20, $21, $22, $23, $24, NOW(), NOW()
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW(), NOW()
                 )
                 RETURNING "_id", "numeroId", "primerNombre"
             `;
@@ -1873,11 +1866,6 @@ app.post('/api/marcar-atendido', async (req, res) => {
                 celular,
                 email || null,
                 fechaNacimiento ? new Date(fechaNacimiento) : null,
-                edad || null,
-                genero || null,
-                estadoCivil || null,
-                hijos || null,
-                ejercicio || null,
                 codEmpresa || null,
                 empresa || null,
                 cargo || null,
@@ -1940,12 +1928,10 @@ app.put('/api/historia-clinica/:id', async (req, res) => {
             // ========== ACTUALIZAR EN HISTORIA CLINICA ==========
             const camposPermitidos = [
                 'numeroId', 'primerNombre', 'segundoNombre', 'primerApellido', 'segundoApellido',
-                'celular', 'email', 'fechaNacimiento', 'edad', 'genero', 'estadoCivil', 'hijos',
-                'ejercicio', 'codEmpresa', 'empresa', 'cargo', 'tipoExamen', 'fechaAtencion',
-                'atendido', 'fechaConsulta', 'mdConceptoFinal', 'mdRecomendacionesMedicasAdicionales',
+                'celular', 'email', 'fechaNacimiento', 'codEmpresa', 'empresa', 'cargo', 'tipoExamen',
+                'fechaAtencion', 'atendido', 'fechaConsulta', 'mdConceptoFinal', 'mdRecomendacionesMedicasAdicionales',
                 'mdObservacionesCertificado', 'mdAntecedentes', 'mdObsParaMiDocYa', 'mdDx1', 'mdDx2',
-                'talla', 'peso', 'motivoConsulta', 'diagnostico', 'tratamiento', 'pvEstado', 'medico',
-                'encuestaSalud', 'antecedentesFamiliares', 'empresa1', 'examenes'
+                'talla', 'peso', 'motivoConsulta', 'diagnostico', 'tratamiento', 'pvEstado', 'medico', 'examenes'
             ];
 
             const setClauses = [];

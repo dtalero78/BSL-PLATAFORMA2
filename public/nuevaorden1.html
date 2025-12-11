@@ -1114,9 +1114,8 @@
 
             document.getElementById('loadingOverlay').classList.add('show');
 
-            const fecha = document.getElementById('dia').value;
-            const hora = document.getElementById('horaSelect').value;
-            const fechaHora = new Date(fecha + 'T' + hora + ':00');
+            const fecha = document.getElementById('dia').value; // YYYY-MM-DD
+            const hora = document.getElementById('horaSelect').value; // HH:MM
 
             const aNombreDe = document.getElementById('aNombreDe').value;
             // Siempre SANITHELP-JJ para codEmpresa
@@ -1153,8 +1152,8 @@
                 codEmpresa: codEmpresa,
                 empresa: empresaNombre,
                 cargo: document.getElementById('cargo').value.trim() || null,
-                fechaAtencion: fechaHora.toISOString(),
-                horaAtencion: hora,
+                fechaAtencion: fecha,  // YYYY-MM-DD - el backend construye el timestamp con hora Colombia
+                horaAtencion: hora,    // HH:MM - hora Colombia, el backend lo usa para construir fechaAtencion
                 examenes: examenesSeleccionados.join(', '),
                 tipoExamen: 'Ingreso',
                 atendido: 'PENDIENTE',
@@ -1513,16 +1512,12 @@
             btn.textContent = 'Actualizando...';
 
             try {
-                const [year, month, day] = dia.split('-').map(Number);
-                const [hours, minutes] = hora.split(':').map(Number);
-                const fechaHora = new Date(year, month - 1, day, hours, minutes);
-
                 const response = await fetch(`/api/ordenes/${ordenExistenteActual._id}/fecha-atencion`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        fechaAtencion: fechaHora.toISOString(),
-                        horaAtencion: hora
+                        fechaAtencion: dia,   // YYYY-MM-DD
+                        horaAtencion: hora    // HH:MM - hora Colombia
                     })
                 });
 

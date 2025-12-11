@@ -1746,30 +1746,6 @@
                                 <label class="form-label">Fecha Nacimiento</label>
                                 <input type="date" class="form-input" id="edit-hc-fechaNacimiento" name="hc_fechaNacimiento">
                             </div>
-                            <div class="form-group">
-                                <label class="form-label">Edad</label>
-                                <input type="number" class="form-input" id="edit-hc-edad" name="hc_edad">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Género</label>
-                                <select class="form-input" id="edit-hc-genero" name="hc_genero">
-                                    <option value="">Seleccionar...</option>
-                                    <option value="Masculino">Masculino</option>
-                                    <option value="Femenino">Femenino</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Estado Civil</label>
-                                <input type="text" class="form-input" id="edit-hc-estadoCivil" name="hc_estadoCivil">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Hijos</label>
-                                <input type="text" class="form-input" id="edit-hc-hijos" name="hc_hijos">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Ejercicio</label>
-                                <input type="text" class="form-input" id="edit-hc-ejercicio" name="hc_ejercicio">
-                            </div>
                         </div>
 
                         <!-- Datos Laborales HC -->
@@ -1786,10 +1762,6 @@
                             <div class="form-group">
                                 <label class="form-label">Cargo</label>
                                 <input type="text" class="form-input" id="edit-hc-cargo" name="hc_cargo">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Empresa 1 (Anterior)</label>
-                                <input type="text" class="form-input" id="edit-hc-empresa1" name="hc_empresa1">
                             </div>
                         </div>
 
@@ -3146,17 +3118,11 @@
                 document.getElementById('edit-hc-email').value = orden.email || '';
                 document.getElementById('edit-hc-ciudad').value = orden.ciudad || '';
                 document.getElementById('edit-hc-fechaNacimiento').value = orden.fechaNacimiento ? orden.fechaNacimiento.split('T')[0] : '';
-                document.getElementById('edit-hc-edad').value = orden.edad || '';
-                document.getElementById('edit-hc-genero').value = orden.genero || '';
-                document.getElementById('edit-hc-estadoCivil').value = orden.estadoCivil || '';
-                document.getElementById('edit-hc-hijos').value = orden.hijos || '';
-                document.getElementById('edit-hc-ejercicio').value = orden.ejercicio || '';
 
                 // Datos laborales HC
                 document.getElementById('edit-hc-empresa').value = orden.empresa || '';
                 document.getElementById('edit-hc-codEmpresa').value = orden.codEmpresa || '';
                 document.getElementById('edit-hc-cargo').value = orden.cargo || '';
-                document.getElementById('edit-hc-empresa1').value = orden.empresa1 || '';
 
                 // Datos del examen HC
                 document.getElementById('edit-hc-tipoExamen').value = orden.tipoExamen || '';
