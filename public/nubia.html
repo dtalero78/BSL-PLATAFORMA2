@@ -1066,7 +1066,8 @@
             const isAtendido = paciente.atendido === 'ATENDIDO';
             const isPagado = paciente.pvEstado === 'Pagado' || paciente.pagado === true;
 
-            const fechaCreacion = paciente._createdDate ? new Date(paciente._createdDate).toLocaleString('es-CO', {
+            // Fecha de atención para el header
+            const fechaAtencionHeader = paciente.fechaAtencion ? new Date(paciente.fechaAtencion).toLocaleString('es-CO', {
                 day: '2-digit',
                 month: '2-digit',
                 year: 'numeric',
@@ -1085,7 +1086,7 @@
                     <div class="profile-info">
                         <div class="profile-name">${nombreCompleto}</div>
                         <div class="profile-meta">${paciente.cargo || 'Sin cargo'} - ${paciente.codEmpresa || 'Sin empresa'}</div>
-                        <div class="profile-created">Creado: ${fechaCreacion}</div>
+                        <div class="profile-created">${fechaAtencionHeader}</div>
                         <span class="status-badge ${status.class}" style="margin-top: 8px;">
                             <span class="status-dot"></span>
                             ${status.text}
@@ -1138,16 +1139,8 @@
                 </div>
 
                 <div class="detail-card">
-                    <div class="detail-card-title">Información de la Cita</div>
+                    <div class="detail-card-title">Información de la Consulta</div>
                     <div class="detail-grid">
-                        <div class="detail-field">
-                            <div class="detail-field-label">Fecha Atención</div>
-                            <div class="detail-field-value">${paciente.fechaAtencion ? new Date(paciente.fechaAtencion).toLocaleString('es-CO') : '—'}</div>
-                        </div>
-                        <div class="detail-field">
-                            <div class="detail-field-label">Hora Atención</div>
-                            <div class="detail-field-value">${paciente.horaAtencion || formatHora(paciente.fechaAtencion)}</div>
-                        </div>
                         <div class="detail-field">
                             <div class="detail-field-label">Fecha Consulta</div>
                             <div class="detail-field-value">${paciente.fechaConsulta ? new Date(paciente.fechaConsulta).toLocaleDateString('es-CO') : '—'}</div>
