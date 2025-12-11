@@ -2374,7 +2374,7 @@ app.patch('/api/historia-clinica/:id/pago', async (req, res) => {
             };
             console.log('📤 Sincronizando pvEstado con Wix HistoriaClinica:', JSON.stringify(wixPayload));
 
-            const wixResponse = await fetch('https://www.bsl-plataforma.com/_functions/actualizarHistoriaClinica', {
+            const wixResponse = await fetch('https://www.bsl.com.co/_functions/actualizarHistoriaClinica', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(wixPayload)
