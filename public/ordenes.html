@@ -2644,9 +2644,16 @@
             const initials = getInitials(orden.primerNombre, orden.primerApellido);
             const isAtendido = orden.atendido && orden.atendido.toUpperCase() === 'ATENDIDO';
             const opcionesFecha = { timeZone: 'America/Bogota', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true };
+            const opcionesSoloFecha = { timeZone: 'America/Bogota', day: '2-digit', month: '2-digit', year: 'numeric' };
             const fechaCreacion = orden._createdDate ? new Date(orden._createdDate).toLocaleString('es-CO', opcionesFecha) : '—';
             const fechaConsulta = orden.fechaConsulta ? new Date(orden.fechaConsulta).toLocaleString('es-CO', opcionesFecha) : '—';
-            const fechaAtencion = orden.fechaAtencion ? new Date(orden.fechaAtencion).toLocaleString('es-CO', opcionesFecha) : '—';
+            // Fecha de atención: usar horaAtencion si existe (datos antiguos), sino extraer de fechaAtencion
+            let fechaAtencion = '—';
+            if (orden.fechaAtencion) {
+                const fechaStr = new Date(orden.fechaAtencion).toLocaleDateString('es-CO', opcionesSoloFecha);
+                const horaStr = orden.horaAtencion || new Date(orden.fechaAtencion).toLocaleTimeString('es-CO', { timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit', hour12: true });
+                fechaAtencion = `${fechaStr}, ${horaStr}`;
+            }
 
             // Hide header titles (we'll show in body)
             document.getElementById('modalDetallesTitulo').textContent = '';

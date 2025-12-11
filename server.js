@@ -8,20 +8,36 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 
 // ========== HELPER: Construir fecha de atención correcta ==========
-// Combina fecha (YYYY-MM-DD) y hora (HH:MM) en zona horaria Colombia (UTC-5)
-// Retorna un objeto Date en UTC que representa la hora correcta en Colombia
+// Recibe fecha y hora en zona horaria Colombia y retorna un Date UTC correcto
+// fecha: YYYY-MM-DD o YYYY-MM-DDTHH:MM (datetime-local)
+// hora: HH:MM (hora Colombia) - opcional si ya viene en fecha
 function construirFechaAtencionColombia(fecha, hora) {
     if (!fecha) return null;
 
-    // Si viene un ISO string completo, extraer solo la fecha
-    const fechaStr = fecha.includes('T') ? fecha.split('T')[0] : fecha;
+    let fechaStr, horaStr;
 
-    // Si no hay hora, usar 08:00 por defecto
-    const horaStr = hora || '08:00';
+    // Si viene un datetime-local (2025-12-11T08:50), separar fecha y hora
+    if (fecha.includes('T')) {
+        const partes = fecha.split('T');
+        fechaStr = partes[0];
+        horaStr = partes[1] || hora || '08:00';
+    } else {
+        fechaStr = fecha;
+        horaStr = hora || '08:00';
+    }
 
-    // Construir la fecha en formato ISO con offset Colombia (UTC-5)
-    // Ejemplo: 2025-12-11T10:00:00-05:00
-    const fechaCompleta = `${fechaStr}T${horaStr}:00-05:00`;
+    // Asegurar formato HH:MM:SS
+    if (horaStr && horaStr.length === 5) {
+        horaStr = horaStr + ':00';
+    } else if (horaStr && horaStr.length < 5) {
+        horaStr = horaStr + ':00:00';
+    }
+
+    // Construir la fecha con offset Colombia (UTC-5)
+    // Ejemplo: 2025-12-11T08:50:00-05:00 -> Se interpreta como 8:50 AM Colombia -> 13:50 UTC
+    const fechaCompleta = `${fechaStr}T${horaStr}-05:00`;
+
+    console.log(`📅 construirFechaAtencionColombia: ${fecha} + ${hora} -> ${fechaCompleta}`);
 
     return new Date(fechaCompleta);
 }
