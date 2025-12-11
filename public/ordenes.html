@@ -742,6 +742,78 @@
             flex-shrink: 0;
         }
 
+        /* Acciones estilo Revolut */
+        .modal-actions-card {
+            background: #FFFFFF;
+            border-radius: 16px;
+            margin: 0 24px 24px;
+            overflow: hidden;
+        }
+
+        .modal-action-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            border: none;
+            background: transparent;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.15s ease;
+            text-decoration: none;
+            color: inherit;
+            font-family: inherit;
+        }
+
+        .modal-action-item:not(:last-child) {
+            border-bottom: 1px solid #F0F0F0;
+        }
+
+        .modal-action-item:hover {
+            background: #F9F9F9;
+        }
+
+        .modal-action-item.danger .modal-action-title {
+            color: #EF4444;
+        }
+
+        .modal-action-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .modal-action-text {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .modal-action-title {
+            display: block;
+            font-size: 15px;
+            font-weight: 500;
+            color: #1A1A1A;
+        }
+
+        .modal-action-desc {
+            display: block;
+            font-size: 13px;
+            color: #6B7280;
+            margin-top: 2px;
+        }
+
+        .modal-action-arrow {
+            font-size: 20px;
+            color: #C0C0C0;
+            font-weight: 300;
+        }
+
         /* Tarjetas blancas estilo Revolut */
         .modal-card {
             background: #FFFFFF;
@@ -1690,27 +1762,57 @@
             <div class="modal-body" id="modalDetallesBody">
                 <!-- Content loaded dynamically -->
             </div>
-            <div class="modal-footer">
-                <a href="#" target="_blank" class="btn btn-flex" id="btnFormularioFromModal" style="background: #00B8E6; color: white;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                    Formulario
+            <!-- Acciones estilo Revolut -->
+            <div class="modal-actions-card">
+                <a href="#" target="_blank" class="modal-action-item" id="btnFormularioFromModal">
+                    <span class="modal-action-icon" style="background: #E0F7FA;">📝</span>
+                    <span class="modal-action-text">
+                        <span class="modal-action-title">Formulario</span>
+                        <span class="modal-action-desc">Abrir formulario del paciente</span>
+                    </span>
+                    <span class="modal-action-arrow">›</span>
                 </a>
-                <a href="#" target="_blank" class="btn btn-success btn-flex" id="btnWhatsappFromModal">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                    Enviar
+                <a href="#" target="_blank" class="modal-action-item" id="btnWhatsappFromModal">
+                    <span class="modal-action-icon" style="background: #E8F5E9;">💬</span>
+                    <span class="modal-action-text">
+                        <span class="modal-action-title">Enviar WhatsApp</span>
+                        <span class="modal-action-desc">Solicitar certificado</span>
+                    </span>
+                    <span class="modal-action-arrow">›</span>
                 </a>
-                <a href="#" target="_blank" class="btn btn-primary btn-flex" id="btnDescargarFromModal">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11zm-6-6v-4h-2v4H8l4 4 4-4h-2z"/></svg>
-                    Descargar
+                <a href="#" target="_blank" class="modal-action-item" id="btnDescargarFromModal">
+                    <span class="modal-action-icon" style="background: #E3F2FD;">📄</span>
+                    <span class="modal-action-text">
+                        <span class="modal-action-title">Descargar PDF</span>
+                        <span class="modal-action-desc">Generar certificado</span>
+                    </span>
+                    <span class="modal-action-arrow">›</span>
                 </a>
-                <button class="btn btn-secondary btn-flex" id="btnEditarFromModal">Editar</button>
-                <button class="btn btn-pago btn-flex" id="btnPagoFromModal">
-                    <span id="btnPagoIcon"></span>
-                    <span id="btnPagoText">Marcar Pago</span>
+                <button class="modal-action-item" id="btnEditarFromModal">
+                    <span class="modal-action-icon" style="background: #FFF3E0;">✏️</span>
+                    <span class="modal-action-text">
+                        <span class="modal-action-title">Editar</span>
+                        <span class="modal-action-desc">Modificar información</span>
+                    </span>
+                    <span class="modal-action-arrow">›</span>
                 </button>
-                <button class="btn btn-danger" id="btnEliminarFromModal">Eliminar</button>
+                <button class="modal-action-item" id="btnPagoFromModal">
+                    <span class="modal-action-icon" id="btnPagoIconContainer" style="background: #F3E5F5;">💰</span>
+                    <span class="modal-action-text">
+                        <span class="modal-action-title" id="btnPagoText">Marcar como pagado</span>
+                        <span class="modal-action-desc">Cambiar estado de pago</span>
+                    </span>
+                    <span class="modal-action-arrow">›</span>
+                </button>
+                <button class="modal-action-item danger" id="btnEliminarFromModal">
+                    <span class="modal-action-icon" style="background: #FFEBEE;">🗑️</span>
+                    <span class="modal-action-text">
+                        <span class="modal-action-title">Eliminar</span>
+                        <span class="modal-action-desc">Borrar esta orden</span>
+                    </span>
+                    <span class="modal-action-arrow">›</span>
+                </button>
             </div>
-            <div style="text-align: center; padding: 4px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0;">modalDetalles</div>
         </div>
     </div>
 
@@ -2637,9 +2739,10 @@
                 fechaAtencion = `${fechaStr}, ${horaStr}`;
             }
 
-            // Hide header titles (we'll show in body)
-            document.getElementById('modalDetallesTitulo').textContent = '';
-            document.getElementById('modalDetallesSubtitulo').textContent = '';
+            // Show patient name as title
+            const nombreCompleto = `${orden.primerNombre || ''} ${orden.primerApellido || ''}`.trim();
+            document.getElementById('modalDetallesTitulo').textContent = nombreCompleto || 'Detalles';
+            document.getElementById('modalDetallesSubtitulo').textContent = orden.numeroId || '';
 
             // Configure buttons
             document.getElementById('btnFormularioFromModal').href = `/?_id=${orden._id}`;
@@ -3046,20 +3149,15 @@
 
         // ========== FUNCIONES DE PAGO ==========
         function actualizarBotonPago(pagado) {
-            const btn = document.getElementById('btnPagoFromModal');
-            const icon = document.getElementById('btnPagoIcon');
             const text = document.getElementById('btnPagoText');
+            const iconContainer = document.getElementById('btnPagoIconContainer');
 
             if (pagado) {
-                btn.classList.remove('sin-pago');
-                btn.classList.add('pagado');
-                icon.innerHTML = '✓';
-                text.textContent = 'Pagado';
+                text.textContent = 'Pagado ✓';
+                if (iconContainer) iconContainer.innerHTML = '✅';
             } else {
-                btn.classList.remove('pagado');
-                btn.classList.add('sin-pago');
-                icon.innerHTML = '';
-                text.textContent = 'Sin Pago';
+                text.textContent = 'Marcar como pagado';
+                if (iconContainer) iconContainer.innerHTML = '💰';
             }
         }
 
