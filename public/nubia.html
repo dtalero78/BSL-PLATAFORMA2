@@ -1066,16 +1066,25 @@
             const isAtendido = paciente.atendido === 'ATENDIDO';
             const isPagado = paciente.pvEstado === 'Pagado' || paciente.pagado === true;
 
-            // Fecha de atención para el header (zona horaria Colombia)
-            const fechaAtencionHeader = paciente.fechaAtencion ? new Date(paciente.fechaAtencion).toLocaleString('es-CO', {
-                timeZone: 'America/Bogota',
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-            }) : '—';
+            // Fecha de atención para el header: usar fecha de fechaAtencion + hora de horaAtencion
+            let fechaAtencionHeader = '—';
+            if (paciente.fechaAtencion) {
+                const fechaObj = new Date(paciente.fechaAtencion);
+                const fechaStr = fechaObj.toLocaleDateString('es-CO', {
+                    timeZone: 'America/Bogota',
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+                // Usar horaAtencion si existe, sino extraer de fechaAtencion
+                const horaStr = paciente.horaAtencion || fechaObj.toLocaleTimeString('es-CO', {
+                    timeZone: 'America/Bogota',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                });
+                fechaAtencionHeader = `${fechaStr}, ${horaStr}`;
+            }
 
             const avatarContent = paciente.foto
                 ? `<img src="${paciente.foto}" alt="Foto paciente">`
