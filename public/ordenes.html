@@ -647,12 +647,12 @@
             to { transform: rotate(360deg); }
         }
 
-        /* ========== MODAL BASE ========== */
+        /* ========== MODAL BASE (Estilo Revolut) ========== */
         .modal-overlay {
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.5);
+            background: #F5F5F5;
             z-index: 1000;
             align-items: flex-start;
             justify-content: center;
@@ -665,11 +665,11 @@
         }
 
         .modal {
-            background: var(--bg-secondary);
-            border-radius: 12px;
+            background: transparent;
+            border-radius: 0;
             width: 100%;
             max-width: 640px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+            box-shadow: none;
             animation: modalSlide 0.2s ease-out;
         }
 
@@ -692,84 +692,109 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 20px 24px;
-            border-bottom: 1px solid var(--border-color);
+            padding: 20px 0;
+            border-bottom: none;
+            margin-bottom: 16px;
         }
 
         .modal-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--text-primary);
+            font-size: 24px;
+            font-weight: 700;
+            color: #1A1A1A;
         }
 
         .modal-subtitle {
-            font-size: 13px;
-            color: var(--text-secondary);
-            margin-top: 2px;
+            font-size: 14px;
+            color: #6B7280;
+            margin-top: 4px;
         }
 
         .btn-close {
-            width: 32px;
-            height: 32px;
+            width: 36px;
+            height: 36px;
             border: none;
-            background: var(--bg-tertiary);
-            border-radius: 6px;
+            background: #FFFFFF;
+            border-radius: 50%;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 18px;
-            color: var(--text-secondary);
+            color: #6B7280;
             transition: all 0.15s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
         .btn-close:hover {
-            background: var(--border-color);
-            color: var(--text-primary);
+            background: #FFFFFF;
+            color: #1A1A1A;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
         }
 
         .modal-body {
-            padding: 24px;
-            max-height: calc(80vh - 140px);
+            padding: 0;
+            max-height: calc(85vh - 100px);
             overflow-y: auto;
         }
 
         .modal-footer {
             display: flex;
             gap: 12px;
-            padding: 16px 24px;
-            border-top: 1px solid var(--border-color);
-            background: var(--bg-tertiary);
-            border-radius: 0 0 12px 12px;
+            padding: 20px 0;
+            border-top: none;
+            background: transparent;
+            margin-top: 16px;
+        }
+
+        /* Tarjetas blancas estilo Revolut */
+        .modal-card {
+            background: #FFFFFF;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .modal-card-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #6B7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
         }
 
         /* ========== DETAIL MODAL - Profile Style ========== */
         .profile-header {
             text-align: center;
-            padding-bottom: 24px;
-            border-bottom: 1px solid var(--border-color);
-            margin-bottom: 24px;
+            padding: 24px;
+            background: #FFFFFF;
+            border-radius: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
         .profile-header-horizontal {
             display: flex;
             align-items: flex-start;
             gap: 16px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid var(--border-color);
-            margin-bottom: 20px;
+            padding: 20px;
+            background: #FFFFFF;
+            border-radius: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
         .profile-photo {
-            width: 72px;
-            height: 72px;
-            border-radius: 12px;
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
             background: linear-gradient(135deg, #0099B2, #007A8C);
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 600;
             flex-shrink: 0;
             overflow: hidden;
@@ -786,7 +811,7 @@
         }
 
         .profile-photo .profile-initials {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 600;
         }
 
@@ -918,17 +943,20 @@
         }
 
         .detail-card {
-            background: var(--bg-tertiary);
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 16px;
+            background: #FFFFFF;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
         .detail-card-title {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 12px;
+            color: #6B7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -1087,52 +1115,56 @@
         .form-label {
             font-size: 13px;
             font-weight: 500;
-            color: var(--text-primary);
+            color: #6B7280;
             margin-bottom: 6px;
         }
 
         .form-input {
-            padding: 10px 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
+            padding: 12px 14px;
+            border: 1px solid #E5E7EB;
+            border-radius: 12px;
             font-size: 14px;
             font-family: inherit;
-            background: var(--bg-input);
-            color: var(--text-primary);
+            background: #F9FAFB;
+            color: #1A1A1A;
             transition: all 0.15s ease;
         }
 
         .form-input:focus {
             outline: none;
-            border-color: var(--accent-color);
+            border-color: #0099B2;
             box-shadow: 0 0 0 3px rgba(0, 153, 178, 0.1);
-            background: var(--bg-secondary);
+            background: #FFFFFF;
         }
 
         .form-section {
-            margin-top: 24px;
-            padding-top: 24px;
-            border-top: 1px solid var(--border-color);
+            background: #FFFFFF;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
         .form-section-title {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 600;
-            color: var(--text-primary);
+            color: #6B7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
             margin-bottom: 16px;
         }
 
-        /* Buttons */
+        /* Buttons - Estilo Revolut */
         .btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
-            padding: 10px 20px;
+            padding: 12px 24px;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 600;
             font-family: inherit;
             cursor: pointer;
             transition: all 0.15s ease;
@@ -1144,17 +1176,17 @@
         }
 
         .btn-primary:hover {
-            background: #4338CA;
+            background: #007A8C;
         }
 
         .btn-secondary {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
+            background: #F0F0F0;
+            color: #1A1A1A;
+            border: none;
         }
 
         .btn-secondary:hover {
-            background: var(--bg-tertiary);
+            background: #E5E5E5;
         }
 
         .btn-danger {
@@ -1190,15 +1222,20 @@
 
         /* Historia Clínica Section */
         .hc-section {
-            background: #F0FDF4;
-            border: 1px solid #BBF7D0;
-            border-radius: 12px;
+            background: #FFFFFF;
+            border: none;
+            border-radius: 16px;
             padding: 20px;
-            margin-top: 24px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
         .hc-section .form-section-title {
-            color: #166534;
+            color: #059669;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         /* ========== MOBILE STYLES ========== */
