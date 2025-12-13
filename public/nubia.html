@@ -1274,7 +1274,11 @@
         let pacienteActual = null;
 
         function abrirModalDetalles(id) {
-            const paciente = pacientes.find(p => p._id === id);
+            // Buscar en pacientes locales, y si no está, buscar en resultados de búsqueda del servidor
+            let paciente = pacientes.find(p => p._id === id);
+            if (!paciente && buscandoEnServidor) {
+                paciente = pacientesFiltrados.find(p => p._id === id);
+            }
             if (!paciente) {
                 showMessage('Paciente no encontrado', 'error');
                 return;
