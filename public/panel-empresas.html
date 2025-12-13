@@ -6,8 +6,38 @@
     <title>Panel Empresas - BSL</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-primary: #FAFAFA;
+            --bg-secondary: #FFFFFF;
+            --bg-tertiary: #F3F4F6;
+            --bg-input: #F8FAFC;
+            --text-primary: #1F2937;
+            --text-secondary: #6B7280;
+            --text-tertiary: #9CA3AF;
+            --border-color: #E5E7EB;
+            --border-light: #F3F4F6;
+            --accent-color: #00B8E6;
+            --accent-hover: #0099B2;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #111827;
+            --bg-secondary: #1F2937;
+            --bg-tertiary: #374151;
+            --bg-input: #374151;
+            --text-primary: #F9FAFB;
+            --text-secondary: #D1D5DB;
+            --text-tertiary: #9CA3AF;
+            --border-color: #374151;
+            --border-light: #4B5563;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -15,29 +45,31 @@
         }
 
         body {
-            font-family: 'Figtree', sans-serif;
-            background: #F8FAFC;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             min-height: 100vh;
-            color: #1E293B;
+            transition: background 0.3s ease, color 0.3s ease;
         }
 
-        /* Login Screen */
+        /* ========== LOGIN SCREEN ========== */
         .login-screen {
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 20px;
-            background: white;
+            background: var(--bg-secondary);
         }
 
         .login-card {
-            background: white;
+            background: var(--bg-secondary);
             border-radius: 16px;
             padding: 48px 40px;
             width: 100%;
             max-width: 420px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            border: 1px solid var(--border-color);
         }
 
         .login-logo {
@@ -54,12 +86,12 @@
             font-weight: 600;
             text-align: center;
             margin-bottom: 8px;
-            color: #1E293B;
+            color: var(--text-primary);
         }
 
         .login-subtitle {
             font-size: 14px;
-            color: #64748B;
+            color: var(--text-secondary);
             text-align: center;
             margin-bottom: 32px;
         }
@@ -67,29 +99,32 @@
         .login-input {
             width: 100%;
             padding: 14px 16px;
-            border: 2px solid #E2E8F0;
+            border: 2px solid var(--border-color);
             border-radius: 10px;
             font-size: 16px;
             font-family: inherit;
             margin-bottom: 16px;
             transition: all 0.2s ease;
             text-transform: uppercase;
+            background: var(--bg-input);
+            color: var(--text-primary);
         }
 
         .login-input:focus {
             outline: none;
-            border-color: #00B8E6;
+            border-color: var(--accent-color);
             box-shadow: 0 0 0 4px rgba(0, 184, 230, 0.1);
         }
 
         .login-input::placeholder {
             text-transform: none;
+            color: var(--text-tertiary);
         }
 
         .login-btn {
             width: 100%;
             padding: 14px 24px;
-            background: #00B8E6;
+            background: var(--accent-color);
             color: white;
             border: none;
             border-radius: 10px;
@@ -101,7 +136,7 @@
         }
 
         .login-btn:hover {
-            background: #0099B2;
+            background: var(--accent-hover);
         }
 
         .login-btn:disabled {
@@ -123,7 +158,7 @@
             display: block;
         }
 
-        /* Panel Screen */
+        /* ========== PANEL SCREEN ========== */
         .panel-screen {
             display: none;
             min-height: 100vh;
@@ -133,46 +168,179 @@
             display: block;
         }
 
-        /* Header */
-        .panel-header {
-            background: white;
-            border-bottom: 1px solid #E2E8F0;
-            padding: 16px 24px;
+        /* ========== LAYOUT ========== */
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 240px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            padding: 24px 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            transition: background 0.3s ease, border-color 0.3s ease;
+        }
+
+        .sidebar-logo {
+            padding: 0 24px 24px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .sidebar-logo img {
+            max-width: 140px;
+            height: auto;
+        }
+
+        .sidebar-nav {
+            padding: 0 12px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.15s ease;
+            margin-bottom: 4px;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: rgba(0, 184, 230, 0.1);
+            color: var(--accent-color);
+        }
+
+        [data-theme="dark"] .nav-item.active {
+            background: rgba(0, 184, 230, 0.2);
+            color: #60D9F7;
+        }
+
+        .nav-item svg {
+            width: 20px;
+            height: 20px;
+            stroke-width: 2;
+        }
+
+        .empresa-badge-sidebar {
+            background: var(--accent-color);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0 12px 16px;
+            text-align: center;
+        }
+
+        /* Top Bar Fijo */
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 240px;
+            right: 0;
+            height: 64px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            position: sticky;
-            top: 0;
+            padding: 0 32px;
             z-index: 100;
+            transition: background 0.3s ease, border-color 0.3s ease;
         }
 
-        .panel-header-left {
-            display: flex;
-            align-items: center;
-            gap: 16px;
+        .top-bar-search {
+            position: relative;
+            width: 400px;
         }
 
-        .panel-logo img {
-            height: 40px;
-        }
-
-        .empresa-badge {
-            background: #00B8E6;
-            color: white;
-            padding: 6px 14px;
-            border-radius: 20px;
+        .top-bar-search input {
+            width: 100%;
+            padding: 10px 16px 10px 42px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
             font-size: 14px;
-            font-weight: 600;
+            font-family: inherit;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            transition: all 0.2s ease;
         }
 
-        .panel-header-right {
+        .top-bar-search input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(0, 184, 230, 0.1);
+            background: var(--bg-secondary);
+        }
+
+        .top-bar-search input::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        .top-bar-search svg {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-tertiary);
+            width: 18px;
+            height: 18px;
+            pointer-events: none;
+        }
+
+        .top-bar-actions {
             display: flex;
             align-items: center;
             gap: 12px;
         }
 
-        .btn-icon {
-            background: #F1F5F9;
+        /* Theme Toggle Button */
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .theme-toggle:hover {
+            background: var(--border-color);
+        }
+
+        .theme-toggle svg {
+            width: 18px;
+            height: 18px;
+            color: var(--text-secondary);
+        }
+
+        .theme-toggle span {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .btn-icon-top {
+            background: var(--bg-tertiary);
             border: none;
             width: 40px;
             height: 40px;
@@ -184,14 +352,14 @@
             transition: all 0.2s ease;
         }
 
-        .btn-icon:hover {
-            background: #E2E8F0;
+        .btn-icon-top:hover {
+            background: var(--border-color);
         }
 
-        .btn-icon svg {
+        .btn-icon-top svg {
             width: 20px;
             height: 20px;
-            stroke: #64748B;
+            stroke: var(--text-secondary);
         }
 
         .btn-logout {
@@ -206,23 +374,95 @@
             stroke: #DC2626;
         }
 
-        /* Stats Grid */
-        .stats-container {
-            padding: 24px;
-            background: white;
-            border-bottom: 1px solid #E2E8F0;
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 240px;
+            padding: 32px 40px;
+            padding-top: 96px;
         }
 
+        /* ========== HEADER ========== */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .page-header-left h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 4px;
+        }
+
+        .page-header-left h1 svg {
+            width: 24px;
+            height: 24px;
+            stroke: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .page-header-left p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-left: 34px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            border: none;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-color);
+        }
+
+        /* ========== STATS CARDS ========== */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 16px;
-            max-width: 1200px;
-            margin: 0 auto;
+            margin-bottom: 24px;
         }
 
         .stat-card {
-            background: #F8FAFC;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 20px;
             text-align: center;
@@ -231,276 +471,257 @@
         .stat-value {
             font-size: 36px;
             font-weight: 700;
-            color: #00B8E6;
+            color: var(--accent-color);
             line-height: 1;
             margin-bottom: 4px;
         }
 
         .stat-label {
             font-size: 14px;
-            color: #64748B;
+            color: var(--text-secondary);
         }
 
-        /* Search Bar */
-        .search-container {
-            padding: 20px 24px;
-            background: white;
-            border-bottom: 1px solid #E2E8F0;
-        }
-
-        .search-bar {
-            max-width: 1200px;
-            margin: 0 auto;
+        /* ========== TABS & FILTERS ========== */
+        .filters-bar {
             display: flex;
-            gap: 12px;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
         }
 
-        .search-input-wrapper {
-            flex: 1;
-            position: relative;
+        .tabs {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-tertiary);
+            padding: 4px;
+            border-radius: 8px;
         }
 
-        .search-input-wrapper svg {
-            position: absolute;
-            left: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 20px;
-            height: 20px;
-            stroke: #94A3B8;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 12px 16px 12px 44px;
-            border: 1px solid #E2E8F0;
-            border-radius: 10px;
-            font-size: 15px;
-            font-family: inherit;
-            transition: all 0.2s ease;
-        }
-
-        .search-input:focus {
-            outline: none;
-            border-color: #00B8E6;
-            box-shadow: 0 0 0 3px rgba(0, 184, 230, 0.1);
-        }
-
-        .btn-search {
-            padding: 12px 24px;
-            background: #00B8E6;
-            color: white;
+        .tab {
+            padding: 8px 16px;
             border: none;
-            border-radius: 10px;
-            font-size: 15px;
+            background: transparent;
+            border-radius: 6px;
+            font-size: 14px;
             font-weight: 500;
-            font-family: inherit;
+            color: var(--text-secondary);
             cursor: pointer;
-            transition: all 0.2s ease;
-            white-space: nowrap;
+            transition: all 0.15s ease;
         }
 
-        .btn-search:hover {
-            background: #0099B2;
+        .tab:hover {
+            color: var(--text-primary);
         }
 
-        .btn-clear {
-            padding: 12px 20px;
-            background: #F1F5F9;
-            color: #64748B;
-            border: none;
+        .tab.active {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .stats-badge {
+            padding: 10px 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
             border-radius: 10px;
-            font-size: 15px;
-            font-weight: 500;
-            font-family: inherit;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: none;
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-left: auto;
         }
 
-        .btn-clear.show {
-            display: block;
+        .stats-badge strong {
+            color: var(--text-primary);
         }
 
-        .btn-clear:hover {
-            background: #E2E8F0;
-        }
-
-        /* Content */
-        .panel-content {
-            padding: 24px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        /* Table */
+        /* ========== TABLE ========== */
         .table-container {
-            background: white;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
             border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            transition: background 0.3s ease, border-color 0.3s ease;
         }
 
-        .table-header {
-            padding: 16px 20px;
-            background: #F8FAFC;
-            border-bottom: 1px solid #E2E8F0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .table-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #1E293B;
-        }
-
-        .table-count {
-            font-size: 14px;
-            color: #64748B;
-        }
-
-        table {
+        .data-table {
             width: 100%;
             border-collapse: collapse;
         }
 
-        th {
+        .data-table thead {
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table th {
+            padding: 12px 16px;
             text-align: left;
-            padding: 14px 20px;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
-            color: #64748B;
+            color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            background: #F8FAFC;
-            border-bottom: 1px solid #E2E8F0;
         }
 
-        td {
-            padding: 16px 20px;
-            font-size: 14px;
-            color: #1E293B;
-            border-bottom: 1px solid #F1F5F9;
+        .data-table tbody tr {
+            border-bottom: 1px solid var(--border-light);
+            transition: background 0.15s ease;
+            cursor: pointer;
         }
 
-        tr:last-child td {
+        .data-table tbody tr:last-child {
             border-bottom: none;
         }
 
-        tr:hover {
-            background: #F8FAFC;
+        .data-table tbody tr:hover {
+            background: var(--bg-tertiary);
         }
 
-        .patient-info {
+        .data-table tbody tr:active {
+            background: var(--border-color);
+        }
+
+        .data-table td {
+            padding: 16px;
+            font-size: 14px;
+            color: var(--text-primary);
+            vertical-align: middle;
+        }
+
+        .cell-name {
             display: flex;
             align-items: center;
             gap: 12px;
         }
 
-        .patient-photo {
-            width: 40px;
-            height: 40px;
+        .avatar {
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
-            object-fit: cover;
-            background: #E2E8F0;
-        }
-
-        .patient-photo-placeholder {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: #E2E8F0;
+            background: var(--bg-tertiary);
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+            overflow: hidden;
         }
 
-        .patient-photo-placeholder svg {
-            width: 20px;
-            height: 20px;
-            stroke: #94A3B8;
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
-        .patient-name {
-            font-weight: 500;
+        .name-info {
+            display: flex;
+            flex-direction: column;
         }
 
-        .patient-cedula {
-            font-size: 13px;
-            color: #64748B;
+        .name-primary {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .name-secondary {
+            font-size: 12px;
+            color: var(--text-tertiary);
         }
 
         .status-badge {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             padding: 4px 10px;
             border-radius: 20px;
             font-size: 12px;
             font-weight: 500;
         }
 
-        .status-atendido {
-            background: #D1FAE5;
-            color: #065F46;
+        .status-badge.atendido {
+            background: #DCFCE7;
+            color: #166534;
         }
 
-        .status-pendiente {
+        .status-badge.pendiente {
             background: #FEF3C7;
             color: #92400E;
         }
 
-        .status-proceso {
+        .status-badge.proceso {
             background: #DBEAFE;
             color: #1E40AF;
         }
 
-        .btn-download {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 8px 14px;
-            background: #00B8E6;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 500;
-            font-family: inherit;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.2s ease;
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
         }
 
-        .btn-download:hover {
-            background: #0099B2;
+        /* ========== EMPTY STATE ========== */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
         }
 
-        .btn-download svg {
-            width: 16px;
-            height: 16px;
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            stroke: var(--text-tertiary);
+            margin-bottom: 16px;
         }
 
-        .btn-download.disabled {
-            background: #E2E8F0;
-            color: #94A3B8;
-            cursor: not-allowed;
+        .empty-state-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
         }
 
-        /* Pagination */
+        .empty-state-text {
+            font-size: 14px;
+        }
+
+        /* Loading */
+        .loading-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .loading-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-color);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ========== PAGINATION ========== */
         .pagination {
             display: flex;
             justify-content: center;
             align-items: center;
             gap: 8px;
             padding: 20px;
-            border-top: 1px solid #E2E8F0;
+            border-top: 1px solid var(--border-color);
         }
 
         .pagination-btn {
             padding: 10px 16px;
-            background: #F1F5F9;
-            color: #64748B;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
             border: none;
             border-radius: 8px;
             font-size: 14px;
@@ -514,7 +735,7 @@
         }
 
         .pagination-btn:hover:not(:disabled) {
-            background: #E2E8F0;
+            background: var(--border-color);
         }
 
         .pagination-btn:disabled {
@@ -525,184 +746,249 @@
         .pagination-info {
             padding: 0 16px;
             font-size: 14px;
-            color: #64748B;
+            color: var(--text-secondary);
         }
 
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
+        /* ========== MODAL DRAWER ========== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            justify-content: flex-end;
         }
 
-        .empty-state svg {
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: #F5F5F5;
+            width: 100%;
+            max-width: 480px;
+            height: 100vh;
+            box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+            animation: slideInRight 0.3s ease-out;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .modal.large {
+            max-width: 600px;
+        }
+
+        [data-theme="dark"] .modal {
+            background: #1F2937;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+            }
+            to {
+                transform: translateX(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 24px;
+            background: #F5F5F5;
+            border-bottom: none;
+            flex-shrink: 0;
+        }
+
+        [data-theme="dark"] .modal-header {
+            background: #1F2937;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .btn-close {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: var(--text-primary);
+            transition: all 0.15s ease;
+        }
+
+        .btn-close:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        [data-theme="dark"] .btn-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-body {
+            padding: 0 24px 24px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .modal-footer {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 16px 24px;
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            margin: 0 24px 24px;
+            flex-shrink: 0;
+        }
+
+        .modal-footer .btn {
+            padding: 10px 14px;
+            font-size: 13px;
+        }
+
+        /* ========== DETAIL MODAL - Profile Style ========== */
+        .profile-header-horizontal {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            padding: 16px;
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            margin-bottom: 12px;
+        }
+
+        .profile-photo {
             width: 64px;
             height: 64px;
-            stroke: #CBD5E1;
-            margin-bottom: 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: 600;
+            flex-shrink: 0;
+            overflow: hidden;
         }
 
-        .empty-state h3 {
+        .profile-photo.has-photo {
+            background: var(--bg-tertiary);
+        }
+
+        .profile-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .profile-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .profile-name {
             font-size: 18px;
             font-weight: 600;
-            color: #64748B;
-            margin-bottom: 8px;
+            color: var(--text-primary);
+            margin-bottom: 4px;
         }
 
-        .empty-state p {
+        .profile-meta {
             font-size: 14px;
-            color: #94A3B8;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
         }
 
-        /* Loading */
-        .loading {
-            text-align: center;
-            padding: 60px 20px;
-        }
-
-        .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid #E2E8F0;
-            border-top-color: #00B8E6;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin: 0 auto 16px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .loading-text {
-            font-size: 14px;
-            color: #64748B;
-        }
-
-        /* Actions Bar */
-        .actions-bar {
-            padding: 16px 24px;
-            background: white;
-            border-bottom: 1px solid #E2E8F0;
-        }
-
-        .actions-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .btn-action {
+        .profile-status {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            padding: 10px 18px;
-            background: white;
-            color: #1E293B;
-            border: 1px solid #E2E8F0;
-            border-radius: 10px;
-            font-size: 14px;
+            gap: 6px;
+            margin-top: 8px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
             font-weight: 500;
-            font-family: inherit;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-decoration: none;
         }
 
-        .btn-action:hover {
-            background: #F8FAFC;
-            border-color: #CBD5E1;
+        .profile-status.atendido {
+            background: #ECFDF5;
+            color: #059669;
         }
 
-        .btn-action svg {
-            width: 18px;
-            height: 18px;
+        .profile-status.pendiente {
+            background: #FEF3C7;
+            color: #D97706;
         }
 
-        .btn-action.primary {
-            background: #00B8E6;
-            color: white;
-            border-color: #00B8E6;
+        .detail-card {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
         }
 
-        .btn-action.primary:hover {
-            background: #0099B2;
-            border-color: #0099B2;
+        .detail-card-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        /* Responsive */
-        @media (max-width: 768px) {
-            .login-card {
-                padding: 32px 24px;
-            }
-
-            .panel-header {
-                flex-direction: column;
-                gap: 12px;
-                padding: 16px;
-            }
-
-            .panel-header-left {
-                width: 100%;
-                justify-content: space-between;
-            }
-
-            .panel-header-right {
-                width: 100%;
-                justify-content: flex-end;
-            }
-
-            .stats-container {
-                padding: 16px;
-            }
-
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .search-bar {
-                flex-direction: column;
-            }
-
-            .panel-content {
-                padding: 16px;
-            }
-
-            .table-container {
-                overflow-x: auto;
-            }
-
-            table {
-                min-width: 600px;
-            }
-
-            th, td {
-                padding: 12px 14px;
-            }
-
-            .actions-content {
-                justify-content: center;
-            }
+        .detail-field {
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-light);
         }
 
-        @media (max-width: 480px) {
-            .stats-grid {
-                grid-template-columns: 1fr 1fr;
-                gap: 10px;
-            }
-
-            .stat-card {
-                padding: 14px;
-            }
-
-            .stat-value {
-                font-size: 28px;
-            }
+        .detail-field:last-child {
+            border-bottom: none;
         }
 
-        /* Modal Nueva Orden */
-        .modal-overlay {
+        .detail-field-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .detail-field-value {
+            font-size: 15px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0;
+        }
+
+        .detail-grid .detail-field {
+            padding: 12px 16px 12px 0;
+        }
+
+        .detail-grid .detail-field:nth-child(even) {
+            padding-left: 16px;
+            border-left: 1px solid var(--border-light);
+        }
+
+        /* ========== MODAL CENTRADO (Nueva Orden) ========== */
+        .modal-overlay-center {
             display: none;
             position: fixed;
             top: 0;
@@ -716,12 +1002,12 @@
             padding: 20px;
         }
 
-        .modal-overlay.active {
+        .modal-overlay-center.active {
             display: flex;
         }
 
         .modal-content {
-            background: white;
+            background: var(--bg-secondary);
             border-radius: 16px;
             width: 100%;
             max-width: 600px;
@@ -730,26 +1016,26 @@
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
         }
 
-        .modal-header {
+        .modal-content .modal-header {
             padding: 20px 24px;
-            border-bottom: 1px solid #E2E8F0;
+            border-bottom: 1px solid var(--border-color);
             display: flex;
             justify-content: space-between;
             align-items: center;
             position: sticky;
             top: 0;
-            background: white;
+            background: var(--bg-secondary);
             z-index: 10;
         }
 
-        .modal-title {
+        .modal-content .modal-title {
             font-size: 20px;
             font-weight: 600;
-            color: #1E293B;
+            color: var(--text-primary);
         }
 
         .modal-close {
-            background: #F1F5F9;
+            background: var(--bg-tertiary);
             border: none;
             width: 36px;
             height: 36px;
@@ -762,28 +1048,42 @@
         }
 
         .modal-close:hover {
-            background: #E2E8F0;
+            background: var(--border-color);
         }
 
         .modal-close svg {
             width: 20px;
             height: 20px;
-            stroke: #64748B;
+            stroke: var(--text-secondary);
         }
 
-        .modal-body {
+        .modal-content .modal-body {
             padding: 24px;
         }
 
+        .modal-content .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            position: sticky;
+            bottom: 0;
+            background: var(--bg-secondary);
+            margin: 0;
+            border-radius: 0;
+        }
+
+        /* Form styles */
         .form-section-title {
             font-size: 14px;
             font-weight: 600;
-            color: #64748B;
+            color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 0.5px;
             margin-bottom: 16px;
             padding-bottom: 8px;
-            border-bottom: 1px solid #E2E8F0;
+            border-bottom: 1px solid var(--border-color);
         }
 
         .form-row {
@@ -805,7 +1105,7 @@
             display: block;
             font-size: 14px;
             font-weight: 500;
-            color: #374151;
+            color: var(--text-secondary);
             margin-bottom: 6px;
         }
 
@@ -818,31 +1118,31 @@
         .form-select {
             width: 100%;
             padding: 12px 14px;
-            border: 1px solid #E2E8F0;
+            border: 1px solid var(--border-color);
             border-radius: 10px;
             font-size: 15px;
             font-family: inherit;
-            color: #1E293B;
-            background: white;
+            color: var(--text-primary);
+            background: var(--bg-secondary);
             transition: all 0.2s ease;
         }
 
         .form-input:focus,
         .form-select:focus {
             outline: none;
-            border-color: #00B8E6;
+            border-color: var(--accent-color);
             box-shadow: 0 0 0 3px rgba(0, 184, 230, 0.1);
         }
 
         .form-input:disabled,
         .form-select:disabled {
-            background: #F8FAFC;
-            color: #64748B;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
             cursor: not-allowed;
         }
 
         .form-input::placeholder {
-            color: #9CA3AF;
+            color: var(--text-tertiary);
         }
 
         /* Modalidad tabs */
@@ -850,7 +1150,7 @@
             display: flex;
             gap: 8px;
             margin-bottom: 16px;
-            background: #F1F5F9;
+            background: var(--bg-tertiary);
             padding: 4px;
             border-radius: 10px;
         }
@@ -864,7 +1164,7 @@
             padding: 12px 16px;
             border: none;
             background: transparent;
-            color: #64748B;
+            color: var(--text-secondary);
             font-size: 14px;
             font-weight: 500;
             font-family: inherit;
@@ -874,12 +1174,12 @@
         }
 
         .modalidad-tab:hover {
-            color: #374151;
+            color: var(--text-primary);
         }
 
         .modalidad-tab.active {
-            background: white;
-            color: #00B8E6;
+            background: var(--bg-secondary);
+            color: var(--accent-color);
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
@@ -890,17 +1190,18 @@
 
         /* Exámenes multi-select */
         .examenes-container {
-            border: 1px solid #E2E8F0;
+            border: 1px solid var(--border-color);
             border-radius: 10px;
             max-height: 180px;
             overflow-y: auto;
+            background: var(--bg-secondary);
         }
 
         .examen-option {
             display: flex;
             align-items: center;
             padding: 12px 14px;
-            border-bottom: 1px solid #F1F5F9;
+            border-bottom: 1px solid var(--border-light);
             cursor: pointer;
             transition: background 0.15s ease;
         }
@@ -910,19 +1211,19 @@
         }
 
         .examen-option:hover {
-            background: #F8FAFC;
+            background: var(--bg-tertiary);
         }
 
         .examen-option input {
             margin-right: 10px;
             width: 18px;
             height: 18px;
-            accent-color: #00B8E6;
+            accent-color: var(--accent-color);
         }
 
         .examen-option label {
             font-size: 14px;
-            color: #1E293B;
+            color: var(--text-primary);
             cursor: pointer;
             flex: 1;
         }
@@ -938,8 +1239,8 @@
             display: inline-flex;
             align-items: center;
             gap: 4px;
-            background: #E0F7FA;
-            color: #0097A7;
+            background: rgba(0, 184, 230, 0.1);
+            color: var(--accent-color);
             padding: 4px 10px;
             border-radius: 16px;
             font-size: 12px;
@@ -948,22 +1249,11 @@
         .examen-tag button {
             background: none;
             border: none;
-            color: #0097A7;
+            color: var(--accent-color);
             cursor: pointer;
             padding: 0;
             font-size: 16px;
             line-height: 1;
-        }
-
-        .modal-footer {
-            padding: 16px 24px;
-            border-top: 1px solid #E2E8F0;
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-            position: sticky;
-            bottom: 0;
-            background: white;
         }
 
         .btn-modal {
@@ -978,21 +1268,21 @@
         }
 
         .btn-modal-secondary {
-            background: #F1F5F9;
-            color: #64748B;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
         }
 
         .btn-modal-secondary:hover {
-            background: #E2E8F0;
+            background: var(--border-color);
         }
 
         .btn-modal-primary {
-            background: #00B8E6;
+            background: var(--accent-color);
             color: white;
         }
 
         .btn-modal-primary:hover {
-            background: #0099B2;
+            background: var(--accent-hover);
         }
 
         .btn-modal-primary:disabled {
@@ -1002,7 +1292,7 @@
 
         .info-tiempo {
             font-size: 12px;
-            color: #64748B;
+            color: var(--text-secondary);
             margin-top: 4px;
         }
 
@@ -1029,6 +1319,80 @@
             background: #ECFDF5;
             color: #065F46;
             border: 1px solid #A7F3D0;
+        }
+
+        /* ========== MOBILE STYLES ========== */
+        @media (max-width: 1024px) {
+            .sidebar {
+                display: none;
+            }
+
+            .top-bar {
+                left: 0;
+                padding: 0 16px;
+                gap: 12px;
+            }
+
+            .top-bar-search {
+                flex: 1;
+                width: auto;
+            }
+
+            .theme-toggle span {
+                display: none;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 20px 16px;
+                padding-top: 84px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .page-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .header-actions {
+                justify-content: center;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .filters-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .stats-badge {
+                text-align: center;
+                margin-left: 0;
+            }
+
+            .table-container {
+                overflow-x: auto;
+            }
+
+            .data-table {
+                min-width: 600px;
+            }
+
+            .modal {
+                max-width: 100%;
+                border-radius: 0;
+            }
+
+            .detail-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
         }
 
         @media (max-width: 600px) {
@@ -1061,142 +1425,198 @@
 
     <!-- Panel Screen -->
     <div class="panel-screen" id="panelScreen">
-        <!-- Header -->
-        <header class="panel-header">
-            <div class="panel-header-left">
-                <div class="panel-logo">
-                    <img src="/bsl-logo.png" alt="BSL">
+        <div class="app-container">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="sidebar-logo">
+                    <img src="/bsl-logo.png" alt="BSL - Bienestar & Salud Laboral">
                 </div>
-                <span class="empresa-badge" id="empresaBadge">EMPRESA</span>
-            </div>
-            <div class="panel-header-right">
-                <button class="btn-icon" onclick="actualizarDatos()" title="Actualizar">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M23 4v6h-6"></path>
-                        <path d="M1 20v-6h6"></path>
-                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-                    </svg>
-                </button>
-                <a href="https://api.whatsapp.com/send?phone=573008021701&text=Hola.%20Requiero%20soporte%20con%20el%20panel%20de%20empresa" target="_blank" class="btn-icon" title="Soporte WhatsApp">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-                    </svg>
-                </a>
-                <button class="btn-icon btn-logout" onclick="cerrarSesion()" title="Cerrar sesión">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                        <polyline points="16 17 21 12 16 7"></polyline>
-                        <line x1="21" y1="12" x2="9" y2="12"></line>
-                    </svg>
-                </button>
-            </div>
-        </header>
+                <div class="empresa-badge-sidebar" id="empresaBadgeSidebar">EMPRESA</div>
+                <nav class="sidebar-nav">
+                    <a href="#" class="nav-item active" onclick="event.preventDefault()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                        </svg>
+                        Órdenes
+                    </a>
+                </nav>
+            </aside>
 
-        <!-- Stats -->
-        <div class="stats-container">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value" id="statProgramadosHoy">0</div>
-                    <div class="stat-label">Programados Hoy</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="statAtendidosHoy">0</div>
-                    <div class="stat-label">Atendidos Hoy</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="statTotalOrdenes">0</div>
-                    <div class="stat-label">Total Órdenes</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Actions Bar -->
-        <div class="actions-bar">
-            <div class="actions-content">
-                <button class="btn-action primary" onclick="abrirModalNuevaOrden()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                    Nueva Orden
-                </button>
-            </div>
-        </div>
-
-        <!-- Search -->
-        <div class="search-container">
-            <div class="search-bar">
-                <div class="search-input-wrapper">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="top-bar-search">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="11" cy="11" r="8"></circle>
                         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                     </svg>
-                    <input type="text" class="search-input" id="searchInput" placeholder="Buscar por cédula o nombre...">
+                    <input type="text" id="searchInput" placeholder="Buscar por cédula o nombre...">
                 </div>
-                <button class="btn-search" id="btnSearch">Buscar</button>
-                <button class="btn-clear" id="btnClear">Limpiar</button>
+                <div class="top-bar-actions">
+                    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="themeIcon">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                        </svg>
+                        <span id="themeText">Dark</span>
+                    </button>
+                    <button class="btn-icon-top" onclick="actualizarDatos()" title="Actualizar">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 4v6h-6"></path>
+                            <path d="M1 20v-6h6"></path>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                    </button>
+                    <a href="https://api.whatsapp.com/send?phone=573008021701&text=Hola.%20Requiero%20soporte%20con%20el%20panel%20de%20empresa" target="_blank" class="btn-icon-top" title="Soporte WhatsApp">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                        </svg>
+                    </a>
+                    <button class="btn-icon-top btn-logout" onclick="cerrarSesion()" title="Cerrar sesión">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <polyline points="16 17 21 12 16 7"></polyline>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
+                        </svg>
+                    </button>
+                </div>
             </div>
-        </div>
 
-        <!-- Content -->
-        <div class="panel-content">
-            <div class="table-container">
-                <div class="table-header">
-                    <span class="table-title">Órdenes Médicas</span>
-                    <span class="table-count" id="tableCount">0 registros</span>
+            <!-- Main Content -->
+            <main class="main-content">
+                <div class="page-header">
+                    <div class="page-header-left">
+                        <h1>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                            </svg>
+                            Órdenes
+                        </h1>
+                        <p>Gestión de órdenes médicas</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="abrirModalNuevaOrden()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Nueva Orden
+                        </button>
+                    </div>
                 </div>
 
-                <div class="loading" id="loadingState">
+                <!-- Stats Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="statProgramadosHoy">0</div>
+                        <div class="stat-label">Programados Hoy</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statAtendidosHoy">0</div>
+                        <div class="stat-label">Atendidos Hoy</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statTotalOrdenes">0</div>
+                        <div class="stat-label">Total Órdenes</div>
+                    </div>
+                </div>
+
+                <!-- Filters Bar -->
+                <div class="filters-bar">
+                    <div class="tabs">
+                        <button class="tab active" data-filter="todos">Todos</button>
+                        <button class="tab" data-filter="atendido">Atendidos</button>
+                        <button class="tab" data-filter="pendiente">Pendientes</button>
+                    </div>
+                    <div class="stats-badge" id="tableCount">
+                        <strong>0</strong> registros
+                    </div>
+                </div>
+
+                <!-- Loading State -->
+                <div id="loadingState" class="loading-state">
                     <div class="loading-spinner"></div>
-                    <p class="loading-text">Cargando órdenes...</p>
+                    <p>Cargando órdenes...</p>
                 </div>
 
-                <div class="empty-state" id="emptyState" style="display: none;">
+                <!-- Empty State -->
+                <div id="emptyState" class="empty-state" style="display: none;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                         <polyline points="14 2 14 8 20 8"></polyline>
                         <line x1="12" y1="18" x2="12" y2="12"></line>
                         <line x1="9" y1="15" x2="15" y2="15"></line>
                     </svg>
-                    <h3>No hay órdenes</h3>
-                    <p>No se encontraron órdenes para esta empresa</p>
+                    <p class="empty-state-title">No hay órdenes</p>
+                    <p class="empty-state-text">No se encontraron órdenes para esta empresa</p>
                 </div>
 
-                <table id="ordenesTable" style="display: none;">
-                    <thead>
-                        <tr>
-                            <th>Paciente</th>
-                            <th>Fecha Consulta</th>
-                            <th>Fecha Atención</th>
-                            <th>Estado</th>
-                            <th>Acción</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ordenesBody">
-                    </tbody>
-                </table>
-
-                <div class="pagination" id="pagination" style="display: none;">
-                    <button class="pagination-btn" id="btnPrev">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                            <polyline points="15 18 9 12 15 6"></polyline>
-                        </svg>
-                        Anterior
-                    </button>
-                    <span class="pagination-info" id="paginationInfo">Página 1 de 1</span>
-                    <button class="pagination-btn" id="btnNext">
-                        Siguiente
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                            <polyline points="9 18 15 12 9 6"></polyline>
-                        </svg>
-                    </button>
+                <!-- Table Container -->
+                <div class="table-container" id="tableContainer" style="display: none;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Paciente</th>
+                                <th>Cédula</th>
+                                <th>Fecha Consulta</th>
+                                <th>Fecha Atención</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                        </tbody>
+                    </table>
+                    <div class="pagination" id="pagination" style="display: none;">
+                        <button class="pagination-btn" id="btnPrev">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
+                            Anterior
+                        </button>
+                        <span class="pagination-info" id="paginationInfo">Página 1 de 1</span>
+                        <button class="pagination-btn" id="btnNext">
+                            Siguiente
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal: Ver Detalles -->
+    <div id="modalDetalles" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title">Detalles del Paciente</h2>
+                </div>
+                <button class="btn-close" onclick="cerrarModalDetalles()">✕</button>
+            </div>
+            <div class="modal-body" id="modalDetallesBody">
+                <!-- Content loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <a href="#" target="_blank" class="btn btn-primary" id="btnDescargarPDF">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Descargar PDF
+                </a>
             </div>
         </div>
     </div>
 
     <!-- Modal Nueva Orden -->
-    <div class="modal-overlay" id="modalNuevaOrden">
+    <div class="modal-overlay-center" id="modalNuevaOrden">
         <div class="modal-content">
             <div class="modal-header">
                 <h2 class="modal-title">Nueva Orden</h2>
@@ -1236,7 +1656,7 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Número de Identificación</label>
-                            <input type="text" class="form-input" id="modalNumeroIdDisplay" disabled style="background: #F1F5F9;">
+                            <input type="text" class="form-input" id="modalNumeroIdDisplay" disabled style="background: var(--bg-tertiary);">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Celular <span class="required">*</span></label>
@@ -1280,76 +1700,75 @@
                     <!-- Datos del Examen -->
                     <div class="form-section-title">Datos del Examen</div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Tipo de Examen <span class="required">*</span></label>
-                        <select class="form-select" id="modalTipoExamen">
-                            <option value="">Seleccionar...</option>
-                            <option value="INGRESO">Ingreso</option>
-                            <option value="PERIODICO">Periódico</option>
-                            <option value="RETIRO">Retiro</option>
-                            <option value="REUBICACION">Reubicación</option>
-                            <option value="POST-INCAPACIDAD">Post-incapacidad</option>
-                        </select>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Tipo de Examen <span class="required">*</span></label>
+                            <select class="form-select" id="modalTipoExamen">
+                                <option value="">Seleccionar...</option>
+                                <option value="INGRESO">Ingreso</option>
+                                <option value="PERIODICO">Periódico</option>
+                                <option value="RETIRO">Retiro</option>
+                                <option value="REUBICACION">Reubicación</option>
+                                <option value="POST-INCAPACIDAD">Post-incapacidad</option>
+                            </select>
+                        </div>
                     </div>
-                </div>
 
-                <!-- Modalidad tabs -->
-                <div class="form-group">
-                    <label class="form-label">Modalidad</label>
-                    <div class="modalidad-tabs">
-                        <button type="button" class="modalidad-tab active" data-modalidad="presencial" onclick="cambiarModalidadOrden('presencial')">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                                <circle cx="9" cy="7" r="4"></circle>
-                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                            </svg>
-                            Presencial
-                        </button>
-                        <button type="button" class="modalidad-tab" data-modalidad="virtual" onclick="cambiarModalidadOrden('virtual')">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polygon points="23 7 16 12 23 17 23 7"></polygon>
-                                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-                            </svg>
-                            Virtual
-                        </button>
+                    <!-- Modalidad tabs -->
+                    <div class="form-group">
+                        <label class="form-label">Modalidad</label>
+                        <div class="modalidad-tabs">
+                            <button type="button" class="modalidad-tab active" data-modalidad="presencial" onclick="cambiarModalidadOrden('presencial')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                                Presencial
+                            </button>
+                            <button type="button" class="modalidad-tab" data-modalidad="virtual" onclick="cambiarModalidadOrden('virtual')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                                </svg>
+                                Virtual
+                            </button>
+                        </div>
                     </div>
-                </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Fecha de Atención <span class="required">*</span></label>
-                        <input type="date" class="form-input" id="modalFechaAtencion" onchange="cargarTurnosDisponibles()">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Fecha de Atención <span class="required">*</span></label>
+                            <input type="date" class="form-input" id="modalFechaAtencion" onchange="cargarTurnosDisponibles()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Hora de Atención <span class="required">*</span></label>
+                            <select class="form-select" id="modalHoraAtencion">
+                                <option value="">Primero seleccione fecha...</option>
+                            </select>
+                            <div class="info-tiempo" id="modalInfoTiempo">El sistema asignará automáticamente un médico disponible</div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Hora de Atención <span class="required">*</span></label>
-                        <select class="form-select" id="modalHoraAtencion">
-                            <option value="">Primero seleccione fecha...</option>
-                        </select>
-                        <div class="info-tiempo" id="modalInfoTiempo">El sistema asignará automáticamente un médico disponible</div>
-                    </div>
-                </div>
 
                     <div class="form-group">
                         <label class="form-label">Exámenes</label>
                         <div class="examenes-container" id="modalExamenesContainer">
-                            <div style="padding: 14px; color: #9CA3AF; font-size: 14px;">Cargando exámenes...</div>
+                            <div style="padding: 14px; color: var(--text-tertiary); font-size: 14px;">Cargando exámenes...</div>
                         </div>
                         <div class="examenes-selected" id="modalExamenesSelected"></div>
                     </div>
-                </div><!-- Cierre modalPaso2 -->
+                </div>
             </div>
             <div class="modal-footer" id="modalFooterPaso2" style="display: none;">
                 <button type="button" class="btn-modal btn-modal-secondary" onclick="volverPaso1Modal()">← Volver</button>
                 <button type="button" class="btn-modal btn-modal-primary" id="btnCrearOrden" onclick="crearOrdenEmpresa()">Crear Orden</button>
             </div>
-            <div style="text-align: center; padding: 4px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0;">modalNuevaOrden</div>
         </div>
     </div>
 
     <!-- Modal de orden duplicada (PENDIENTE) -->
-    <div class="modal-overlay" id="modalDuplicado">
+    <div class="modal-overlay-center" id="modalDuplicado">
         <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
                 <h2 class="modal-title" style="display: flex; align-items: center; gap: 12px;">
@@ -1370,29 +1789,20 @@
                 </button>
             </div>
             <div class="modal-body">
-                <p style="color: #4B5563; margin-bottom: 16px;">Ya existe una orden <strong>pendiente</strong> para este número de documento.</p>
-                <div id="ordenExistenteInfo" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 16px;">
-                    <!-- Se llena dinámicamente -->
-                </div>
-                <p id="mensajeFormulario" style="margin-top: 12px; font-size: 14px; color: #64748B;"></p>
+                <p style="color: var(--text-secondary); margin-bottom: 16px;">Ya existe una orden <strong>pendiente</strong> para este número de documento.</p>
+                <div id="ordenExistenteInfo" style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 10px; padding: 16px;"></div>
+                <p id="mensajeFormulario" style="margin-top: 12px; font-size: 14px; color: var(--text-secondary);"></p>
             </div>
             <div class="modal-footer" style="flex-direction: column; gap: 8px;">
-                <button type="button" class="btn-modal btn-modal-primary" id="btnUsarExistente" style="width: 100%;">
-                    Usar orden existente
-                </button>
-                <button type="button" class="btn-modal" id="btnCrearNuevaModal" style="width: 100%; background: #F59E0B; color: white;">
-                    Crear nueva de todos modos
-                </button>
-                <button type="button" class="btn-modal btn-modal-secondary" onclick="cerrarModalDuplicado()" style="width: 100%;">
-                    Cancelar
-                </button>
+                <button type="button" class="btn-modal btn-modal-primary" id="btnUsarExistente" style="width: 100%;">Usar orden existente</button>
+                <button type="button" class="btn-modal" id="btnCrearNuevaModal" style="width: 100%; background: #F59E0B; color: white;">Crear nueva de todos modos</button>
+                <button type="button" class="btn-modal btn-modal-secondary" onclick="cerrarModalDuplicado()" style="width: 100%;">Cancelar</button>
             </div>
-            <div style="text-align: center; padding: 4px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0;">modalDuplicado</div>
         </div>
     </div>
 
     <!-- Modal de certificado existente (ATENDIDO) -->
-    <div class="modal-overlay" id="modalAtendido">
+    <div class="modal-overlay-center" id="modalAtendido">
         <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
                 <h2 class="modal-title" style="display: flex; align-items: center; gap: 12px;">
@@ -1413,26 +1823,19 @@
                 </button>
             </div>
             <div class="modal-body">
-                <p style="color: #4B5563; margin-bottom: 16px;">Ya existe un <strong>certificado médico</strong> para este número de documento.</p>
-                <div id="ordenAtendidaInfo" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 16px;">
-                    <!-- Se llena dinámicamente -->
-                </div>
-                <p style="margin-top: 12px; font-size: 14px; color: #64748B;">Si necesita crear una nueva orden, puede continuar.</p>
+                <p style="color: var(--text-secondary); margin-bottom: 16px;">Ya existe un <strong>certificado médico</strong> para este número de documento.</p>
+                <div id="ordenAtendidaInfo" style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 10px; padding: 16px;"></div>
+                <p style="margin-top: 12px; font-size: 14px; color: var(--text-secondary);">Si necesita crear una nueva orden, puede continuar.</p>
             </div>
             <div class="modal-footer" style="flex-direction: column; gap: 8px;">
-                <button type="button" class="btn-modal" id="btnCrearNuevaAtendido" style="width: 100%; background: #F59E0B; color: white;">
-                    Crear nueva orden
-                </button>
-                <button type="button" class="btn-modal btn-modal-secondary" onclick="cerrarModalAtendido()" style="width: 100%;">
-                    Cancelar
-                </button>
+                <button type="button" class="btn-modal" id="btnCrearNuevaAtendido" style="width: 100%; background: #F59E0B; color: white;">Crear nueva orden</button>
+                <button type="button" class="btn-modal btn-modal-secondary" onclick="cerrarModalAtendido()" style="width: 100%;">Cancelar</button>
             </div>
-            <div style="text-align: center; padding: 4px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0;">modalAtendido</div>
         </div>
     </div>
 
-    <!-- Modal de cita expirada (PENDIENTE con fecha vencida) -->
-    <div class="modal-overlay" id="modalExpirado">
+    <!-- Modal de cita expirada -->
+    <div class="modal-overlay-center" id="modalExpirado">
         <div class="modal-content" style="max-width: 520px;">
             <div class="modal-header">
                 <h2 class="modal-title" style="display: flex; align-items: center; gap: 12px;">
@@ -1453,23 +1856,21 @@
                 </button>
             </div>
             <div class="modal-body">
-                <p style="color: #4B5563; margin-bottom: 16px;">Tenía una cita programada pero la <strong>fecha ya pasó</strong>. Puede reagendar la cita.</p>
-                <div id="ordenExpiradaInfo" style="background: #FEF2F2; border: 1px solid #FECACA; border-radius: 10px; padding: 16px; margin-bottom: 16px;">
-                    <!-- Se llena dinámicamente -->
-                </div>
+                <p style="color: var(--text-secondary); margin-bottom: 16px;">Tenía una cita programada pero la <strong>fecha ya pasó</strong>. Puede reagendar la cita.</p>
+                <div id="ordenExpiradaInfo" style="background: #FEF2F2; border: 1px solid #FECACA; border-radius: 10px; padding: 16px; margin-bottom: 16px;"></div>
 
                 <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 10px; padding: 16px;">
                     <h4 style="font-size: 14px; font-weight: 600; color: #166534; margin-bottom: 12px;">Nueva fecha y hora:</h4>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                         <div>
-                            <label style="font-size: 12px; color: #374151; display: block; margin-bottom: 4px;">Mes</label>
+                            <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Mes</label>
                             <select id="mesExpirado" onchange="actualizarDiasExpirado()" class="form-input" style="width: 100%; padding: 10px; border-radius: 8px;">
                                 <option value="">Seleccionar...</option>
                             </select>
                         </div>
                         <div>
-                            <label style="font-size: 12px; color: #374151; display: block; margin-bottom: 4px;">Día</label>
+                            <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Día</label>
                             <select id="diaExpirado" onchange="actualizarHorasExpirado()" class="form-input" style="width: 100%; padding: 10px; border-radius: 8px;">
                                 <option value="">Seleccionar...</option>
                             </select>
@@ -1477,7 +1878,7 @@
                     </div>
 
                     <div>
-                        <label style="font-size: 12px; color: #374151; display: block; margin-bottom: 4px;">Hora</label>
+                        <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Hora</label>
                         <select id="horaExpirado" class="form-input" style="width: 100%; padding: 10px; border-radius: 8px;">
                             <option value="">Primero selecciona un día</option>
                         </select>
@@ -1485,17 +1886,10 @@
                 </div>
             </div>
             <div class="modal-footer" style="flex-direction: column; gap: 8px;">
-                <button type="button" class="btn-modal" id="btnActualizarFecha" onclick="actualizarFechaYContinuar()" style="width: 100%; background: #10B981; color: white;">
-                    Reagendar y continuar
-                </button>
-                <button type="button" class="btn-modal" id="btnCrearNuevaExpirado" style="width: 100%; background: #F59E0B; color: white;">
-                    Crear nueva orden
-                </button>
-                <button type="button" class="btn-modal btn-modal-secondary" onclick="cerrarModalExpirado()" style="width: 100%;">
-                    Cancelar
-                </button>
+                <button type="button" class="btn-modal" id="btnActualizarFecha" onclick="actualizarFechaYContinuar()" style="width: 100%; background: #10B981; color: white;">Reagendar y continuar</button>
+                <button type="button" class="btn-modal" id="btnCrearNuevaExpirado" style="width: 100%; background: #F59E0B; color: white;">Crear nueva orden</button>
+                <button type="button" class="btn-modal btn-modal-secondary" onclick="cerrarModalExpirado()" style="width: 100%;">Cancelar</button>
             </div>
-            <div style="text-align: center; padding: 4px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0;">modalExpirado</div>
         </div>
     </div>
 
@@ -1507,6 +1901,8 @@
         const pageSize = 10;
         let searchTimeout = null;
         let busquedaActual = '';
+        let currentFilter = 'todos';
+        let pacienteActual = null;
 
         // Elementos del DOM
         const loginScreen = document.getElementById('loginScreen');
@@ -1514,19 +1910,43 @@
         const codEmpresaInput = document.getElementById('codEmpresaInput');
         const btnEntrar = document.getElementById('btnEntrar');
         const loginError = document.getElementById('loginError');
-        const empresaBadge = document.getElementById('empresaBadge');
         const searchInput = document.getElementById('searchInput');
-        const btnSearch = document.getElementById('btnSearch');
-        const btnClear = document.getElementById('btnClear');
         const loadingState = document.getElementById('loadingState');
         const emptyState = document.getElementById('emptyState');
-        const ordenesTable = document.getElementById('ordenesTable');
-        const ordenesBody = document.getElementById('ordenesBody');
+        const tableContainer = document.getElementById('tableContainer');
+        const tableBody = document.getElementById('tableBody');
         const pagination = document.getElementById('pagination');
         const btnPrev = document.getElementById('btnPrev');
         const btnNext = document.getElementById('btnNext');
         const paginationInfo = document.getElementById('paginationInfo');
         const tableCount = document.getElementById('tableCount');
+
+        // Theme toggle
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+        }
+
+        function updateThemeIcon(theme) {
+            const icon = document.getElementById('themeIcon');
+            const text = document.getElementById('themeText');
+            if (theme === 'dark') {
+                icon.innerHTML = '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
+                text.textContent = 'Light';
+            } else {
+                icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+                text.textContent = 'Dark';
+            }
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateThemeIcon(savedTheme);
 
         // Verificar sesión guardada
         document.addEventListener('DOMContentLoaded', () => {
@@ -1535,6 +1955,16 @@
                 codEmpresa = savedEmpresa;
                 mostrarPanel();
             }
+
+            // Tab filters
+            document.querySelectorAll('.tabs .tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    currentFilter = tab.dataset.filter;
+                    aplicarFiltros();
+                });
+            });
         });
 
         // Login
@@ -1557,7 +1987,6 @@
             loginError.classList.remove('show');
 
             try {
-                // Verificar que existan órdenes para esta empresa
                 const response = await fetch(`/api/ordenes?codEmpresa=${encodeURIComponent(codigo)}&limit=1`);
                 const result = await response.json();
 
@@ -1582,7 +2011,7 @@
         function mostrarPanel() {
             loginScreen.style.display = 'none';
             panelScreen.classList.add('active');
-            empresaBadge.textContent = codEmpresa;
+            document.getElementById('empresaBadgeSidebar').textContent = codEmpresa;
             actualizarDatos();
         }
 
@@ -1603,19 +2032,13 @@
             mostrarLoading();
 
             try {
-                // Cargar órdenes
                 const response = await fetch(`/api/ordenes?codEmpresa=${encodeURIComponent(codEmpresa)}&limit=1000`);
                 const result = await response.json();
 
                 if (result.success) {
                     allData = result.data || [];
-                    filteredData = [...allData];
-
-                    // Calcular estadísticas
                     calcularEstadisticas();
-
-                    // Mostrar datos
-                    renderTabla();
+                    aplicarFiltros();
                 } else {
                     mostrarEmpty();
                 }
@@ -1652,69 +2075,42 @@
             document.getElementById('statTotalOrdenes').textContent = allData.length;
         }
 
-        // Búsqueda server-side con debounce
-        btnSearch.addEventListener('click', buscarServerSide);
-        searchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') buscarServerSide();
-        });
+        function aplicarFiltros() {
+            let data = [...allData];
 
-        // Búsqueda automática mientras escribe (debounce)
+            // Aplicar filtro de estado
+            if (currentFilter === 'atendido') {
+                data = data.filter(o => o.atendido === 'ATENDIDO');
+            } else if (currentFilter === 'pendiente') {
+                data = data.filter(o => o.atendido !== 'ATENDIDO');
+            }
+
+            // Aplicar búsqueda local
+            if (busquedaActual && busquedaActual.length >= 2) {
+                const query = busquedaActual.toLowerCase();
+                data = data.filter(o => {
+                    const nombre = `${o.primerNombre || ''} ${o.segundoNombre || ''} ${o.primerApellido || ''} ${o.segundoApellido || ''}`.toLowerCase();
+                    const cedula = (o.numeroId || '').toLowerCase();
+                    return nombre.includes(query) || cedula.includes(query);
+                });
+            }
+
+            filteredData = data;
+            currentPage = 0;
+            renderTabla();
+        }
+
+        // Búsqueda
         searchInput.addEventListener('input', (e) => {
             clearTimeout(searchTimeout);
             busquedaActual = e.target.value.trim();
 
-            if (busquedaActual.length < 2) {
-                // Si es muy corto, filtrar localmente
-                if (busquedaActual.length === 0) {
-                    filteredData = [...allData];
-                    btnClear.classList.remove('show');
-                    currentPage = 0;
-                    renderTabla();
+            searchTimeout = setTimeout(() => {
+                if (busquedaActual.length >= 2 || busquedaActual.length === 0) {
+                    aplicarFiltros();
                 }
-                return;
-            }
-
-            searchTimeout = setTimeout(() => buscarServerSide(), 300);
+            }, 300);
         });
-
-        btnClear.addEventListener('click', () => {
-            searchInput.value = '';
-            busquedaActual = '';
-            filteredData = [...allData];
-            currentPage = 0;
-            btnClear.classList.remove('show');
-            renderTabla();
-        });
-
-        async function buscarServerSide() {
-            const query = searchInput.value.trim();
-
-            if (!query) {
-                filteredData = [...allData];
-                btnClear.classList.remove('show');
-                currentPage = 0;
-                renderTabla();
-                return;
-            }
-
-            btnClear.classList.add('show');
-            tableCount.textContent = 'Buscando...';
-
-            try {
-                const response = await fetch(`/api/ordenes?codEmpresa=${encodeURIComponent(codEmpresa)}&buscar=${encodeURIComponent(query)}&limit=500`);
-                const result = await response.json();
-
-                if (result.success) {
-                    filteredData = result.data || [];
-                    currentPage = 0;
-                    renderTabla();
-                    tableCount.textContent = `${filteredData.length} resultados (búsqueda global)`;
-                }
-            } catch (error) {
-                console.error('Error en búsqueda:', error);
-                tableCount.textContent = 'Error en búsqueda';
-            }
-        }
 
         // Paginación
         btnPrev.addEventListener('click', () => goToPage(currentPage - 1));
@@ -1732,16 +2128,14 @@
         function mostrarLoading() {
             loadingState.style.display = 'block';
             emptyState.style.display = 'none';
-            ordenesTable.style.display = 'none';
-            pagination.style.display = 'none';
+            tableContainer.style.display = 'none';
         }
 
         function mostrarEmpty() {
             loadingState.style.display = 'none';
             emptyState.style.display = 'block';
-            ordenesTable.style.display = 'none';
-            pagination.style.display = 'none';
-            tableCount.textContent = '0 registros';
+            tableContainer.style.display = 'none';
+            tableCount.innerHTML = '<strong>0</strong> registros';
         }
 
         function renderTabla() {
@@ -1752,69 +2146,38 @@
 
             loadingState.style.display = 'none';
             emptyState.style.display = 'none';
-            ordenesTable.style.display = 'table';
+            tableContainer.style.display = 'block';
 
             const totalPages = Math.ceil(filteredData.length / pageSize);
             const start = currentPage * pageSize;
             const end = Math.min(start + pageSize, filteredData.length);
             const pageData = filteredData.slice(start, end);
 
-            tableCount.textContent = `${filteredData.length} registros`;
+            tableCount.innerHTML = `<strong>${filteredData.length}</strong> registros`;
 
-            ordenesBody.innerHTML = pageData.map(orden => {
+            tableBody.innerHTML = pageData.map(orden => {
                 const nombre = `${orden.primerNombre || ''} ${orden.segundoNombre || ''} ${orden.primerApellido || ''} ${orden.segundoApellido || ''}`.trim();
                 const cedula = orden.numeroId || '-';
                 const fechaConsulta = orden.fechaConsulta ? new Date(orden.fechaConsulta).toLocaleDateString('es-CO') : '-';
                 const fechaAtencion = orden.fechaAtencion ? new Date(orden.fechaAtencion).toLocaleDateString('es-CO') : '-';
                 const estado = orden.atendido || 'PENDIENTE';
-                const statusClass = estado === 'ATENDIDO' ? 'status-atendido' : (estado === 'EN PROCESO' ? 'status-proceso' : 'status-pendiente');
-
-                // URL del certificado
-                let downloadUrl = '';
-                if (estado === 'ATENDIDO') {
-                    downloadUrl = `https://bsl-utilidades-yp78a.ondigitalocean.app/generar-certificado-desde-wix/${orden._id}`;
-                }
+                const statusClass = estado === 'ATENDIDO' ? 'atendido' : (estado === 'EN PROCESO' ? 'proceso' : 'pendiente');
+                const initials = nombre.split(' ').slice(0, 2).map(n => n.charAt(0)).join('').toUpperCase() || '?';
 
                 return `
-                    <tr>
+                    <tr onclick="abrirModalDetalles('${orden._id}')">
                         <td>
-                            <div class="patient-info">
-                                <div class="patient-photo-placeholder">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                                        <circle cx="12" cy="7" r="4"></circle>
-                                    </svg>
-                                </div>
-                                <div>
-                                    <div class="patient-name">${nombre || 'Sin nombre'}</div>
-                                    <div class="patient-cedula">CC: ${cedula}</div>
+                            <div class="cell-name">
+                                <div class="avatar">${initials}</div>
+                                <div class="name-info">
+                                    <span class="name-primary">${nombre || 'Sin nombre'}</span>
                                 </div>
                             </div>
                         </td>
+                        <td>${cedula}</td>
                         <td>${fechaConsulta}</td>
                         <td>${fechaAtencion}</td>
-                        <td><span class="status-badge ${statusClass}">${estado}</span></td>
-                        <td>
-                            ${estado === 'ATENDIDO' ? `
-                                <a href="${downloadUrl}" target="_blank" class="btn-download">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                        <polyline points="7 10 12 15 17 10"></polyline>
-                                        <line x1="12" y1="15" x2="12" y2="3"></line>
-                                    </svg>
-                                    Certificado
-                                </a>
-                            ` : `
-                                <span class="btn-download disabled">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                        <polyline points="7 10 12 15 17 10"></polyline>
-                                        <line x1="12" y1="15" x2="12" y2="3"></line>
-                                    </svg>
-                                    Pendiente
-                                </span>
-                            `}
-                        </td>
+                        <td><span class="status-badge ${statusClass}"><span class="status-dot"></span>${estado}</span></td>
                     </tr>
                 `;
             }).join('');
@@ -1830,12 +2193,121 @@
             }
         }
 
-        // ========== MODAL NUEVA ORDEN ==========
+        // ========== MODAL DETALLES ==========
+        function abrirModalDetalles(id) {
+            const paciente = allData.find(p => p._id === id) || filteredData.find(p => p._id === id);
+            if (!paciente) return;
 
+            pacienteActual = paciente;
+            const nombre = `${paciente.primerNombre || ''} ${paciente.segundoNombre || ''} ${paciente.primerApellido || ''} ${paciente.segundoApellido || ''}`.trim();
+            const initials = nombre.split(' ').slice(0, 2).map(n => n.charAt(0)).join('').toUpperCase() || '?';
+            const estado = paciente.atendido || 'PENDIENTE';
+            const statusClass = estado === 'ATENDIDO' ? 'atendido' : 'pendiente';
+
+            const modalBody = document.getElementById('modalDetallesBody');
+            modalBody.innerHTML = `
+                <div class="profile-header-horizontal">
+                    <div class="profile-photo">${initials}</div>
+                    <div class="profile-info">
+                        <div class="profile-name">${nombre || 'Sin nombre'}</div>
+                        <div class="profile-meta">CC: ${paciente.numeroId || '-'}</div>
+                        <div class="profile-status ${statusClass}">
+                            <span class="status-dot"></span>
+                            ${estado}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-card">
+                    <div class="detail-card-title">Información Personal</div>
+                    <div class="detail-grid">
+                        <div class="detail-field">
+                            <div class="detail-field-label">Celular</div>
+                            <div class="detail-field-value">${paciente.celular || '-'}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="detail-field-label">Ciudad</div>
+                            <div class="detail-field-value">${paciente.ciudad || '-'}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-card">
+                    <div class="detail-card-title">Información Laboral</div>
+                    <div class="detail-grid">
+                        <div class="detail-field">
+                            <div class="detail-field-label">Empresa</div>
+                            <div class="detail-field-value">${paciente.empresa || paciente.codEmpresa || '-'}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="detail-field-label">Cargo</div>
+                            <div class="detail-field-value">${paciente.cargo || '-'}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-card">
+                    <div class="detail-card-title">Información del Examen</div>
+                    <div class="detail-grid">
+                        <div class="detail-field">
+                            <div class="detail-field-label">Tipo de Examen</div>
+                            <div class="detail-field-value">${paciente.tipoExamen || '-'}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="detail-field-label">Modalidad</div>
+                            <div class="detail-field-value">${paciente.modalidad || 'Presencial'}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="detail-field-label">Fecha Atención</div>
+                            <div class="detail-field-value">${paciente.fechaAtencion ? new Date(paciente.fechaAtencion).toLocaleDateString('es-CO') : '-'}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="detail-field-label">Hora</div>
+                            <div class="detail-field-value">${paciente.horaAtencion || '-'}</div>
+                        </div>
+                    </div>
+                    <div class="detail-field">
+                        <div class="detail-field-label">Médico</div>
+                        <div class="detail-field-value">${paciente.medico || 'Por asignar'}</div>
+                    </div>
+                    <div class="detail-field">
+                        <div class="detail-field-label">Exámenes</div>
+                        <div class="detail-field-value">${paciente.examenes || '-'}</div>
+                    </div>
+                </div>
+            `;
+
+            // Configurar botón PDF
+            const btnPDF = document.getElementById('btnDescargarPDF');
+            if (estado === 'ATENDIDO') {
+                btnPDF.href = `https://bsl-utilidades-yp78a.ondigitalocean.app/generar-certificado-desde-wix/${paciente._id}`;
+                btnPDF.style.opacity = '1';
+                btnPDF.style.pointerEvents = 'auto';
+            } else {
+                btnPDF.href = '#';
+                btnPDF.style.opacity = '0.5';
+                btnPDF.style.pointerEvents = 'none';
+            }
+
+            document.getElementById('modalDetalles').classList.add('active');
+        }
+
+        function cerrarModalDetalles() {
+            document.getElementById('modalDetalles').classList.remove('active');
+            pacienteActual = null;
+        }
+
+        // Cerrar modal al hacer clic fuera
+        document.getElementById('modalDetalles').addEventListener('click', function(e) {
+            if (e.target === this) {
+                cerrarModalDetalles();
+            }
+        });
+
+        // ========== MODAL NUEVA ORDEN ==========
         let modalidadActual = 'presencial';
         let examenesDataModal = [];
         let examenesSeleccionadosModal = [];
-
         let ordenExistenteActual = null;
 
         function abrirModalNuevaOrden() {
@@ -1845,7 +2317,6 @@
             actualizarTabsModalidad();
             cargarExamenesModal();
             limpiarFormularioModal();
-            // Mostrar paso 1, ocultar paso 2
             document.getElementById('modalPaso1').style.display = 'block';
             document.getElementById('modalPaso2').style.display = 'none';
             document.getElementById('modalFooterPaso2').style.display = 'none';
@@ -1867,7 +2338,6 @@
             document.getElementById('modalCargo').value = '';
             document.getElementById('modalCiudad').value = '';
             document.getElementById('modalTipoExamen').value = '';
-            // Establecer fecha mínima como hoy
             const hoy = new Date().toISOString().split('T')[0];
             const inputFecha = document.getElementById('modalFechaAtencion');
             inputFecha.min = hoy;
@@ -1880,7 +2350,6 @@
         function cambiarModalidadOrden(modalidad) {
             modalidadActual = modalidad;
             actualizarTabsModalidad();
-            // Recargar turnos si ya hay fecha seleccionada
             if (document.getElementById('modalFechaAtencion').value) {
                 cargarTurnosDisponibles();
             }
@@ -1924,7 +2393,7 @@
                         } else {
                             option.textContent = `${texto} (no disponible)`;
                             option.disabled = true;
-                            option.style.color = '#9CA3AF';
+                            option.style.color = 'var(--text-tertiary)';
                         }
                         select.appendChild(option);
                     });
@@ -1954,7 +2423,7 @@
             const container = document.getElementById('modalExamenesContainer');
 
             if (examenesDataModal.length === 0) {
-                container.innerHTML = '<div style="padding: 14px; color: #9CA3AF; font-size: 14px;">No hay exámenes disponibles</div>';
+                container.innerHTML = '<div style="padding: 14px; color: var(--text-tertiary); font-size: 14px;">No hay exámenes disponibles</div>';
                 return;
             }
 
@@ -1985,7 +2454,6 @@
         }
 
         function actualizarExamenesUIModal() {
-            // Actualizar checkboxes
             examenesDataModal.forEach(examen => {
                 const checkbox = document.getElementById(`modal-examen-${examen.id}`);
                 if (checkbox) {
@@ -1993,7 +2461,6 @@
                 }
             });
 
-            // Actualizar tags seleccionados
             const selectedContainer = document.getElementById('modalExamenesSelected');
             selectedContainer.innerHTML = examenesSeleccionadosModal.map(nombre => `
                 <span class="examen-tag">
@@ -2016,7 +2483,6 @@
         async function crearOrdenEmpresa() {
             ocultarAlertaModal();
 
-            // Validaciones
             const numeroId = document.getElementById('modalNumeroId').value.trim();
             const celular = document.getElementById('modalCelular').value.trim();
             const primerNombre = document.getElementById('modalPrimerNombre').value.trim();
@@ -2057,7 +2523,6 @@
                 horaAtencion: horaAtencion,
                 examenes: examenesSeleccionadosModal.join(', '),
                 atendido: 'PENDIENTE',
-                // Asignación automática de médico
                 asignarMedicoAuto: true,
                 modalidad: modalidadActual
             };
@@ -2073,7 +2538,7 @@
 
                 if (result.success) {
                     cerrarModalNuevaOrden();
-                    actualizarDatos(); // Refrescar la tabla
+                    actualizarDatos();
                     alert('Orden creada exitosamente');
                 } else {
                     mostrarAlertaModal(result.message || 'Error al crear la orden');
@@ -2087,7 +2552,6 @@
             }
         }
 
-        // Cerrar modal al hacer clic fuera
         document.getElementById('modalNuevaOrden').addEventListener('click', function(e) {
             if (e.target === this) {
                 cerrarModalNuevaOrden();
@@ -2095,7 +2559,6 @@
         });
 
         // ========== FUNCIONES PARA VERIFICACIÓN DE DUPLICADOS ==========
-
         async function verificarDocumentoModal() {
             const numeroId = document.getElementById('modalNumeroId').value.trim();
 
@@ -2118,17 +2581,13 @@
                     btn.textContent = 'Verificar y Continuar';
 
                     if (result.tipo === 'atendido') {
-                        // Mostrar modal de certificado existente
                         mostrarModalAtendido(result.ordenExistente);
                     } else if (result.tipo === 'expirado') {
-                        // Mostrar modal de cita expirada
                         mostrarModalExpirado(result.ordenExistente);
                     } else {
-                        // Mostrar modal de orden pendiente
                         mostrarModalDuplicado(result.ordenExistente);
                     }
                 } else {
-                    // No hay duplicado, pasar al paso 2
                     mostrarPaso2Modal();
                 }
             } catch (error) {
@@ -2180,7 +2639,6 @@
             document.getElementById('modalDuplicado').classList.remove('active');
         }
 
-        // Función para mostrar modal de ATENDIDO
         function mostrarModalAtendido(ordenExistente) {
             ordenExistenteActual = ordenExistente;
 
@@ -2206,7 +2664,6 @@
             document.getElementById('modalAtendido').classList.remove('active');
         }
 
-        // Funciones para modal de CITA EXPIRADA
         function mostrarModalExpirado(ordenExistente) {
             ordenExistenteActual = ordenExistente;
 
@@ -2385,18 +2842,15 @@
 
         document.getElementById('btnCrearNuevaModal').addEventListener('click', () => {
             cerrarModalDuplicado();
-            // Continuar al paso 2 para llenar datos
             mostrarPaso2Modal();
         });
 
-        // Cerrar modal de duplicados al hacer clic fuera
         document.getElementById('modalDuplicado').addEventListener('click', function(e) {
             if (e.target === this) {
                 cerrarModalDuplicado();
             }
         });
 
-        // Event listeners para modal de ATENDIDO
         document.getElementById('btnCrearNuevaAtendido').addEventListener('click', () => {
             cerrarModalAtendido();
             mostrarPaso2Modal();
@@ -2408,7 +2862,6 @@
             }
         });
 
-        // Event listeners para modal de EXPIRADO
         document.getElementById('btnCrearNuevaExpirado').addEventListener('click', () => {
             cerrarModalExpirado();
             mostrarPaso2Modal();
