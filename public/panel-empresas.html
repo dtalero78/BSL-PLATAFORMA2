@@ -1694,18 +1694,11 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Modalidad</label>
-                            <select class="form-select" id="edit-modalidad">
-                                <option value="presencial">Presencial</option>
-                                <option value="virtual">Virtual</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
                             <label class="form-label">Fecha de Atención</label>
                             <input type="date" class="form-input" id="edit-fechaAtencion">
                         </div>
+                    </div>
+                    <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Hora de Atención</label>
                             <input type="time" class="form-input" id="edit-horaAtencion">
@@ -2363,10 +2356,6 @@
                             <div class="detail-field-value">${paciente.tipoExamen || '-'}</div>
                         </div>
                         <div class="detail-field">
-                            <div class="detail-field-label">Modalidad</div>
-                            <div class="detail-field-value">${paciente.modalidad || 'Presencial'}</div>
-                        </div>
-                        <div class="detail-field">
                             <div class="detail-field-label">Fecha Atención</div>
                             <div class="detail-field-value">${paciente.fechaAtencion ? new Date(paciente.fechaAtencion).toLocaleDateString('es-CO') : '-'}</div>
                         </div>
@@ -2428,7 +2417,6 @@
             document.getElementById('edit-ciudad').value = pacienteActual.ciudad || '';
             document.getElementById('edit-cargo').value = pacienteActual.cargo || '';
             document.getElementById('edit-tipoExamen').value = pacienteActual.tipoExamen || '';
-            document.getElementById('edit-modalidad').value = pacienteActual.modalidad || 'presencial';
             document.getElementById('edit-examenes').value = pacienteActual.examenes || '';
 
             // Formatear fecha
@@ -2470,7 +2458,6 @@
                 ciudad: document.getElementById('edit-ciudad').value.trim(),
                 cargo: document.getElementById('edit-cargo').value.trim(),
                 tipoExamen: document.getElementById('edit-tipoExamen').value,
-                modalidad: document.getElementById('edit-modalidad').value,
                 examenes: document.getElementById('edit-examenes').value.trim(),
                 horaAtencion: document.getElementById('edit-horaAtencion').value
             };
