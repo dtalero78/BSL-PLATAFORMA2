@@ -2537,16 +2537,16 @@
 
             if (rangosOrigen.length === 0) return;
 
-            // Aplicar a todos los demás días
+            // Aplicar a TODOS los días (incluyendo el origen)
             const ordenDias = [0, 1, 2, 3, 4, 5, 6];
             for (const dia of ordenDias) {
-                if (dia === diaOrigen) continue;
+                // Activar el checkbox (si no es el origen, ya está activo)
+                if (dia !== diaOrigen) {
+                    const checkbox = document.getElementById(`dia-${dia}`);
+                    checkbox.checked = true;
+                }
 
-                // Activar el checkbox
-                const checkbox = document.getElementById(`dia-${dia}`);
-                checkbox.checked = true;
-
-                // Actualizar la configuración en memoria
+                // Actualizar la configuración en memoria para TODOS los días
                 disponibilidadPorModalidad[modalidadActual][dia] = {
                     activo: true,
                     rangos: [...rangosOrigen]
