@@ -1614,7 +1614,7 @@ app.get('/api/ordenes', async (req, res) => {
         let query = `
             SELECT "_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
                    "codEmpresa", "empresa", "cargo", "tipoExamen", "medico", "atendido",
-                   "fechaAtencion", "horaAtencion", "examenes", "ciudad",
+                   "fechaAtencion", "horaAtencion", "examenes", "ciudad", "celular", "modalidad",
                    "_createdDate", "_updatedDate", "fechaConsulta"
             FROM "HistoriaClinica"
             WHERE 1=1
