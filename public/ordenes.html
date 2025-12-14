@@ -1675,6 +1675,7 @@
                             <th>Estado</th>
                             <th>Fecha Creación</th>
                             <th>Fecha Atención</th>
+                            <th>Fecha Consulta</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
@@ -2442,6 +2443,7 @@
                         </td>
                         <td>${formatearFechaCreacion(orden._createdDate)}</td>
                         <td>${formatearFechaAtencion(orden.fechaAtencion)}</td>
+                        <td>${formatearFechaCreacion(orden.fechaConsulta)}</td>
                         <td>
                             <div class="actions-cell">
                                 <a href="/visiometria.html?orden=${orden._id}"
