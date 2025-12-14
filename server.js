@@ -2896,7 +2896,7 @@ app.post('/api/medicos', async (req, res) => {
     try {
         const {
             primerNombre, segundoNombre, primerApellido, segundoApellido,
-            numeroLicencia, tipoLicencia, fechaVencimientoLicencia, especialidad, firma
+            alias, numeroLicencia, tipoLicencia, fechaVencimientoLicencia, especialidad, firma
         } = req.body;
 
         if (!primerNombre || !primerApellido || !numeroLicencia) {
@@ -2909,14 +2909,15 @@ app.post('/api/medicos', async (req, res) => {
         const result = await pool.query(`
             INSERT INTO medicos (
                 primer_nombre, segundo_nombre, primer_apellido, segundo_apellido,
-                numero_licencia, tipo_licencia, fecha_vencimiento_licencia, especialidad, firma
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                alias, numero_licencia, tipo_licencia, fecha_vencimiento_licencia, especialidad, firma
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             RETURNING *
         `, [
             primerNombre,
             segundoNombre || null,
             primerApellido,
             segundoApellido || null,
+            alias || null,
             numeroLicencia,
             tipoLicencia || null,
             fechaVencimientoLicencia ? new Date(fechaVencimientoLicencia) : null,
@@ -2947,7 +2948,7 @@ app.put('/api/medicos/:id', async (req, res) => {
         const { id } = req.params;
         const {
             primerNombre, segundoNombre, primerApellido, segundoApellido,
-            numeroLicencia, tipoLicencia, fechaVencimientoLicencia, especialidad, firma, activo
+            alias, numeroLicencia, tipoLicencia, fechaVencimientoLicencia, especialidad, firma, activo
         } = req.body;
 
         const result = await pool.query(`
@@ -2956,20 +2957,22 @@ app.put('/api/medicos/:id', async (req, res) => {
                 segundo_nombre = COALESCE($2, segundo_nombre),
                 primer_apellido = COALESCE($3, primer_apellido),
                 segundo_apellido = COALESCE($4, segundo_apellido),
-                numero_licencia = COALESCE($5, numero_licencia),
-                tipo_licencia = COALESCE($6, tipo_licencia),
-                fecha_vencimiento_licencia = COALESCE($7, fecha_vencimiento_licencia),
-                especialidad = COALESCE($8, especialidad),
-                firma = COALESCE($9, firma),
-                activo = COALESCE($10, activo),
+                alias = $5,
+                numero_licencia = COALESCE($6, numero_licencia),
+                tipo_licencia = COALESCE($7, tipo_licencia),
+                fecha_vencimiento_licencia = COALESCE($8, fecha_vencimiento_licencia),
+                especialidad = COALESCE($9, especialidad),
+                firma = COALESCE($10, firma),
+                activo = COALESCE($11, activo),
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = $11
+            WHERE id = $12
             RETURNING *
         `, [
             primerNombre,
             segundoNombre,
             primerApellido,
             segundoApellido,
+            alias || null,
             numeroLicencia,
             tipoLicencia,
             fechaVencimientoLicencia ? new Date(fechaVencimientoLicencia) : null,

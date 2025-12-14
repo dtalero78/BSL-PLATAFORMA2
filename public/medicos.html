@@ -689,6 +689,10 @@
                             <label class="form-label">Segundo Apellido</label>
                             <input type="text" class="form-input" name="segundoApellido">
                         </div>
+                        <div class="form-group full-width">
+                            <label class="form-label">Alias (nombre que se guarda en órdenes)</label>
+                            <input type="text" class="form-input" name="alias" placeholder="Ej: Dr. Juan Pérez">
+                        </div>
                         <div class="form-group">
                             <label class="form-label">Número de Licencia <span class="required">*</span></label>
                             <input type="text" class="form-input" name="numeroLicencia" required placeholder="Ej: RM-12345">
@@ -860,6 +864,7 @@
                 form.segundoNombre.value = medico.segundo_nombre || '';
                 form.primerApellido.value = medico.primer_apellido || '';
                 form.segundoApellido.value = medico.segundo_apellido || '';
+                form.alias.value = medico.alias || '';
                 form.numeroLicencia.value = medico.numero_licencia || '';
                 form.tipoLicencia.value = medico.tipo_licencia || '';
                 form.especialidad.value = medico.especialidad || '';
@@ -925,6 +930,7 @@
                 segundoNombre: form.segundoNombre.value || null,
                 primerApellido: form.primerApellido.value,
                 segundoApellido: form.segundoApellido.value || null,
+                alias: form.alias.value || null,
                 numeroLicencia: form.numeroLicencia.value,
                 tipoLicencia: form.tipoLicencia.value || null,
                 especialidad: form.especialidad.value || null,
