@@ -2365,7 +2365,8 @@ app.get('/api/historia-clinica/list', async (req, res) => {
         const historiaResult = await pool.query(`
             SELECT "_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
                    "celular", "cargo", "ciudad", "tipoExamen", "codEmpresa", "empresa", "medico",
-                   "atendido", "examenes", "_createdDate", "fechaConsulta", 'historia' as origen
+                   "atendido", "examenes", "_createdDate", "fechaConsulta", "fechaAtencion", "horaAtencion",
+                   'historia' as origen
             FROM "HistoriaClinica"
             ORDER BY "_createdDate" DESC
             LIMIT 500
