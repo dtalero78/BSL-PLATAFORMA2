@@ -456,6 +456,52 @@
             letter-spacing: 0.5px;
         }
 
+        .data-table th.sortable {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            padding-right: 24px;
+        }
+
+        .data-table th.sortable:hover {
+            color: var(--accent-color);
+            background: var(--bg-secondary);
+        }
+
+        .data-table th.sortable .sort-icon {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            opacity: 0.4;
+        }
+
+        .data-table th.sortable:hover .sort-icon {
+            opacity: 0.7;
+        }
+
+        .data-table th.sortable.sort-asc .sort-icon,
+        .data-table th.sortable.sort-desc .sort-icon {
+            opacity: 1;
+        }
+
+        .data-table th.sortable .sort-icon svg {
+            width: 10px;
+            height: 10px;
+            fill: currentColor;
+        }
+
+        .data-table th.sortable.sort-asc .sort-icon .icon-up {
+            color: var(--accent-color);
+        }
+
+        .data-table th.sortable.sort-desc .sort-icon .icon-down {
+            color: var(--accent-color);
+        }
+
         .data-table tbody tr {
             border-bottom: 1px solid var(--border-light);
             transition: background 0.15s ease;
@@ -1673,9 +1719,27 @@
                             <th>CodEmpresa</th>
                             <th>Tipo Examen</th>
                             <th>Estado</th>
-                            <th>Fecha Creación</th>
-                            <th>Fecha Atención</th>
-                            <th>Fecha Consulta</th>
+                            <th class="sortable" data-sort="_createdDate" onclick="ordenarPorColumna('_createdDate')">
+                                Fecha Creación
+                                <span class="sort-icon">
+                                    <svg class="icon-up" viewBox="0 0 10 5"><polygon points="5,0 10,5 0,5"/></svg>
+                                    <svg class="icon-down" viewBox="0 0 10 5"><polygon points="0,0 10,0 5,5"/></svg>
+                                </span>
+                            </th>
+                            <th class="sortable" data-sort="fechaAtencion" onclick="ordenarPorColumna('fechaAtencion')">
+                                Fecha Atención
+                                <span class="sort-icon">
+                                    <svg class="icon-up" viewBox="0 0 10 5"><polygon points="5,0 10,5 0,5"/></svg>
+                                    <svg class="icon-down" viewBox="0 0 10 5"><polygon points="0,0 10,0 5,5"/></svg>
+                                </span>
+                            </th>
+                            <th class="sortable" data-sort="fechaConsulta" onclick="ordenarPorColumna('fechaConsulta')">
+                                Fecha Consulta
+                                <span class="sort-icon">
+                                    <svg class="icon-up" viewBox="0 0 10 5"><polygon points="5,0 10,5 0,5"/></svg>
+                                    <svg class="icon-down" viewBox="0 0 10 5"><polygon points="0,0 10,0 5,5"/></svg>
+                                </span>
+                            </th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
@@ -2345,6 +2409,8 @@
         let formularioActual = null;
         let searchTimeout = null;
         let buscandoEnServidor = false;
+        let columnaOrden = '_createdDate';
+        let direccionOrden = 'desc'; // 'asc' o 'desc'
 
         // ========== EXÁMENES STATE ==========
         let examenesData = [];
@@ -2406,6 +2472,54 @@
         function getStatusText(estado) {
             if (!estado) return 'Pendiente';
             return estado;
+        }
+
+        // ========== SORTING FUNCTIONS ==========
+        function ordenarPorColumna(columna) {
+            // Si es la misma columna, cambiar dirección
+            if (columnaOrden === columna) {
+                direccionOrden = direccionOrden === 'asc' ? 'desc' : 'asc';
+            } else {
+                columnaOrden = columna;
+                direccionOrden = 'desc'; // Por defecto descendente (más reciente primero)
+            }
+
+            // Actualizar clases visuales en los encabezados
+            document.querySelectorAll('.data-table th.sortable').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+                if (th.dataset.sort === columna) {
+                    th.classList.add(direccionOrden === 'asc' ? 'sort-asc' : 'sort-desc');
+                }
+            });
+
+            // Ordenar los datos
+            ordenarFormularios();
+
+            // Re-renderizar
+            renderTable(formulariosFiltrados);
+            renderMobileCards(formulariosFiltrados);
+        }
+
+        function ordenarFormularios() {
+            formulariosFiltrados.sort((a, b) => {
+                let valorA = a[columnaOrden];
+                let valorB = b[columnaOrden];
+
+                // Manejar valores nulos
+                if (!valorA && !valorB) return 0;
+                if (!valorA) return direccionOrden === 'asc' ? -1 : 1;
+                if (!valorB) return direccionOrden === 'asc' ? 1 : -1;
+
+                // Comparar fechas
+                const fechaA = new Date(valorA);
+                const fechaB = new Date(valorB);
+
+                if (direccionOrden === 'asc') {
+                    return fechaA - fechaB;
+                } else {
+                    return fechaB - fechaA;
+                }
+            });
         }
 
         // ========== RENDER FUNCTIONS ==========
@@ -2585,6 +2699,9 @@
 
             formulariosFiltrados = resultado;
 
+            // Aplicar ordenamiento actual
+            ordenarFormularios();
+
             // Update stats
             document.getElementById('statsCounter').innerHTML = `<strong>${resultado.length}</strong> de ${todosLosFormularios.length} registros`;
 
@@ -2601,8 +2718,8 @@
             }
 
             // Render
-            renderTable(resultado);
-            renderMobileCards(resultado);
+            renderTable(formulariosFiltrados);
+            renderMobileCards(formulariosFiltrados);
         }
 
         // ========== DATA LOADING ==========
@@ -3418,6 +3535,12 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize Feather Icons
             feather.replace();
+
+            // Marcar columna de ordenamiento inicial
+            const columnaInicial = document.querySelector(`.data-table th.sortable[data-sort="${columnaOrden}"]`);
+            if (columnaInicial) {
+                columnaInicial.classList.add(direccionOrden === 'asc' ? 'sort-asc' : 'sort-desc');
+            }
 
             // Check for search query in URL
             const urlParams = new URLSearchParams(window.location.search);
