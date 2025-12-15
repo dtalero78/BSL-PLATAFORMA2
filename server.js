@@ -1886,36 +1886,44 @@ app.get('/api/ordenes', async (req, res) => {
     try {
         const { codEmpresa, buscar, limit = 100, offset = 0 } = req.query;
 
+        // Query con JOIN para obtener foto_url del formulario vinculado
         let query = `
-            SELECT "_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
-                   "codEmpresa", "empresa", "cargo", "tipoExamen", "medico", "atendido",
-                   "fechaAtencion", "horaAtencion", "examenes", "ciudad", "celular",
-                   "_createdDate", "_updatedDate", "fechaConsulta",
-                   "mdConceptoFinal", "mdRecomendacionesMedicasAdicionales", "mdObservacionesCertificado", "mdObsParaMiDocYa"
-            FROM "HistoriaClinica"
+            SELECT h."_id", h."numeroId", h."primerNombre", h."segundoNombre", h."primerApellido", h."segundoApellido",
+                   h."codEmpresa", h."empresa", h."cargo", h."tipoExamen", h."medico", h."atendido",
+                   h."fechaAtencion", h."horaAtencion", h."examenes", h."ciudad", h."celular",
+                   h."_createdDate", h."_updatedDate", h."fechaConsulta",
+                   h."mdConceptoFinal", h."mdRecomendacionesMedicasAdicionales", h."mdObservacionesCertificado", h."mdObsParaMiDocYa",
+                   COALESCE(f_exact.foto_url, f_fallback.foto_url) as foto_url
+            FROM "HistoriaClinica" h
+            LEFT JOIN formularios f_exact ON f_exact.wix_id = h."_id"
+            LEFT JOIN LATERAL (
+                SELECT foto_url FROM formularios
+                WHERE numero_id = h."numeroId" AND foto_url IS NOT NULL
+                ORDER BY fecha_registro DESC LIMIT 1
+            ) f_fallback ON f_exact.id IS NULL
             WHERE 1=1
         `;
         const params = [];
         let paramIndex = 1;
 
         if (codEmpresa) {
-            query += ` AND "codEmpresa" = $${paramIndex}`;
+            query += ` AND h."codEmpresa" = $${paramIndex}`;
             params.push(codEmpresa);
             paramIndex++;
         }
 
         if (buscar) {
             query += ` AND (
-                "numeroId" ILIKE $${paramIndex} OR
-                "primerNombre" ILIKE $${paramIndex} OR
-                "primerApellido" ILIKE $${paramIndex} OR
-                "empresa" ILIKE $${paramIndex}
+                h."numeroId" ILIKE $${paramIndex} OR
+                h."primerNombre" ILIKE $${paramIndex} OR
+                h."primerApellido" ILIKE $${paramIndex} OR
+                h."empresa" ILIKE $${paramIndex}
             )`;
             params.push(`%${buscar}%`);
             paramIndex++;
         }
 
-        query += ` ORDER BY "fechaAtencion" DESC NULLS LAST, "_createdDate" DESC`;
+        query += ` ORDER BY h."fechaAtencion" DESC NULLS LAST, h."_createdDate" DESC`;
         query += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
         params.push(parseInt(limit), parseInt(offset));
 

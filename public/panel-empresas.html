@@ -622,6 +622,10 @@
             object-fit: cover;
         }
 
+        .avatar.has-photo {
+            background: var(--bg-tertiary);
+        }
+
         .name-info {
             display: flex;
             flex-direction: column;
@@ -2360,12 +2364,13 @@
                 const estado = orden.atendido || 'PENDIENTE';
                 const statusClass = estado === 'ATENDIDO' ? 'atendido' : (estado === 'EN PROCESO' ? 'proceso' : 'pendiente');
                 const initials = nombre.split(' ').slice(0, 2).map(n => n.charAt(0)).join('').toUpperCase() || '?';
+                const hasFoto = orden.foto_url ? 'has-photo' : '';
 
                 return `
                     <tr onclick="abrirModalDetalles('${orden._id}')">
                         <td>
                             <div class="cell-name">
-                                <div class="avatar">${initials}</div>
+                                <div class="avatar ${hasFoto}">${orden.foto_url ? `<img src="${orden.foto_url}" alt="">` : initials}</div>
                                 <div class="name-info">
                                     <span class="name-primary">${nombre || 'Sin nombre'}</span>
                                 </div>
@@ -2400,11 +2405,12 @@
             const initials = nombre.split(' ').slice(0, 2).map(n => n.charAt(0)).join('').toUpperCase() || '?';
             const estado = paciente.atendido || 'PENDIENTE';
             const statusClass = estado === 'ATENDIDO' ? 'atendido' : 'pendiente';
+            const hasFoto = paciente.foto_url ? 'has-photo' : '';
 
             const modalBody = document.getElementById('modalDetallesBody');
             modalBody.innerHTML = `
                 <div class="profile-header-horizontal">
-                    <div class="profile-photo">${initials}</div>
+                    <div class="profile-photo ${hasFoto}">${paciente.foto_url ? `<img src="${paciente.foto_url}" alt="Foto">` : initials}</div>
                     <div class="profile-info">
                         <div class="profile-name">${nombre || 'Sin nombre'}</div>
                         <div class="profile-meta">CC: ${paciente.numeroId || '-'}</div>
