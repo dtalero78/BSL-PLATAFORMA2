@@ -2453,20 +2453,22 @@ app.get('/api/historia-clinica/list', async (req, res) => {
         const totalRegistros = parseInt(countResult.rows[0].count);
         const totalPaginas = Math.ceil(totalRegistros / limit);
 
-        // Obtener registros de HistoriaClinica con foto_url del formulario más reciente
+        // Obtener registros de HistoriaClinica con foto_url del formulario vinculado por orden_id
+        // Prioriza match exacto por wix_id = _id, fallback a numero_id para registros antiguos
         const historiaResult = await pool.query(`
             SELECT h."_id", h."numeroId", h."primerNombre", h."segundoNombre", h."primerApellido", h."segundoApellido",
                    h."celular", h."cargo", h."ciudad", h."tipoExamen", h."codEmpresa", h."empresa", h."medico",
                    h."atendido", h."examenes", h."_createdDate", h."fechaConsulta", h."fechaAtencion", h."horaAtencion",
                    h."mdConceptoFinal", h."mdRecomendacionesMedicasAdicionales", h."mdObservacionesCertificado", h."mdObsParaMiDocYa",
                    'historia' as origen,
-                   f.foto_url
+                   COALESCE(f_exact.foto_url, f_fallback.foto_url) as foto_url
             FROM "HistoriaClinica" h
+            LEFT JOIN formularios f_exact ON f_exact.wix_id = h."_id"
             LEFT JOIN LATERAL (
                 SELECT foto_url FROM formularios
                 WHERE numero_id = h."numeroId" AND foto_url IS NOT NULL
                 ORDER BY fecha_registro DESC LIMIT 1
-            ) f ON true
+            ) f_fallback ON f_exact.id IS NULL
             ORDER BY h."_createdDate" DESC
             LIMIT $1 OFFSET $2
         `, [limit, offset]);
@@ -2506,20 +2508,27 @@ app.get('/api/historia-clinica/buscar', async (req, res) => {
 
         const searchTerm = `%${q}%`;
         const result = await pool.query(`
-            SELECT "_id", "numeroId", "primerNombre", "segundoNombre",
-                   "primerApellido", "segundoApellido", "celular", "cargo",
-                   "ciudad", "tipoExamen", "codEmpresa", "empresa", "medico",
-                   "atendido", "examenes", "_createdDate", "fechaConsulta",
-                   "fechaAtencion", "horaAtencion",
-                   "mdConceptoFinal", "mdRecomendacionesMedicasAdicionales", "mdObservacionesCertificado", "mdObsParaMiDocYa",
-                   'historia' as origen
-            FROM "HistoriaClinica"
-            WHERE "numeroId" ILIKE $1
-               OR "primerNombre" ILIKE $1
-               OR "primerApellido" ILIKE $1
-               OR "codEmpresa" ILIKE $1
-               OR "celular" ILIKE $1
-            ORDER BY "_createdDate" DESC
+            SELECT h."_id", h."numeroId", h."primerNombre", h."segundoNombre",
+                   h."primerApellido", h."segundoApellido", h."celular", h."cargo",
+                   h."ciudad", h."tipoExamen", h."codEmpresa", h."empresa", h."medico",
+                   h."atendido", h."examenes", h."_createdDate", h."fechaConsulta",
+                   h."fechaAtencion", h."horaAtencion",
+                   h."mdConceptoFinal", h."mdRecomendacionesMedicasAdicionales", h."mdObservacionesCertificado", h."mdObsParaMiDocYa",
+                   'historia' as origen,
+                   COALESCE(f_exact.foto_url, f_fallback.foto_url) as foto_url
+            FROM "HistoriaClinica" h
+            LEFT JOIN formularios f_exact ON f_exact.wix_id = h."_id"
+            LEFT JOIN LATERAL (
+                SELECT foto_url FROM formularios
+                WHERE numero_id = h."numeroId" AND foto_url IS NOT NULL
+                ORDER BY fecha_registro DESC LIMIT 1
+            ) f_fallback ON f_exact.id IS NULL
+            WHERE h."numeroId" ILIKE $1
+               OR h."primerNombre" ILIKE $1
+               OR h."primerApellido" ILIKE $1
+               OR h."codEmpresa" ILIKE $1
+               OR h."celular" ILIKE $1
+            ORDER BY h."_createdDate" DESC
             LIMIT 100
         `, [searchTerm]);
 
