@@ -1,11 +1,86 @@
+require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
 const { Pool } = require('pg');
 const cron = require('node-cron');
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+
+// ========== DIGITALOCEAN SPACES (Object Storage) ==========
+const SPACES_ENDPOINT = 'https://nyc3.digitaloceanspaces.com';
+const SPACES_REGION = 'nyc3';
+const SPACES_BUCKET = process.env.SPACES_BUCKET || 'bsl-fotos';
+
+const s3Client = new S3Client({
+    endpoint: SPACES_ENDPOINT,
+    region: SPACES_REGION,
+    credentials: {
+        accessKeyId: process.env.SPACES_KEY,
+        secretAccessKey: process.env.SPACES_SECRET
+    },
+    forcePathStyle: false
+});
+
+/**
+ * Sube una imagen base64 a DigitalOcean Spaces y retorna la URL pública
+ * @param {string} base64Data - Imagen en formato base64 (con o sin prefijo data:image)
+ * @param {string} numeroId - Número de identificación del paciente
+ * @param {number|string} formId - ID del formulario
+ * @returns {Promise<string|null>} URL pública de la imagen o null si falla
+ */
+async function subirFotoASpaces(base64Data, numeroId, formId) {
+    try {
+        if (!base64Data || base64Data.length < 100) {
+            console.log('⚠️ subirFotoASpaces: base64 inválido o muy pequeño');
+            return null;
+        }
+
+        // Detectar tipo de imagen
+        let mime = 'image/jpeg';
+        let ext = 'jpg';
+        if (base64Data.startsWith('data:image/png')) {
+            mime = 'image/png';
+            ext = 'png';
+        } else if (base64Data.startsWith('data:image/webp')) {
+            mime = 'image/webp';
+            ext = 'webp';
+        }
+
+        // Limpiar prefijo base64
+        const cleanBase64 = base64Data.replace(/^data:image\/\w+;base64,/, '');
+        const buffer = Buffer.from(cleanBase64, 'base64');
+
+        if (buffer.length < 100) {
+            console.log('⚠️ subirFotoASpaces: buffer demasiado pequeño');
+            return null;
+        }
+
+        // Generar nombre único
+        const timestamp = Date.now();
+        const fileName = `fotos/${numeroId || 'unknown'}_${formId}_${timestamp}.${ext}`;
+
+        // Subir a Spaces
+        await s3Client.send(new PutObjectCommand({
+            Bucket: SPACES_BUCKET,
+            Key: fileName,
+            Body: buffer,
+            ContentType: mime,
+            ACL: 'public-read',
+            CacheControl: 'max-age=31536000'
+        }));
+
+        const fotoUrl = `https://${SPACES_BUCKET}.${SPACES_REGION}.digitaloceanspaces.com/${fileName}`;
+        console.log(`📸 Foto subida a Spaces: ${fileName} (${(buffer.length / 1024).toFixed(1)} KB)`);
+
+        return fotoUrl;
+    } catch (error) {
+        console.error('❌ Error subiendo foto a Spaces:', error.message);
+        return null;
+    }
+}
 
 // ========== HELPER: Construir fecha de atención correcta ==========
 // Recibe fecha y hora en zona horaria Colombia y retorna un Date UTC correcto
@@ -670,6 +745,13 @@ app.post('/api/formulario', async (req, res) => {
             });
         }
 
+        // Subir foto a DigitalOcean Spaces si existe
+        let fotoUrl = null;
+        if (datos.foto && datos.foto.startsWith('data:image')) {
+            console.log('📤 Subiendo foto a DigitalOcean Spaces...');
+            fotoUrl = await subirFotoASpaces(datos.foto, datos.numeroId, 'new');
+        }
+
         // Insertar en PostgreSQL
         const query = `
             INSERT INTO formularios (
@@ -688,7 +770,7 @@ app.post('/api/formulario', async (req, res) => {
                 familia_trastornos, familia_infecciosas,
                 trastorno_psicologico, sintomas_psicologicos, diagnostico_cancer,
                 enfermedades_laborales, enfermedad_osteomuscular, enfermedad_autoinmune,
-                firma, inscripcion_boletin, foto
+                firma, inscripcion_boletin, foto_url
             ) VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
                 $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
@@ -716,7 +798,7 @@ app.post('/api/formulario', async (req, res) => {
             datos.familiaTrastornos, datos.familiaInfecciosas,
             datos.trastornoPsicologico, datos.sintomasPsicologicos, datos.diagnosticoCancer,
             datos.enfermedadesLaborales, datos.enfermedadOsteomuscular, datos.enfermedadAutoinmune,
-            datos.firma, datos.inscripcionBoletin, datos.foto
+            datos.firma, datos.inscripcionBoletin, fotoUrl
         ];
 
         const result = await pool.query(query, values);
@@ -2615,9 +2697,9 @@ app.get('/api/buscar-paciente/:numeroId', async (req, res) => {
 
         console.log('🔍 Buscando paciente con numeroId:', numeroId);
 
-        // Buscar en formularios
+        // Buscar en formularios (incluir foto_url)
         const formResult = await pool.query(
-            'SELECT id, wix_id, primer_nombre, primer_apellido, numero_id, foto FROM formularios WHERE numero_id = $1 ORDER BY fecha_registro DESC LIMIT 1',
+            'SELECT id, wix_id, primer_nombre, primer_apellido, numero_id, foto_url FROM formularios WHERE numero_id = $1 ORDER BY fecha_registro DESC LIMIT 1',
             [numeroId]
         );
 
@@ -2637,7 +2719,8 @@ app.get('/api/buscar-paciente/:numeroId', async (req, res) => {
                 wix_id: paciente.wix_id,
                 nombre: `${paciente.primer_nombre || ''} ${paciente.primer_apellido || ''}`.trim(),
                 numero_id: paciente.numero_id,
-                tiene_foto: !!paciente.foto
+                tiene_foto: !!paciente.foto_url,
+                foto_url: paciente.foto_url
             }
         });
 
@@ -2685,17 +2768,29 @@ app.post('/api/actualizar-foto', async (req, res) => {
 
         const paciente = checkResult.rows[0];
 
-        // Actualizar foto en PostgreSQL
+        // Subir foto a DigitalOcean Spaces
+        console.log('📤 Subiendo foto a DigitalOcean Spaces...');
+        const fotoUrl = await subirFotoASpaces(foto, numeroId, paciente.id);
+
+        if (!fotoUrl) {
+            return res.status(500).json({
+                success: false,
+                message: 'Error al subir foto a Spaces'
+            });
+        }
+
+        // Actualizar foto_url en PostgreSQL
         await pool.query(
-            'UPDATE formularios SET foto = $1 WHERE id = $2',
-            [foto, paciente.id]
+            'UPDATE formularios SET foto_url = $1 WHERE id = $2',
+            [fotoUrl, paciente.id]
         );
 
-        console.log('✅ POSTGRESQL: Foto actualizada');
+        console.log('✅ POSTGRESQL: foto_url actualizada');
         console.log('   ID:', paciente.id);
         console.log('   Paciente:', paciente.primer_nombre, paciente.primer_apellido);
+        console.log('   URL:', fotoUrl);
 
-        // Sincronizar con Wix si tiene wix_id
+        // Sincronizar con Wix si tiene wix_id (enviar URL en lugar de base64)
         let wixSincronizado = false;
         if (paciente.wix_id) {
             try {
@@ -2710,13 +2805,13 @@ app.post('/api/actualizar-foto', async (req, res) => {
                     if (queryResult.success && queryResult.item) {
                         const wixId = queryResult.item._id;
 
-                        // Actualizar foto en Wix
+                        // Actualizar foto en Wix con URL
                         const wixPayload = {
                             _id: wixId,
-                            foto: foto
+                            foto: fotoUrl
                         };
 
-                        console.log('📤 Sincronizando foto con Wix...');
+                        console.log('📤 Sincronizando URL de foto con Wix...');
 
                         const wixResponse = await fetch('https://www.bsl.com.co/_functions/actualizarFormulario', {
                             method: 'POST',
@@ -2728,7 +2823,7 @@ app.post('/api/actualizar-foto', async (req, res) => {
 
                         if (wixResponse.ok) {
                             wixSincronizado = true;
-                            console.log('✅ WIX: Foto sincronizada exitosamente');
+                            console.log('✅ WIX: URL de foto sincronizada exitosamente');
                         } else {
                             console.error('❌ WIX: Error al sincronizar foto');
                         }
@@ -2741,6 +2836,7 @@ app.post('/api/actualizar-foto', async (req, res) => {
 
         console.log('');
         console.log('🎉 RESUMEN: Actualización de foto completada');
+        console.log('   ✅ Spaces: ' + fotoUrl);
         console.log('   ✅ PostgreSQL: OK');
         console.log('   ' + (wixSincronizado ? '✅' : '⚠️') + ' Wix:', wixSincronizado ? 'Sincronizado' : 'No sincronizado');
         console.log('═══════════════════════════════════════════════════════════');
@@ -2752,6 +2848,7 @@ app.post('/api/actualizar-foto', async (req, res) => {
             data: {
                 id: paciente.id,
                 nombre: `${paciente.primer_nombre || ''} ${paciente.primer_apellido || ''}`.trim(),
+                fotoUrl,
                 wixSincronizado
             }
         });
@@ -4365,7 +4462,7 @@ app.get('/api/nubia/pacientes', async (req, res) => {
                    h."atendido", h."examenes", h."_createdDate", h."fechaConsulta", h."fechaAtencion", h."horaAtencion",
                    h."pvEstado", h."mdConceptoFinal", h."mdRecomendacionesMedicasAdicionales", h."mdObservacionesCertificado",
                    h."pagado",
-                   (SELECT f.foto FROM formularios f WHERE f.numero_id = h."numeroId" ORDER BY f.fecha_registro DESC LIMIT 1) as foto
+                   (SELECT COALESCE(f.foto_url, f.foto) FROM formularios f WHERE f.numero_id = h."numeroId" ORDER BY f.fecha_registro DESC LIMIT 1) as foto
             FROM "HistoriaClinica" h
             WHERE h."medico" ILIKE '%NUBIA%'
               AND h."fechaAtencion" >= $1
