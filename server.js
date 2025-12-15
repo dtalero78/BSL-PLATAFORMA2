@@ -2444,15 +2444,21 @@ app.get('/api/historia-clinica/list', async (req, res) => {
     try {
         console.log('📋 Listando órdenes de HistoriaClinica...');
 
-        // Solo obtener registros de HistoriaClinica (sincronizados desde Wix)
+        // Obtener registros de HistoriaClinica con foto_url del formulario más reciente
         const historiaResult = await pool.query(`
-            SELECT "_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
-                   "celular", "cargo", "ciudad", "tipoExamen", "codEmpresa", "empresa", "medico",
-                   "atendido", "examenes", "_createdDate", "fechaConsulta", "fechaAtencion", "horaAtencion",
-                   "mdConceptoFinal", "mdRecomendacionesMedicasAdicionales", "mdObservacionesCertificado", "mdObsParaMiDocYa",
-                   'historia' as origen
-            FROM "HistoriaClinica"
-            ORDER BY "_createdDate" DESC
+            SELECT h."_id", h."numeroId", h."primerNombre", h."segundoNombre", h."primerApellido", h."segundoApellido",
+                   h."celular", h."cargo", h."ciudad", h."tipoExamen", h."codEmpresa", h."empresa", h."medico",
+                   h."atendido", h."examenes", h."_createdDate", h."fechaConsulta", h."fechaAtencion", h."horaAtencion",
+                   h."mdConceptoFinal", h."mdRecomendacionesMedicasAdicionales", h."mdObservacionesCertificado", h."mdObsParaMiDocYa",
+                   'historia' as origen,
+                   f.foto_url
+            FROM "HistoriaClinica" h
+            LEFT JOIN LATERAL (
+                SELECT foto_url FROM formularios
+                WHERE numero_id = h."numeroId" AND foto_url IS NOT NULL
+                ORDER BY fecha_registro DESC LIMIT 1
+            ) f ON true
+            ORDER BY h."_createdDate" DESC
             LIMIT 500
         `);
 

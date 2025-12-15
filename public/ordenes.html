@@ -2538,7 +2538,7 @@
                     <tr onclick="abrirModalDetalles('${orden._id}')">
                         <td>
                             <div class="cell-name">
-                                <div class="avatar">${getInitials(orden.primerNombre, orden.primerApellido)}</div>
+                                <div class="avatar ${orden.foto_url ? 'has-photo' : ''}">${orden.foto_url ? `<img src="${orden.foto_url}" alt="">` : getInitials(orden.primerNombre, orden.primerApellido)}</div>
                                 <div class="name-info">
                                     <span class="name-primary">${orden.primerNombre || ''} ${orden.primerApellido || ''}</span>
                                     <span class="name-secondary">${orden.empresa || '—'}</span>
@@ -2600,7 +2600,7 @@
                 return `
                     <div class="mobile-card">
                         <div class="mobile-card-header">
-                            <div class="mobile-card-avatar">${getInitials(orden.primerNombre, orden.primerApellido)}</div>
+                            <div class="mobile-card-avatar ${orden.foto_url ? 'has-photo' : ''}">${orden.foto_url ? `<img src="${orden.foto_url}" alt="">` : getInitials(orden.primerNombre, orden.primerApellido)}</div>
                             <div class="mobile-card-name">
                                 <h3>${orden.primerNombre || ''} ${orden.primerApellido || ''}</h3>
                                 <span>${orden.numeroId || '—'}</span>
