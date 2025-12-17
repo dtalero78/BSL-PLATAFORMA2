@@ -2761,11 +2761,20 @@
         }
 
         async function cargarTurnosDisponibles() {
-            const fecha = document.getElementById('modalFechaAtencion').value;
+            const inputFecha = document.getElementById('modalFechaAtencion');
+            const fecha = inputFecha.value;
             const select = document.getElementById('modalHoraAtencion');
 
             if (!fecha) {
                 select.innerHTML = '<option value="">Primero seleccione fecha...</option>';
+                return;
+            }
+
+            // Validar que la fecha no sea pasada (timezone Colombia)
+            const hoyColombia = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+            if (fecha < hoyColombia) {
+                inputFecha.value = '';
+                select.innerHTML = '<option value="">Fecha inválida - seleccione una fecha futura</option>';
                 return;
             }
 
@@ -3121,11 +3130,20 @@
         }
 
         async function cargarTurnosExpirado() {
-            const fecha = document.getElementById('fechaExpirado').value;
+            const inputFecha = document.getElementById('fechaExpirado');
+            const fecha = inputFecha.value;
             const select = document.getElementById('horaExpirado');
 
             if (!fecha) {
                 select.innerHTML = '<option value="">Primero selecciona una fecha</option>';
+                return;
+            }
+
+            // Validar que la fecha no sea pasada (timezone Colombia)
+            const hoyColombia = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+            if (fecha < hoyColombia) {
+                inputFecha.value = '';
+                select.innerHTML = '<option value="">Fecha inválida - selecciona una fecha futura</option>';
                 return;
             }
 
