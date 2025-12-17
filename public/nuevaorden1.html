@@ -901,19 +901,23 @@
 
         function generarHorasDisponibles(fecha) {
             const select = document.getElementById('horaSelect');
+
+            // Usar hora Colombia (UTC-5) independiente de la zona del usuario
             const ahora = new Date();
-            const fechaSeleccionada = new Date(fecha + 'T00:00:00');
-            const esHoy = fechaSeleccionada.toDateString() === ahora.toDateString();
+            const colombiaTime = ahora.toLocaleString('en-US', { timeZone: 'America/Bogota' });
+            const ahoraColombia = new Date(colombiaTime);
+            const fechaHoyColombia = ahora.toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+            const esHoy = fecha === fechaHoyColombia;
 
             // Horario de 8 AM a 8 PM (20:00)
             let horaInicio = 8;
             let horaFin = 20;
             let minutoInicio = 0;
 
-            // Si es hoy, agregar buffer de 1 hora desde la hora actual
+            // Si es hoy, agregar buffer de 1 hora desde la hora actual Colombia
             if (esHoy) {
-                const horaMinima = ahora.getHours() + 1;
-                const minutoMinimo = ahora.getMinutes();
+                const horaMinima = ahoraColombia.getHours() + 1;
+                const minutoMinimo = ahoraColombia.getMinutes();
 
                 if (horaMinima >= horaFin) {
                     select.innerHTML = '<option value="">No hay horas disponibles para hoy</option>';

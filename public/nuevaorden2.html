@@ -948,9 +948,12 @@
                 }
 
                 // Filtrar solo los turnos que están disponibles
+                // Usar hora Colombia (UTC-5) independiente de la zona del usuario
                 const ahora = new Date();
-                const fechaSeleccionada = new Date(fecha + 'T00:00:00');
-                const esHoy = fechaSeleccionada.toDateString() === ahora.toDateString();
+                const colombiaTime = ahora.toLocaleString('en-US', { timeZone: 'America/Bogota' });
+                const ahoraColombia = new Date(colombiaTime);
+                const fechaHoyColombia = ahora.toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+                const esHoy = fecha === fechaHoyColombia;
 
                 select.innerHTML = '<option value="">Seleccionar hora...</option>';
                 let hayHorasDisponibles = false;
@@ -958,14 +961,13 @@
                 for (const turno of turnosDisponibles) {
                     if (!turno.disponible) continue;
 
-                    // Si es hoy, verificar que la hora sea al menos 1 hora en el futuro
+                    // Si es hoy, verificar que la hora sea al menos 1 hora en el futuro (hora Colombia)
                     if (esHoy) {
                         const [h, m] = turno.hora.split(':').map(Number);
-                        const horaTurno = new Date(fechaSeleccionada);
-                        horaTurno.setHours(h, m, 0, 0);
+                        const horaTurnoMinutos = h * 60 + m;
+                        const horaColombiaMinutos = ahoraColombia.getHours() * 60 + ahoraColombia.getMinutes();
 
-                        const horaMinima = new Date(ahora.getTime() + 60 * 60 * 1000); // +1 hora
-                        if (horaTurno < horaMinima) continue;
+                        if (horaTurnoMinutos < horaColombiaMinutos + 60) continue; // +1 hora de margen
                     }
 
                     const hora = turno.hora;
@@ -1549,21 +1551,25 @@
                     return;
                 }
 
+                // Usar hora Colombia (UTC-5) independiente de la zona del usuario
                 const ahora = new Date();
-                const fechaSeleccionada = new Date(fecha + 'T00:00:00');
-                const esHoy = fechaSeleccionada.toDateString() === ahora.toDateString();
+                const colombiaTime = ahora.toLocaleString('en-US', { timeZone: 'America/Bogota' });
+                const ahoraColombia = new Date(colombiaTime);
+                const fechaHoyColombia = ahora.toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+                const esHoy = fecha === fechaHoyColombia;
 
                 select.innerHTML = '<option value="">Seleccionar hora...</option>';
 
                 for (const turno of result.turnos) {
                     if (!turno.disponible) continue;
 
+                    // Si es hoy, verificar que la hora sea al menos 1 hora en el futuro (hora Colombia)
                     if (esHoy) {
                         const [h, m] = turno.hora.split(':').map(Number);
-                        const horaTurno = new Date(fechaSeleccionada);
-                        horaTurno.setHours(h, m, 0, 0);
-                        const horaMinima = new Date(ahora.getTime() + 60 * 60 * 1000);
-                        if (horaTurno < horaMinima) continue;
+                        const horaTurnoMinutos = h * 60 + m;
+                        const horaColombiaMinutos = ahoraColombia.getHours() * 60 + ahoraColombia.getMinutes();
+
+                        if (horaTurnoMinutos < horaColombiaMinutos + 60) continue; // +1 hora de margen
                     }
 
                     const hora = turno.hora;
