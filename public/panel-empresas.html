@@ -1544,6 +1544,12 @@
                         <button class="tab" data-filter="atendido">Atendidos</button>
                         <button class="tab" data-filter="pendiente">Pendientes</button>
                     </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="date" id="fechaDesde" class="form-input" style="padding: 8px 12px; font-size: 13px; border-radius: 8px; width: auto;" title="Fecha desde">
+                        <span style="color: var(--text-tertiary); font-size: 13px;">a</span>
+                        <input type="date" id="fechaHasta" class="form-input" style="padding: 8px 12px; font-size: 13px; border-radius: 8px; width: auto;" title="Fecha hasta">
+                        <button id="btnLimpiarFechas" onclick="limpiarFiltroFechas()" style="padding: 8px 12px; border: none; background: var(--bg-tertiary); border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--text-secondary);" title="Limpiar filtro de fechas">✕</button>
+                    </div>
                     <div class="stats-badge" id="tableCount">
                         <strong>0</strong> registros
                     </div>
@@ -2102,6 +2108,8 @@
         let busquedaActual = '';
         let currentFilter = 'todos';
         let pacienteActual = null;
+        let fechaDesde = '';
+        let fechaHasta = '';
 
         // Función para capitalizar (primera letra mayúscula de cada palabra)
         function capitalize(str) {
@@ -2170,7 +2178,25 @@
                     aplicarFiltros();
                 });
             });
+
+            // Filtros de fecha
+            document.getElementById('fechaDesde').addEventListener('change', (e) => {
+                fechaDesde = e.target.value;
+                aplicarFiltros();
+            });
+            document.getElementById('fechaHasta').addEventListener('change', (e) => {
+                fechaHasta = e.target.value;
+                aplicarFiltros();
+            });
         });
+
+        function limpiarFiltroFechas() {
+            fechaDesde = '';
+            fechaHasta = '';
+            document.getElementById('fechaDesde').value = '';
+            document.getElementById('fechaHasta').value = '';
+            aplicarFiltros();
+        }
 
         // Login
         btnEntrar.addEventListener('click', iniciarSesion);
@@ -2288,6 +2314,24 @@
                 data = data.filter(o => o.atendido === 'ATENDIDO');
             } else if (currentFilter === 'pendiente') {
                 data = data.filter(o => o.atendido !== 'ATENDIDO');
+            }
+
+            // Aplicar filtro de fechas (usa fechaAtencion)
+            if (fechaDesde) {
+                const desde = new Date(fechaDesde + 'T00:00:00');
+                data = data.filter(o => {
+                    if (!o.fechaAtencion) return false;
+                    const fechaOrden = new Date(o.fechaAtencion);
+                    return fechaOrden >= desde;
+                });
+            }
+            if (fechaHasta) {
+                const hasta = new Date(fechaHasta + 'T23:59:59');
+                data = data.filter(o => {
+                    if (!o.fechaAtencion) return false;
+                    const fechaOrden = new Date(o.fechaAtencion);
+                    return fechaOrden <= hasta;
+                });
             }
 
             // Aplicar búsqueda local
