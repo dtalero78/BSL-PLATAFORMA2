@@ -2058,25 +2058,28 @@
                 <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 10px; padding: 16px;">
                     <h4 style="font-size: 14px; font-weight: 600; color: #166534; margin-bottom: 12px;">Nueva fecha y hora:</h4>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                        <div>
-                            <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Mes</label>
-                            <select id="mesExpirado" onchange="actualizarDiasExpirado()" class="form-input" style="width: 100%; padding: 10px; border-radius: 8px;">
-                                <option value="">Seleccionar...</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Día</label>
-                            <select id="diaExpirado" onchange="actualizarHorasExpirado()" class="form-input" style="width: 100%; padding: 10px; border-radius: 8px;">
-                                <option value="">Seleccionar...</option>
-                            </select>
+                    <!-- Tabs de modalidad -->
+                    <div style="margin-bottom: 12px;">
+                        <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Modalidad</label>
+                        <div style="display: flex; gap: 8px;">
+                            <button type="button" class="modalidad-tab-expirado active" data-modalidad="presencial" onclick="cambiarModalidadExpirado('presencial')" style="flex: 1; padding: 10px; border: 1px solid #10B981; border-radius: 8px; background: #10B981; color: white; cursor: pointer; font-weight: 500;">
+                                Presencial
+                            </button>
+                            <button type="button" class="modalidad-tab-expirado" data-modalidad="virtual" onclick="cambiarModalidadExpirado('virtual')" style="flex: 1; padding: 10px; border: 1px solid #D1D5DB; border-radius: 8px; background: white; color: #374151; cursor: pointer; font-weight: 500;">
+                                Virtual
+                            </button>
                         </div>
                     </div>
 
+                    <div style="margin-bottom: 12px;">
+                        <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Fecha</label>
+                        <input type="date" id="fechaExpirado" onchange="cargarTurnosExpirado()" class="form-input" style="width: 100%; padding: 10px; border-radius: 8px;">
+                    </div>
+
                     <div>
-                        <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Hora</label>
+                        <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Hora disponible</label>
                         <select id="horaExpirado" class="form-input" style="width: 100%; padding: 10px; border-radius: 8px;">
-                            <option value="">Primero selecciona un día</option>
+                            <option value="">Primero selecciona una fecha</option>
                         </select>
                     </div>
                 </div>
@@ -3012,8 +3015,11 @@
             document.getElementById('modalAtendido').classList.remove('active');
         }
 
+        let modalidadExpirado = 'presencial';
+
         function mostrarModalExpirado(ordenExistente) {
             ordenExistenteActual = ordenExistente;
+            modalidadExpirado = 'presencial';
 
             let fechaAtencionStr = 'No disponible';
             if (ordenExistente.fechaAtencion) {
@@ -3026,7 +3032,15 @@
                 <p style="margin: 4px 0;"><strong>Fecha programada:</strong> <span style="color: #DC2626;">${fechaAtencionStr} (Expirada)</span></p>
             `;
 
-            cargarMesesModalExpirado();
+            // Resetear controles
+            actualizarTabsModalidadExpirado();
+            document.getElementById('fechaExpirado').value = '';
+            document.getElementById('horaExpirado').innerHTML = '<option value="">Primero selecciona una fecha</option>';
+
+            // Establecer fecha mínima como hoy
+            const hoy = new Date().toISOString().split('T')[0];
+            document.getElementById('fechaExpirado').min = hoy;
+
             document.getElementById('modalExpirado').classList.add('active');
         }
 
@@ -3034,108 +3048,89 @@
             document.getElementById('modalExpirado').classList.remove('active');
         }
 
-        function cargarMesesModalExpirado() {
-            const select = document.getElementById('mesExpirado');
-            const hoy = new Date();
-            const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-                          'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-
-            select.innerHTML = '<option value="">Seleccionar...</option>';
-            for (let i = 0; i < 3; i++) {
-                const fecha = new Date(hoy.getFullYear(), hoy.getMonth() + i, 1);
-                const mesIndex = fecha.getMonth();
-                const year = fecha.getFullYear();
-                select.innerHTML += `<option value="${mesIndex + 1}-${year}">${meses[mesIndex]} ${year}</option>`;
+        function cambiarModalidadExpirado(modalidad) {
+            modalidadExpirado = modalidad;
+            actualizarTabsModalidadExpirado();
+            // Si ya hay fecha seleccionada, recargar turnos
+            if (document.getElementById('fechaExpirado').value) {
+                cargarTurnosExpirado();
             }
         }
 
-        function actualizarDiasExpirado() {
-            const mesValue = document.getElementById('mesExpirado').value;
-            if (!mesValue) return;
-
-            const [mes, year] = mesValue.split('-').map(Number);
-            const select = document.getElementById('diaExpirado');
-            const hoy = new Date();
-            hoy.setHours(0, 0, 0, 0);
-
-            const primerDia = new Date(year, mes - 1, 1);
-            const ultimoDia = new Date(year, mes, 0);
-
-            let diaInicio = primerDia;
-            if (mes - 1 === hoy.getMonth() && year === hoy.getFullYear()) {
-                diaInicio = hoy;
-            }
-
-            const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-            select.innerHTML = '<option value="">Seleccionar...</option>';
-
-            let diaActual = new Date(diaInicio);
-            while (diaActual <= ultimoDia) {
-                const diaSemana = diasSemana[diaActual.getDay()];
-                const diaNum = diaActual.getDate();
-                const esHoy = diaActual.getTime() === hoy.getTime();
-                const fechaISO = diaActual.toISOString().split('T')[0];
-
-                select.innerHTML += `<option value="${fechaISO}">${esHoy ? 'Hoy' : diaSemana + ' ' + diaNum}</option>`;
-                diaActual.setDate(diaActual.getDate() + 1);
-            }
-
-            document.getElementById('horaExpirado').innerHTML = '<option value="">Primero selecciona un día</option>';
+        function actualizarTabsModalidadExpirado() {
+            document.querySelectorAll('.modalidad-tab-expirado').forEach(tab => {
+                const esActivo = tab.dataset.modalidad === modalidadExpirado;
+                if (esActivo) {
+                    tab.style.background = '#10B981';
+                    tab.style.color = 'white';
+                    tab.style.borderColor = '#10B981';
+                } else {
+                    tab.style.background = 'white';
+                    tab.style.color = '#374151';
+                    tab.style.borderColor = '#D1D5DB';
+                }
+            });
         }
 
-        function actualizarHorasExpirado() {
-            const fecha = document.getElementById('diaExpirado').value;
-            if (!fecha) return;
-
+        async function cargarTurnosExpirado() {
+            const fecha = document.getElementById('fechaExpirado').value;
             const select = document.getElementById('horaExpirado');
-            const ahora = new Date();
-            const fechaSeleccionada = new Date(fecha + 'T00:00:00');
-            const esHoy = fechaSeleccionada.toDateString() === ahora.toDateString();
 
-            let horaInicio = 8;
-            let horaFin = 20;
-            let minutoInicio = 0;
-
-            if (esHoy) {
-                const horaMinima = ahora.getHours() + 1;
-                const minutoMinimo = ahora.getMinutes();
-
-                if (horaMinima >= horaFin) {
-                    select.innerHTML = '<option value="">No hay horas disponibles para hoy</option>';
-                    return;
-                }
-
-                if (horaMinima > horaInicio) {
-                    horaInicio = horaMinima;
-                    minutoInicio = Math.ceil(minutoMinimo / 10) * 10;
-                    if (minutoInicio >= 60) {
-                        minutoInicio = 0;
-                        horaInicio++;
-                    }
-                }
+            if (!fecha) {
+                select.innerHTML = '<option value="">Primero selecciona una fecha</option>';
+                return;
             }
 
-            select.innerHTML = '<option value="">Seleccionar hora...</option>';
+            select.innerHTML = '<option value="">Cargando turnos disponibles...</option>';
 
-            for (let hora = horaInicio; hora < horaFin; hora++) {
-                const startMinuto = (hora === horaInicio) ? minutoInicio : 0;
-                for (let minuto = startMinuto; minuto < 60; minuto += 10) {
-                    const horaStr = String(hora).padStart(2, '0');
-                    const minutoStr = String(minuto).padStart(2, '0');
-                    const horaCompleta = `${horaStr}:${minutoStr}`;
-                    const hora12 = hora > 12 ? hora - 12 : (hora === 0 ? 12 : hora);
-                    const ampm = hora >= 12 ? 'PM' : 'AM';
-                    select.innerHTML += `<option value="${horaCompleta}">${hora12}:${minutoStr} ${ampm}</option>`;
+            try {
+                const response = await fetch(`/api/turnos-disponibles?fecha=${fecha}&modalidad=${modalidadExpirado}`);
+                const result = await response.json();
+
+                if (result.success && result.turnos && result.turnos.length > 0) {
+                    select.innerHTML = '<option value="">Seleccionar hora...</option>';
+
+                    result.turnos.forEach(turno => {
+                        const [hora, minuto] = turno.hora.split(':').map(Number);
+                        const hora12 = hora > 12 ? hora - 12 : (hora === 0 ? 12 : hora);
+                        const ampm = hora >= 12 ? 'PM' : 'AM';
+                        const texto = `${hora12}:${minuto.toString().padStart(2, '0')} ${ampm}`;
+
+                        const option = document.createElement('option');
+                        option.value = JSON.stringify({ hora: turno.hora, medico: turno.medico });
+
+                        if (turno.disponible) {
+                            option.textContent = texto;
+                        } else {
+                            option.textContent = `${texto} (no disponible)`;
+                            option.disabled = true;
+                            option.style.color = 'var(--text-tertiary)';
+                        }
+                        select.appendChild(option);
+                    });
+                } else {
+                    select.innerHTML = '<option value="">No hay turnos disponibles para este día</option>';
                 }
+            } catch (error) {
+                console.error('Error al cargar turnos:', error);
+                select.innerHTML = '<option value="">Error al cargar turnos</option>';
             }
         }
 
         async function actualizarFechaYContinuar() {
-            const dia = document.getElementById('diaExpirado').value;
-            const hora = document.getElementById('horaExpirado').value;
+            const fecha = document.getElementById('fechaExpirado').value;
+            const turnoValue = document.getElementById('horaExpirado').value;
 
-            if (!dia || !hora) {
+            if (!fecha || !turnoValue) {
                 alert('Por favor selecciona una nueva fecha y hora');
+                return;
+            }
+
+            let turnoData;
+            try {
+                turnoData = JSON.parse(turnoValue);
+            } catch (e) {
+                alert('Error al procesar el turno seleccionado');
                 return;
             }
 
@@ -3144,8 +3139,8 @@
             btn.textContent = 'Actualizando...';
 
             try {
-                const [year, month, day] = dia.split('-').map(Number);
-                const [hours, minutes] = hora.split(':').map(Number);
+                const [year, month, day] = fecha.split('-').map(Number);
+                const [hours, minutes] = turnoData.hora.split(':').map(Number);
                 const fechaHora = new Date(year, month - 1, day, hours, minutes);
 
                 const response = await fetch(`/api/ordenes/${ordenExistenteActual._id}/fecha-atencion`, {
@@ -3153,7 +3148,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         fechaAtencion: fechaHora.toISOString(),
-                        horaAtencion: hora
+                        horaAtencion: turnoData.hora,
+                        medico: turnoData.medico
                     })
                 });
 

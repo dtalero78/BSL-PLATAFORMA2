@@ -1555,7 +1555,7 @@ app.get('/api/ordenes/verificar-duplicado/:numeroId', async (req, res) => {
 app.patch('/api/ordenes/:id/fecha-atencion', async (req, res) => {
     try {
         const { id } = req.params;
-        const { fechaAtencion, horaAtencion } = req.body;
+        const { fechaAtencion, horaAtencion, medico } = req.body;
 
         if (!fechaAtencion) {
             return res.status(400).json({
@@ -1569,10 +1569,11 @@ app.patch('/api/ordenes/:id/fecha-atencion', async (req, res) => {
         const result = await pool.query(`
             UPDATE "HistoriaClinica"
             SET "fechaAtencion" = $1,
-                "horaAtencion" = NULL
+                "horaAtencion" = NULL,
+                "medico" = COALESCE($3, "medico")
             WHERE "_id" = $2
-            RETURNING "_id", "numeroId", "primerNombre", "primerApellido", "fechaAtencion"
-        `, [fechaCorrecta, id]);
+            RETURNING "_id", "numeroId", "primerNombre", "primerApellido", "fechaAtencion", "medico"
+        `, [fechaCorrecta, id, medico || null]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({
@@ -1607,12 +1608,13 @@ app.patch('/api/ordenes/:id/fecha-atencion', async (req, res) => {
                 body: JSON.stringify({
                     idGeneral: id,
                     fechaAtencion: fechaAtencionWix,
-                    horaAtencion: horaAtencion || ''
+                    horaAtencion: horaAtencion || '',
+                    medico: medico || ''
                 })
             });
 
             if (wixResponse.ok) {
-                console.log('✅ Fecha actualizada en Wix');
+                console.log('✅ Fecha y médico actualizados en Wix');
             }
         } catch (wixError) {
             console.error('⚠️ Error al actualizar en Wix (no crítico):', wixError.message);
@@ -1626,7 +1628,7 @@ app.patch('/api/ordenes/:id/fecha-atencion', async (req, res) => {
                 numeroId: ordenActualizada.numeroId,
                 nombre: `${ordenActualizada.primerNombre} ${ordenActualizada.primerApellido}`,
                 fechaAtencion: ordenActualizada.fechaAtencion,
-                horaAtencion: ordenActualizada.horaAtencion
+                medico: ordenActualizada.medico
             }
         });
     } catch (error) {
