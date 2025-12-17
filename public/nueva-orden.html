@@ -992,10 +992,6 @@
             cargarEmpresas();
             cargarExamenes();
             generarOpcionesHoraDefault();
-
-            // Establecer fecha mínima como hoy (Colombia timezone)
-            const hoyColombia = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
-            document.getElementById('inputFechaAtencion').min = hoyColombia;
         });
 
         async function cargarExamenes() {
@@ -1161,8 +1157,19 @@
 
         async function actualizarMedicosPorModalidad() {
             const modalidad = document.getElementById('selectModalidad').value;
-            const fecha = document.getElementById('inputFechaAtencion').value;
+            const inputFecha = document.getElementById('inputFechaAtencion');
+            const fecha = inputFecha.value;
             const select = document.getElementById('selectMedico');
+
+            // Validar que la fecha no sea pasada (timezone Colombia)
+            if (fecha) {
+                const hoyColombia = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+                if (fecha < hoyColombia) {
+                    inputFecha.value = '';
+                    alert('No se puede seleccionar una fecha pasada');
+                    return;
+                }
+            }
 
             select.innerHTML = '<option value="">Cargando médicos...</option>';
 
