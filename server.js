@@ -3984,15 +3984,14 @@ app.get('/api/turnos-disponibles', async (req, res) => {
 
             // Obtener citas existentes del médico para esa fecha
             const citasResult = await pool.query(`
-                SELECT "horaAtencion" as hora
+                SELECT TO_CHAR("fechaAtencion", 'HH24:MI') as hora
                 FROM "HistoriaClinica"
                 WHERE "fechaAtencion" >= $1::timestamp
                   AND "fechaAtencion" < ($1::timestamp + interval '1 day')
                   AND "medico" = $2
-                  AND "horaAtencion" IS NOT NULL
             `, [fecha, medicoNombre]);
 
-            const horasOcupadas = citasResult.rows.map(r => r.hora ? r.hora.substring(0, 5) : null).filter(Boolean);
+            const horasOcupadas = citasResult.rows.map(r => r.hora).filter(Boolean);
 
             // Generar horarios para TODOS los rangos de este médico
             for (const rango of medico.rangos) {
