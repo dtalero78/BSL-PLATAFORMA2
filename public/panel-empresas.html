@@ -2595,6 +2595,10 @@
             const inputFecha = document.getElementById('edit-fechaAtencion');
             const inputHora = document.getElementById('edit-horaAtencion');
 
+            // Establecer fecha mínima como hoy (Colombia timezone)
+            const hoyColombia = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+            inputFecha.min = hoyColombia;
+
             if (pacienteActual.fechaAtencion) {
                 const fecha = new Date(pacienteActual.fechaAtencion);
                 const year = fecha.getFullYear();
@@ -2733,7 +2737,7 @@
             document.getElementById('modalCargo').value = '';
             document.getElementById('modalCiudad').value = '';
             document.getElementById('modalTipoExamen').value = '';
-            const hoy = new Date().toISOString().split('T')[0];
+            const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
             const inputFecha = document.getElementById('modalFechaAtencion');
             inputFecha.min = hoy;
             inputFecha.value = '';
@@ -3081,8 +3085,8 @@
             document.getElementById('fechaExpirado').value = '';
             document.getElementById('horaExpirado').innerHTML = '<option value="">Primero selecciona una fecha</option>';
 
-            // Establecer fecha mínima como hoy
-            const hoy = new Date().toISOString().split('T')[0];
+            // Establecer fecha mínima como hoy (Colombia timezone)
+            const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
             document.getElementById('fechaExpirado').min = hoy;
 
             document.getElementById('modalExpirado').classList.add('active');

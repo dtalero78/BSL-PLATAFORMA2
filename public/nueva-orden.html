@@ -992,6 +992,10 @@
             cargarEmpresas();
             cargarExamenes();
             generarOpcionesHoraDefault();
+
+            // Establecer fecha mínima como hoy (Colombia timezone)
+            const hoyColombia = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+            document.getElementById('inputFechaAtencion').min = hoyColombia;
         });
 
         async function cargarExamenes() {

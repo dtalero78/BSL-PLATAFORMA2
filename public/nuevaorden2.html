@@ -873,7 +873,10 @@
         // Cargar meses disponibles
         function cargarMeses() {
             const select = document.getElementById('mes');
-            const hoy = new Date();
+            // Usar timezone Colombia para obtener la fecha actual
+            const ahora = new Date();
+            const colombiaTime = ahora.toLocaleString('en-US', { timeZone: 'America/Bogota' });
+            const hoy = new Date(colombiaTime);
             const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
                           'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
@@ -893,7 +896,10 @@
 
             const [mes, year] = mesValue.split('-').map(Number);
             const select = document.getElementById('dia');
-            const hoy = new Date();
+            // Usar timezone Colombia para obtener la fecha actual
+            const ahora = new Date();
+            const colombiaTime = ahora.toLocaleString('en-US', { timeZone: 'America/Bogota' });
+            const hoy = new Date(colombiaTime);
             hoy.setHours(0, 0, 0, 0);
 
             const primerDia = new Date(year, mes - 1, 1);
@@ -1487,7 +1493,10 @@
 
         function cargarMesesModalExpirado() {
             const select = document.getElementById('mesExpirado');
-            const hoy = new Date();
+            // Usar timezone Colombia para obtener la fecha actual
+            const ahora = new Date();
+            const colombiaTime = ahora.toLocaleString('en-US', { timeZone: 'America/Bogota' });
+            const hoy = new Date(colombiaTime);
             const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
                           'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
@@ -1506,7 +1515,10 @@
 
             const [mes, year] = mesValue.split('-').map(Number);
             const select = document.getElementById('diaExpirado');
-            const hoy = new Date();
+            // Usar timezone Colombia para obtener la fecha actual
+            const ahora = new Date();
+            const colombiaTime = ahora.toLocaleString('en-US', { timeZone: 'America/Bogota' });
+            const hoy = new Date(colombiaTime);
             hoy.setHours(0, 0, 0, 0);
 
             const primerDia = new Date(year, mes - 1, 1);
