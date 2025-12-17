@@ -4046,10 +4046,13 @@ app.get('/api/turnos-disponibles', async (req, res) => {
             .map(hora => {
                 const medicosEnHora = turnosPorHora[hora];
                 const medicosDisponibles = medicosEnHora.filter(m => m.disponible);
+                // Asignar el primer médico disponible
+                const medicoAsignado = medicosDisponibles.length > 0 ? medicosDisponibles[0].medicoNombre : null;
                 return {
                     hora,
                     disponible: medicosDisponibles.length > 0,
                     cantidadDisponibles: medicosDisponibles.length,
+                    medico: medicoAsignado,
                     // Guardamos internamente los médicos para asignar al crear la orden
                     _medicos: medicosEnHora
                 };
