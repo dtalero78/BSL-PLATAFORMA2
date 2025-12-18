@@ -1942,7 +1942,7 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Fecha de Atención <span class="required">*</span></label>
-                            <input type="date" class="form-input" id="modalFechaAtencion" onchange="cargarTurnosDisponibles()">
+                            <input type="date" class="form-input" id="modalFechaAtencion" onchange="validarYCargarTurnosDisponibles()">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Hora de Atención <span class="required">*</span></label>
@@ -2079,7 +2079,7 @@
 
                     <div style="margin-bottom: 12px;">
                         <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Fecha</label>
-                        <input type="date" id="fechaExpirado" onchange="cargarTurnosExpirado()" class="form-input" style="width: 100%; padding: 10px; border-radius: 8px;">
+                        <input type="date" id="fechaExpirado" onchange="validarYCargarTurnosExpirado()" class="form-input" style="width: 100%; padding: 10px; border-radius: 8px;">
                     </div>
 
                     <div>
@@ -2744,7 +2744,7 @@
             modalidadActual = modalidad;
             actualizarTabsModalidad();
             if (document.getElementById('modalFechaAtencion').value) {
-                cargarTurnosDisponibles();
+                validarYCargarTurnosDisponibles();
             }
         }
 
@@ -2754,7 +2754,7 @@
             });
         }
 
-        async function cargarTurnosDisponibles() {
+        function validarYCargarTurnosDisponibles() {
             const inputFecha = document.getElementById('modalFechaAtencion');
             const fecha = inputFecha.value;
             const select = document.getElementById('modalHoraAtencion');
@@ -2767,8 +2767,23 @@
             // Validar que la fecha no sea pasada (timezone Colombia)
             const hoyColombia = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
             if (fecha < hoyColombia) {
+                alert('No puedes seleccionar una fecha pasada');
                 inputFecha.value = '';
-                select.innerHTML = '<option value="">Fecha inválida - seleccione una fecha futura</option>';
+                select.innerHTML = '<option value="">Selecciona una fecha válida</option>';
+                return;
+            }
+
+            // Fecha válida, cargar turnos
+            cargarTurnosDisponibles();
+        }
+
+        async function cargarTurnosDisponibles() {
+            const inputFecha = document.getElementById('modalFechaAtencion');
+            const fecha = inputFecha.value;
+            const select = document.getElementById('modalHoraAtencion');
+
+            if (!fecha) {
+                select.innerHTML = '<option value="">Primero seleccione fecha...</option>';
                 return;
             }
 
@@ -3100,7 +3115,7 @@
             actualizarTabsModalidadExpirado();
             // Si ya hay fecha seleccionada, recargar turnos
             if (document.getElementById('fechaExpirado').value) {
-                cargarTurnosExpirado();
+                validarYCargarTurnosExpirado();
             }
         }
 
@@ -3119,7 +3134,7 @@
             });
         }
 
-        async function cargarTurnosExpirado() {
+        function validarYCargarTurnosExpirado() {
             const inputFecha = document.getElementById('fechaExpirado');
             const fecha = inputFecha.value;
             const select = document.getElementById('horaExpirado');
@@ -3132,8 +3147,23 @@
             // Validar que la fecha no sea pasada (timezone Colombia)
             const hoyColombia = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
             if (fecha < hoyColombia) {
+                alert('No puedes seleccionar una fecha pasada');
                 inputFecha.value = '';
-                select.innerHTML = '<option value="">Fecha inválida - selecciona una fecha futura</option>';
+                select.innerHTML = '<option value="">Selecciona una fecha válida</option>';
+                return;
+            }
+
+            // Fecha válida, cargar turnos
+            cargarTurnosExpirado();
+        }
+
+        async function cargarTurnosExpirado() {
+            const inputFecha = document.getElementById('fechaExpirado');
+            const fecha = inputFecha.value;
+            const select = document.getElementById('horaExpirado');
+
+            if (!fecha) {
+                select.innerHTML = '<option value="">Primero selecciona una fecha</option>';
                 return;
             }
 
