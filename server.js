@@ -386,6 +386,19 @@ const initDB = async () => {
             // Si falla, es porque la columna no existe o ya tiene el tipo correcto
         }
 
+        // Aumentar tamaño de columnas eps, arl, pensiones a VARCHAR(150)
+        const columnsToResize = ['eps', 'arl', 'pensiones'];
+        for (const col of columnsToResize) {
+            try {
+                await pool.query(`
+                    ALTER TABLE formularios
+                    ALTER COLUMN ${col} TYPE VARCHAR(150)
+                `);
+            } catch (err) {
+                // Columna no existe o ya tiene el tipo correcto
+            }
+        }
+
         // Agregar columna horaAtencion a HistoriaClinica si no existe
         try {
             await pool.query(`
