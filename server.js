@@ -2114,6 +2114,211 @@ app.put('/api/ordenes/:id', async (req, res) => {
     }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// ENDPOINT: ESTADÍSTICAS CON IA (OpenAI)
+// ═══════════════════════════════════════════════════════════════════════════
+app.post('/api/estadisticas-ia', async (req, res) => {
+    try {
+        const { codEmpresa, pregunta } = req.body;
+
+        if (!codEmpresa || !pregunta) {
+            return res.status(400).json({
+                success: false,
+                message: 'Se requiere codEmpresa y pregunta'
+            });
+        }
+
+        console.log('');
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('🤖 CONSULTA IA - Empresa:', codEmpresa);
+        console.log('📝 Pregunta:', pregunta);
+        console.log('═══════════════════════════════════════════════════════════');
+
+        // Query agregado eficiente para obtener estadísticas de la empresa
+        const statsQuery = `
+            SELECT
+                COUNT(*) as total_empleados,
+                COUNT(*) FILTER (WHERE fuma = 'Sí') as fumadores,
+                COUNT(*) FILTER (WHERE presion_alta = 'Sí') as presion_alta,
+                COUNT(*) FILTER (WHERE problemas_cardiacos = 'Sí') as problemas_cardiacos,
+                COUNT(*) FILTER (WHERE problemas_azucar = 'Sí') as diabetes,
+                COUNT(*) FILTER (WHERE hormigueos = 'Sí') as hormigueos,
+                COUNT(*) FILTER (WHERE dolor_espalda = 'Sí') as dolor_espalda,
+                COUNT(*) FILTER (WHERE dolor_cabeza = 'Sí') as dolor_cabeza,
+                COUNT(*) FILTER (WHERE problemas_sueno = 'Sí') as problemas_sueno,
+                COUNT(*) FILTER (WHERE embarazo = 'Sí') as embarazos,
+                COUNT(*) FILTER (WHERE hernias = 'Sí') as hernias,
+                COUNT(*) FILTER (WHERE varices = 'Sí') as varices,
+                COUNT(*) FILTER (WHERE hepatitis = 'Sí') as hepatitis,
+                COUNT(*) FILTER (WHERE enfermedad_higado = 'Sí') as enfermedad_higado,
+                COUNT(*) FILTER (WHERE enfermedad_pulmonar = 'Sí') as enfermedad_pulmonar,
+                COUNT(*) FILTER (WHERE cirugia_ocular = 'Sí') as cirugia_ocular,
+                COUNT(*) FILTER (WHERE usa_anteojos = 'Sí') as usa_anteojos,
+                COUNT(*) FILTER (WHERE usa_lentes_contacto = 'Sí') as usa_lentes_contacto,
+                COUNT(*) FILTER (WHERE condicion_medica = 'Sí') as condicion_medica_tratamiento,
+                COUNT(*) FILTER (WHERE trastorno_psicologico = 'Sí') as trastorno_psicologico,
+                COUNT(*) FILTER (WHERE sintomas_psicologicos = 'Sí') as sintomas_psicologicos,
+                COUNT(*) FILTER (WHERE diagnostico_cancer = 'Sí') as diagnostico_cancer,
+                COUNT(*) FILTER (WHERE enfermedades_laborales = 'Sí') as enfermedades_laborales,
+                COUNT(*) FILTER (WHERE enfermedad_osteomuscular = 'Sí') as enfermedad_osteomuscular,
+                COUNT(*) FILTER (WHERE enfermedad_autoinmune = 'Sí') as enfermedad_autoinmune,
+                COUNT(*) FILTER (WHERE genero = 'MASCULINO') as hombres,
+                COUNT(*) FILTER (WHERE genero = 'FEMENINO') as mujeres,
+                ROUND(AVG(edad)::numeric, 1) as edad_promedio,
+                MIN(edad) as edad_minima,
+                MAX(edad) as edad_maxima,
+                -- Antecedentes familiares
+                COUNT(*) FILTER (WHERE familia_diabetes = 'Sí') as familia_diabetes,
+                COUNT(*) FILTER (WHERE familia_hipertension = 'Sí') as familia_hipertension,
+                COUNT(*) FILTER (WHERE familia_cancer = 'Sí') as familia_cancer,
+                COUNT(*) FILTER (WHERE familia_infartos = 'Sí') as familia_infartos,
+                COUNT(*) FILTER (WHERE familia_trastornos = 'Sí') as familia_trastornos_mentales,
+                COUNT(*) FILTER (WHERE familia_hereditarias = 'Sí') as familia_enfermedades_hereditarias,
+                COUNT(*) FILTER (WHERE familia_geneticas = 'Sí') as familia_enfermedades_geneticas
+            FROM formularios
+            WHERE UPPER(cod_empresa) = UPPER($1)
+        `;
+
+        const statsResult = await pool.query(statsQuery, [codEmpresa]);
+        const stats = statsResult.rows[0];
+
+        // También obtener datos de HistoriaClinica (citas/órdenes)
+        const ordenesQuery = `
+            SELECT
+                COUNT(*) as total_ordenes,
+                COUNT(*) FILTER (WHERE "atendido" = 'ATENDIDO') as atendidos,
+                COUNT(*) FILTER (WHERE "atendido" = 'PENDIENTE') as pendientes
+            FROM "HistoriaClinica"
+            WHERE UPPER("codEmpresa") = UPPER($1)
+        `;
+        const ordenesResult = await pool.query(ordenesQuery, [codEmpresa]);
+        const ordenes = ordenesResult.rows[0];
+
+        // Construir el contexto de datos para OpenAI
+        const datosEstadisticos = `
+DATOS DE SALUD DE LOS COLABORADORES:
+- Total de empleados con formulario completado: ${stats.total_empleados}
+- Hombres: ${stats.hombres} | Mujeres: ${stats.mujeres}
+- Edad promedio: ${stats.edad_promedio || 'N/A'} años (min: ${stats.edad_minima || 'N/A'}, max: ${stats.edad_maxima || 'N/A'})
+
+HÁBITOS Y FACTORES DE RIESGO:
+- Fumadores (fuman o fumaban): ${stats.fumadores}
+- Con presión arterial alta: ${stats.presion_alta}
+- Con problemas cardíacos: ${stats.problemas_cardiacos}
+- Con diabetes o problemas de azúcar: ${stats.diabetes}
+- Con problemas de sueño: ${stats.problemas_sueno}
+
+SÍNTOMAS Y CONDICIONES:
+- Con hormigueos: ${stats.hormigueos}
+- Con dolor de espalda: ${stats.dolor_espalda}
+- Con dolor de cabeza frecuente: ${stats.dolor_cabeza}
+- Con hernias: ${stats.hernias}
+- Con várices: ${stats.varices}
+- Con hepatitis: ${stats.hepatitis}
+- Con enfermedad del hígado: ${stats.enfermedad_higado}
+- Con enfermedad pulmonar: ${stats.enfermedad_pulmonar}
+- Con condición médica en tratamiento: ${stats.condicion_medica_tratamiento}
+- Embarazos actuales: ${stats.embarazos}
+
+SALUD VISUAL:
+- Usan anteojos: ${stats.usa_anteojos}
+- Usan lentes de contacto: ${stats.usa_lentes_contacto}
+- Con cirugía ocular previa: ${stats.cirugia_ocular}
+
+SALUD MENTAL:
+- Con trastorno psicológico o psiquiátrico: ${stats.trastorno_psicologico}
+- Con síntomas psicológicos recientes: ${stats.sintomas_psicologicos}
+
+OTRAS CONDICIONES:
+- Con diagnóstico o sospecha de cáncer: ${stats.diagnostico_cancer}
+- Con enfermedades laborales o accidentes de trabajo: ${stats.enfermedades_laborales}
+- Con enfermedad osteomuscular: ${stats.enfermedad_osteomuscular}
+- Con enfermedad autoinmune: ${stats.enfermedad_autoinmune}
+
+ANTECEDENTES FAMILIARES:
+- Familiares con diabetes: ${stats.familia_diabetes}
+- Familiares con hipertensión: ${stats.familia_hipertension}
+- Familiares con cáncer: ${stats.familia_cancer}
+- Familiares con infartos: ${stats.familia_infartos}
+- Familiares con trastornos mentales: ${stats.familia_trastornos_mentales}
+- Familiares con enfermedades hereditarias: ${stats.familia_enfermedades_hereditarias}
+- Familiares con enfermedades genéticas: ${stats.familia_enfermedades_geneticas}
+
+ÓRDENES/CITAS MÉDICAS:
+- Total de órdenes: ${ordenes.total_ordenes}
+- Atendidos: ${ordenes.atendidos}
+- Pendientes: ${ordenes.pendientes}
+`;
+
+        console.log('📊 Datos estadísticos obtenidos');
+
+        // Llamar a OpenAI
+        const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: 'gpt-4o-mini',
+                messages: [
+                    {
+                        role: 'system',
+                        content: `Eres un asistente de análisis de salud ocupacional para la empresa ${codEmpresa}.
+Tu rol es ayudar al área de recursos humanos a entender la salud de sus colaboradores.
+
+Tienes acceso a los siguientes datos estadísticos:
+${datosEstadisticos}
+
+INSTRUCCIONES:
+- Responde de forma clara, concisa y profesional
+- Siempre incluye números absolutos y porcentajes cuando sea relevante
+- Si la pregunta no puede ser respondida con los datos disponibles, indícalo amablemente
+- Usa emojis moderadamente para hacer la respuesta más visual (📊 📈 ⚠️ ✅)
+- Si detectas datos preocupantes, sugiere acciones preventivas
+- Nunca inventes datos, solo usa los proporcionados
+- Responde en español`
+                    },
+                    {
+                        role: 'user',
+                        content: pregunta
+                    }
+                ],
+                temperature: 0.7,
+                max_tokens: 1000
+            })
+        });
+
+        if (!openaiResponse.ok) {
+            const errorData = await openaiResponse.text();
+            console.error('❌ Error de OpenAI:', errorData);
+            throw new Error('Error al comunicarse con OpenAI');
+        }
+
+        const openaiData = await openaiResponse.json();
+        const respuestaIA = openaiData.choices[0].message.content;
+
+        console.log('✅ Respuesta IA generada exitosamente');
+
+        res.json({
+            success: true,
+            respuesta: respuestaIA,
+            datosBase: {
+                totalEmpleados: parseInt(stats.total_empleados),
+                totalOrdenes: parseInt(ordenes.total_ordenes)
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Error en estadísticas IA:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al procesar la consulta',
+            error: error.message
+        });
+    }
+});
+
 // Endpoint para marcar como atendido desde Wix (upsert en HistoriaClinica)
 app.post('/api/marcar-atendido', async (req, res) => {
     try {
