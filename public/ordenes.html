@@ -204,19 +204,59 @@
             flex-shrink: 0;
         }
 
-        /* Sub-items del menú */
-        .nav-item.sub-item {
+        /* Menú con subitems desplegables */
+        .nav-group {
+            position: relative;
+        }
+
+        .nav-item.has-submenu {
+            cursor: pointer;
+        }
+
+        .nav-item.has-submenu::after {
+            content: '';
+            width: 0;
+            height: 0;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 5px solid var(--text-secondary);
+            margin-left: auto;
+            transition: transform 0.2s ease;
+        }
+
+        .nav-group.open .nav-item.has-submenu::after {
+            transform: rotate(180deg);
+        }
+
+        .sidebar.collapsed .nav-item.has-submenu::after {
+            display: none;
+        }
+
+        .nav-submenu {
+            display: none;
+            overflow: hidden;
+        }
+
+        .nav-group.open .nav-submenu {
+            display: block;
+        }
+
+        .nav-submenu .nav-item {
             padding-left: 44px;
             font-size: 13px;
         }
 
-        .nav-item.sub-item i {
+        .nav-submenu .nav-item i {
             width: 16px;
             height: 16px;
         }
 
-        .sidebar.collapsed .nav-item.sub-item {
-            padding-left: 10px;
+        .sidebar.collapsed .nav-submenu {
+            display: none;
+        }
+
+        .sidebar.collapsed .nav-group.open .nav-submenu {
+            display: none;
         }
 
         /* Tooltip para sidebar colapsado */
@@ -1811,14 +1851,22 @@
                     <i data-feather="calendar"></i>
                     <span>Calendario</span>
                 </a>
-                <a href="/medicos.html" class="nav-item" data-tooltip="Médicos">
-                    <i data-feather="users"></i>
-                    <span>Médicos</span>
-                </a>
-                <a href="/fijar-tiempo.html" class="nav-item sub-item" data-tooltip="Fijar Tiempo">
-                    <i data-feather="clock"></i>
-                    <span>Fijar Tiempo</span>
-                </a>
+                <div class="nav-group">
+                    <div class="nav-item has-submenu" data-tooltip="Médicos" onclick="toggleNavGroup(this)">
+                        <i data-feather="users"></i>
+                        <span>Médicos</span>
+                    </div>
+                    <div class="nav-submenu">
+                        <a href="/medicos.html" class="nav-item" data-tooltip="Lista Médicos">
+                            <i data-feather="list"></i>
+                            <span>Lista Médicos</span>
+                        </a>
+                        <a href="/calendario.html" class="nav-item" data-tooltip="Fijar Tiempo">
+                            <i data-feather="clock"></i>
+                            <span>Fijar Tiempo</span>
+                        </a>
+                    </div>
+                </div>
                 <a href="/examenes.html" class="nav-item" data-tooltip="Exámenes">
                     <i data-feather="activity"></i>
                     <span>Exámenes</span>
@@ -2585,6 +2633,12 @@
                 document.getElementById('sidebar').classList.add('collapsed');
                 document.body.classList.add('sidebar-collapsed');
             }
+        }
+
+        // Toggle nav group (submenú desplegable)
+        function toggleNavGroup(element) {
+            const group = element.closest('.nav-group');
+            group.classList.toggle('open');
         }
 
         function updateThemeButton(theme) {
