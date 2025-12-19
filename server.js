@@ -5591,37 +5591,13 @@ function generarHTMLCertificado(datos, medico, fotoUrl, firmaPaciente) {
  * @param {string} baseUrl - URL base para recursos estáticos
  * @returns {Promise<Buffer>} Buffer del PDF generado
  */
-/**
- * Busca el ejecutable de Chromium en ubicaciones comunes
- * @returns {string|null} Ruta al ejecutable o null si no se encuentra
- */
-function encontrarChromium() {
-    const ubicaciones = [
-        process.env.PUPPETEER_EXECUTABLE_PATH,
-        '/usr/bin/chromium',
-        '/usr/bin/chromium-browser',
-        '/usr/bin/google-chrome',
-        '/usr/bin/google-chrome-stable',
-        '/snap/bin/chromium',
-        '/app/.apt/usr/bin/chromium',
-        '/app/.apt/usr/bin/chromium-browser'
-    ];
-
-    for (const ubicacion of ubicaciones) {
-        if (ubicacion && fs.existsSync(ubicacion)) {
-            return ubicacion;
-        }
-    }
-    return null;
-}
-
 async function generarPDFConPuppeteer(html, baseUrl) {
     let browser = null;
 
     try {
         console.log('🎭 Iniciando Puppeteer para generar PDF...');
 
-        // Configuración de Puppeteer
+        // Configuración de Puppeteer - dejar que Puppeteer encuentre Chrome automáticamente
         const launchOptions = {
             headless: 'new',
             args: [
@@ -5630,17 +5606,17 @@ async function generarPDFConPuppeteer(html, baseUrl) {
                 '--disable-dev-shm-usage',
                 '--disable-gpu',
                 '--disable-software-rasterizer',
-                '--single-process'
+                '--single-process',
+                '--no-zygote'
             ]
         };
 
-        // Buscar Chromium del sistema
-        const chromiumPath = encontrarChromium();
-        if (chromiumPath) {
-            launchOptions.executablePath = chromiumPath;
-            console.log('📍 Usando Chromium del sistema:', chromiumPath);
+        // Solo usar executablePath si está explícitamente configurado
+        if (process.env.PUPPETEER_EXECUTABLE_PATH && fs.existsSync(process.env.PUPPETEER_EXECUTABLE_PATH)) {
+            launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+            console.log('📍 Usando Chromium del sistema:', process.env.PUPPETEER_EXECUTABLE_PATH);
         } else {
-            console.log('📍 Usando Chromium bundled de Puppeteer');
+            console.log('📍 Usando Chrome de Puppeteer (cache)');
         }
 
         browser = await puppeteer.launch(launchOptions);
