@@ -5757,7 +5757,7 @@ app.get('/preview-certificado/:id', async (req, res) => {
 app.get('/api/certificado-pdf/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { download } = req.query; // ?download=true para forzar descarga
+        // Parámetro download ya no es necesario, siempre forzamos descarga
 
         console.log(`📄 Generando PDF de certificado para orden: ${id}`);
 
@@ -5831,11 +5831,8 @@ app.get('/api/certificado-pdf/:id', async (req, res) => {
 
         // 9. Configurar headers de respuesta
         res.setHeader('Content-Type', 'application/pdf');
-        if (download === 'true') {
-            res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivo}"`);
-        } else {
-            res.setHeader('Content-Disposition', `inline; filename="${nombreArchivo}"`);
-        }
+        // Siempre forzar descarga para evitar problemas de visualización
+        res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivo}"`);
         res.setHeader('Content-Length', pdfBuffer.length);
 
         res.send(pdfBuffer);
