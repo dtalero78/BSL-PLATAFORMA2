@@ -102,6 +102,18 @@
             letter-spacing: 0.5px;
         }
 
+        .section-title-green {
+            background: linear-gradient(90deg, #00a651 0%, #00a651 100%);
+            color: white;
+            padding: 6px 12px;
+            font-size: 11px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
         /* Contenedor de datos personales con foto a la izquierda */
         .personal-data-wrapper {
             display: flex;
@@ -187,6 +199,9 @@
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 6px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-top: none;
         }
 
         .exam-box {
@@ -216,94 +231,100 @@
             font-weight: bold;
         }
 
-        /* Concepto médico */
-        .concept-box {
-            background: #f0f8ff;
-            border: 2px solid #0066cc;
-            border-radius: 8px;
-            padding: 15px;
-            text-align: center;
-            margin: 8px 0;
+        /* Concepto médico - estilo verde según imagen */
+        .concept-box-green {
+            background: #e8f5e9;
+            border: 2px solid #00a651;
+            padding: 15px 20px;
+            margin: 0;
         }
 
-        .concept-label {
-            font-size: 9px;
-            color: #666;
-            text-transform: uppercase;
-            margin-bottom: 8px;
-        }
-
-        .concept-value {
-            font-size: 18px;
+        .concept-title {
+            font-size: 13px;
             font-weight: bold;
-            color: #28a745;
+            color: #00a651;
             text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .concept-value.apto {
-            color: #28a745;
-        }
-
-        .concept-value.apto-restricciones {
-            color: #ffc107;
-        }
-
-        .concept-value.no-apto {
-            color: #dc3545;
-        }
-
-        .concept-value.aplazado {
-            color: #6c757d;
+            margin-bottom: 10px;
+            text-align: center;
         }
 
         .concept-description {
-            font-size: 9px;
+            font-size: 10px;
             color: #333;
-            margin-top: 10px;
-            line-height: 1.4;
+            line-height: 1.5;
+            text-align: justify;
+        }
+
+        /* Resultados Generales */
+        .results-container {
+            border: 1px solid #ddd;
+            border-top: none;
+        }
+
+        .result-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-item-title {
+            font-size: 11px;
+            font-weight: bold;
+            color: #00a651;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .result-item-content {
+            font-size: 10px;
+            color: #333;
+            line-height: 1.5;
+            text-align: justify;
         }
 
         /* Recomendaciones */
         .recommendations-box {
             background: #fff3cd;
             border: 1px solid #ffeeba;
-            border-radius: 4px;
-            padding: 8px;
-            margin-top: 8px;
+            padding: 10px 15px;
+            margin-top: 10px;
         }
 
         .recommendations-box h4 {
-            font-size: 9px;
+            font-size: 10px;
             color: #856404;
-            margin-bottom: 4px;
+            margin-bottom: 5px;
+            font-weight: bold;
         }
 
         .recommendations-box p {
-            font-size: 9px;
+            font-size: 10px;
             color: #856404;
-            line-height: 1.3;
+            line-height: 1.4;
         }
 
         /* Observaciones */
         .observations-box {
             background: #e7f3ff;
             border: 1px solid #b8daff;
-            border-radius: 4px;
-            padding: 8px;
-            margin-top: 8px;
+            padding: 10px 15px;
+            margin-top: 10px;
         }
 
         .observations-box h4 {
-            font-size: 9px;
+            font-size: 10px;
             color: #004085;
-            margin-bottom: 4px;
+            margin-bottom: 5px;
+            font-weight: bold;
         }
 
         .observations-box p {
-            font-size: 9px;
+            font-size: 10px;
             color: #004085;
-            line-height: 1.3;
+            line-height: 1.4;
         }
 
         /* Firmas */
@@ -316,6 +337,9 @@
             grid-template-columns: 1fr 1fr;
             gap: 30px;
             margin-top: 8px;
+            border: 1px solid #ddd;
+            border-top: none;
+            padding: 15px;
         }
 
         .signature-box {
@@ -391,7 +415,7 @@
                 page-break-inside: avoid;
             }
 
-            .concept-box {
+            .concept-box-green {
                 page-break-inside: avoid;
             }
         }
@@ -502,20 +526,11 @@
             </div>
         </div>
 
-        <!-- EXÁMENES REALIZADOS -->
-        <div class="section">
-            <div class="section-title">Exámenes Realizados</div>
-            <div class="exams-grid">
-                {{EXAMENES_HTML}}
-            </div>
-        </div>
-
-        <!-- CONCEPTO MÉDICO -->
+        <!-- CONCEPTO DE EVALUACIÓN MÉDICA -->
         <div class="section">
             <div class="section-title">Concepto de Evaluación Médica</div>
-            <div class="concept-box">
-                <div class="concept-label">Resultado de la Evaluación</div>
-                <div class="concept-value {{CONCEPTO_CLASS}}">{{CONCEPTO_FINAL}}</div>
+            <div class="concept-box-green">
+                <div class="concept-title">{{CONCEPTO_FINAL}}</div>
                 <div class="concept-description">
                     De acuerdo al examen ocupacional realizado a <strong>{{NOMBRES_COMPLETOS}}</strong>
                     con documento de identificación No. <strong>{{NUMERO_ID}}</strong>,
@@ -523,17 +538,25 @@
                     la ocupación del cargo descrito.
                 </div>
             </div>
+        </div>
+
+        <!-- RESULTADOS GENERALES -->
+        <div class="section">
+            <div class="section-title-green">Resultados Generales</div>
+            <div class="results-container">
+                {{RESULTADOS_HTML}}
+            </div>
 
             {{#if RECOMENDACIONES}}
             <div class="recommendations-box">
-                <h4>Recomendaciones Médicas:</h4>
+                <h4>RECOMENDACIONES MÉDICAS:</h4>
                 <p>{{RECOMENDACIONES}}</p>
             </div>
             {{/if}}
 
             {{#if OBSERVACIONES_CERTIFICADO}}
             <div class="observations-box">
-                <h4>Observaciones:</h4>
+                <h4>OBSERVACIONES:</h4>
                 <p>{{OBSERVACIONES_CERTIFICADO}}</p>
             </div>
             {{/if}}

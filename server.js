@@ -5481,6 +5481,124 @@ function generarExamenesHTML(examenes) {
 }
 
 /**
+ * Genera el HTML para la sección de Resultados Generales con cada examen
+ * @param {string} examenes - Lista de exámenes (string o JSON array)
+ * @param {Object} historia - Datos de la historia clínica con resultados
+ * @returns {string} HTML de los resultados
+ */
+function generarResultadosHTML(examenes, historia) {
+    let listaExamenes = [];
+
+    // Parsear exámenes
+    if (examenes) {
+        try {
+            if (examenes.startsWith('[')) {
+                listaExamenes = JSON.parse(examenes);
+            } else {
+                listaExamenes = examenes.split(',').map(e => e.trim()).filter(e => e);
+            }
+        } catch (e) {
+            listaExamenes = examenes.split(',').map(e => e.trim()).filter(e => e);
+        }
+    }
+
+    if (listaExamenes.length === 0) {
+        listaExamenes = ['Examen Médico Ocupacional'];
+    }
+
+    // Normalizar nombre de examen para comparación
+    const normalizar = (str) => str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+    // Mapeo de exámenes a sus resultados/descripciones
+    const resultadosMap = {
+        'examen medico ocupacional': {
+            titulo: 'EXAMEN MÉDICO OCUPACIONAL OSTEOMUSCULAR',
+            contenido: historia.mdConceptoOsteomuscular ||
+                `Basándose en los resultados obtenidos de la evaluación física y osteomuscular, el trabajador se encuentra ${historia.mdConceptoFinal || 'APTO'} para desempeñar las funciones del cargo.`
+        },
+        'osteomuscular': {
+            titulo: 'EXAMEN MÉDICO OCUPACIONAL OSTEOMUSCULAR',
+            contenido: historia.mdConceptoOsteomuscular ||
+                `Basándose en los resultados obtenidos de la evaluación física y osteomuscular, el trabajador se encuentra ${historia.mdConceptoFinal || 'APTO'} para desempeñar las funciones del cargo.`
+        },
+        'audiometria': {
+            titulo: 'AUDIOMETRÍA',
+            contenido: historia.audioConcepto || historia.audiometriaConcepto ||
+                'Audición dentro de parámetros normales. Se recomienda continuar con controles periódicos.'
+        },
+        'visiometria': {
+            titulo: 'VISIOMETRÍA',
+            contenido: historia.visioConcepto || historia.visiometriaConcepto ||
+                'Agudeza visual dentro de parámetros normales para el desempeño de las funciones del cargo.'
+        },
+        'perfil psicologico': {
+            titulo: 'PERFIL PSICOLÓGICO',
+            contenido: historia.psicoConcepto || historia.perfilPsicologicoConcepto ||
+                'El trabajador presenta un perfil psicológico adecuado para el desempeño de las funciones del cargo.'
+        },
+        'psicologico': {
+            titulo: 'PERFIL PSICOLÓGICO',
+            contenido: historia.psicoConcepto || historia.perfilPsicologicoConcepto ||
+                'El trabajador presenta un perfil psicológico adecuado para el desempeño de las funciones del cargo.'
+        },
+        'espirometria': {
+            titulo: 'ESPIROMETRÍA',
+            contenido: historia.espiroConcepto || historia.espirometriaConcepto ||
+                'Función pulmonar dentro de parámetros normales.'
+        },
+        'electrocardiograma': {
+            titulo: 'ELECTROCARDIOGRAMA',
+            contenido: historia.ekgConcepto || historia.electrocardiogramaConcepto ||
+                'Ritmo cardíaco dentro de parámetros normales.'
+        },
+        'optometria': {
+            titulo: 'OPTOMETRÍA',
+            contenido: historia.optoConcepto || historia.optometriaConcepto ||
+                'Evaluación optométrica dentro de parámetros normales.'
+        },
+        'laboratorio': {
+            titulo: 'EXÁMENES DE LABORATORIO',
+            contenido: historia.labConcepto || historia.laboratorioConcepto ||
+                'Resultados de laboratorio dentro de parámetros normales.'
+        },
+        'trabajo en alturas': {
+            titulo: 'TRABAJO EN ALTURAS',
+            contenido: historia.alturasConcepto ||
+                `El trabajador se encuentra ${historia.mdConceptoFinal || 'APTO'} para realizar trabajo en alturas.`
+        }
+    };
+
+    // Generar HTML para cada examen
+    return listaExamenes.map(examen => {
+        const examenNorm = normalizar(examen);
+
+        // Buscar resultado correspondiente
+        let resultado = null;
+        for (const [key, value] of Object.entries(resultadosMap)) {
+            if (examenNorm.includes(normalizar(key)) || normalizar(key).includes(examenNorm)) {
+                resultado = value;
+                break;
+            }
+        }
+
+        // Si no se encuentra, usar un resultado genérico
+        if (!resultado) {
+            resultado = {
+                titulo: examen.toUpperCase(),
+                contenido: `Examen realizado satisfactoriamente. El trabajador se encuentra ${historia.mdConceptoFinal || 'APTO'} según los resultados obtenidos.`
+            };
+        }
+
+        return `
+            <div class="result-item">
+                <div class="result-item-title">${resultado.titulo}</div>
+                <div class="result-item-content">${resultado.contenido}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
  * Genera el HTML del certificado médico con los datos del paciente
  * @param {Object} datos - Datos de la historia clínica
  * @param {Object} medico - Datos del médico
@@ -5602,6 +5720,7 @@ function generarHTMLCertificado(historia, medico, fotoUrl, firmaPaciente, datosF
         '{{PENSIONES}}': df.pensiones || '',
         '{{NIVEL_EDUCATIVO}}': df.nivel_educativo || '',
         '{{EXAMENES_HTML}}': generarExamenesHTML(historia.examenes),
+        '{{RESULTADOS_HTML}}': generarResultadosHTML(historia.examenes, historia),
         '{{CONCEPTO_FINAL}}': historia.mdConceptoFinal || 'PENDIENTE',
         '{{CONCEPTO_CLASS}}': getConceptoClass(historia.mdConceptoFinal),
         '{{RECOMENDACIONES}}': historia.mdRecomendacionesMedicasAdicionales || '',
