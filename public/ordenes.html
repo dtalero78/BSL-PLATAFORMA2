@@ -109,11 +109,11 @@
         /* Toggle Button */
         .sidebar-toggle {
             position: absolute;
-            top: 20px;
-            right: -14px;
-            width: 28px;
-            height: 28px;
-            background: var(--bg-secondary);
+            top: 24px;
+            right: 12px;
+            width: 32px;
+            height: 32px;
+            background: var(--bg-tertiary);
             border: 1px solid var(--border-color);
             border-radius: 50%;
             display: flex;
@@ -122,18 +122,27 @@
             cursor: pointer;
             transition: all 0.2s ease;
             z-index: 160;
-            box-shadow: var(--shadow-md);
         }
 
         .sidebar-toggle:hover {
-            background: var(--bg-tertiary);
+            background: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        .sidebar-toggle:hover i {
+            color: white;
         }
 
         .sidebar-toggle i {
-            width: 16px;
-            height: 16px;
+            width: 18px;
+            height: 18px;
             color: var(--text-secondary);
-            transition: transform 0.3s ease;
+            transition: transform 0.3s ease, color 0.2s ease;
+        }
+
+        .sidebar.collapsed .sidebar-toggle {
+            right: 50%;
+            transform: translateX(50%);
         }
 
         .sidebar.collapsed .sidebar-toggle i {
