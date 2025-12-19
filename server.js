@@ -5660,7 +5660,7 @@ async function generarPDFConPuppeteer(html, baseUrl) {
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         // Generar PDF
-        const pdfBuffer = await page.pdf({
+        const pdfData = await page.pdf({
             format: 'Letter',
             printBackground: true,
             margin: {
@@ -5670,6 +5670,17 @@ async function generarPDFConPuppeteer(html, baseUrl) {
                 left: '0.5cm'
             }
         });
+
+        // Asegurar que sea un Buffer (Puppeteer v24+ devuelve Uint8Array)
+        const pdfBuffer = Buffer.from(pdfData);
+
+        // Verificar que el PDF es válido (debe empezar con %PDF-)
+        const pdfHeader = pdfBuffer.slice(0, 5).toString();
+        console.log('📄 PDF Header:', pdfHeader, '| Size:', pdfBuffer.length, 'bytes');
+
+        if (!pdfHeader.startsWith('%PDF-')) {
+            throw new Error('El PDF generado no es válido');
+        }
 
         console.log('✅ PDF generado exitosamente');
         return pdfBuffer;
