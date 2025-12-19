@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "postinstall": "npx puppeteer browsers install chrome || echo 'Chrome install skipped'"
+    "postinstall": "node node_modules/puppeteer/install.mjs || echo 'Chrome install skipped'"
   },
   "keywords": [
     "bsl",
