@@ -2,9 +2,11 @@ require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
+const fs = require('fs');
 const { Pool } = require('pg');
 const cron = require('node-cron');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const puppeteer = require('puppeteer');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -5396,6 +5398,453 @@ app.post('/api/visiometrias', async (req, res) => {
     } catch (error) {
         console.error('❌ Error guardando visiometría:', error);
         res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ==========================================
+// CERTIFICADO MÉDICO PDF - Generación con Puppeteer
+// ==========================================
+
+/**
+ * Formatea una fecha ISO a formato legible en español
+ * @param {string|Date} fecha - Fecha a formatear
+ * @returns {string} Fecha formateada (ej: "15 de Diciembre de 2025")
+ */
+function formatearFechaCertificado(fecha) {
+    if (!fecha) return 'No especificada';
+
+    const meses = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+
+    const fechaObj = new Date(fecha);
+    if (isNaN(fechaObj.getTime())) return 'No especificada';
+
+    const dia = fechaObj.getDate();
+    const mes = meses[fechaObj.getMonth()];
+    const anio = fechaObj.getFullYear();
+
+    return `${dia} de ${mes} de ${anio}`;
+}
+
+/**
+ * Determina la clase CSS para el concepto médico
+ * @param {string} concepto - Concepto médico final
+ * @returns {string} Clase CSS
+ */
+function getConceptoClass(concepto) {
+    if (!concepto) return '';
+    const conceptoUpper = concepto.toUpperCase();
+    if (conceptoUpper.includes('NO APTO')) return 'no-apto';
+    if (conceptoUpper.includes('RESTRICCION') || conceptoUpper.includes('RECOMENDACION')) return 'apto-restricciones';
+    if (conceptoUpper.includes('APLAZADO')) return 'aplazado';
+    if (conceptoUpper.includes('APTO')) return 'apto';
+    return '';
+}
+
+/**
+ * Genera el HTML de los exámenes realizados
+ * @param {string} examenes - String de exámenes separados por coma o JSON
+ * @returns {string} HTML de los exámenes
+ */
+function generarExamenesHTML(examenes) {
+    if (!examenes) {
+        return '<div class="exam-box"><h4>Examen Médico Ocupacional</h4><span class="estado">✓ Realizado</span></div>';
+    }
+
+    let listaExamenes = [];
+
+    // Intentar parsear como JSON array
+    try {
+        if (examenes.startsWith('[')) {
+            listaExamenes = JSON.parse(examenes);
+        } else {
+            // Es un string separado por comas
+            listaExamenes = examenes.split(',').map(e => e.trim()).filter(e => e);
+        }
+    } catch (e) {
+        // Si falla, tratar como string simple
+        listaExamenes = examenes.split(',').map(e => e.trim()).filter(e => e);
+    }
+
+    if (listaExamenes.length === 0) {
+        listaExamenes = ['Examen Médico Ocupacional'];
+    }
+
+    return listaExamenes.map(examen => `
+        <div class="exam-box realizado">
+            <h4>${examen}</h4>
+            <span class="estado">✓ Realizado</span>
+        </div>
+    `).join('');
+}
+
+/**
+ * Genera el HTML del certificado médico con los datos del paciente
+ * @param {Object} datos - Datos de la historia clínica
+ * @param {Object} medico - Datos del médico
+ * @param {string} fotoUrl - URL de la foto del paciente
+ * @param {string} firmaPaciente - Firma del paciente (base64 o URL)
+ * @returns {string} HTML completo del certificado
+ */
+function generarHTMLCertificado(datos, medico, fotoUrl, firmaPaciente) {
+    // Leer template base
+    const templatePath = path.join(__dirname, 'public', 'certificado-template.html');
+    let html = fs.readFileSync(templatePath, 'utf8');
+
+    // Nombres completos
+    const nombresCompletos = [
+        datos.primerNombre,
+        datos.segundoNombre,
+        datos.primerApellido,
+        datos.segundoApellido
+    ].filter(Boolean).join(' ').toUpperCase();
+
+    // Nombre del médico
+    const medicoNombre = medico ?
+        [medico.primer_nombre, medico.primer_apellido].filter(Boolean).join(' ').toUpperCase() :
+        (datos.medico || 'MÉDICO OCUPACIONAL');
+
+    // Licencia del médico
+    const medicoLicencia = medico && medico.numero_licencia ?
+        `Lic. S.O. ${medico.numero_licencia}` :
+        '';
+
+    // Firma del médico (puede ser base64 o URL)
+    const firmaMedico = medico && medico.firma ? medico.firma : '';
+
+    // URL del logo
+    const logoUrl = '/bsl-logo.png';
+
+    // Reemplazos en el template
+    const replacements = {
+        '{{LOGO_URL}}': logoUrl,
+        '{{TIPO_EXAMEN}}': datos.tipoExamen || 'OCUPACIONAL',
+        '{{FECHA_ATENCION}}': formatearFechaCertificado(datos.fechaConsulta || datos.fechaAtencion),
+        '{{ORDEN_ID}}': datos._id || '',
+        '{{NOMBRES_COMPLETOS}}': nombresCompletos,
+        '{{NUMERO_ID}}': datos.numeroId || '',
+        '{{EMPRESA}}': (datos.empresa || '').toUpperCase(),
+        '{{COD_EMPRESA}}': datos.codEmpresa || '',
+        '{{CARGO}}': (datos.cargo || '').toUpperCase(),
+        '{{CIUDAD}}': (datos.ciudad || 'BUCARAMANGA').toUpperCase(),
+        '{{EXAMENES_HTML}}': generarExamenesHTML(datos.examenes),
+        '{{CONCEPTO_FINAL}}': datos.mdConceptoFinal || 'PENDIENTE',
+        '{{CONCEPTO_CLASS}}': getConceptoClass(datos.mdConceptoFinal),
+        '{{RECOMENDACIONES}}': datos.mdRecomendacionesMedicasAdicionales || '',
+        '{{OBSERVACIONES_CERTIFICADO}}': datos.mdObservacionesCertificado || '',
+        '{{MEDICO_NOMBRE}}': medicoNombre,
+        '{{MEDICO_LICENCIA}}': medicoLicencia,
+        '{{FIRMA_MEDICO}}': firmaMedico,
+        '{{FIRMA_PACIENTE}}': firmaPaciente || '',
+        '{{FOTO_URL}}': fotoUrl || ''
+    };
+
+    // Aplicar reemplazos
+    for (const [key, value] of Object.entries(replacements)) {
+        html = html.split(key).join(value);
+    }
+
+    // Manejar condicionales simples {{#if VAR}}...{{/if}}
+    // Foto
+    if (fotoUrl) {
+        html = html.replace(/\{\{#if FOTO_URL\}\}([\s\S]*?)\{\{else\}\}[\s\S]*?\{\{\/if\}\}/g, '$1');
+    } else {
+        html = html.replace(/\{\{#if FOTO_URL\}\}[\s\S]*?\{\{else\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+    }
+
+    // Firma médico
+    if (firmaMedico) {
+        html = html.replace(/\{\{#if FIRMA_MEDICO\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+    } else {
+        html = html.replace(/\{\{#if FIRMA_MEDICO\}\}[\s\S]*?\{\{\/if\}\}/g, '');
+    }
+
+    // Firma paciente
+    if (firmaPaciente) {
+        html = html.replace(/\{\{#if FIRMA_PACIENTE\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+    } else {
+        html = html.replace(/\{\{#if FIRMA_PACIENTE\}\}[\s\S]*?\{\{\/if\}\}/g, '');
+    }
+
+    // Recomendaciones
+    if (datos.mdRecomendacionesMedicasAdicionales) {
+        html = html.replace(/\{\{#if RECOMENDACIONES\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+    } else {
+        html = html.replace(/\{\{#if RECOMENDACIONES\}\}[\s\S]*?\{\{\/if\}\}/g, '');
+    }
+
+    // Observaciones
+    if (datos.mdObservacionesCertificado) {
+        html = html.replace(/\{\{#if OBSERVACIONES_CERTIFICADO\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+    } else {
+        html = html.replace(/\{\{#if OBSERVACIONES_CERTIFICADO\}\}[\s\S]*?\{\{\/if\}\}/g, '');
+    }
+
+    return html;
+}
+
+/**
+ * Genera un PDF a partir de HTML usando Puppeteer
+ * @param {string} html - HTML a convertir
+ * @param {string} baseUrl - URL base para recursos estáticos
+ * @returns {Promise<Buffer>} Buffer del PDF generado
+ */
+async function generarPDFConPuppeteer(html, baseUrl) {
+    let browser = null;
+
+    try {
+        console.log('🎭 Iniciando Puppeteer para generar PDF...');
+
+        // Configuración de Puppeteer (usa Chromium del sistema en producción)
+        const launchOptions = {
+            headless: 'new',
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--disable-software-rasterizer'
+            ]
+        };
+
+        // En producción (Docker/DigitalOcean), usar Chromium del sistema
+        if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+            launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+            console.log('📍 Usando Chromium del sistema:', process.env.PUPPETEER_EXECUTABLE_PATH);
+        }
+
+        browser = await puppeteer.launch(launchOptions);
+
+        const page = await browser.newPage();
+
+        // Configurar base URL para recursos estáticos
+        await page.setContent(html, {
+            waitUntil: ['load', 'networkidle0'],
+            timeout: 30000
+        });
+
+        // Inyectar base URL para imágenes relativas
+        await page.evaluate((baseUrl) => {
+            document.querySelectorAll('img').forEach(img => {
+                const src = img.getAttribute('src');
+                if (src && src.startsWith('/')) {
+                    img.src = baseUrl + src;
+                }
+            });
+        }, baseUrl);
+
+        // Esperar a que las imágenes se carguen
+        await page.evaluate(() => {
+            return Promise.all(
+                Array.from(document.images).map(img => {
+                    return new Promise((resolve) => {
+                        if (img.complete) {
+                            resolve();
+                            return;
+                        }
+                        img.addEventListener('load', resolve);
+                        img.addEventListener('error', resolve);
+                        setTimeout(resolve, 5000);
+                    });
+                })
+            );
+        });
+
+        // Esperar un momento adicional para renderizado completo
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Generar PDF
+        const pdfBuffer = await page.pdf({
+            format: 'Letter',
+            printBackground: true,
+            margin: {
+                top: '0.5cm',
+                right: '0.5cm',
+                bottom: '0.5cm',
+                left: '0.5cm'
+            }
+        });
+
+        console.log('✅ PDF generado exitosamente');
+        return pdfBuffer;
+
+    } catch (error) {
+        console.error('❌ Error generando PDF con Puppeteer:', error);
+        throw error;
+    } finally {
+        if (browser) {
+            await browser.close();
+        }
+    }
+}
+
+// GET /preview-certificado/:id - Preview HTML del certificado médico
+app.get('/preview-certificado/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log(`📄 Generando preview de certificado para orden: ${id}`);
+
+        // 1. Obtener datos de HistoriaClinica
+        const historiaResult = await pool.query(
+            'SELECT * FROM "HistoriaClinica" WHERE "_id" = $1',
+            [id]
+        );
+
+        if (historiaResult.rows.length === 0) {
+            return res.status(404).send('<h1>Orden no encontrada</h1>');
+        }
+
+        const historia = historiaResult.rows[0];
+
+        // 2. Obtener foto del paciente desde formularios
+        let fotoUrl = null;
+        const fotoResult = await pool.query(`
+            SELECT foto_url FROM formularios
+            WHERE (wix_id = $1 OR numero_id = $2) AND foto_url IS NOT NULL
+            ORDER BY fecha_registro DESC LIMIT 1
+        `, [id, historia.numeroId]);
+
+        if (fotoResult.rows.length > 0) {
+            fotoUrl = fotoResult.rows[0].foto_url;
+        }
+
+        // 3. Obtener firma del paciente desde formularios
+        let firmaPaciente = null;
+        const firmaResult = await pool.query(`
+            SELECT firma FROM formularios
+            WHERE (wix_id = $1 OR numero_id = $2) AND firma IS NOT NULL
+            ORDER BY fecha_registro DESC LIMIT 1
+        `, [id, historia.numeroId]);
+
+        if (firmaResult.rows.length > 0) {
+            firmaPaciente = firmaResult.rows[0].firma;
+        }
+
+        // 4. Obtener datos del médico (si está registrado)
+        let medico = null;
+        if (historia.medico) {
+            const medicoResult = await pool.query(`
+                SELECT * FROM medicos
+                WHERE CONCAT(primer_nombre, ' ', primer_apellido) ILIKE $1
+                   OR CONCAT(primer_nombre, ' ', segundo_nombre, ' ', primer_apellido) ILIKE $1
+                LIMIT 1
+            `, [`%${historia.medico}%`]);
+
+            if (medicoResult.rows.length > 0) {
+                medico = medicoResult.rows[0];
+            }
+        }
+
+        // 5. Generar HTML
+        const html = generarHTMLCertificado(historia, medico, fotoUrl, firmaPaciente);
+
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.send(html);
+
+    } catch (error) {
+        console.error('❌ Error generando preview de certificado:', error);
+        res.status(500).send('<h1>Error generando certificado</h1><p>' + error.message + '</p>');
+    }
+});
+
+// GET /api/certificado-pdf/:id - Genera y descarga el PDF del certificado médico
+app.get('/api/certificado-pdf/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { download } = req.query; // ?download=true para forzar descarga
+
+        console.log(`📄 Generando PDF de certificado para orden: ${id}`);
+
+        // 1. Obtener datos de HistoriaClinica
+        const historiaResult = await pool.query(
+            'SELECT * FROM "HistoriaClinica" WHERE "_id" = $1',
+            [id]
+        );
+
+        if (historiaResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Orden no encontrada'
+            });
+        }
+
+        const historia = historiaResult.rows[0];
+
+        // 2. Obtener foto del paciente desde formularios
+        let fotoUrl = null;
+        const fotoResult = await pool.query(`
+            SELECT foto_url FROM formularios
+            WHERE (wix_id = $1 OR numero_id = $2) AND foto_url IS NOT NULL
+            ORDER BY fecha_registro DESC LIMIT 1
+        `, [id, historia.numeroId]);
+
+        if (fotoResult.rows.length > 0) {
+            fotoUrl = fotoResult.rows[0].foto_url;
+        }
+
+        // 3. Obtener firma del paciente desde formularios
+        let firmaPaciente = null;
+        const firmaResult = await pool.query(`
+            SELECT firma FROM formularios
+            WHERE (wix_id = $1 OR numero_id = $2) AND firma IS NOT NULL
+            ORDER BY fecha_registro DESC LIMIT 1
+        `, [id, historia.numeroId]);
+
+        if (firmaResult.rows.length > 0) {
+            firmaPaciente = firmaResult.rows[0].firma;
+        }
+
+        // 4. Obtener datos del médico (si está registrado)
+        let medico = null;
+        if (historia.medico) {
+            const medicoResult = await pool.query(`
+                SELECT * FROM medicos
+                WHERE CONCAT(primer_nombre, ' ', primer_apellido) ILIKE $1
+                   OR CONCAT(primer_nombre, ' ', segundo_nombre, ' ', primer_apellido) ILIKE $1
+                LIMIT 1
+            `, [`%${historia.medico}%`]);
+
+            if (medicoResult.rows.length > 0) {
+                medico = medicoResult.rows[0];
+            }
+        }
+
+        // 5. Generar HTML
+        const html = generarHTMLCertificado(historia, medico, fotoUrl, firmaPaciente);
+
+        // 6. Determinar base URL para recursos estáticos
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+        const host = req.headers['x-forwarded-host'] || req.headers.host;
+        const baseUrl = `${protocol}://${host}`;
+
+        // 7. Generar PDF
+        const pdfBuffer = await generarPDFConPuppeteer(html, baseUrl);
+
+        // 8. Nombre del archivo
+        const nombreArchivo = `certificado_${historia.numeroId || id}_${Date.now()}.pdf`;
+
+        // 9. Configurar headers de respuesta
+        res.setHeader('Content-Type', 'application/pdf');
+        if (download === 'true') {
+            res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivo}"`);
+        } else {
+            res.setHeader('Content-Disposition', `inline; filename="${nombreArchivo}"`);
+        }
+        res.setHeader('Content-Length', pdfBuffer.length);
+
+        res.send(pdfBuffer);
+
+        console.log(`✅ PDF enviado: ${nombreArchivo} (${(pdfBuffer.length / 1024).toFixed(1)} KB)`);
+
+    } catch (error) {
+        console.error('❌ Error generando PDF de certificado:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error generando el PDF del certificado',
+            error: error.message
+        });
     }
 });
 

@@ -23,7 +23,8 @@
     "express": "^4.18.2",
     "node-cron": "^4.2.1",
     "node-fetch": "^3.3.0",
-    "pg": "^8.11.3"
+    "pg": "^8.11.3",
+    "puppeteer": "^24.34.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

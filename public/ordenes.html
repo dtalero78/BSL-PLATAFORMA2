@@ -699,6 +699,11 @@
             color: #2563EB;
         }
 
+        .btn-icon.pdf:hover {
+            background: #FEE2E2;
+            color: #DC2626;
+        }
+
         .btn-icon.disabled {
             opacity: 0.3;
             pointer-events: none;
@@ -2636,6 +2641,13 @@
                                    onclick="event.stopPropagation();">
                                     <i data-feather="headphones"></i>
                                 </a>
+                                <a href="/api/certificado-pdf/${orden._id}"
+                                   target="_blank"
+                                   class="btn-icon pdf"
+                                   title="Certificado PDF"
+                                   onclick="event.stopPropagation();">
+                                    <i data-feather="file-text"></i>
+                                </a>
                             </div>
                         </td>
                     </tr>
@@ -2699,6 +2711,9 @@
                             <a href="/audiometria.html?orden=${wixId}"
                                target="_blank"
                                class="mobile-card-btn ${!hasWixId ? 'disabled' : ''}">🎧 Audio</a>
+                            <a href="/api/certificado-pdf/${wixId}"
+                               target="_blank"
+                               class="mobile-card-btn ${!hasWixId ? 'disabled' : ''}">📄 PDF</a>
                             <button class="mobile-card-btn primary" onclick="abrirModalDetalles('${orden._id}')">Ver</button>
                         </div>
                     </div>
@@ -2919,7 +2934,7 @@
             // Configure buttons
             document.getElementById('btnFormularioFromModal').href = `/?_id=${orden._id}`;
             document.getElementById('btnWhatsappFromModal').href = `https://bsl-utilidades-yp78a.ondigitalocean.app/static/solicitar-certificado.html?id=${orden._id}`;
-            document.getElementById('btnDescargarFromModal').href = `https://bsl-utilidades-yp78a.ondigitalocean.app/generar-certificado-desde-wix/${orden._id}`;
+            document.getElementById('btnDescargarFromModal').href = `/api/certificado-pdf/${orden._id}`;
             document.getElementById('btnEditarFromModal').onclick = () => {
                 cerrarModalDetalles();
                 editarOrden(orden._id);
