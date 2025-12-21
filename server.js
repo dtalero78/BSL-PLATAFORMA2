@@ -1052,11 +1052,13 @@ app.get('/api/formularios/search', async (req, res) => {
                 hc."atendido" as estado_atencion
             FROM formularios f
             LEFT JOIN "HistoriaClinica" hc ON f.wix_id = hc."_id"
-            WHERE f.numero_id ILIKE $1
-               OR f.primer_nombre ILIKE $1
-               OR f.primer_apellido ILIKE $1
-               OR f.cod_empresa ILIKE $1
-               OR f.celular ILIKE $1
+            WHERE (
+                COALESCE(f.numero_id, '') || ' ' ||
+                COALESCE(f.primer_nombre, '') || ' ' ||
+                COALESCE(f.primer_apellido, '') || ' ' ||
+                COALESCE(f.cod_empresa, '') || ' ' ||
+                COALESCE(f.celular, '')
+            ) ILIKE $1
             ORDER BY f.fecha_registro DESC
             LIMIT 100
         `, [searchTerm]);
@@ -1983,12 +1985,15 @@ app.get('/api/ordenes', async (req, res) => {
         }
 
         if (buscar) {
+            // Usar índice GIN pg_trgm para búsqueda optimizada (incluye todos los campos buscables)
             query += ` AND (
-                h."numeroId" ILIKE $${paramIndex} OR
-                h."primerNombre" ILIKE $${paramIndex} OR
-                h."primerApellido" ILIKE $${paramIndex} OR
-                h."empresa" ILIKE $${paramIndex}
-            )`;
+                COALESCE(h."numeroId", '') || ' ' ||
+                COALESCE(h."primerNombre", '') || ' ' ||
+                COALESCE(h."primerApellido", '') || ' ' ||
+                COALESCE(h."codEmpresa", '') || ' ' ||
+                COALESCE(h."celular", '') || ' ' ||
+                COALESCE(h."empresa", '')
+            ) ILIKE $${paramIndex}`;
             params.push(`%${buscar}%`);
             paramIndex++;
         }
@@ -2011,12 +2016,15 @@ app.get('/api/ordenes', async (req, res) => {
         }
 
         if (buscar) {
+            // Usar índice GIN pg_trgm para búsqueda optimizada
             countQuery += ` AND (
-                "numeroId" ILIKE $${countParamIndex} OR
-                "primerNombre" ILIKE $${countParamIndex} OR
-                "primerApellido" ILIKE $${countParamIndex} OR
-                "empresa" ILIKE $${countParamIndex}
-            )`;
+                COALESCE("numeroId", '') || ' ' ||
+                COALESCE("primerNombre", '') || ' ' ||
+                COALESCE("primerApellido", '') || ' ' ||
+                COALESCE("codEmpresa", '') || ' ' ||
+                COALESCE("celular", '') || ' ' ||
+                COALESCE("empresa", '')
+            ) ILIKE $${countParamIndex}`;
             countParams.push(`%${buscar}%`);
         }
 
@@ -2845,11 +2853,14 @@ app.get('/api/historia-clinica/buscar', async (req, res) => {
                 WHERE numero_id = h."numeroId" AND foto_url IS NOT NULL
                 ORDER BY fecha_registro DESC LIMIT 1
             ) f_fallback ON f_exact.id IS NULL
-            WHERE h."numeroId" ILIKE $1
-               OR h."primerNombre" ILIKE $1
-               OR h."primerApellido" ILIKE $1
-               OR h."codEmpresa" ILIKE $1
-               OR h."celular" ILIKE $1
+            WHERE (
+                COALESCE(h."numeroId", '') || ' ' ||
+                COALESCE(h."primerNombre", '') || ' ' ||
+                COALESCE(h."primerApellido", '') || ' ' ||
+                COALESCE(h."codEmpresa", '') || ' ' ||
+                COALESCE(h."celular", '') || ' ' ||
+                COALESCE(h."empresa", '')
+            ) ILIKE $1
             ORDER BY h."_createdDate" DESC
             LIMIT 100
         `, [searchTerm]);
