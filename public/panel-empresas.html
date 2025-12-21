@@ -1543,6 +1543,10 @@
                         <div class="stat-value" id="statTotalOrdenes">0</div>
                         <div class="stat-label">Total Órdenes</div>
                     </div>
+                    <div class="stat-card" id="statCargaCard" style="display: none;">
+                        <div class="stat-value" id="statCargados">0</div>
+                        <div class="stat-label" id="statCargaLabel">Cargados</div>
+                    </div>
                 </div>
 
                 <!-- Filters Bar -->
@@ -2266,17 +2270,41 @@
             loginError.classList.remove('show');
         }
 
-        // Cargar datos
+        // Cargar datos con paginación del servidor
+        let totalOrdenes = 0;
+        const LIMIT_POR_PAGINA = 5000; // Cargar en lotes
+
         async function actualizarDatos() {
             mostrarLoading();
+            allData = [];
 
             try {
-                const response = await fetch(`/api/ordenes?codEmpresa=${encodeURIComponent(codEmpresa)}&limit=50000`);
+                // Primera carga: obtener stats y primera página
+                const response = await fetch(`/api/ordenes?codEmpresa=${encodeURIComponent(codEmpresa)}&limit=${LIMIT_POR_PAGINA}&offset=0`);
                 const result = await response.json();
 
                 if (result.success) {
                     allData = result.data || [];
-                    calcularEstadisticas();
+                    totalOrdenes = result.total || allData.length;
+
+                    // Actualizar estadísticas desde el servidor
+                    if (result.stats) {
+                        document.getElementById('statProgramadosHoy').textContent = result.stats.programadosHoy;
+                        document.getElementById('statAtendidosHoy').textContent = result.stats.atendidosHoy;
+                    }
+                    document.getElementById('statTotalOrdenes').textContent = totalOrdenes;
+
+                    // Si hay más datos, cargarlos en segundo plano
+                    if (totalOrdenes > LIMIT_POR_PAGINA) {
+                        // Mostrar indicador de carga
+                        document.getElementById('statCargaCard').style.display = '';
+                        document.getElementById('statCargados').textContent = allData.length;
+                        document.getElementById('statCargaLabel').textContent = `de ${totalOrdenes} cargados...`;
+                        cargarDatosRestantes();
+                    } else {
+                        document.getElementById('statCargaCard').style.display = 'none';
+                    }
+
                     aplicarFiltros();
                 } else {
                     mostrarEmpty();
@@ -2287,31 +2315,35 @@
             }
         }
 
-        function calcularEstadisticas() {
-            const hoy = new Date();
-            hoy.setHours(0, 0, 0, 0);
-            const finHoy = new Date(hoy);
-            finHoy.setHours(23, 59, 59, 999);
+        // Cargar datos restantes en segundo plano
+        async function cargarDatosRestantes() {
+            let offset = LIMIT_POR_PAGINA;
+            const statCargaCard = document.getElementById('statCargaCard');
+            const statCargados = document.getElementById('statCargados');
+            const statCargaLabel = document.getElementById('statCargaLabel');
 
-            let programadosHoy = 0;
-            let atendidosHoy = 0;
+            while (offset < totalOrdenes) {
+                try {
+                    const response = await fetch(`/api/ordenes?codEmpresa=${encodeURIComponent(codEmpresa)}&limit=${LIMIT_POR_PAGINA}&offset=${offset}`);
+                    const result = await response.json();
 
-            allData.forEach(orden => {
-                const fechaAtencion = orden.fechaAtencion ? new Date(orden.fechaAtencion) : null;
-                const fechaConsulta = orden.fechaConsulta ? new Date(orden.fechaConsulta) : null;
+                    if (result.success && result.data) {
+                        allData = allData.concat(result.data);
+                        // Actualizar indicador de progreso
+                        statCargados.textContent = allData.length;
+                        statCargaLabel.textContent = `de ${totalOrdenes} cargados...`;
+                        aplicarFiltros(); // Re-renderizar con nuevos datos
+                    }
 
-                if (fechaAtencion && fechaAtencion >= hoy && fechaAtencion <= finHoy) {
-                    programadosHoy++;
+                    offset += LIMIT_POR_PAGINA;
+                } catch (error) {
+                    console.error('Error cargando datos adicionales:', error);
+                    break;
                 }
+            }
 
-                if (fechaConsulta && fechaConsulta >= hoy && fechaConsulta <= finHoy) {
-                    atendidosHoy++;
-                }
-            });
-
-            document.getElementById('statProgramadosHoy').textContent = programadosHoy;
-            document.getElementById('statAtendidosHoy').textContent = atendidosHoy;
-            document.getElementById('statTotalOrdenes').textContent = allData.length;
+            // Ocultar indicador cuando termine
+            statCargaCard.style.display = 'none';
         }
 
         function aplicarFiltros() {

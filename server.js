@@ -2031,12 +2031,34 @@ app.get('/api/ordenes', async (req, res) => {
         const countResult = await pool.query(countQuery, countParams);
         const total = parseInt(countResult.rows[0].count);
 
+        // Si se filtra por empresa, calcular estadísticas (programados hoy, atendidos hoy)
+        let stats = null;
+        if (codEmpresa) {
+            const hoy = new Date();
+            const inicioHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 0, 0, 0);
+            const finHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59);
+
+            const statsResult = await pool.query(`
+                SELECT
+                    COUNT(*) FILTER (WHERE "fechaAtencion" >= $2 AND "fechaAtencion" <= $3) as programados_hoy,
+                    COUNT(*) FILTER (WHERE "fechaConsulta" >= $2 AND "fechaConsulta" <= $3) as atendidos_hoy
+                FROM "HistoriaClinica"
+                WHERE "codEmpresa" = $1
+            `, [codEmpresa, inicioHoy.toISOString(), finHoy.toISOString()]);
+
+            stats = {
+                programadosHoy: parseInt(statsResult.rows[0].programados_hoy) || 0,
+                atendidosHoy: parseInt(statsResult.rows[0].atendidos_hoy) || 0
+            };
+        }
+
         res.json({
             success: true,
             data: result.rows,
             total,
             limit: parseInt(limit),
-            offset: parseInt(offset)
+            offset: parseInt(offset),
+            stats
         });
     } catch (error) {
         console.error('❌ Error al listar órdenes:', error);
