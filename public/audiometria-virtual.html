@@ -33,27 +33,24 @@
             flex-direction: column;
         }
 
-        /* Header */
+        /* Header estilo app */
         .header {
-            text-align: center;
-            padding: 20px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0 16px;
         }
 
-        .header img {
-            height: 50px;
-            margin-bottom: 8px;
+        .header-logo {
+            height: 40px;
+            width: auto;
         }
 
-        .header h1 {
-            font-size: 28px;
+        .header-title {
+            font-size: 18px;
             font-weight: 700;
-            letter-spacing: -0.5px;
-            margin-bottom: 4px;
-        }
-
-        .header p {
-            font-size: 15px;
-            color: #8E8E93;
+            color: #1C1C1E;
+            letter-spacing: -0.3px;
         }
 
         /* Paciente info card */
@@ -225,39 +222,6 @@
             border-radius: 4px;
             transition: width 0.3s ease;
             width: 0%;
-        }
-
-        /* Indicador de oído */
-        .ear-indicator {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 16px;
-            text-align: center;
-        }
-
-        .ear-icon {
-            font-size: 48px;
-            margin-bottom: 8px;
-        }
-
-        .ear-label {
-            font-size: 20px;
-            font-weight: 700;
-        }
-
-        .ear-label.right {
-            color: #FF3B30;
-        }
-
-        .ear-label.left {
-            color: #007AFF;
-        }
-
-        .frequency-label {
-            font-size: 15px;
-            color: #8E8E93;
-            margin-top: 4px;
         }
 
         /* Reproductor de audio */
@@ -640,9 +604,8 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <img src="https://static.wixstatic.com/media/cb6469_86c5c3de4e0f4bc794c1ea8d498db106~mv2.png" alt="BSL">
-            <h1>Audiometría Virtual</h1>
-            <p>Prueba de audición</p>
+            <img src="bsl-logo.png" alt="BSL" class="header-logo">
+            <span class="header-title">AUDIOMETRÍA VIRTUAL</span>
         </div>
 
         <!-- Tarjeta de paciente -->
@@ -699,13 +662,6 @@
                 <div class="progress-bar-container">
                     <div class="progress-bar" id="progressBar"></div>
                 </div>
-            </div>
-
-            <!-- Indicador de oído -->
-            <div class="ear-indicator">
-                <div class="ear-icon" id="earIcon">👂</div>
-                <div class="ear-label" id="earLabel">Oído Derecho</div>
-                <div class="frequency-label" id="frequencyLabel">Frecuencia: 8000 Hz</div>
             </div>
 
             <!-- Estado del audio -->
@@ -982,7 +938,6 @@
 
                 // Actualizar UI
                 updateProgressBar();
-                updateEarIndicator(audio);
 
                 // Configurar y reproducir audio
                 audioPlayer.src = audio.url;
@@ -1090,24 +1045,6 @@
             const progress = ((currentIndex + 1) / shuffledAudios.length) * 100;
             document.getElementById('progressBar').style.width = `${progress}%`;
             document.getElementById('progressCounter').textContent = `${currentIndex + 1} de ${shuffledAudios.length}`;
-        }
-
-        function updateEarIndicator(audio) {
-            const earIcon = document.getElementById('earIcon');
-            const earLabel = document.getElementById('earLabel');
-            const frequencyLabel = document.getElementById('frequencyLabel');
-
-            if (audio.ear === 'right') {
-                earIcon.textContent = '👂';
-                earLabel.textContent = 'Oído Derecho';
-                earLabel.className = 'ear-label right';
-            } else {
-                earIcon.textContent = '👂';
-                earLabel.textContent = 'Oído Izquierdo';
-                earLabel.className = 'ear-label left';
-            }
-
-            frequencyLabel.textContent = `Frecuencia: ${audio.frequency} Hz`;
         }
 
         function disableKeypad(disabled) {
