@@ -4836,7 +4836,8 @@ app.get('/api/nubia/pacientes', async (req, res) => {
         `, [inicioDelDia.toISOString(), finDelDia.toISOString()]);
 
         // Contar atendidos y pagados
-        const atendidos = result.rows.filter(r => r.atendido === 'ATENDIDO').length;
+        // Un paciente está atendido si: tiene atendido='ATENDIDO' O está pagado (no se puede pagar sin atender)
+        const atendidos = result.rows.filter(r => r.atendido === 'ATENDIDO' || r.pagado === true).length;
         const pagados = result.rows.filter(r => r.pagado === true).length;
 
         res.json({
