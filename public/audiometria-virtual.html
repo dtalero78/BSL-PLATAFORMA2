@@ -901,9 +901,9 @@
 
             // Botón continuar
             document.getElementById('continueBtn').addEventListener('click', () => {
-                // Redirigir a la siguiente prueba (visual) o al inicio
-                if (patientData && patientData._id) {
-                    window.location.href = `https://www.bsl.com.co/visual2/${patientData._id}`;
+                // Redirigir a la siguiente prueba (visiometría virtual)
+                if (ordenId) {
+                    window.location.href = `/visiometria-virtual.html?ordenId=${ordenId}`;
                 } else {
                     window.location.href = '/';
                 }

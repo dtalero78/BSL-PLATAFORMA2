@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Visiometría Virtual - BSL</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #F2F2F7;
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
+            color: #1C1C1E;
+            -webkit-font-smoothing: antialiased;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 16px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0 16px;
+        }
+
+        .header-logo {
+            height: 50px;
+            width: auto;
+        }
+
+        /* Paciente info card */
+        .patient-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .patient-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 25px;
+            background: linear-gradient(135deg, #5856D6, #AF52DE);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .patient-info {
+            flex: 1;
+        }
+
+        .patient-name {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .patient-id {
+            font-size: 14px;
+            color: #8E8E93;
+        }
+
+        /* ========== PANTALLAS ========== */
+        .screen {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* Pantalla de bienvenida */
+        .instructions-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .instructions-card h2 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .instruction-list {
+            list-style: none;
+        }
+
+        .instruction-list li {
+            padding: 12px 0;
+            border-bottom: 0.5px solid #E5E5EA;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            font-size: 15px;
+            line-height: 1.4;
+        }
+
+        .instruction-list li:last-child {
+            border-bottom: none;
+        }
+
+        .instruction-number {
+            width: 24px;
+            height: 24px;
+            border-radius: 12px;
+            background: #5856D6;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        /* Botón principal */
+        .btn-primary {
+            background: #5856D6;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 16px 24px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.15s ease;
+            font-family: inherit;
+            margin-top: auto;
+        }
+
+        .btn-primary:hover {
+            background: #4240a8;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary:disabled {
+            background: #C7C7CC;
+            cursor: not-allowed;
+        }
+
+        /* Progress indicator */
+        .progress-section {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .progress-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #5856D6;
+        }
+
+        .progress-counter {
+            font-size: 14px;
+            color: #8E8E93;
+        }
+
+        .progress-bar-container {
+            height: 6px;
+            background: #E5E5EA;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: #5856D6;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        /* ========== TEST DE LETRAS (SNELLEN) ========== */
+        .test-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .test-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .test-subtitle {
+            font-size: 14px;
+            color: #8E8E93;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .snellen-display {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 150px;
+            margin-bottom: 20px;
+        }
+
+        .snellen-letters {
+            font-family: 'Courier New', monospace;
+            font-weight: 700;
+            letter-spacing: 8px;
+            text-align: center;
+            color: #1C1C1E;
+        }
+
+        .snellen-input-container {
+            margin-bottom: 16px;
+        }
+
+        .snellen-input {
+            width: 100%;
+            padding: 16px;
+            font-size: 24px;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 8px;
+            border: 2px solid #E5E5EA;
+            border-radius: 12px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .snellen-input:focus {
+            border-color: #5856D6;
+        }
+
+        .snellen-hint {
+            text-align: center;
+            font-size: 13px;
+            color: #8E8E93;
+            margin-top: 8px;
+        }
+
+        /* ========== TEST LANDOLT C ========== */
+        .landolt-display {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 200px;
+            margin-bottom: 20px;
+        }
+
+        .landolt-c {
+            width: 120px;
+            height: 120px;
+            border: 16px solid #1C1C1E;
+            border-radius: 50%;
+            position: relative;
+        }
+
+        .landolt-c.gap-top {
+            border-top-color: transparent;
+        }
+
+        .landolt-c.gap-right {
+            border-right-color: transparent;
+        }
+
+        .landolt-c.gap-bottom {
+            border-bottom-color: transparent;
+        }
+
+        .landolt-c.gap-left {
+            border-left-color: transparent;
+        }
+
+        .direction-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            max-width: 280px;
+            margin: 0 auto;
+        }
+
+        .direction-btn {
+            aspect-ratio: 1;
+            border: 2px solid #E5E5EA;
+            border-radius: 12px;
+            background: white;
+            font-size: 28px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .direction-btn:hover {
+            border-color: #5856D6;
+            background: #F5F5FF;
+        }
+
+        .direction-btn:active {
+            transform: scale(0.95);
+            background: #5856D6;
+            color: white;
+        }
+
+        .direction-btn.center {
+            visibility: hidden;
+        }
+
+        /* ========== TEST DE COLORES (ISHIHARA) ========== */
+        .ishihara-display {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 220px;
+            margin-bottom: 20px;
+        }
+
+        .ishihara-plate {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ishihara-plate img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+
+        .color-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .color-option-btn {
+            padding: 16px;
+            border: 2px solid #E5E5EA;
+            border-radius: 12px;
+            background: white;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .color-option-btn:hover {
+            border-color: #5856D6;
+            background: #F5F5FF;
+        }
+
+        .color-option-btn:active {
+            transform: scale(0.98);
+            background: #5856D6;
+            color: white;
+        }
+
+        /* ========== PANTALLA DE RESULTADOS ========== */
+        .results-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .results-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        .results-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .results-subtitle {
+            font-size: 15px;
+            color: #8E8E93;
+            margin-bottom: 24px;
+        }
+
+        .results-summary {
+            background: #F2F2F7;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #E5E5EA;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            font-size: 15px;
+            color: #8E8E93;
+        }
+
+        .result-value {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .result-value.good {
+            color: #34C759;
+        }
+
+        .result-value.warning {
+            color: #FF9500;
+        }
+
+        .result-value.bad {
+            color: #FF3B30;
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.95);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading-spinner {
+            text-align: center;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #E5E5EA;
+            border-top-color: #5856D6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Error card */
+        .error-card {
+            background: #FEF2F2;
+            border: 1px solid #FCA5A5;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .error-card p {
+            color: #DC2626;
+            font-size: 15px;
+        }
+
+        /* WhatsApp button */
+        .whatsapp-btn {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            border-radius: 28px;
+            background: #25D366;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            text-decoration: none;
+            box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4);
+            z-index: 100;
+        }
+
+        /* Responsive */
+        @media (max-width: 400px) {
+            .snellen-letters {
+                letter-spacing: 4px;
+            }
+
+            .snellen-input {
+                letter-spacing: 4px;
+                font-size: 20px;
+            }
+
+            .landolt-c {
+                width: 100px;
+                height: 100px;
+                border-width: 14px;
+            }
+
+            .ishihara-plate {
+                width: 180px;
+                height: 180px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <img src="bsl-logo.png" alt="BSL Logo" class="header-logo">
+        </div>
+
+        <!-- Patient card -->
+        <div class="patient-card">
+            <div class="patient-avatar" id="patientAvatar">--</div>
+            <div class="patient-info">
+                <div class="patient-name" id="patientName">Cargando...</div>
+                <div class="patient-id" id="patientId">---</div>
+            </div>
+        </div>
+
+        <!-- Error card -->
+        <div class="error-card" id="errorCard">
+            <p id="errorMessage"></p>
+        </div>
+
+        <!-- ========== PANTALLA DE BIENVENIDA ========== -->
+        <div class="screen active" id="welcomeScreen">
+            <div class="instructions-card">
+                <h2>👁️ Visiometría Virtual</h2>
+                <p style="color: #8E8E93; margin-bottom: 16px;">Esta prueba evalúa tu agudeza visual a través de 3 ejercicios sencillos.</p>
+                <ul class="instruction-list">
+                    <li>
+                        <span class="instruction-number">1</span>
+                        <span><strong>Test de Letras:</strong> Escribe las letras que veas en pantalla</span>
+                    </li>
+                    <li>
+                        <span class="instruction-number">2</span>
+                        <span><strong>Test de Dirección:</strong> Indica hacia dónde apunta la abertura del círculo</span>
+                    </li>
+                    <li>
+                        <span class="instruction-number">3</span>
+                        <span><strong>Test de Colores:</strong> Identifica el número que ves en cada imagen</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="instructions-card">
+                <h2>📋 Recomendaciones</h2>
+                <ul class="instruction-list">
+                    <li>
+                        <span class="instruction-number">✓</span>
+                        <span>Mantén el dispositivo a unos 40 cm de distancia</span>
+                    </li>
+                    <li>
+                        <span class="instruction-number">✓</span>
+                        <span>Asegúrate de estar en un lugar bien iluminado</span>
+                    </li>
+                    <li>
+                        <span class="instruction-number">✓</span>
+                        <span>Si usas lentes, realiza la prueba con ellos puestos</span>
+                    </li>
+                </ul>
+            </div>
+
+            <button class="btn-primary" id="startBtn">Comenzar Prueba</button>
+        </div>
+
+        <!-- ========== TEST 1: SNELLEN (LETRAS) ========== -->
+        <div class="screen" id="snellenScreen">
+            <div class="progress-section">
+                <div class="progress-header">
+                    <span class="progress-title">Test de Letras</span>
+                    <span class="progress-counter"><span id="snellenCurrent">1</span> de <span id="snellenTotal">6</span></span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="snellenProgress" style="width: 16.6%"></div>
+                </div>
+            </div>
+
+            <div class="test-card">
+                <div class="test-title">¿Qué letras ves?</div>
+                <div class="test-subtitle">Escribe las letras que puedas identificar</div>
+
+                <div class="snellen-display">
+                    <div class="snellen-letters" id="snellenLetters">E</div>
+                </div>
+
+                <div class="snellen-input-container">
+                    <input type="text" class="snellen-input" id="snellenInput" placeholder="..." maxlength="6" autocomplete="off" autocapitalize="characters">
+                    <p class="snellen-hint">Presiona verificar cuando estés listo</p>
+                </div>
+
+                <button class="btn-primary" id="snellenNextBtn">Verificar</button>
+            </div>
+        </div>
+
+        <!-- ========== TEST 2: LANDOLT C (DIRECCIÓN) ========== -->
+        <div class="screen" id="landoltScreen">
+            <div class="progress-section">
+                <div class="progress-header">
+                    <span class="progress-title">Test de Dirección</span>
+                    <span class="progress-counter"><span id="landoltCurrent">1</span> de <span id="landoltTotal">5</span></span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="landoltProgress" style="width: 20%"></div>
+                </div>
+            </div>
+
+            <div class="test-card">
+                <div class="test-title">¿Hacia dónde está la abertura?</div>
+                <div class="test-subtitle">Toca la flecha que indica la dirección</div>
+
+                <div class="landolt-display">
+                    <div class="landolt-c" id="landoltC"></div>
+                </div>
+
+                <div class="direction-buttons">
+                    <div class="direction-btn" data-direction="top-left" onclick="selectDirection('top-left')">↖️</div>
+                    <div class="direction-btn" data-direction="top" onclick="selectDirection('top')">⬆️</div>
+                    <div class="direction-btn" data-direction="top-right" onclick="selectDirection('top-right')">↗️</div>
+                    <div class="direction-btn" data-direction="left" onclick="selectDirection('left')">⬅️</div>
+                    <div class="direction-btn center"></div>
+                    <div class="direction-btn" data-direction="right" onclick="selectDirection('right')">➡️</div>
+                    <div class="direction-btn" data-direction="bottom-left" onclick="selectDirection('bottom-left')">↙️</div>
+                    <div class="direction-btn" data-direction="bottom" onclick="selectDirection('bottom')">⬇️</div>
+                    <div class="direction-btn" data-direction="bottom-right" onclick="selectDirection('bottom-right')">↘️</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== TEST 3: ISHIHARA (COLORES) ========== -->
+        <div class="screen" id="ishiharaScreen">
+            <div class="progress-section">
+                <div class="progress-header">
+                    <span class="progress-title">Test de Colores</span>
+                    <span class="progress-counter"><span id="ishiharaCurrent">1</span> de <span id="ishiharaTotal">6</span></span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="ishiharaProgress" style="width: 16.6%"></div>
+                </div>
+            </div>
+
+            <div class="test-card">
+                <div class="test-title">¿Qué número ves?</div>
+                <div class="test-subtitle">Selecciona el número que puedas identificar</div>
+
+                <div class="ishihara-display">
+                    <div class="ishihara-plate" id="ishiharaPlate">
+                        <!-- SVG de placa Ishihara generada dinámicamente -->
+                    </div>
+                </div>
+
+                <div class="color-options" id="colorOptions">
+                    <!-- Opciones generadas dinámicamente -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== PANTALLA DE RESULTADOS ========== -->
+        <div class="screen" id="resultsScreen">
+            <div class="results-card">
+                <div class="results-icon">✅</div>
+                <div class="results-title">Prueba Completada</div>
+                <div class="results-subtitle">Tus resultados han sido guardados</div>
+
+                <div class="results-summary">
+                    <div class="result-item">
+                        <span class="result-label">Agudeza Visual (Letras)</span>
+                        <span class="result-value" id="resultSnellen">-</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Sensibilidad al Contraste</span>
+                        <span class="result-value" id="resultLandolt">-</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Visión Cromática</span>
+                        <span class="result-value" id="resultIshihara">-</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Concepto General</span>
+                        <span class="result-value" id="resultConcepto">-</span>
+                    </div>
+                </div>
+
+                <button class="btn-primary" id="continueBtn">Continuar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Guardando resultados...</p>
+        </div>
+    </div>
+
+    <!-- WhatsApp button -->
+    <a href="https://api.whatsapp.com/send?phone=573008021701&text=Hola.%20Requiero%20soporte%20con%20la%20visiometría%20virtual"
+       target="_blank"
+       class="whatsapp-btn">
+        💬
+    </a>
+
+    <script>
+        // ==========================================
+        // CONFIGURACIÓN DE PRUEBAS
+        // ==========================================
+
+        // Test Snellen - Letras (de más grande a más pequeño)
+        const snellenTests = [
+            { letters: 'E', size: 72, correctAnswer: 'E' },
+            { letters: 'FP', size: 56, correctAnswer: 'FP' },
+            { letters: 'TOZ', size: 44, correctAnswer: 'TOZ' },
+            { letters: 'LPED', size: 36, correctAnswer: 'LPED' },
+            { letters: 'PECFD', size: 28, correctAnswer: 'PECFD' },
+            { letters: 'EDFCZP', size: 22, correctAnswer: 'EDFCZP' }
+        ];
+
+        // Test Landolt C - Direcciones
+        const landoltTests = [
+            { direction: 'top', cssClass: 'gap-top' },
+            { direction: 'right', cssClass: 'gap-right' },
+            { direction: 'bottom', cssClass: 'gap-bottom' },
+            { direction: 'left', cssClass: 'gap-left' },
+            { direction: 'top', cssClass: 'gap-top' }
+        ];
+
+        // Test Ishihara - Placas de colores (simuladas con SVG)
+        const ishiharaTests = [
+            { number: 12, options: [12, 17, 21, 'Ninguno'] },
+            { number: 8, options: [3, 8, 6, 'Ninguno'] },
+            { number: 6, options: [6, 9, 5, 'Ninguno'] },
+            { number: 29, options: [29, 70, 26, 'Ninguno'] },
+            { number: 57, options: [57, 35, 75, 'Ninguno'] },
+            { number: 5, options: [5, 2, 8, 'Ninguno'] }
+        ];
+
+        // ==========================================
+        // ESTADO DE LA APLICACIÓN
+        // ==========================================
+        let patientData = null;
+        let ordenId = null;
+
+        // Resultados
+        let snellenIndex = 0;
+        let snellenCorrect = 0;
+
+        let landoltIndex = 0;
+        let landoltCorrect = 0;
+
+        let ishiharaIndex = 0;
+        let ishiharaCorrect = 0;
+
+        // ==========================================
+        // INICIALIZACIÓN
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            ordenId = urlParams.get('ordenId');
+
+            if (!ordenId) {
+                showError('No se proporcionó un ID de orden válido.');
+                return;
+            }
+
+            await loadPatientData();
+            setupEventListeners();
+        });
+
+        async function loadPatientData() {
+            try {
+                const response = await fetch(`/api/historia-clinica/${ordenId}`);
+                if (!response.ok) throw new Error('No se encontró la orden');
+
+                const result = await response.json();
+
+                if (!result.success || !result.data) {
+                    throw new Error('Datos del paciente no disponibles');
+                }
+
+                patientData = result.data;
+
+                // Actualizar UI
+                const initials = ((patientData.primerNombre || '')[0] || '') + ((patientData.primerApellido || '')[0] || '');
+                document.getElementById('patientAvatar').textContent = initials.toUpperCase();
+                document.getElementById('patientName').textContent = `${patientData.primerNombre || ''} ${patientData.primerApellido || ''}`.trim() || 'Paciente';
+                document.getElementById('patientId').textContent = `CC ${patientData.numeroId || '---'}`;
+
+            } catch (error) {
+                console.error('Error cargando paciente:', error);
+                showError('No se pudo cargar la información del paciente. Verifique el enlace.');
+            }
+        }
+
+        function setupEventListeners() {
+            document.getElementById('startBtn').addEventListener('click', startTest);
+            document.getElementById('snellenNextBtn').addEventListener('click', checkSnellenAnswer);
+            document.getElementById('continueBtn').addEventListener('click', () => {
+                // Redirigir al final del flujo
+                window.location.href = `https://www.bsl.com.co/foto2/${ordenId}`;
+            });
+
+            // Enter para avanzar en test Snellen
+            document.getElementById('snellenInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    checkSnellenAnswer();
+                }
+            });
+        }
+
+        // ==========================================
+        // NAVEGACIÓN ENTRE PANTALLAS
+        // ==========================================
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function startTest() {
+            showScreen('snellenScreen');
+            showSnellenTest(0);
+        }
+
+        // ==========================================
+        // TEST 1: SNELLEN (LETRAS)
+        // ==========================================
+        function showSnellenTest(index) {
+            const test = snellenTests[index];
+            const lettersEl = document.getElementById('snellenLetters');
+            const inputEl = document.getElementById('snellenInput');
+
+            lettersEl.textContent = test.letters;
+            lettersEl.style.fontSize = test.size + 'px';
+            inputEl.value = '';
+            inputEl.maxLength = test.letters.length;
+            inputEl.focus();
+
+            // Actualizar progreso
+            document.getElementById('snellenCurrent').textContent = index + 1;
+            document.getElementById('snellenTotal').textContent = snellenTests.length;
+            document.getElementById('snellenProgress').style.width = ((index + 1) / snellenTests.length * 100) + '%';
+        }
+
+        function checkSnellenAnswer() {
+            const input = document.getElementById('snellenInput').value.toUpperCase().trim();
+            const test = snellenTests[snellenIndex];
+
+            if (input === test.correctAnswer) {
+                snellenCorrect++;
+            }
+
+            snellenIndex++;
+
+            if (snellenIndex < snellenTests.length) {
+                showSnellenTest(snellenIndex);
+            } else {
+                // Pasar al siguiente test
+                showScreen('landoltScreen');
+                showLandoltTest(0);
+            }
+        }
+
+        // ==========================================
+        // TEST 2: LANDOLT C (DIRECCIÓN)
+        // ==========================================
+        function showLandoltTest(index) {
+            const test = landoltTests[index];
+            const cElement = document.getElementById('landoltC');
+
+            // Limpiar clases anteriores
+            cElement.className = 'landolt-c';
+            cElement.classList.add(test.cssClass);
+
+            // Actualizar progreso
+            document.getElementById('landoltCurrent').textContent = index + 1;
+            document.getElementById('landoltTotal').textContent = landoltTests.length;
+            document.getElementById('landoltProgress').style.width = ((index + 1) / landoltTests.length * 100) + '%';
+        }
+
+        function selectDirection(direction) {
+            const test = landoltTests[landoltIndex];
+
+            if (direction === test.direction) {
+                landoltCorrect++;
+            }
+
+            landoltIndex++;
+
+            if (landoltIndex < landoltTests.length) {
+                showLandoltTest(landoltIndex);
+            } else {
+                // Pasar al siguiente test
+                showScreen('ishiharaScreen');
+                showIshiharaTest(0);
+            }
+        }
+
+        // ==========================================
+        // TEST 3: ISHIHARA (COLORES)
+        // ==========================================
+        function showIshiharaTest(index) {
+            const test = ishiharaTests[index];
+
+            // Generar placa Ishihara simulada
+            generateIshiharaPlate(test.number);
+
+            // Generar opciones
+            const optionsContainer = document.getElementById('colorOptions');
+            optionsContainer.innerHTML = '';
+
+            // Mezclar opciones
+            const shuffledOptions = [...test.options].sort(() => Math.random() - 0.5);
+
+            shuffledOptions.forEach(option => {
+                const btn = document.createElement('button');
+                btn.className = 'color-option-btn';
+                btn.textContent = option;
+                btn.onclick = () => selectIshiharaOption(option, test.number);
+                optionsContainer.appendChild(btn);
+            });
+
+            // Actualizar progreso
+            document.getElementById('ishiharaCurrent').textContent = index + 1;
+            document.getElementById('ishiharaTotal').textContent = ishiharaTests.length;
+            document.getElementById('ishiharaProgress').style.width = ((index + 1) / ishiharaTests.length * 100) + '%';
+        }
+
+        function generateIshiharaPlate(number) {
+            const plate = document.getElementById('ishiharaPlate');
+
+            // Colores para simular placas Ishihara
+            const bgColors = ['#8B9467', '#A4B07A', '#97A86C', '#7D8A5B'];
+            const numColors = ['#C45C3E', '#D4724A', '#B84832', '#E08562'];
+
+            // Crear SVG con círculos aleatorios
+            const size = 200;
+            let svg = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`;
+
+            // Círculos de fondo
+            for (let i = 0; i < 300; i++) {
+                const x = Math.random() * size;
+                const y = Math.random() * size;
+                const r = 4 + Math.random() * 8;
+                const color = bgColors[Math.floor(Math.random() * bgColors.length)];
+                svg += `<circle cx="${x}" cy="${y}" r="${r}" fill="${color}"/>`;
+            }
+
+            // Dibujar número con círculos
+            const numStr = number.toString();
+            const startX = numStr.length === 1 ? 70 : 45;
+
+            numStr.split('').forEach((digit, idx) => {
+                const digitPaths = getDigitPath(digit);
+                const offsetX = startX + idx * 60;
+
+                digitPaths.forEach(([dx, dy]) => {
+                    const x = offsetX + dx;
+                    const y = 60 + dy;
+                    const r = 5 + Math.random() * 4;
+                    const color = numColors[Math.floor(Math.random() * numColors.length)];
+                    svg += `<circle cx="${x}" cy="${y}" r="${r}" fill="${color}"/>`;
+                });
+            });
+
+            svg += '</svg>';
+            plate.innerHTML = svg;
+        }
+
+        function getDigitPath(digit) {
+            // Puntos simplificados para cada dígito
+            const paths = {
+                '0': [[20,0],[30,0],[40,0],[10,15],[50,15],[10,40],[50,40],[10,65],[50,65],[20,80],[30,80],[40,80]],
+                '1': [[25,0],[30,0],[30,20],[30,40],[30,60],[30,80],[20,80],[40,80]],
+                '2': [[10,0],[20,0],[30,0],[40,0],[50,20],[30,40],[10,60],[10,80],[20,80],[30,80],[40,80],[50,80]],
+                '3': [[10,0],[20,0],[30,0],[40,0],[50,20],[30,40],[50,60],[10,80],[20,80],[30,80],[40,80]],
+                '4': [[10,0],[10,20],[10,40],[20,40],[30,40],[40,40],[50,40],[40,0],[40,20],[40,60],[40,80]],
+                '5': [[10,0],[20,0],[30,0],[40,0],[50,0],[10,20],[10,40],[20,40],[30,40],[40,40],[50,60],[10,80],[20,80],[30,80],[40,80]],
+                '6': [[20,0],[30,0],[40,0],[10,20],[10,40],[10,60],[20,40],[30,40],[40,40],[50,60],[20,80],[30,80],[40,80]],
+                '7': [[10,0],[20,0],[30,0],[40,0],[50,0],[50,20],[40,40],[30,60],[30,80]],
+                '8': [[20,0],[30,0],[40,0],[10,15],[50,15],[20,40],[30,40],[40,40],[10,65],[50,65],[20,80],[30,80],[40,80]],
+                '9': [[20,0],[30,0],[40,0],[10,15],[50,15],[20,40],[30,40],[40,40],[50,40],[50,60],[20,80],[30,80],[40,80]]
+            };
+            return paths[digit] || [];
+        }
+
+        function selectIshiharaOption(selected, correct) {
+            if (selected === correct) {
+                ishiharaCorrect++;
+            }
+
+            ishiharaIndex++;
+
+            if (ishiharaIndex < ishiharaTests.length) {
+                showIshiharaTest(ishiharaIndex);
+            } else {
+                // Finalizar y guardar
+                finishTest();
+            }
+        }
+
+        // ==========================================
+        // FINALIZAR Y GUARDAR
+        // ==========================================
+        async function finishTest() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+
+            // Calcular resultados
+            const snellenScore = Math.round((snellenCorrect / snellenTests.length) * 100);
+            const landoltScore = Math.round((landoltCorrect / landoltTests.length) * 100);
+            const ishiharaScore = Math.round((ishiharaCorrect / ishiharaTests.length) * 100);
+
+            // Determinar concepto
+            const totalScore = (snellenScore + landoltScore + ishiharaScore) / 3;
+            let concepto = 'Normal';
+            if (totalScore < 50) {
+                concepto = 'Revisión Sugerida';
+            } else if (totalScore < 80) {
+                concepto = 'Aceptable';
+            }
+
+            // Preparar datos para guardar
+            const dataToSave = {
+                orden_id: ordenId,
+                numero_id: patientData?.numeroId || '',
+                primer_nombre: patientData?.primerNombre || '',
+                primer_apellido: patientData?.primerApellido || '',
+                empresa: patientData?.empresa || '',
+                cod_empresa: patientData?.codEmpresa || '',
+                snellen_correctas: snellenCorrect,
+                snellen_total: snellenTests.length,
+                snellen_porcentaje: snellenScore,
+                landolt_correctas: landoltCorrect,
+                landolt_total: landoltTests.length,
+                landolt_porcentaje: landoltScore,
+                ishihara_correctas: ishiharaCorrect,
+                ishihara_total: ishiharaTests.length,
+                ishihara_porcentaje: ishiharaScore,
+                concepto: concepto
+            };
+
+            try {
+                const response = await fetch('/api/visiometria-virtual', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dataToSave)
+                });
+
+                const result = await response.json();
+                console.log('Resultados guardados:', result);
+
+            } catch (error) {
+                console.error('Error guardando resultados:', error);
+            }
+
+            document.getElementById('loadingOverlay').style.display = 'none';
+
+            // Mostrar resultados
+            showResults(snellenScore, landoltScore, ishiharaScore, concepto);
+        }
+
+        function showResults(snellen, landolt, ishihara, concepto) {
+            // Actualizar UI de resultados
+            const snellenEl = document.getElementById('resultSnellen');
+            snellenEl.textContent = `${snellenCorrect}/${snellenTests.length} (${snellen}%)`;
+            snellenEl.className = 'result-value ' + getScoreClass(snellen);
+
+            const landoltEl = document.getElementById('resultLandolt');
+            landoltEl.textContent = `${landoltCorrect}/${landoltTests.length} (${landolt}%)`;
+            landoltEl.className = 'result-value ' + getScoreClass(landolt);
+
+            const ishiharaEl = document.getElementById('resultIshihara');
+            ishiharaEl.textContent = `${ishiharaCorrect}/${ishiharaTests.length} (${ishihara}%)`;
+            ishiharaEl.className = 'result-value ' + getScoreClass(ishihara);
+
+            const conceptoEl = document.getElementById('resultConcepto');
+            conceptoEl.textContent = concepto;
+            conceptoEl.className = 'result-value ' + (concepto === 'Normal' ? 'good' : concepto === 'Aceptable' ? 'warning' : 'bad');
+
+            showScreen('resultsScreen');
+        }
+
+        function getScoreClass(score) {
+            if (score >= 80) return 'good';
+            if (score >= 50) return 'warning';
+            return 'bad';
+        }
+
+        // ==========================================
+        // UTILIDADES
+        // ==========================================
+        function showError(message) {
+            document.getElementById('errorCard').style.display = 'block';
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('startBtn').disabled = true;
+        }
+    </script>
+</body>
+</html>

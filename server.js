@@ -737,6 +737,43 @@ const initDB = async () => {
             )
         `);
 
+        // Crear tabla visiometrias_virtual si no existe
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS visiometrias_virtual (
+                id SERIAL PRIMARY KEY,
+                orden_id VARCHAR(100) REFERENCES "HistoriaClinica"("_id") ON DELETE CASCADE,
+                numero_id VARCHAR(50),
+                primer_nombre VARCHAR(100),
+                primer_apellido VARCHAR(100),
+                empresa VARCHAR(100),
+                cod_empresa VARCHAR(50),
+
+                -- Resultados Test Snellen (Letras)
+                snellen_correctas INTEGER,
+                snellen_total INTEGER,
+                snellen_porcentaje INTEGER,
+
+                -- Resultados Test Landolt C (Dirección)
+                landolt_correctas INTEGER,
+                landolt_total INTEGER,
+                landolt_porcentaje INTEGER,
+
+                -- Resultados Test Ishihara (Colores)
+                ishihara_correctas INTEGER,
+                ishihara_total INTEGER,
+                ishihara_porcentaje INTEGER,
+
+                -- Concepto general
+                concepto VARCHAR(50),
+
+                -- Metadatos
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+                CONSTRAINT unique_visiometria_virtual_orden UNIQUE (orden_id)
+            )
+        `);
+
         console.log('✅ Base de datos inicializada correctamente');
     } catch (error) {
         console.error('❌ Error al inicializar la base de datos:', error);
@@ -5827,12 +5864,16 @@ app.get('/api/estado-pruebas/:ordenId', async (req, res) => {
         );
         const tieneADC = adcResult.rows.length > 0;
 
-        // Verificar visiometría
+        // Verificar visiometría (presencial o virtual)
         const visioResult = await pool.query(
             'SELECT id FROM visiometrias WHERE orden_id = $1',
             [ordenId]
         );
-        const tieneVisiometria = visioResult.rows.length > 0;
+        const visioVirtualResult = await pool.query(
+            'SELECT id FROM visiometrias_virtual WHERE orden_id = $1',
+            [ordenId]
+        );
+        const tieneVisiometria = visioResult.rows.length > 0 || visioVirtualResult.rows.length > 0;
 
         // Determinar qué pruebas son requeridas según el campo exámenes
         const examLower = examenesRequeridos.toLowerCase();
@@ -5921,7 +5962,7 @@ app.post('/api/enviar-link-prueba', async (req, res) => {
                 nombrePrueba = 'Audiometría Virtual';
                 break;
             case 'visiometria':
-                url = `${baseUrl}/visiometria.html?ordenId=${ordenId}`;
+                url = `${baseUrl}/visiometria-virtual.html?ordenId=${ordenId}`;
                 nombrePrueba = 'Visiometría';
                 break;
             default:
@@ -5953,7 +5994,138 @@ app.post('/api/enviar-link-prueba', async (req, res) => {
 });
 
 // ==========================================
-// ENDPOINTS VISIOMETRIAS
+// ENDPOINTS VISIOMETRIA VIRTUAL
+// ==========================================
+
+// Obtener visiometría virtual por orden_id
+app.get('/api/visiometria-virtual/:ordenId', async (req, res) => {
+    try {
+        const { ordenId } = req.params;
+
+        const result = await pool.query(
+            'SELECT * FROM visiometrias_virtual WHERE orden_id = $1',
+            [ordenId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.json({ success: true, data: null });
+        }
+
+        res.json({ success: true, data: result.rows[0] });
+    } catch (error) {
+        console.error('❌ Error obteniendo visiometría virtual:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Crear o actualizar visiometría virtual
+app.post('/api/visiometria-virtual', async (req, res) => {
+    try {
+        const datos = req.body;
+
+        if (!datos.orden_id) {
+            return res.status(400).json({ success: false, message: 'orden_id es requerido' });
+        }
+
+        // Verificar si ya existe
+        const existeResult = await pool.query(
+            'SELECT id FROM visiometrias_virtual WHERE orden_id = $1',
+            [datos.orden_id]
+        );
+
+        if (existeResult.rows.length > 0) {
+            // Actualizar existente
+            const updateQuery = `
+                UPDATE visiometrias_virtual SET
+                    numero_id = $2,
+                    primer_nombre = $3,
+                    primer_apellido = $4,
+                    empresa = $5,
+                    cod_empresa = $6,
+                    snellen_correctas = $7,
+                    snellen_total = $8,
+                    snellen_porcentaje = $9,
+                    landolt_correctas = $10,
+                    landolt_total = $11,
+                    landolt_porcentaje = $12,
+                    ishihara_correctas = $13,
+                    ishihara_total = $14,
+                    ishihara_porcentaje = $15,
+                    concepto = $16,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE orden_id = $1
+                RETURNING *
+            `;
+
+            const values = [
+                datos.orden_id,
+                datos.numero_id,
+                datos.primer_nombre,
+                datos.primer_apellido,
+                datos.empresa,
+                datos.cod_empresa,
+                datos.snellen_correctas,
+                datos.snellen_total,
+                datos.snellen_porcentaje,
+                datos.landolt_correctas,
+                datos.landolt_total,
+                datos.landolt_porcentaje,
+                datos.ishihara_correctas,
+                datos.ishihara_total,
+                datos.ishihara_porcentaje,
+                datos.concepto
+            ];
+
+            const result = await pool.query(updateQuery, values);
+            console.log('✅ Visiometría virtual actualizada para orden:', datos.orden_id);
+
+            return res.json({ success: true, data: result.rows[0], operacion: 'UPDATE' });
+        } else {
+            // Insertar nuevo
+            const insertQuery = `
+                INSERT INTO visiometrias_virtual (
+                    orden_id, numero_id, primer_nombre, primer_apellido, empresa, cod_empresa,
+                    snellen_correctas, snellen_total, snellen_porcentaje,
+                    landolt_correctas, landolt_total, landolt_porcentaje,
+                    ishihara_correctas, ishihara_total, ishihara_porcentaje,
+                    concepto
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+                RETURNING *
+            `;
+
+            const values = [
+                datos.orden_id,
+                datos.numero_id,
+                datos.primer_nombre,
+                datos.primer_apellido,
+                datos.empresa,
+                datos.cod_empresa,
+                datos.snellen_correctas,
+                datos.snellen_total,
+                datos.snellen_porcentaje,
+                datos.landolt_correctas,
+                datos.landolt_total,
+                datos.landolt_porcentaje,
+                datos.ishihara_correctas,
+                datos.ishihara_total,
+                datos.ishihara_porcentaje,
+                datos.concepto
+            ];
+
+            const result = await pool.query(insertQuery, values);
+            console.log('✅ Visiometría virtual creada para orden:', datos.orden_id);
+
+            return res.json({ success: true, data: result.rows[0], operacion: 'INSERT' });
+        }
+
+    } catch (error) {
+        console.error('❌ Error guardando visiometría virtual:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ==========================================
+// ENDPOINTS VISIOMETRIAS (PRESENCIAL)
 // ==========================================
 
 // Obtener visiometría por orden_id
