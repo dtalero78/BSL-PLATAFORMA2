@@ -5812,6 +5812,87 @@ app.get('/api/estado-pruebas/:ordenId', async (req, res) => {
     }
 });
 
+// Enviar link de prueba por WhatsApp
+app.post('/api/enviar-link-prueba', async (req, res) => {
+    try {
+        const { ordenId, tipoPrueba } = req.body;
+
+        if (!ordenId || !tipoPrueba) {
+            return res.status(400).json({ success: false, message: 'ordenId y tipoPrueba son requeridos' });
+        }
+
+        // Obtener datos del paciente
+        const ordenResult = await pool.query(
+            'SELECT "primerNombre", "primerApellido", "celular", "numeroId" FROM "HistoriaClinica" WHERE "_id" = $1',
+            [ordenId]
+        );
+
+        if (ordenResult.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Orden no encontrada' });
+        }
+
+        const paciente = ordenResult.rows[0];
+        const primerNombre = paciente.primerNombre || 'Paciente';
+        const celular = paciente.celular;
+
+        if (!celular) {
+            return res.status(400).json({ success: false, message: 'El paciente no tiene número de celular registrado' });
+        }
+
+        // Limpiar número de teléfono
+        const telefonoLimpio = celular.replace(/\s+/g, '').replace(/[^0-9]/g, '');
+        const toNumber = telefonoLimpio.startsWith('57') ? telefonoLimpio : `57${telefonoLimpio}`;
+
+        // Determinar URL según tipo de prueba
+        const baseUrl = 'https://bsl-plataforma.com';
+        let url = '';
+        let nombrePrueba = '';
+
+        switch (tipoPrueba) {
+            case 'formulario':
+                url = `${baseUrl}/?_id=${ordenId}`;
+                nombrePrueba = 'Formulario Médico';
+                break;
+            case 'adc':
+                url = `${baseUrl}/pruebas-adc.html?ordenId=${ordenId}`;
+                nombrePrueba = 'Pruebas Psicotécnicas ADC';
+                break;
+            case 'audiometria':
+                url = `${baseUrl}/audiometria-virtual.html?ordenId=${ordenId}`;
+                nombrePrueba = 'Audiometría Virtual';
+                break;
+            case 'visiometria':
+                url = `${baseUrl}/visiometria.html?ordenId=${ordenId}`;
+                nombrePrueba = 'Visiometría';
+                break;
+            default:
+                return res.status(400).json({ success: false, message: 'Tipo de prueba no válido' });
+        }
+
+        // Construir mensaje
+        const mensaje = `Hola ${primerNombre}, te enviamos el enlace para completar tu *${nombrePrueba}*:\n\n${url}\n\n_BSL - Salud Ocupacional_`;
+
+        // Enviar mensaje por WhatsApp
+        await sendWhatsAppMessage(toNumber, mensaje);
+
+        console.log(`📱 Link de ${tipoPrueba} enviado a ${toNumber} para orden ${ordenId}`);
+
+        res.json({
+            success: true,
+            message: `Link de ${nombrePrueba} enviado correctamente`,
+            enviado: {
+                telefono: toNumber,
+                prueba: tipoPrueba,
+                url: url
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Error enviando link de prueba:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // ==========================================
 // ENDPOINTS VISIOMETRIAS
 // ==========================================

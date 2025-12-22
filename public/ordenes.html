@@ -1314,6 +1314,37 @@
             background: #F59E0B;
         }
 
+        .prueba-tag {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .prueba-tag:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .prueba-tag:active {
+            transform: scale(0.98);
+        }
+
+        .prueba-enviada {
+            background: #DBEAFE !important;
+            color: #1D4ED8 !important;
+        }
+
+        .prueba-enviada::before {
+            background: #3B82F6 !important;
+        }
+
+        .pruebas-hint {
+            font-size: 10px;
+            font-weight: 400;
+            color: #9CA3AF;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+
         .detail-actions {
             display: flex;
             gap: 12px;
@@ -3313,10 +3344,19 @@
 
             // Generar tags de estado de pruebas
             let pruebasTagsHtml = '';
+            const ordenId = orden._id;
             if (estadoPruebas && estadoPruebas.pruebas) {
                 const p = estadoPruebas.pruebas;
                 let tagsCompletados = [];
                 let tagsPendientes = [];
+
+                // Mapeo de nombres a tipos de prueba
+                const tiposPrueba = {
+                    'Formulario': 'formulario',
+                    'Pruebas ADC': 'adc',
+                    'Audiometría': 'audiometria',
+                    'Visiometría': 'visiometria'
+                };
 
                 // Formulario
                 if (p.formulario.completado) {
@@ -3349,10 +3389,10 @@
                 if (tagsCompletados.length > 0 || tagsPendientes.length > 0) {
                     pruebasTagsHtml = `
                         <div class="pruebas-status-section">
-                            <div class="pruebas-status-title">Estado de Pruebas</div>
+                            <div class="pruebas-status-title">Estado de Pruebas <span class="pruebas-hint">(clic para enviar link por WhatsApp)</span></div>
                             <div class="pruebas-tags-container">
-                                ${tagsCompletados.map(t => `<span class="prueba-tag prueba-completada">${t}</span>`).join('')}
-                                ${tagsPendientes.map(t => `<span class="prueba-tag prueba-pendiente">${t}</span>`).join('')}
+                                ${tagsCompletados.map(t => `<span class="prueba-tag prueba-completada" data-tipo="${tiposPrueba[t]}" data-orden="${ordenId}" onclick="enviarLinkPrueba(this)">${t}</span>`).join('')}
+                                ${tagsPendientes.map(t => `<span class="prueba-tag prueba-pendiente" data-tipo="${tiposPrueba[t]}" data-orden="${ordenId}" onclick="enviarLinkPrueba(this)">${t}</span>`).join('')}
                             </div>
                         </div>
                     `;
@@ -3696,6 +3736,60 @@
 
         function cerrarModalDetalles() {
             document.getElementById('modalDetalles').classList.remove('active');
+        }
+
+        // ========== ENVIAR LINK PRUEBA POR WHATSAPP ==========
+        async function enviarLinkPrueba(tagElement) {
+            const tipoPrueba = tagElement.dataset.tipo;
+            const ordenId = tagElement.dataset.orden;
+            const nombrePrueba = tagElement.textContent;
+
+            // Confirmación
+            if (!confirm(`¿Enviar link de "${nombrePrueba}" por WhatsApp al paciente?`)) {
+                return;
+            }
+
+            // Mostrar estado de carga en el tag
+            const textoOriginal = tagElement.textContent;
+            tagElement.textContent = 'Enviando...';
+            tagElement.style.opacity = '0.6';
+            tagElement.style.pointerEvents = 'none';
+
+            try {
+                const response = await fetch('/api/enviar-link-prueba', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ ordenId, tipoPrueba })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Mostrar éxito temporalmente
+                    tagElement.textContent = '✓ Enviado';
+                    tagElement.classList.add('prueba-enviada');
+
+                    setTimeout(() => {
+                        tagElement.textContent = textoOriginal;
+                        tagElement.classList.remove('prueba-enviada');
+                        tagElement.style.opacity = '1';
+                        tagElement.style.pointerEvents = 'auto';
+                    }, 2000);
+                } else {
+                    alert('Error: ' + (result.message || 'No se pudo enviar el mensaje'));
+                    tagElement.textContent = textoOriginal;
+                    tagElement.style.opacity = '1';
+                    tagElement.style.pointerEvents = 'auto';
+                }
+            } catch (error) {
+                console.error('Error enviando link:', error);
+                alert('Error al enviar el mensaje. Intenta de nuevo.');
+                tagElement.textContent = textoOriginal;
+                tagElement.style.opacity = '1';
+                tagElement.style.pointerEvents = 'auto';
+            }
         }
 
         // ========== EXÁMENES FUNCTIONS ==========
