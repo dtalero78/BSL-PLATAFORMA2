@@ -1383,13 +1383,35 @@ app.get('/api/admin/usuarios/pendientes', authMiddleware, requireAdmin, async (r
 app.put('/api/admin/usuarios/:id/aprobar', authMiddleware, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
+        const { codEmpresa } = req.body;
+
+        // Validar que se asigne una empresa
+        if (!codEmpresa) {
+            return res.status(400).json({
+                success: false,
+                message: 'Debe asignar una empresa al usuario'
+            });
+        }
+
+        // Verificar que la empresa existe
+        const empresaCheck = await pool.query(
+            'SELECT cod_empresa FROM empresas WHERE cod_empresa = $1 AND activo = true',
+            [codEmpresa.toUpperCase()]
+        );
+
+        if (empresaCheck.rows.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'La empresa seleccionada no existe o no está activa'
+            });
+        }
 
         const result = await pool.query(`
             UPDATE usuarios
-            SET estado = 'aprobado', fecha_aprobacion = NOW(), aprobado_por = $1
-            WHERE id = $2 AND estado = 'pendiente'
-            RETURNING id, email, nombre_completo, estado
-        `, [req.usuario.id, id]);
+            SET estado = 'aprobado', fecha_aprobacion = NOW(), aprobado_por = $1, cod_empresa = $2
+            WHERE id = $3 AND estado = 'pendiente'
+            RETURNING id, email, nombre_completo, estado, cod_empresa
+        `, [req.usuario.id, codEmpresa.toUpperCase(), id]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({
@@ -1398,7 +1420,7 @@ app.put('/api/admin/usuarios/:id/aprobar', authMiddleware, requireAdmin, async (
             });
         }
 
-        console.log(`✅ Usuario aprobado: ${result.rows[0].email} (por ${req.usuario.email})`);
+        console.log(`✅ Usuario aprobado: ${result.rows[0].email} -> ${codEmpresa} (por ${req.usuario.email})`);
 
         res.json({
             success: true,

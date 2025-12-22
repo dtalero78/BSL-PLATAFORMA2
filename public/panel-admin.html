@@ -806,6 +806,40 @@
         </div>
     </div>
 
+    <!-- Modal Aprobar Usuario -->
+    <div class="modal-overlay" id="modalAprobar">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Aprobar usuario</h3>
+                <button class="modal-close" onclick="cerrarModal('modalAprobar')">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Usuario</label>
+                    <p id="aprobarUsuarioInfo" style="font-size: 14px; color: var(--text-secondary); margin: 0;"></p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Asignar a empresa *</label>
+                    <select class="form-select" id="aprobarEmpresaSelect" required>
+                        <option value="">Selecciona una empresa...</option>
+                    </select>
+                    <p style="font-size: 12px; color: var(--text-tertiary); margin-top: 6px;">
+                        El usuario podra acceder al panel de esta empresa
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="cerrarModal('modalAprobar')">Cancelar</button>
+                <button type="button" class="btn-primary" id="btnConfirmarAprobar" onclick="confirmarAprobacion()">Aprobar Usuario</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast -->
     <div class="alert-toast" id="toast"></div>
 
@@ -813,6 +847,9 @@
     <script>
         let usuarioActual = null;
         let tabActual = 'pendientes';
+        let empresasCache = [];
+        let usuarioAprobarId = null;
+        let usuarioAprobarInfo = null;
 
         // Inicializar
         document.addEventListener('DOMContentLoaded', async () => {
@@ -823,6 +860,9 @@
             document.getElementById('userName').textContent = usuarioActual.nombreCompleto || 'Administrador';
             document.getElementById('userEmail').textContent = usuarioActual.email;
 
+            // Cargar empresas para el selector
+            await cargarEmpresas();
+
             // Cargar datos
             cargarEstadisticas();
             cargarPendientes();
@@ -830,6 +870,42 @@
             // Configurar busqueda
             document.getElementById('searchInput').addEventListener('input', debounce(filtrarUsuarios, 300));
         });
+
+        async function cargarEmpresas() {
+            try {
+                const response = await Auth.fetchAuth('/api/empresas');
+                if (!response) return;
+                const data = await response.json();
+
+                if (data.success) {
+                    empresasCache = data.data;
+                    // Actualizar selector en modal de crear usuario
+                    actualizarSelectoresEmpresa();
+                }
+            } catch (error) {
+                console.error('Error cargando empresas:', error);
+            }
+        }
+
+        function actualizarSelectoresEmpresa() {
+            const selectAprobar = document.getElementById('aprobarEmpresaSelect');
+            const selectCrear = document.getElementById('nuevoCodEmpresa');
+
+            const options = empresasCache.map(e =>
+                `<option value="${e.cod_empresa}">${e.cod_empresa} - ${e.empresa}</option>`
+            ).join('');
+
+            selectAprobar.innerHTML = '<option value="">Selecciona una empresa...</option>' + options;
+
+            // Convertir el input de codigo empresa a select en modal crear
+            if (selectCrear && selectCrear.tagName === 'INPUT') {
+                const newSelect = document.createElement('select');
+                newSelect.className = 'form-select';
+                newSelect.id = 'nuevoCodEmpresa';
+                newSelect.innerHTML = '<option value="">Selecciona una empresa...</option>' + options;
+                selectCrear.parentNode.replaceChild(newSelect, selectCrear);
+            }
+        }
 
         function debounce(func, wait) {
             let timeout;
@@ -881,7 +957,7 @@
                             <td>${formatearFecha(u.fecha_registro)}</td>
                             <td>
                                 <div class="action-buttons">
-                                    <button class="btn-action approve" onclick="aprobarUsuario(${u.id})">Aprobar</button>
+                                    <button class="btn-action approve" onclick="aprobarUsuario(${u.id}, '${u.email}', '${(u.nombre_completo || '').replace(/'/g, "\\'")}')">Aprobar</button>
                                     <button class="btn-action reject" onclick="rechazarUsuario(${u.id})">Rechazar</button>
                                 </div>
                             </td>
@@ -959,9 +1035,10 @@
         }
 
         function renderAcciones(usuario) {
+            const nombreEscapado = (usuario.nombre_completo || '').replace(/'/g, "\\'");
             if (usuario.estado === 'pendiente') {
                 return `
-                    <button class="btn-action approve" onclick="aprobarUsuario(${usuario.id})">Aprobar</button>
+                    <button class="btn-action approve" onclick="aprobarUsuario(${usuario.id}, '${usuario.email}', '${nombreEscapado}')">Aprobar</button>
                     <button class="btn-action reject" onclick="rechazarUsuario(${usuario.id})">Rechazar</button>
                 `;
             } else if (usuario.estado === 'aprobado') {
@@ -997,16 +1074,48 @@
             }
         }
 
-        async function aprobarUsuario(id) {
-            if (!confirm('Aprobar este usuario?')) return;
+        // Abrir modal para aprobar usuario con selección de empresa
+        function aprobarUsuario(id, email, nombre) {
+            usuarioAprobarId = id;
+            usuarioAprobarInfo = { email, nombre };
+
+            // Mostrar info del usuario
+            document.getElementById('aprobarUsuarioInfo').innerHTML = `
+                <strong>${nombre || 'Sin nombre'}</strong><br>
+                ${email}
+            `;
+
+            // Resetear selector
+            document.getElementById('aprobarEmpresaSelect').value = '';
+
+            // Abrir modal
+            document.getElementById('modalAprobar').classList.add('show');
+        }
+
+        // Confirmar aprobación con empresa seleccionada
+        async function confirmarAprobacion() {
+            const codEmpresa = document.getElementById('aprobarEmpresaSelect').value;
+
+            if (!codEmpresa) {
+                mostrarToast('Debes seleccionar una empresa', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btnConfirmarAprobar');
+            btn.disabled = true;
+            btn.textContent = 'Aprobando...';
 
             try {
-                const response = await Auth.fetchAuth(`/api/admin/usuarios/${id}/aprobar`, { method: 'PUT' });
+                const response = await Auth.fetchAuth(`/api/admin/usuarios/${usuarioAprobarId}/aprobar`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ codEmpresa })
+                });
                 if (!response) return;
                 const data = await response.json();
 
                 if (data.success) {
-                    mostrarToast('Usuario aprobado exitosamente', 'success');
+                    mostrarToast(`Usuario aprobado y asignado a ${codEmpresa}`, 'success');
+                    cerrarModal('modalAprobar');
                     cargarEstadisticas();
                     cargarPendientes();
                     if (tabActual === 'todos') cargarTodosUsuarios();
@@ -1015,6 +1124,9 @@
                 }
             } catch (error) {
                 mostrarToast('Error de conexion', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Aprobar Usuario';
             }
         }
 
