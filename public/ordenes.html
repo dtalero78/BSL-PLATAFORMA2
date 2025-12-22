@@ -3301,18 +3301,18 @@
                         }
                     }
 
-                    // Cargar estado de pruebas
-                    try {
-                        const estadoResponse = await fetch(`/api/estado-pruebas/${ordenId}`);
-                        const estadoResult = await estadoResponse.json();
-                        if (estadoResult.success) {
-                            datos.estadoPruebas = estadoResult.data;
-                        }
-                    } catch (e) {
-                        console.log('No se pudo cargar estado de pruebas');
-                    }
-
                     detallesCache[ordenId] = datos;
+                }
+
+                // Siempre cargar estado de pruebas (no cachear, puede cambiar)
+                try {
+                    const estadoResponse = await fetch(`/api/estado-pruebas/${ordenId}`);
+                    const estadoResult = await estadoResponse.json();
+                    if (estadoResult.success) {
+                        datos.estadoPruebas = estadoResult.data;
+                    }
+                } catch (e) {
+                    console.log('No se pudo cargar estado de pruebas');
                 }
 
                 renderModalDetalles(datos);
