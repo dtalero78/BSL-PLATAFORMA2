@@ -3357,7 +3357,7 @@
                     'Formulario': 'formulario',
                     'Pruebas ADC': 'adc',
                     'Audiometría': 'audiometria',
-                    'Visiometría': 'visiometria'
+                    'Visual': 'visiometria'
                 };
 
                 // Formulario
@@ -3381,11 +3381,11 @@
                     tagsPendientes.push('Audiometría');
                 }
 
-                // Visiometría
+                // Visual (Visiometría)
                 if (p.visiometria.completado) {
-                    tagsCompletados.push('Visiometría');
+                    tagsCompletados.push('Visual');
                 } else if (p.visiometria.requerido) {
-                    tagsPendientes.push('Visiometría');
+                    tagsPendientes.push('Visual');
                 }
 
                 if (tagsCompletados.length > 0 || tagsPendientes.length > 0) {
