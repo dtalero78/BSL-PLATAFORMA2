@@ -2812,6 +2812,83 @@ app.put('/api/historia-clinica/:id', async (req, res) => {
             console.log('   numeroId:', historiaActualizada.numeroId);
             console.log('═══════════════════════════════════════════════════════════');
 
+            // Si se actualizó el numeroId, actualizar en cascada en todas las tablas relacionadas
+            if (datos.numeroId !== undefined) {
+                const nuevoNumeroId = datos.numeroId;
+                const ordenId = id; // El _id de HistoriaClinica es el orden_id en las otras tablas
+
+                console.log('🔄 Actualizando numeroId en cascada...');
+                console.log('   Nuevo numeroId:', nuevoNumeroId);
+                console.log('   orden_id:', ordenId);
+
+                // Actualizar en formularios (buscar por wix_id que es el orden_id)
+                try {
+                    const formResult = await pool.query(
+                        'UPDATE formularios SET numero_id = $1 WHERE wix_id = $2 RETURNING id',
+                        [nuevoNumeroId, ordenId]
+                    );
+                    if (formResult.rows.length > 0) {
+                        console.log('   ✅ formularios actualizado');
+                    }
+                } catch (e) {
+                    console.log('   ⚠️ formularios: sin registro para actualizar');
+                }
+
+                // Actualizar en audiometrias
+                try {
+                    const audioResult = await pool.query(
+                        'UPDATE audiometrias SET numero_id = $1 WHERE orden_id = $2 RETURNING id',
+                        [nuevoNumeroId, ordenId]
+                    );
+                    if (audioResult.rows.length > 0) {
+                        console.log('   ✅ audiometrias actualizado');
+                    }
+                } catch (e) {
+                    console.log('   ⚠️ audiometrias: sin registro para actualizar');
+                }
+
+                // Actualizar en pruebasADC
+                try {
+                    const adcResult = await pool.query(
+                        'UPDATE "pruebasADC" SET numero_id = $1 WHERE orden_id = $2 RETURNING id',
+                        [nuevoNumeroId, ordenId]
+                    );
+                    if (adcResult.rows.length > 0) {
+                        console.log('   ✅ pruebasADC actualizado');
+                    }
+                } catch (e) {
+                    console.log('   ⚠️ pruebasADC: sin registro para actualizar');
+                }
+
+                // Actualizar en visiometrias
+                try {
+                    const visioResult = await pool.query(
+                        'UPDATE visiometrias SET numero_id = $1 WHERE orden_id = $2 RETURNING id',
+                        [nuevoNumeroId, ordenId]
+                    );
+                    if (visioResult.rows.length > 0) {
+                        console.log('   ✅ visiometrias actualizado');
+                    }
+                } catch (e) {
+                    console.log('   ⚠️ visiometrias: sin registro para actualizar');
+                }
+
+                // Actualizar en visiometrias_virtual
+                try {
+                    const visioVirtualResult = await pool.query(
+                        'UPDATE visiometrias_virtual SET numero_id = $1 WHERE orden_id = $2 RETURNING id',
+                        [nuevoNumeroId, ordenId]
+                    );
+                    if (visioVirtualResult.rows.length > 0) {
+                        console.log('   ✅ visiometrias_virtual actualizado');
+                    }
+                } catch (e) {
+                    console.log('   ⚠️ visiometrias_virtual: sin registro para actualizar');
+                }
+
+                console.log('🔄 Actualización en cascada completada');
+            }
+
             // Sincronizar con Wix
             try {
                 const fetch = (await import('node-fetch')).default;
