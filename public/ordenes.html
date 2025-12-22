@@ -3288,17 +3288,15 @@
                     const orden = ordenResult.data;
                     datos = { orden, formulario: null, estadoPruebas: null };
 
-                    // Buscar formulario por numeroId si existe
-                    if (orden.numeroId) {
-                        try {
-                            const formResponse = await fetch(`/api/formularios/buscar/${orden.numeroId}`);
-                            const formResult = await formResponse.json();
-                            if (formResult.success && formResult.data) {
-                                datos.formulario = formResult.data;
-                            }
-                        } catch (e) {
-                            console.log('No se encontró formulario para este paciente');
+                    // Buscar formulario por orden._id (wix_id) - relación principal
+                    try {
+                        const formResponse = await fetch(`/api/formularios/buscar/${orden._id}`);
+                        const formResult = await formResponse.json();
+                        if (formResult.success && formResult.data) {
+                            datos.formulario = formResult.data;
                         }
+                    } catch (e) {
+                        console.log('No se encontró formulario para este paciente');
                     }
 
                     detallesCache[ordenId] = datos;
@@ -3907,17 +3905,15 @@
                 const orden = ordenResult.data;
                 let formulario = null;
 
-                // Buscar formulario por numeroId si existe
-                if (orden.numeroId) {
-                    try {
-                        const formResponse = await fetch(`/api/formularios/buscar/${orden.numeroId}`);
-                        const formResult = await formResponse.json();
-                        if (formResult.success && formResult.data) {
-                            formulario = formResult.data;
-                        }
-                    } catch (e) {
-                        console.log('No se encontró formulario para este paciente');
+                // Buscar formulario por orden._id (wix_id) - relación principal
+                try {
+                    const formResponse = await fetch(`/api/formularios/buscar/${orden._id}`);
+                    const formResult = await formResponse.json();
+                    if (formResult.success && formResult.data) {
+                        formulario = formResult.data;
                     }
+                } catch (e) {
+                    console.log('No se encontró formulario para este paciente');
                 }
 
                 formularioActual = { orden, formulario };

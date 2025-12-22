@@ -1264,32 +1264,40 @@ app.get('/api/formularios/search', async (req, res) => {
     }
 });
 
-// Buscar formulario por numeroId (cédula) o por _id de HistoriaClinica
-app.get('/api/formularios/buscar/:numeroId', async (req, res) => {
+// Buscar formulario por wix_id (orden_id), con fallback a numero_id (cédula)
+app.get('/api/formularios/buscar/:identificador', async (req, res) => {
     try {
-        const { numeroId } = req.params;
+        const { identificador } = req.params;
 
-        console.log(`🔍 Buscando formulario por numeroId: ${numeroId}`);
+        console.log(`🔍 Buscando formulario por identificador: ${identificador}`);
 
-        // Primero buscar por cédula directa
+        // Primero buscar por wix_id (orden_id) - relación principal
         let result = await pool.query(
-            'SELECT * FROM formularios WHERE numero_id = $1 ORDER BY fecha_registro DESC LIMIT 1',
-            [numeroId]
+            'SELECT * FROM formularios WHERE wix_id = $1 LIMIT 1',
+            [identificador]
         );
 
-        // Si no encuentra, buscar el _id de HistoriaClinica y luego buscar formulario
+        // Si no encuentra por wix_id, buscar por numero_id (cédula) - fallback para datos antiguos
         if (result.rows.length === 0) {
-            // Obtener el _id de HistoriaClinica que tiene esta cédula
+            console.log(`🔍 No encontrado por wix_id, buscando por numero_id...`);
+            result = await pool.query(
+                'SELECT * FROM formularios WHERE numero_id = $1 ORDER BY fecha_registro DESC LIMIT 1',
+                [identificador]
+            );
+        }
+
+        // Si aún no encuentra, intentar obtener el _id de HistoriaClinica por cédula
+        if (result.rows.length === 0) {
             const hcResult = await pool.query(
                 'SELECT "_id" FROM "HistoriaClinica" WHERE "numeroId" = $1 LIMIT 1',
-                [numeroId]
+                [identificador]
             );
 
             if (hcResult.rows.length > 0) {
                 const hcId = hcResult.rows[0]._id;
-                console.log(`🔍 Buscando formulario por _id de HC: ${hcId}`);
+                console.log(`🔍 Buscando formulario por wix_id desde HC: ${hcId}`);
                 result = await pool.query(
-                    'SELECT * FROM formularios WHERE numero_id = $1 ORDER BY fecha_registro DESC LIMIT 1',
+                    'SELECT * FROM formularios WHERE wix_id = $1 LIMIT 1',
                     [hcId]
                 );
             }
@@ -5918,13 +5926,19 @@ app.get('/api/estado-pruebas/:ordenId', async (req, res) => {
 
         const orden = ordenResult.rows[0];
         const examenesRequeridos = orden.examenes || '';
-        const numeroId = orden.numeroId;
 
-        // Verificar formulario principal (en tabla formularios por numero_id)
-        const formularioResult = await pool.query(
-            'SELECT id FROM formularios WHERE numero_id = $1',
-            [numeroId]
+        // Verificar formulario principal (por wix_id = orden_id, con fallback a numero_id para datos antiguos)
+        let formularioResult = await pool.query(
+            'SELECT id FROM formularios WHERE wix_id = $1',
+            [ordenId]
         );
+        // Fallback: buscar por numero_id si no se encuentra por wix_id (datos antiguos)
+        if (formularioResult.rows.length === 0 && orden.numeroId) {
+            formularioResult = await pool.query(
+                'SELECT id FROM formularios WHERE numero_id = $1',
+                [orden.numeroId]
+            );
+        }
         const tieneFormulario = formularioResult.rows.length > 0;
 
         // Verificar audiometría
