@@ -1256,6 +1256,64 @@
             background: #F3E8FF;
         }
 
+        /* Estado de Pruebas - Tags */
+        .pruebas-status-section {
+            background: #F8FAFC;
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+        }
+
+        .pruebas-status-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #6B7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .pruebas-tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .prueba-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            gap: 6px;
+        }
+
+        .prueba-tag::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .prueba-completada {
+            background: #ECFDF5;
+            color: #065F46;
+        }
+
+        .prueba-completada::before {
+            background: #10B981;
+        }
+
+        .prueba-pendiente {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+
+        .prueba-pendiente::before {
+            background: #F59E0B;
+        }
+
         .detail-actions {
             display: flex;
             gap: 12px;
@@ -3197,7 +3255,7 @@
                     if (!ordenResult.success) throw new Error('No se pudo cargar la orden');
 
                     const orden = ordenResult.data;
-                    datos = { orden, formulario: null };
+                    datos = { orden, formulario: null, estadoPruebas: null };
 
                     // Buscar formulario por numeroId si existe
                     if (orden.numeroId) {
@@ -3210,6 +3268,17 @@
                         } catch (e) {
                             console.log('No se encontró formulario para este paciente');
                         }
+                    }
+
+                    // Cargar estado de pruebas
+                    try {
+                        const estadoResponse = await fetch(`/api/estado-pruebas/${ordenId}`);
+                        const estadoResult = await estadoResponse.json();
+                        if (estadoResult.success) {
+                            datos.estadoPruebas = estadoResult.data;
+                        }
+                    } catch (e) {
+                        console.log('No se pudo cargar estado de pruebas');
                     }
 
                     detallesCache[ordenId] = datos;
@@ -3225,6 +3294,7 @@
         function renderModalDetalles(datos) {
             const orden = datos.orden;
             const form = datos.formulario;
+            const estadoPruebas = datos.estadoPruebas;
 
             const nombreCompleto = `${orden.primerNombre || ''} ${orden.segundoNombre || ''} ${orden.primerApellido || ''} ${orden.segundoApellido || ''}`.replace(/\s+/g, ' ').trim() || 'Sin nombre';
             const initials = getInitials(orden.primerNombre, orden.primerApellido);
@@ -3239,6 +3309,54 @@
                 const fechaStr = new Date(orden.fechaAtencion).toLocaleDateString('es-CO', opcionesSoloFecha);
                 const horaStr = orden.horaAtencion || new Date(orden.fechaAtencion).toLocaleTimeString('es-CO', { timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit', hour12: true });
                 fechaAtencion = `${fechaStr}, ${horaStr}`;
+            }
+
+            // Generar tags de estado de pruebas
+            let pruebasTagsHtml = '';
+            if (estadoPruebas && estadoPruebas.pruebas) {
+                const p = estadoPruebas.pruebas;
+                let tagsCompletados = [];
+                let tagsPendientes = [];
+
+                // Formulario
+                if (p.formulario.completado) {
+                    tagsCompletados.push('Formulario');
+                } else if (p.formulario.requerido) {
+                    tagsPendientes.push('Formulario');
+                }
+
+                // Pruebas ADC
+                if (p.adc.completado) {
+                    tagsCompletados.push('Pruebas ADC');
+                } else if (p.adc.requerido) {
+                    tagsPendientes.push('Pruebas ADC');
+                }
+
+                // Audiometría
+                if (p.audiometria.completado) {
+                    tagsCompletados.push('Audiometría');
+                } else if (p.audiometria.requerido) {
+                    tagsPendientes.push('Audiometría');
+                }
+
+                // Visiometría
+                if (p.visiometria.completado) {
+                    tagsCompletados.push('Visiometría');
+                } else if (p.visiometria.requerido) {
+                    tagsPendientes.push('Visiometría');
+                }
+
+                if (tagsCompletados.length > 0 || tagsPendientes.length > 0) {
+                    pruebasTagsHtml = `
+                        <div class="pruebas-status-section">
+                            <div class="pruebas-status-title">Estado de Pruebas</div>
+                            <div class="pruebas-tags-container">
+                                ${tagsCompletados.map(t => `<span class="prueba-tag prueba-completada">${t}</span>`).join('')}
+                                ${tagsPendientes.map(t => `<span class="prueba-tag prueba-pendiente">${t}</span>`).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
             }
 
             // Configure buttons
@@ -3390,6 +3508,9 @@
                         <div class="profile-date">${fechaAtencion}</div>
                     </div>
                 </div>
+
+                <!-- Estado de Pruebas -->
+                ${pruebasTagsHtml}
 
                 <!-- HISTORIA CLINICA: Información de la Orden -->
                 <div class="detail-card">

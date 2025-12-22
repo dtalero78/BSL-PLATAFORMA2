@@ -5725,6 +5725,94 @@ async function syncADCToWix(datos, operacion) {
 }
 
 // ==========================================
+// ENDPOINT ESTADO DE PRUEBAS DEL PACIENTE
+// ==========================================
+
+// Obtener estado de todas las pruebas por orden_id
+app.get('/api/estado-pruebas/:ordenId', async (req, res) => {
+    try {
+        const { ordenId } = req.params;
+
+        // Obtener información de la orden (exámenes requeridos)
+        const ordenResult = await pool.query(
+            'SELECT "examenes", "numeroId" FROM "HistoriaClinica" WHERE "_id" = $1',
+            [ordenId]
+        );
+
+        if (ordenResult.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Orden no encontrada' });
+        }
+
+        const orden = ordenResult.rows[0];
+        const examenesRequeridos = orden.examenes || '';
+        const numeroId = orden.numeroId;
+
+        // Verificar formulario principal (en tabla formularios por numero_id)
+        const formularioResult = await pool.query(
+            'SELECT id FROM formularios WHERE numero_id = $1',
+            [numeroId]
+        );
+        const tieneFormulario = formularioResult.rows.length > 0;
+
+        // Verificar audiometría
+        const audioResult = await pool.query(
+            'SELECT id FROM audiometrias WHERE orden_id = $1',
+            [ordenId]
+        );
+        const tieneAudiometria = audioResult.rows.length > 0;
+
+        // Verificar pruebas ADC
+        const adcResult = await pool.query(
+            'SELECT id FROM "pruebasADC" WHERE orden_id = $1',
+            [ordenId]
+        );
+        const tieneADC = adcResult.rows.length > 0;
+
+        // Verificar visiometría
+        const visioResult = await pool.query(
+            'SELECT id FROM visiometrias WHERE orden_id = $1',
+            [ordenId]
+        );
+        const tieneVisiometria = visioResult.rows.length > 0;
+
+        // Determinar qué pruebas son requeridas según el campo exámenes
+        const examLower = examenesRequeridos.toLowerCase();
+        const requiereAudiometria = examLower.includes('audiometr');
+        const requiereVisiometria = examLower.includes('visiometr') || examLower.includes('optometr');
+        const requiereADC = true; // Siempre se requiere ADC para todos
+
+        res.json({
+            success: true,
+            data: {
+                examenesRequeridos,
+                pruebas: {
+                    formulario: {
+                        completado: tieneFormulario,
+                        requerido: true
+                    },
+                    audiometria: {
+                        completado: tieneAudiometria,
+                        requerido: requiereAudiometria
+                    },
+                    visiometria: {
+                        completado: tieneVisiometria,
+                        requerido: requiereVisiometria
+                    },
+                    adc: {
+                        completado: tieneADC,
+                        requerido: requiereADC
+                    }
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Error obteniendo estado de pruebas:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ==========================================
 // ENDPOINTS VISIOMETRIAS
 // ==========================================
 
