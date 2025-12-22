@@ -704,8 +704,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                         redirectUrl = `https://www.bsl.com.co/psicosocialb/${itemId}`;
                     }
                     else {
-                        console.warn("No se encontró un examen válido en 'examenes'.");
-                        redirectUrl = `https://www.bsl.com.co/adc-preguntas2/${itemId}`;
+                        // Redirigir a pruebas ADC locales
+                        redirectUrl = `/pruebas-adc.html?ordenId=${itemId}`;
                     }
 
                     console.log('🔄 Redirigiendo a:', redirectUrl);
