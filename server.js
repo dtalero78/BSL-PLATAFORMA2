@@ -6143,6 +6143,8 @@ app.post('/api/visiometria-virtual', async (req, res) => {
                     ishihara_total = $14,
                     ishihara_porcentaje = $15,
                     concepto = $16,
+                    miopia = $17,
+                    astigmatismo = $18,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE orden_id = $1
                 RETURNING *
@@ -6164,7 +6166,9 @@ app.post('/api/visiometria-virtual', async (req, res) => {
                 datos.ishihara_correctas,
                 datos.ishihara_total,
                 datos.ishihara_porcentaje,
-                datos.concepto
+                datos.concepto,
+                datos.miopia || null,
+                datos.astigmatismo || null
             ];
 
             const result = await pool.query(updateQuery, values);
@@ -6179,8 +6183,8 @@ app.post('/api/visiometria-virtual', async (req, res) => {
                     snellen_correctas, snellen_total, snellen_porcentaje,
                     landolt_correctas, landolt_total, landolt_porcentaje,
                     ishihara_correctas, ishihara_total, ishihara_porcentaje,
-                    concepto
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+                    concepto, miopia, astigmatismo
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
                 RETURNING *
             `;
 
@@ -6200,7 +6204,9 @@ app.post('/api/visiometria-virtual', async (req, res) => {
                 datos.ishihara_correctas,
                 datos.ishihara_total,
                 datos.ishihara_porcentaje,
-                datos.concepto
+                datos.concepto,
+                datos.miopia || null,
+                datos.astigmatismo || null
             ];
 
             const result = await pool.query(insertQuery, values);

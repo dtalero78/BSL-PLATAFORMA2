@@ -691,6 +691,34 @@
             <button class="btn-primary" id="startBtn">Comenzar Prueba</button>
         </div>
 
+        <!-- ========== PANTALLA DE PREGUNTAS PREVIAS ========== -->
+        <div class="screen" id="questionsScreen">
+            <div class="instructions-card">
+                <h2>Antes de comenzar</h2>
+                <p style="color: #8E8E93; margin-bottom: 20px;">Por favor responde las siguientes preguntas sobre tu salud visual:</p>
+
+                <div class="question-group" style="margin-bottom: 24px;">
+                    <label style="display: block; font-size: 16px; font-weight: 600; margin-bottom: 12px;">¿Tienes miopía?</label>
+                    <div style="display: flex; gap: 12px;">
+                        <button type="button" class="option-btn" data-question="miopia" data-value="Si" style="flex: 1; padding: 14px; border: 2px solid #E5E5EA; border-radius: 10px; background: white; font-size: 16px; font-weight: 500; cursor: pointer; transition: all 0.15s;">Sí</button>
+                        <button type="button" class="option-btn" data-question="miopia" data-value="No" style="flex: 1; padding: 14px; border: 2px solid #E5E5EA; border-radius: 10px; background: white; font-size: 16px; font-weight: 500; cursor: pointer; transition: all 0.15s;">No</button>
+                        <button type="button" class="option-btn" data-question="miopia" data-value="No sé" style="flex: 1; padding: 14px; border: 2px solid #E5E5EA; border-radius: 10px; background: white; font-size: 16px; font-weight: 500; cursor: pointer; transition: all 0.15s;">No sé</button>
+                    </div>
+                </div>
+
+                <div class="question-group">
+                    <label style="display: block; font-size: 16px; font-weight: 600; margin-bottom: 12px;">¿Tienes astigmatismo?</label>
+                    <div style="display: flex; gap: 12px;">
+                        <button type="button" class="option-btn" data-question="astigmatismo" data-value="Si" style="flex: 1; padding: 14px; border: 2px solid #E5E5EA; border-radius: 10px; background: white; font-size: 16px; font-weight: 500; cursor: pointer; transition: all 0.15s;">Sí</button>
+                        <button type="button" class="option-btn" data-question="astigmatismo" data-value="No" style="flex: 1; padding: 14px; border: 2px solid #E5E5EA; border-radius: 10px; background: white; font-size: 16px; font-weight: 500; cursor: pointer; transition: all 0.15s;">No</button>
+                        <button type="button" class="option-btn" data-question="astigmatismo" data-value="No sé" style="flex: 1; padding: 14px; border: 2px solid #E5E5EA; border-radius: 10px; background: white; font-size: 16px; font-weight: 500; cursor: pointer; transition: all 0.15s;">No sé</button>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-primary" id="continueToTestBtn" disabled>Continuar</button>
+        </div>
+
         <!-- ========== TEST 1: SNELLEN (LETRAS) ========== -->
         <div class="screen" id="snellenScreen">
             <div class="progress-section">
@@ -905,6 +933,10 @@
         let patientData = null;
         let ordenId = null;
 
+        // Respuestas de preguntas previas
+        let respuestaMiopia = null;
+        let respuestaAstigmatismo = null;
+
         // Resultados
         let snellenIndex = 0;
         let snellenCorrect = 0;
@@ -957,7 +989,8 @@
         }
 
         function setupEventListeners() {
-            document.getElementById('startBtn').addEventListener('click', startTest);
+            document.getElementById('startBtn').addEventListener('click', goToQuestions);
+            document.getElementById('continueToTestBtn').addEventListener('click', startTest);
             document.getElementById('snellenNextBtn').addEventListener('click', checkSnellenAnswer);
 
             // Enter para avanzar en test Snellen
@@ -965,6 +998,38 @@
                 if (e.key === 'Enter') {
                     checkSnellenAnswer();
                 }
+            });
+
+            // Configurar botones de opciones para miopía y astigmatismo
+            document.querySelectorAll('.option-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const question = this.dataset.question;
+                    const value = this.dataset.value;
+
+                    // Deseleccionar otros botones del mismo grupo
+                    document.querySelectorAll(`.option-btn[data-question="${question}"]`).forEach(b => {
+                        b.style.borderColor = '#E5E5EA';
+                        b.style.background = 'white';
+                        b.style.color = '#1C1C1E';
+                    });
+
+                    // Seleccionar este botón
+                    this.style.borderColor = '#5856D6';
+                    this.style.background = '#5856D6';
+                    this.style.color = 'white';
+
+                    // Guardar respuesta
+                    if (question === 'miopia') {
+                        respuestaMiopia = value;
+                    } else if (question === 'astigmatismo') {
+                        respuestaAstigmatismo = value;
+                    }
+
+                    // Habilitar botón continuar si ambas preguntas están respondidas
+                    if (respuestaMiopia && respuestaAstigmatismo) {
+                        document.getElementById('continueToTestBtn').disabled = false;
+                    }
+                });
             });
         }
 
@@ -974,6 +1039,10 @@
         function showScreen(screenId) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(screenId).classList.add('active');
+        }
+
+        function goToQuestions() {
+            showScreen('questionsScreen');
         }
 
         function startTest() {
@@ -1202,7 +1271,9 @@
                 ishihara_correctas: ishiharaCorrect,
                 ishihara_total: ishiharaTests.length,
                 ishihara_porcentaje: ishiharaScore,
-                concepto: concepto
+                concepto: concepto,
+                miopia: respuestaMiopia,
+                astigmatismo: respuestaAstigmatismo
             };
 
             try {
