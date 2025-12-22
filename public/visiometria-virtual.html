@@ -851,14 +851,14 @@
         // CONFIGURACIÓN DE PRUEBAS
         // ==========================================
 
-        // Test Snellen - Letras (de más grande a más pequeño)
+        // Test Snellen - Letras (de más grande a más pequeño) - Tamaños reducidos
         const snellenTests = [
-            { letters: 'E', size: 72, correctAnswer: 'E' },
-            { letters: 'FP', size: 56, correctAnswer: 'FP' },
-            { letters: 'TOZ', size: 44, correctAnswer: 'TOZ' },
-            { letters: 'LPED', size: 36, correctAnswer: 'LPED' },
-            { letters: 'PECFD', size: 28, correctAnswer: 'PECFD' },
-            { letters: 'EDFCZP', size: 22, correctAnswer: 'EDFCZP' }
+            { letters: 'E', size: 48, correctAnswer: 'E' },
+            { letters: 'FP', size: 38, correctAnswer: 'FP' },
+            { letters: 'TOZ', size: 30, correctAnswer: 'TOZ' },
+            { letters: 'LPED', size: 24, correctAnswer: 'LPED' },
+            { letters: 'PECFD', size: 18, correctAnswer: 'PECFD' },
+            { letters: 'EDFCZP', size: 14, correctAnswer: 'EDFCZP' }
         ];
 
         // Test Landolt C - Direcciones
@@ -958,6 +958,7 @@
         }
 
         function startTest() {
+            blockZoom(); // Bloquear zoom durante test de letras
             showScreen('snellenScreen');
             showSnellenTest(0);
         }
@@ -996,6 +997,7 @@
                 showSnellenTest(snellenIndex);
             } else {
                 // Pasar al siguiente test
+                unblockZoom(); // Restaurar zoom al terminar test de letras
                 showScreen('landoltScreen');
                 showLandoltTest(0);
             }
@@ -1248,6 +1250,75 @@
             document.getElementById('errorMessage').textContent = message;
             document.getElementById('startBtn').disabled = true;
         }
+
+        // ==========================================
+        // BLOQUEO DE ZOOM DURANTE TEST SNELLEN
+        // ==========================================
+        let zoomBlocked = false;
+        let lastTouchEnd = 0;
+
+        // Bloquear zoom (pinch-to-zoom y double-tap)
+        function blockZoom() {
+            zoomBlocked = true;
+            document.body.style.touchAction = 'pan-x pan-y';
+        }
+
+        // Restaurar zoom
+        function unblockZoom() {
+            zoomBlocked = false;
+            document.body.style.touchAction = 'auto';
+        }
+
+        // Prevenir gestos de zoom en móviles
+        document.addEventListener('touchstart', function(e) {
+            if (zoomBlocked && e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        document.addEventListener('touchmove', function(e) {
+            if (zoomBlocked && e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // Prevenir double-tap zoom
+        document.addEventListener('touchend', function(e) {
+            if (!zoomBlocked) return;
+
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, { passive: false });
+
+        // Prevenir zoom con gestos (gesturestart/gesturechange en iOS)
+        document.addEventListener('gesturestart', function(e) {
+            if (zoomBlocked) e.preventDefault();
+        }, { passive: false });
+
+        document.addEventListener('gesturechange', function(e) {
+            if (zoomBlocked) e.preventDefault();
+        }, { passive: false });
+
+        document.addEventListener('gestureend', function(e) {
+            if (zoomBlocked) e.preventDefault();
+        }, { passive: false });
+
+        // Prevenir zoom con Ctrl+scroll (escritorio)
+        document.addEventListener('wheel', function(e) {
+            if (zoomBlocked && e.ctrlKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // Prevenir zoom con teclado (Ctrl+Plus, Ctrl+Minus)
+        document.addEventListener('keydown', function(e) {
+            if (zoomBlocked && e.ctrlKey && (e.key === '+' || e.key === '-' || e.key === '=' || e.key === '0')) {
+                e.preventDefault();
+            }
+        });
     </script>
 </body>
 </html>
