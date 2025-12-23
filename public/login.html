@@ -217,6 +217,31 @@
         .divider span {
             padding: 0 12px;
         }
+
+        /* WhatsApp button */
+        .whatsapp-btn {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            border-radius: 28px;
+            background: #25D366;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            text-decoration: none;
+            box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4);
+            z-index: 100;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .whatsapp-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(37, 211, 102, 0.5);
+        }
     </style>
 </head>
 <body>
@@ -261,6 +286,14 @@
             </div>
         </div>
     </div>
+
+    <!-- WhatsApp button -->
+    <a href="https://api.whatsapp.com/send?phone=573008021701&text=Hola.%20Necesito%20ayuda%20para%20iniciar%20sesion%20en%20la%20plataforma%20BSL"
+       target="_blank"
+       class="whatsapp-btn"
+       title="Soporte WhatsApp">
+        💬
+    </a>
 
     <script src="/js/auth.js"></script>
     <script>
