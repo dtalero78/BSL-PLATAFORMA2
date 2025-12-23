@@ -3468,13 +3468,29 @@ app.post('/api/ordenes/importar-csv', upload.single('archivo'), async (req, res)
                 // Parsear fecha de atención usando la función helper que maneja zona horaria Colombia
                 let fechaAtencionParsed = null;
                 if (row.fechaAtencion) {
-                    // Normalizar formato de fecha: DD/MM/YYYY o YYYY-MM-DD -> YYYY-MM-DD
-                    let fechaNormalizada = row.fechaAtencion;
-                    if (row.fechaAtencion.includes('/')) {
-                        // Formato DD/MM/YYYY -> YYYY-MM-DD
-                        const partes = row.fechaAtencion.split('/');
+                    let fechaNormalizada = row.fechaAtencion.trim();
+
+                    if (fechaNormalizada.includes('/')) {
+                        // Formato con barras: MM/DD/YYYY o DD/MM/YYYY
+                        const partes = fechaNormalizada.split('/');
                         if (partes.length === 3) {
-                            fechaNormalizada = `${partes[2]}-${partes[1].padStart(2, '0')}-${partes[0].padStart(2, '0')}`;
+                            const primero = parseInt(partes[0]);
+                            const segundo = parseInt(partes[1]);
+                            const anio = partes[2];
+
+                            // Detectar formato: si el segundo número es > 12, es MM/DD/YYYY
+                            // Si el primero es > 12, es DD/MM/YYYY
+                            if (segundo > 12) {
+                                // Formato MM/DD/YYYY (ej: 12/23/2025)
+                                fechaNormalizada = `${anio}-${partes[0].padStart(2, '0')}-${partes[1].padStart(2, '0')}`;
+                            } else if (primero > 12) {
+                                // Formato DD/MM/YYYY (ej: 23/12/2025)
+                                fechaNormalizada = `${anio}-${partes[1].padStart(2, '0')}-${partes[0].padStart(2, '0')}`;
+                            } else {
+                                // Ambiguo (ej: 12/10/2025) - asumir MM/DD/YYYY por defecto
+                                fechaNormalizada = `${anio}-${partes[0].padStart(2, '0')}-${partes[1].padStart(2, '0')}`;
+                            }
+                            console.log(`   📅 Fecha convertida: ${row.fechaAtencion} -> ${fechaNormalizada}`);
                         }
                     }
 
@@ -3485,6 +3501,9 @@ app.post('/api/ordenes/importar-csv', upload.single('archivo'), async (req, res)
                     const fechaObj = construirFechaAtencionColombia(fechaNormalizada, horaAtencion);
                     if (fechaObj) {
                         fechaAtencionParsed = fechaObj;
+                        console.log(`   ✅ Fecha final: ${fechaObj.toISOString()}`);
+                    } else {
+                        console.log(`   ❌ Error parseando fecha: ${row.fechaAtencion}`);
                     }
                 }
 
