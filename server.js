@@ -3436,22 +3436,27 @@ app.post('/api/ordenes/importar-csv', upload.single('archivo'), async (req, res)
             resultados.total++;
 
             try {
-                // Parsear línea CSV (manejando comillas)
-                const values = line.match(/("([^"]*)"|[^,]*)/g).map(v =>
-                    v.replace(/^"|"$/g, '').trim()
-                );
+                // Parsear línea CSV (split simple por coma, luego limpiar comillas)
+                const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
 
                 // Crear objeto con los valores
                 const row = {};
                 headers.forEach((header, index) => {
-                    row[header] = values[index] || null;
+                    row[header] = values[index] !== undefined ? values[index] : null;
                 });
+
+                console.log(`   Fila ${i + 1} parseada:`, JSON.stringify(row));
 
                 // Validar campos requeridos
                 if (!row.numeroId || !row.primerNombre || !row.primerApellido || !row.codEmpresa) {
+                    const faltantes = [];
+                    if (!row.numeroId) faltantes.push('numeroId');
+                    if (!row.primerNombre) faltantes.push('primerNombre');
+                    if (!row.primerApellido) faltantes.push('primerApellido');
+                    if (!row.codEmpresa) faltantes.push('codEmpresa');
                     resultados.errores.push({
                         fila: i + 1,
-                        error: 'Faltan campos requeridos (numeroId, primerNombre, primerApellido, codEmpresa)',
+                        error: `Faltan campos requeridos: ${faltantes.join(', ')}`,
                         datos: row
                     });
                     continue;
