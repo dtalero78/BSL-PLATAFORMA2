@@ -6943,7 +6943,7 @@ app.post('/api/enviar-link-prueba', async (req, res) => {
                 break;
             case 'visiometria':
                 url = `${baseUrl}/visiometria-virtual.html?ordenId=${ordenId}`;
-                nombrePrueba = 'Visiometría';
+                nombrePrueba = 'Prueba Visual';
                 break;
             default:
                 return res.status(400).json({ success: false, message: 'Tipo de prueba no válido' });
