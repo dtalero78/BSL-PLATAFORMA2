@@ -3643,7 +3643,7 @@
             ocultarAlertaModal();
 
             try {
-                const response = await fetch(`/api/ordenes/verificar-duplicado/${encodeURIComponent(numeroId)}`);
+                const response = await fetch(`/api/ordenes/verificar-duplicado/${encodeURIComponent(numeroId)}?codEmpresa=${encodeURIComponent(codEmpresa)}`);
                 const result = await response.json();
 
                 if (result.success && result.hayDuplicado) {

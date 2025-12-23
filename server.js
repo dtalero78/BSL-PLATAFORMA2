@@ -2747,22 +2747,31 @@ app.delete('/api/formularios/:id', async (req, res) => {
 app.get('/api/ordenes/verificar-duplicado/:numeroId', async (req, res) => {
     try {
         const { numeroId } = req.params;
+        const { codEmpresa } = req.query;
 
         if (!numeroId) {
             return res.json({ success: true, hayDuplicado: false, tipo: null });
         }
 
-        // Primero buscar órdenes PENDIENTES
-        const resultPendiente = await pool.query(`
+        // Primero buscar órdenes PENDIENTES (solo de la misma empresa si se especifica)
+        let queryPendiente = `
             SELECT "_id", "numeroId", "primerNombre", "primerApellido",
                    "codEmpresa", "empresa", "tipoExamen", "atendido",
                    "_createdDate", "fechaAtencion"
             FROM "HistoriaClinica"
             WHERE "numeroId" = $1
               AND "atendido" = 'PENDIENTE'
-            ORDER BY "_createdDate" DESC
-            LIMIT 1
-        `, [numeroId]);
+        `;
+        const paramsPendiente = [numeroId];
+
+        if (codEmpresa) {
+            queryPendiente += ` AND "codEmpresa" = $2`;
+            paramsPendiente.push(codEmpresa);
+        }
+
+        queryPendiente += ` ORDER BY "_createdDate" DESC LIMIT 1`;
+
+        const resultPendiente = await pool.query(queryPendiente, paramsPendiente);
 
         if (resultPendiente.rows.length > 0) {
             const ordenExistente = resultPendiente.rows[0];
@@ -2804,17 +2813,25 @@ app.get('/api/ordenes/verificar-duplicado/:numeroId', async (req, res) => {
             });
         }
 
-        // Si no hay PENDIENTE, buscar ATENDIDO
-        const resultAtendido = await pool.query(`
+        // Si no hay PENDIENTE, buscar ATENDIDO (solo de la misma empresa si se especifica)
+        let queryAtendido = `
             SELECT "_id", "numeroId", "primerNombre", "primerApellido",
                    "codEmpresa", "empresa", "tipoExamen", "atendido",
                    "_createdDate", "fechaAtencion"
             FROM "HistoriaClinica"
             WHERE "numeroId" = $1
               AND "atendido" = 'ATENDIDO'
-            ORDER BY "_createdDate" DESC
-            LIMIT 1
-        `, [numeroId]);
+        `;
+        const paramsAtendido = [numeroId];
+
+        if (codEmpresa) {
+            queryAtendido += ` AND "codEmpresa" = $2`;
+            paramsAtendido.push(codEmpresa);
+        }
+
+        queryAtendido += ` ORDER BY "_createdDate" DESC LIMIT 1`;
+
+        const resultAtendido = await pool.query(queryAtendido, paramsAtendido);
 
         if (resultAtendido.rows.length > 0) {
             const ordenAtendida = resultAtendido.rows[0];
