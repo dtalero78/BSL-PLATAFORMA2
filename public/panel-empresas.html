@@ -2840,6 +2840,10 @@
             const ids = Array.from(ordenesSeleccionadas);
             const btn = event.target.closest('button');
             const originalText = btn.innerHTML;
+            const container = document.getElementById('download-frames-container');
+
+            // Limpiar iframes anteriores
+            container.innerHTML = '';
 
             btn.disabled = true;
             btn.innerHTML = `
@@ -2858,9 +2862,12 @@
                     Descargando ${i + 1}/${ids.length}...
                 `;
 
-                // Abrir la URL de descarga
+                // Usar iframe oculto para evitar bloqueo de popups
                 const url = `https://bsl-utilidades-yp78a.ondigitalocean.app/generar-certificado-desde-wix/${ordenId}`;
-                window.open(url, '_blank');
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = url;
+                container.appendChild(iframe);
 
                 // Esperar 5 segundos antes de la siguiente descarga (excepto en la última)
                 if (i < ids.length - 1) {
@@ -2875,6 +2882,11 @@
             limpiarSeleccion();
 
             alert(`Se han iniciado ${ids.length} descargas de certificados`);
+
+            // Limpiar iframes después de un tiempo
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 30000);
         }
 
         // ========== MOBILE CARDS ==========
@@ -3945,5 +3957,8 @@
             }
         });
     </script>
+
+    <!-- Contenedor oculto para iframes de descarga -->
+    <div id="download-frames-container" style="display: none;"></div>
 </body>
 </html>
