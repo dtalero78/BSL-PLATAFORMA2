@@ -2103,46 +2103,16 @@
                             <label class="form-label">Ciudad <span class="required">*</span></label>
                             <select class="form-select" id="modalCiudad">
                                 <option value="">Seleccionar ciudad...</option>
-                                <option value="Bogotá">Bogotá D.C.</option>
-                                <option value="Medellín">Medellín</option>
-                                <option value="Cali">Cali</option>
-                                <option value="Barranquilla">Barranquilla</option>
-                                <option value="Cartagena">Cartagena</option>
-                                <option value="Cúcuta">Cúcuta</option>
-                                <option value="Bucaramanga">Bucaramanga</option>
-                                <option value="Pereira">Pereira</option>
-                                <option value="Santa Marta">Santa Marta</option>
-                                <option value="Ibagué">Ibagué</option>
-                                <option value="Pasto">Pasto</option>
-                                <option value="Manizales">Manizales</option>
-                                <option value="Neiva">Neiva</option>
-                                <option value="Villavicencio">Villavicencio</option>
-                                <option value="Armenia">Armenia</option>
-                                <option value="Valledupar">Valledupar</option>
-                                <option value="Montería">Montería</option>
-                                <option value="Sincelejo">Sincelejo</option>
-                                <option value="Popayán">Popayán</option>
-                                <option value="Floridablanca">Floridablanca</option>
-                                <option value="Buenaventura">Buenaventura</option>
-                                <option value="Soledad">Soledad</option>
-                                <option value="Itagüí">Itagüí</option>
-                                <option value="Soacha">Soacha</option>
-                                <option value="Bello">Bello</option>
-                                <option value="Palmira">Palmira</option>
-                                <option value="Tunja">Tunja</option>
-                                <option value="Girardot">Girardot</option>
-                                <option value="Riohacha">Riohacha</option>
-                                <option value="Barrancabermeja">Barrancabermeja</option>
-                                <option value="Dosquebradas">Dosquebradas</option>
-                                <option value="Envigado">Envigado</option>
-                                <option value="Tuluá">Tuluá</option>
-                                <option value="Sogamoso">Sogamoso</option>
-                                <option value="Duitama">Duitama</option>
-                                <option value="Zipaquirá">Zipaquirá</option>
-                                <option value="Facatativá">Facatativá</option>
-                                <option value="Chía">Chía</option>
-                                <option value="Fusagasugá">Fusagasugá</option>
-                                <option value="Otro">Otra ciudad</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Subempresa (solo visible si la empresa tiene subempresas configuradas) -->
+                    <div class="form-row" id="subempresaContainer" style="display: none;">
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label class="form-label">Subempresa / Sede</label>
+                            <select class="form-select" id="modalSubempresa">
+                                <option value="">Seleccionar subempresa...</option>
                             </select>
                         </div>
                     </div>
@@ -2351,6 +2321,7 @@
         let codEmpresa = '';
         let usuarioActual = null;
         let permisosUsuario = []; // Permisos cargados del servidor
+        let configEmpresa = null; // Configuración de ciudades, exámenes y subempresas
         let allData = [];
         let filteredData = [];
         let currentPage = 0;
@@ -2431,6 +2402,24 @@
             }
         }
 
+        // Cargar configuración de la empresa (ciudades, exámenes, subempresas)
+        async function cargarConfigEmpresa() {
+            if (!codEmpresa) return;
+            try {
+                const response = await fetch(`/api/empresas/codigo/${encodeURIComponent(codEmpresa)}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        configEmpresa = data.data;
+                        console.log('Configuración de empresa cargada:', configEmpresa);
+                    }
+                }
+            } catch (error) {
+                console.error('Error cargando configuración de empresa:', error);
+                configEmpresa = null;
+            }
+        }
+
         // Aplicar permisos a la UI
         function aplicarPermisosUI() {
             // VER_ORDENES - Si no tiene permiso, ocultar toda la sección de órdenes
@@ -2467,8 +2456,9 @@
                     return;
                 }
 
-                // Cargar permisos antes de mostrar el panel
+                // Cargar permisos y configuración de empresa antes de mostrar el panel
                 await cargarPermisos();
+                await cargarConfigEmpresa();
                 mostrarPanel();
                 aplicarPermisosUI();
             } else {
@@ -3072,10 +3062,52 @@
             modalidadActual = 'presencial';
             actualizarTabsModalidad();
             cargarExamenesModal();
+            cargarCiudadesModal();
+            cargarSubempresasModal();
             limpiarFormularioModal();
             document.getElementById('modalPaso1').style.display = 'block';
             document.getElementById('modalPaso2').style.display = 'none';
             document.getElementById('modalFooterPaso2').style.display = 'none';
+        }
+
+        // Cargar ciudades según configuración de empresa
+        function cargarCiudadesModal() {
+            const select = document.getElementById('modalCiudad');
+            let ciudades = [];
+
+            if (configEmpresa && configEmpresa.ciudades && configEmpresa.ciudades.length > 0) {
+                ciudades = configEmpresa.ciudades;
+            } else {
+                // Lista por defecto de ciudades colombianas
+                ciudades = [
+                    'Bogotá', 'Medellín', 'Cali', 'Barranquilla', 'Cartagena',
+                    'Cúcuta', 'Bucaramanga', 'Pereira', 'Santa Marta', 'Ibagué',
+                    'Pasto', 'Manizales', 'Neiva', 'Villavicencio', 'Armenia',
+                    'Valledupar', 'Montería', 'Sincelejo', 'Popayán', 'Floridablanca',
+                    'Buenaventura', 'Soledad', 'Itagüí', 'Soacha', 'Bello',
+                    'Palmira', 'Tunja', 'Girardot', 'Riohacha', 'Barrancabermeja',
+                    'Dosquebradas', 'Envigado', 'Tuluá', 'Sogamoso', 'Duitama',
+                    'Zipaquirá', 'Facatativá', 'Chía', 'Fusagasugá', 'Otro'
+                ];
+            }
+
+            select.innerHTML = '<option value="">Seleccionar ciudad...</option>' +
+                ciudades.map(ciudad => `<option value="${ciudad}">${ciudad}</option>`).join('');
+        }
+
+        // Cargar subempresas según configuración
+        function cargarSubempresasModal() {
+            const container = document.getElementById('subempresaContainer');
+            if (!container) return;
+
+            if (configEmpresa && configEmpresa.subempresas && configEmpresa.subempresas.length > 0) {
+                container.style.display = 'block';
+                const select = document.getElementById('modalSubempresa');
+                select.innerHTML = '<option value="">Seleccionar subempresa...</option>' +
+                    configEmpresa.subempresas.map(sub => `<option value="${sub}">${sub}</option>`).join('');
+            } else {
+                container.style.display = 'none';
+            }
         }
 
         function cerrarModalNuevaOrden() {
@@ -3094,6 +3126,8 @@
             document.getElementById('modalCargo').value = '';
             document.getElementById('modalCiudad').value = '';
             document.getElementById('modalTipoExamen').value = '';
+            const subempresaSelect = document.getElementById('modalSubempresa');
+            if (subempresaSelect) subempresaSelect.value = '';
             const inputFecha = document.getElementById('modalFechaAtencion');
             inputFecha.value = '';
             document.getElementById('modalHoraAtencion').innerHTML = '<option value="">Primero seleccione fecha...</option>';
@@ -3194,7 +3228,14 @@
             try {
                 const response = await fetch('/api/examenes');
                 const data = await response.json();
-                examenesDataModal = data.filter(e => e.activo !== false);
+                let examenes = data.filter(e => e.activo !== false);
+
+                // Filtrar por configuración de empresa si existe
+                if (configEmpresa && configEmpresa.examenes && configEmpresa.examenes.length > 0) {
+                    examenes = examenes.filter(e => configEmpresa.examenes.includes(e.nombre));
+                }
+
+                examenesDataModal = examenes;
                 renderExamenesModal();
             } catch (error) {
                 console.error('Error al cargar exámenes:', error);
@@ -3291,6 +3332,10 @@
             btn.disabled = true;
             btn.textContent = 'Creando...';
 
+            // Obtener subempresa si está configurada
+            const subempresaSelect = document.getElementById('modalSubempresa');
+            const subempresa = subempresaSelect && subempresaSelect.value ? subempresaSelect.value : null;
+
             const datos = {
                 codEmpresa: codEmpresa,
                 empresa: codEmpresa,
@@ -3302,6 +3347,7 @@
                 segundoApellido: document.getElementById('modalSegundoApellido').value.trim() ? capitalize(document.getElementById('modalSegundoApellido').value) : null,
                 cargo: cargo,
                 ciudad: ciudad,
+                subempresa: subempresa,
                 tipoExamen: tipoExamen,
                 fechaAtencion: fechaAtencion,
                 horaAtencion: horaAtencion,

@@ -424,6 +424,16 @@ const initDB = async () => {
             // Columna ya existe o tabla no existe
         }
 
+        // Agregar columna subempresa a HistoriaClinica si no existe
+        try {
+            await pool.query(`
+                ALTER TABLE "HistoriaClinica"
+                ADD COLUMN IF NOT EXISTS subempresa VARCHAR(200)
+            `);
+        } catch (err) {
+            // Columna ya existe o tabla no existe
+        }
+
         // Crear tabla medicos_disponibilidad si no existe
         await pool.query(`
             CREATE TABLE IF NOT EXISTS medicos_disponibilidad (
@@ -847,6 +857,24 @@ const initDB = async () => {
             await pool.query(`CREATE INDEX IF NOT EXISTS idx_permisos_permiso ON permisos_usuario(permiso)`);
         } catch (err) {
             // Índices ya existen
+        }
+
+        // Agregar columnas JSONB para configuración de empresas
+        const empresasColumnsToAdd = [
+            'ciudades JSONB DEFAULT \'[]\'::jsonb',
+            'examenes JSONB DEFAULT \'[]\'::jsonb',
+            'subempresas JSONB DEFAULT \'[]\'::jsonb'
+        ];
+
+        for (const column of empresasColumnsToAdd) {
+            try {
+                await pool.query(`
+                    ALTER TABLE empresas
+                    ADD COLUMN IF NOT EXISTS ${column}
+                `);
+            } catch (err) {
+                // Columna ya existe
+            }
         }
 
         console.log('✅ Base de datos inicializada correctamente');
@@ -2922,6 +2950,7 @@ app.post('/api/ordenes', async (req, res) => {
             celular,
             cargo,
             ciudad,
+            subempresa,
             tipoExamen,
             medico,
             fechaAtencion,
@@ -3050,10 +3079,10 @@ app.post('/api/ordenes', async (req, res) => {
         const insertQuery = `
             INSERT INTO "HistoriaClinica" (
                 "_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
-                "celular", "codEmpresa", "empresa", "cargo", "ciudad", "tipoExamen", "medico",
+                "celular", "codEmpresa", "empresa", "cargo", "ciudad", "subempresa", "tipoExamen", "medico",
                 "fechaAtencion", "horaAtencion", "atendido", "examenes", "_createdDate", "_updatedDate"
             ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW()
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW(), NOW()
             )
             RETURNING "_id", "numeroId", "primerNombre", "primerApellido"
         `;
@@ -3070,6 +3099,7 @@ app.post('/api/ordenes', async (req, res) => {
             empresa || null,
             cargo || null,
             ciudad || null,
+            subempresa || null,
             tipoExamen || null,
             medico || null,
             construirFechaAtencionColombia(fechaAtencion, horaAtencion),
@@ -5017,7 +5047,8 @@ app.delete('/api/medicos/:id/disponibilidad/:dia', async (req, res) => {
 app.get('/api/empresas', async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT id, cod_empresa, empresa, nit, profesiograma, activo, created_at
+            SELECT id, cod_empresa, empresa, nit, profesiograma, activo, created_at,
+                   ciudades, examenes, subempresas
             FROM empresas
             WHERE activo = true
             ORDER BY empresa
@@ -5068,7 +5099,7 @@ app.get('/api/empresas/:id', async (req, res) => {
 // Crear una nueva empresa
 app.post('/api/empresas', async (req, res) => {
     try {
-        const { codEmpresa, empresa, nit, profesiograma } = req.body;
+        const { codEmpresa, empresa, nit, profesiograma, ciudades, examenes, subempresas } = req.body;
 
         if (!codEmpresa || !empresa) {
             return res.status(400).json({
@@ -5078,10 +5109,18 @@ app.post('/api/empresas', async (req, res) => {
         }
 
         const result = await pool.query(`
-            INSERT INTO empresas (cod_empresa, empresa, nit, profesiograma)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO empresas (cod_empresa, empresa, nit, profesiograma, ciudades, examenes, subempresas)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *
-        `, [codEmpresa, empresa, nit || null, profesiograma || null]);
+        `, [
+            codEmpresa,
+            empresa,
+            nit || null,
+            profesiograma || null,
+            JSON.stringify(ciudades || []),
+            JSON.stringify(examenes || []),
+            JSON.stringify(subempresas || [])
+        ]);
 
         console.log(`✅ Empresa creada: ${empresa} (${codEmpresa})`);
 
@@ -5110,7 +5149,7 @@ app.post('/api/empresas', async (req, res) => {
 app.put('/api/empresas/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { codEmpresa, empresa, nit, profesiograma, activo } = req.body;
+        const { codEmpresa, empresa, nit, profesiograma, activo, ciudades, examenes, subempresas } = req.body;
 
         const result = await pool.query(`
             UPDATE empresas SET
@@ -5119,10 +5158,23 @@ app.put('/api/empresas/:id', async (req, res) => {
                 nit = COALESCE($3, nit),
                 profesiograma = COALESCE($4, profesiograma),
                 activo = COALESCE($5, activo),
+                ciudades = COALESCE($6, ciudades),
+                examenes = COALESCE($7, examenes),
+                subempresas = COALESCE($8, subempresas),
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = $6
+            WHERE id = $9
             RETURNING *
-        `, [codEmpresa, empresa, nit, profesiograma, activo, id]);
+        `, [
+            codEmpresa,
+            empresa,
+            nit,
+            profesiograma,
+            activo,
+            ciudades ? JSON.stringify(ciudades) : null,
+            examenes ? JSON.stringify(examenes) : null,
+            subempresas ? JSON.stringify(subempresas) : null,
+            id
+        ]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({
@@ -5178,6 +5230,37 @@ app.delete('/api/empresas/:id', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error al desactivar empresa',
+            error: error.message
+        });
+    }
+});
+
+// Obtener configuración de empresa por código (para panel-empresas)
+app.get('/api/empresas/codigo/:codEmpresa', async (req, res) => {
+    try {
+        const { codEmpresa } = req.params;
+        const result = await pool.query(`
+            SELECT id, cod_empresa, empresa, nit, profesiograma, ciudades, examenes, subempresas
+            FROM empresas
+            WHERE cod_empresa = $1 AND activo = true
+        `, [codEmpresa]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Empresa no encontrada'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: result.rows[0]
+        });
+    } catch (error) {
+        console.error('❌ Error al obtener empresa por código:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener empresa',
             error: error.message
         });
     }
