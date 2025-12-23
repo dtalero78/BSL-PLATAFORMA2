@@ -1821,16 +1821,38 @@
                 <!-- Mobile Cards Container -->
                 <div class="mobile-cards" id="mobileCards"></div>
 
+                <!-- Barra de acciones para selección múltiple -->
+                <div class="selection-actions" id="selectionActions" style="display: none; padding: 12px 16px; background: #EEF2FF; border-radius: 8px; margin-bottom: 16px; align-items: center; gap: 16px;">
+                    <span style="font-size: 14px; color: #4338CA; font-weight: 500;">
+                        <span id="selectedCount">0</span> seleccionados
+                    </span>
+                    <button class="btn btn-primary" onclick="descargarCertificadosSeleccionados()" style="padding: 8px 16px; font-size: 13px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: middle;">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Descargar Certificados
+                    </button>
+                    <button class="btn btn-secondary" onclick="limpiarSeleccion()" style="padding: 8px 16px; font-size: 13px;">
+                        Limpiar selección
+                    </button>
+                </div>
+
                 <!-- Table Container -->
                 <div class="table-container" id="tableContainer" style="display: none;">
                     <table class="data-table">
                         <thead>
                             <tr>
+                                <th style="width: 40px; text-align: center;">
+                                    <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" title="Seleccionar todos" style="cursor: pointer;">
+                                </th>
                                 <th>Paciente</th>
                                 <th>Cédula</th>
                                 <th>Fecha Consulta</th>
                                 <th>Fecha Atención</th>
                                 <th>Estado</th>
+                                <th style="width: 50px; text-align: center;">Cert.</th>
                             </tr>
                         </thead>
                         <tbody id="tableBody">
@@ -2705,8 +2727,11 @@
                 const hasFoto = orden.foto_url ? 'has-photo' : '';
 
                 return `
-                    <tr onclick="abrirModalDetalles('${orden._id}')">
-                        <td>
+                    <tr>
+                        <td style="text-align: center;" onclick="event.stopPropagation();">
+                            <input type="checkbox" class="orden-checkbox" data-id="${orden._id}" onchange="actualizarSeleccion()" style="cursor: pointer; width: 18px; height: 18px;">
+                        </td>
+                        <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;">
                             <div class="cell-name">
                                 <div class="avatar ${hasFoto}">${orden.foto_url ? `<img src="${orden.foto_url}" alt="">` : initials}</div>
                                 <div class="name-info">
@@ -2714,10 +2739,19 @@
                                 </div>
                             </div>
                         </td>
-                        <td>${cedula}</td>
-                        <td>${fechaConsulta}</td>
-                        <td>${fechaAtencion}</td>
-                        <td><span class="status-badge ${statusClass}"><span class="status-dot"></span>${estado}</span></td>
+                        <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;">${cedula}</td>
+                        <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;">${fechaConsulta}</td>
+                        <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;">${fechaAtencion}</td>
+                        <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;"><span class="status-badge ${statusClass}"><span class="status-dot"></span>${estado}</span></td>
+                        <td style="text-align: center;" onclick="event.stopPropagation();">
+                            <button class="btn-icon-small" onclick="descargarCertificado('${orden._id}')" title="Descargar certificado" style="padding: 6px; border: none; background: #F3F4F6; border-radius: 6px; cursor: pointer;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="7 10 12 15 17 10"/>
+                                    <line x1="12" y1="15" x2="12" y2="3"/>
+                                </svg>
+                            </button>
+                        </td>
                     </tr>
                 `;
             }).join('');
@@ -2734,6 +2768,113 @@
             } else {
                 pagination.style.display = 'none';
             }
+        }
+
+        // ========== SELECCIÓN Y DESCARGA DE CERTIFICADOS ==========
+        let ordenesSeleccionadas = new Set();
+
+        function toggleSelectAll(checkbox) {
+            const checkboxes = document.querySelectorAll('.orden-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = checkbox.checked;
+                if (checkbox.checked) {
+                    ordenesSeleccionadas.add(cb.dataset.id);
+                } else {
+                    ordenesSeleccionadas.delete(cb.dataset.id);
+                }
+            });
+            actualizarUISeleccion();
+        }
+
+        function actualizarSeleccion() {
+            ordenesSeleccionadas.clear();
+            const checkboxes = document.querySelectorAll('.orden-checkbox:checked');
+            checkboxes.forEach(cb => ordenesSeleccionadas.add(cb.dataset.id));
+
+            // Actualizar el checkbox de "seleccionar todos"
+            const allCheckboxes = document.querySelectorAll('.orden-checkbox');
+            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = allCheckboxes.length > 0 && checkboxes.length === allCheckboxes.length;
+                selectAllCheckbox.indeterminate = checkboxes.length > 0 && checkboxes.length < allCheckboxes.length;
+            }
+
+            actualizarUISeleccion();
+        }
+
+        function actualizarUISeleccion() {
+            const count = ordenesSeleccionadas.size;
+            const selectionActions = document.getElementById('selectionActions');
+            const selectedCount = document.getElementById('selectedCount');
+
+            if (count > 0) {
+                selectionActions.style.display = 'flex';
+                selectedCount.textContent = count;
+            } else {
+                selectionActions.style.display = 'none';
+            }
+        }
+
+        function limpiarSeleccion() {
+            ordenesSeleccionadas.clear();
+            document.querySelectorAll('.orden-checkbox').forEach(cb => cb.checked = false);
+            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            }
+            actualizarUISeleccion();
+        }
+
+        function descargarCertificado(ordenId) {
+            const url = `https://bsl-utilidades-yp78a.ondigitalocean.app/generar-certificado-desde-wix/${ordenId}`;
+            window.open(url, '_blank');
+        }
+
+        async function descargarCertificadosSeleccionados() {
+            if (ordenesSeleccionadas.size === 0) {
+                alert('No hay órdenes seleccionadas');
+                return;
+            }
+
+            const ids = Array.from(ordenesSeleccionadas);
+            const btn = event.target.closest('button');
+            const originalText = btn.innerHTML;
+
+            btn.disabled = true;
+            btn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: middle; animation: spin 1s linear infinite;">
+                    <circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="32"/>
+                </svg>
+                Descargando 0/${ids.length}...
+            `;
+
+            for (let i = 0; i < ids.length; i++) {
+                const ordenId = ids[i];
+                btn.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: middle; animation: spin 1s linear infinite;">
+                        <circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="32"/>
+                    </svg>
+                    Descargando ${i + 1}/${ids.length}...
+                `;
+
+                // Abrir la URL de descarga
+                const url = `https://bsl-utilidades-yp78a.ondigitalocean.app/generar-certificado-desde-wix/${ordenId}`;
+                window.open(url, '_blank');
+
+                // Esperar 5 segundos antes de la siguiente descarga (excepto en la última)
+                if (i < ids.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                }
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+
+            // Limpiar selección después de descargar
+            limpiarSeleccion();
+
+            alert(`Se han iniciado ${ids.length} descargas de certificados`);
         }
 
         // ========== MOBILE CARDS ==========
