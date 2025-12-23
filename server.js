@@ -408,6 +408,37 @@ const initDB = async () => {
             }
         }
 
+        // Asegurar que foto_url sea TEXT para URLs largas
+        try {
+            await pool.query(`
+                ALTER TABLE formularios
+                ADD COLUMN IF NOT EXISTS foto_url TEXT
+            `);
+        } catch (err) {
+            // Columna ya existe
+        }
+        try {
+            await pool.query(`
+                ALTER TABLE formularios
+                ALTER COLUMN foto_url TYPE TEXT
+            `);
+        } catch (err) {
+            // Ya es TEXT o error
+        }
+
+        // Aumentar tamaño de campos de texto que pueden ser largos
+        const textFieldsToEnlarge = ['ejercicio', 'consumo_licor', 'estado_civil', 'nivel_educativo'];
+        for (const col of textFieldsToEnlarge) {
+            try {
+                await pool.query(`
+                    ALTER TABLE formularios
+                    ALTER COLUMN ${col} TYPE VARCHAR(100)
+                `);
+            } catch (err) {
+                // Columna no existe o ya tiene el tipo correcto
+            }
+        }
+
         // Agregar columna horaAtencion a HistoriaClinica si no existe
         try {
             await pool.query(`
