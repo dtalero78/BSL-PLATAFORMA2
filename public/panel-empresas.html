@@ -2012,7 +2012,10 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Exámenes</label>
-                        <input type="text" class="form-input" id="edit-examenes">
+                        <div class="examenes-container" id="editExamenesContainer">
+                            <div style="padding: 14px; color: var(--text-tertiary); font-size: 14px;">Cargando exámenes...</div>
+                        </div>
+                        <div class="examenes-selected" id="editExamenesSelected"></div>
                     </div>
 
                     <button type="submit" class="btn btn-primary" id="btnGuardarEdicion" style="width: 100%; margin-top: 20px;">
@@ -2936,7 +2939,11 @@
             document.getElementById('edit-ciudad').value = pacienteActual.ciudad || '';
             document.getElementById('edit-cargo').value = pacienteActual.cargo || '';
             document.getElementById('edit-tipoExamen').value = pacienteActual.tipoExamen || '';
-            document.getElementById('edit-examenes').value = pacienteActual.examenes || '';
+
+            // Cargar exámenes seleccionados
+            const examenesStr = pacienteActual.examenes || '';
+            examenesSeleccionadosEdit = examenesStr.split(',').map(e => e.trim()).filter(e => e);
+            cargarExamenesEdit();
 
             // Formatear fecha y verificar si ya pasó
             const inputFecha = document.getElementById('edit-fechaAtencion');
@@ -3000,7 +3007,7 @@
                 ciudad: document.getElementById('edit-ciudad').value.trim(),
                 cargo: document.getElementById('edit-cargo').value.trim(),
                 tipoExamen: document.getElementById('edit-tipoExamen').value,
-                examenes: document.getElementById('edit-examenes').value.trim(),
+                examenes: examenesSeleccionadosEdit.join(', '),
                 horaAtencion: document.getElementById('edit-horaAtencion').value
             };
 
@@ -3045,6 +3052,81 @@
                 cerrarModalEdicion();
             }
         });
+
+        // ========== MODAL EDICIÓN - EXÁMENES ==========
+        let examenesDataEdit = [];
+        let examenesSeleccionadosEdit = [];
+
+        async function cargarExamenesEdit() {
+            try {
+                const response = await fetch('/api/examenes');
+                const data = await response.json();
+                let examenes = data.filter(e => e.activo !== false);
+
+                // Filtrar por configuración de empresa si existe
+                if (configEmpresa && configEmpresa.examenes && configEmpresa.examenes.length > 0) {
+                    examenes = examenes.filter(e => configEmpresa.examenes.includes(e.nombre));
+                }
+
+                examenesDataEdit = examenes;
+                renderExamenesEdit();
+            } catch (error) {
+                console.error('Error al cargar exámenes:', error);
+                document.getElementById('editExamenesContainer').innerHTML =
+                    '<div style="padding: 14px; color: #EF4444; font-size: 14px;">Error al cargar exámenes</div>';
+            }
+        }
+
+        function renderExamenesEdit() {
+            const container = document.getElementById('editExamenesContainer');
+
+            if (examenesDataEdit.length === 0) {
+                container.innerHTML = '<div style="padding: 14px; color: var(--text-tertiary); font-size: 14px;">No hay exámenes disponibles</div>';
+                return;
+            }
+
+            container.innerHTML = examenesDataEdit.map(examen => `
+                <label class="examen-checkbox" onclick="toggleExamenEdit('${examen.nombre}')">
+                    <input type="checkbox" id="edit-examen-${examen.id}" ${examenesSeleccionadosEdit.includes(examen.nombre) ? 'checked' : ''}>
+                    <span>${examen.nombre}</span>
+                </label>
+            `).join('');
+        }
+
+        function toggleExamenEdit(nombre) {
+            const index = examenesSeleccionadosEdit.indexOf(nombre);
+            if (index === -1) {
+                examenesSeleccionadosEdit.push(nombre);
+            } else {
+                examenesSeleccionadosEdit.splice(index, 1);
+            }
+            actualizarExamenesUIEdit();
+        }
+
+        function removeExamenEdit(nombre) {
+            const index = examenesSeleccionadosEdit.indexOf(nombre);
+            if (index !== -1) {
+                examenesSeleccionadosEdit.splice(index, 1);
+            }
+            actualizarExamenesUIEdit();
+        }
+
+        function actualizarExamenesUIEdit() {
+            examenesDataEdit.forEach(examen => {
+                const checkbox = document.getElementById(`edit-examen-${examen.id}`);
+                if (checkbox) {
+                    checkbox.checked = examenesSeleccionadosEdit.includes(examen.nombre);
+                }
+            });
+
+            const selectedContainer = document.getElementById('editExamenesSelected');
+            selectedContainer.innerHTML = examenesSeleccionadosEdit.map(nombre => `
+                <div class="selected-examen">
+                    <span>${nombre}</span>
+                    <button type="button" class="remove-examen" onclick="removeExamenEdit('${nombre}')">&times;</button>
+                </div>
+            `).join('');
+        }
 
         // ========== MODAL NUEVA ORDEN ==========
         let modalidadActual = 'presencial';
