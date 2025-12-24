@@ -3776,7 +3776,7 @@
                         <div class="detail-field">
                             <div class="detail-field-label">Exámenes Solicitados</div>
                             <div class="detail-field-value" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
-                                ${orden.examenes.split(',').map(examen => examen.trim()).filter(e => e).map(examen => `
+                                ${orden.examenes.split(/[;,]/).map(examen => examen.trim()).filter(e => e).map(examen => `
                                     <span style="display: inline-flex; align-items: center; padding: 6px 12px; background: #EEF2FF; color: #4338CA; border-radius: 20px; font-size: 13px; font-weight: 500;">
                                         ${examen}
                                     </span>
