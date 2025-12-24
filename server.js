@@ -3444,9 +3444,30 @@ app.post('/api/ordenes/importar-csv', upload.single('archivo'), async (req, res)
             });
         }
 
-        // Obtener encabezados (primera línea)
-        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-        console.log('📋 Encabezados encontrados:', headers);
+        // Obtener encabezados (primera línea) y normalizarlos
+        const headersRaw = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+
+        // Mapeo de nombres alternativos a nombres estándar
+        const headerMapping = {
+            'Fecha Atención': 'fechaAtencion',
+            'Fecha Atencion': 'fechaAtencion',
+            'fecha_atencion': 'fechaAtencion',
+            'Hora Atención': 'horaAtencion',
+            'Hora Atencion': 'horaAtencion',
+            'hora_atencion': 'horaAtencion',
+            'primer_nombre': 'primerNombre',
+            'segundo_nombre': 'segundoNombre',
+            'primer_apellido': 'primerApellido',
+            'segundo_apellido': 'segundoApellido',
+            'numero_id': 'numeroId',
+            'tipo_examen': 'tipoExamen',
+            'cod_empresa': 'codEmpresa'
+        };
+
+        // Normalizar headers
+        const headers = headersRaw.map(h => headerMapping[h] || h);
+        console.log('📋 Encabezados originales:', headersRaw);
+        console.log('📋 Encabezados normalizados:', headers);
 
         // Campos requeridos
         const camposRequeridos = ['numeroId', 'primerNombre', 'primerApellido', 'codEmpresa'];
@@ -3541,12 +3562,13 @@ app.post('/api/ordenes/importar-csv', upload.single('archivo'), async (req, res)
                 // Insertar en PostgreSQL
                 const insertQuery = `
                     INSERT INTO "HistoriaClinica" (
-                        "_id", "numeroId", "primerNombre", "primerApellido",
+                        "_id", "numeroId", "primerNombre", "segundoNombre",
+                        "primerApellido", "segundoApellido",
                         "celular", "cargo", "ciudad", "fechaAtencion",
                         "empresa", "tipoExamen", "medico", "atendido",
                         "codEmpresa", "examenes", "_createdDate", "_updatedDate"
                     ) VALUES (
-                        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW()
+                        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW(), NOW()
                     )
                     RETURNING "_id"
                 `;
@@ -3555,7 +3577,9 @@ app.post('/api/ordenes/importar-csv', upload.single('archivo'), async (req, res)
                     ordenId,
                     row.numeroId,
                     row.primerNombre,
+                    row.segundoNombre || null,
                     row.primerApellido,
+                    row.segundoApellido || null,
                     row.celular || null,
                     row.cargo || null,
                     row.ciudad || null,
@@ -3576,9 +3600,9 @@ app.post('/api/ordenes/importar-csv', upload.single('archivo'), async (req, res)
                         _id: ordenId,
                         numeroId: row.numeroId,
                         primerNombre: row.primerNombre,
-                        segundoNombre: '',
+                        segundoNombre: row.segundoNombre || '',
                         primerApellido: row.primerApellido,
-                        segundoApellido: '',
+                        segundoApellido: row.segundoApellido || '',
                         celular: row.celular || '',
                         codEmpresa: row.codEmpresa,
                         empresa: row.empresa || row.codEmpresa,
