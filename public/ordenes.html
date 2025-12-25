@@ -3959,18 +3959,18 @@
             select.innerHTML = '<option value="">Seleccionar médico...</option>';
 
             medicosData.forEach(medico => {
-                const nombreCompleto = `${medico.primer_nombre} ${medico.primer_apellido}`;
+                const alias = medico.alias || `${medico.primer_nombre} ${medico.primer_apellido}`;
                 const option = document.createElement('option');
-                option.value = nombreCompleto;
-                option.textContent = nombreCompleto;
-                if (medicoActual && nombreCompleto === medicoActual) {
+                option.value = alias;
+                option.textContent = alias;
+                if (medicoActual && alias === medicoActual) {
                     option.selected = true;
                 }
                 select.appendChild(option);
             });
 
             // Si el médico actual no está en la lista pero tiene valor, agregarlo como opción
-            if (medicoActual && !medicosData.some(m => `${m.primer_nombre} ${m.primer_apellido}` === medicoActual)) {
+            if (medicoActual && !medicosData.some(m => (m.alias || `${m.primer_nombre} ${m.primer_apellido}`) === medicoActual)) {
                 const option = document.createElement('option');
                 option.value = medicoActual;
                 option.textContent = medicoActual;

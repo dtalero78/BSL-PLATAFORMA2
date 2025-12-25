@@ -6304,7 +6304,7 @@ app.get('/api/medicos-por-modalidad', async (req, res) => {
         const { modalidad = 'presencial', fecha } = req.query;
 
         let query = `
-            SELECT DISTINCT m.id, m.primer_nombre, m.primer_apellido,
+            SELECT DISTINCT m.id, m.primer_nombre, m.primer_apellido, m.alias,
                    m.especialidad, COALESCE(m.tiempo_consulta, 10) as tiempo_consulta
             FROM medicos m
             INNER JOIN medicos_disponibilidad md ON m.id = md.medico_id

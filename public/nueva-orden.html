@@ -1189,19 +1189,19 @@
 
                 if (result.success && result.data.length > 0) {
                     result.data.forEach(medico => {
-                        const nombreCompleto = `${medico.primer_nombre} ${medico.primer_apellido}`;
+                        const alias = medico.alias || `${medico.primer_nombre} ${medico.primer_apellido}`;
                         const option = document.createElement('option');
-                        option.value = nombreCompleto;
-                        option.textContent = nombreCompleto;
+                        option.value = alias;
+                        option.textContent = alias;
                         select.appendChild(option);
                     });
                 } else {
                     // Si no hay médicos con disponibilidad configurada, mostrar todos
                     medicosData.forEach(medico => {
-                        const nombreCompleto = `${medico.primer_nombre} ${medico.primer_apellido}`;
+                        const alias = medico.alias || `${medico.primer_nombre} ${medico.primer_apellido}`;
                         const option = document.createElement('option');
-                        option.value = nombreCompleto;
-                        option.textContent = nombreCompleto;
+                        option.value = alias;
+                        option.textContent = alias;
                         select.appendChild(option);
                     });
                 }
@@ -1214,10 +1214,10 @@
                 // En caso de error, mostrar todos los médicos
                 select.innerHTML = '<option value="">Seleccionar médico...</option>';
                 medicosData.forEach(medico => {
-                    const nombreCompleto = `${medico.primer_nombre} ${medico.primer_apellido}`;
+                    const alias = medico.alias || `${medico.primer_nombre} ${medico.primer_apellido}`;
                     const option = document.createElement('option');
-                    option.value = nombreCompleto;
-                    option.textContent = nombreCompleto;
+                    option.value = alias;
+                    option.textContent = alias;
                     select.appendChild(option);
                 });
             }
