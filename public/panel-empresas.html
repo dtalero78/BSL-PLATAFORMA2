@@ -2329,6 +2329,16 @@
                         </div>
                     </div>
 
+                    <!-- Centro de Costo (solo visible si la empresa tiene centros de costo configurados) -->
+                    <div class="form-row" id="centroCostoContainer" style="display: none;">
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label class="form-label">Centro de Costo</label>
+                            <select class="form-select" id="modalCentroCosto">
+                                <option value="">Seleccionar centro de costo...</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <!-- Datos del Examen -->
                     <div class="form-section-title">Datos del Examen</div>
 
@@ -3573,6 +3583,7 @@
             cargarExamenesModal();
             cargarCiudadesModal();
             cargarSubempresasModal();
+            cargarCentrosCostoModal();
             limpiarFormularioModal();
             document.getElementById('modalPaso1').style.display = 'block';
             document.getElementById('modalPaso2').style.display = 'none';
@@ -3619,6 +3630,21 @@
             }
         }
 
+        // Cargar centros de costo según configuración
+        function cargarCentrosCostoModal() {
+            const container = document.getElementById('centroCostoContainer');
+            if (!container) return;
+
+            if (configEmpresa && configEmpresa.centros_de_costo && configEmpresa.centros_de_costo.length > 0) {
+                container.style.display = 'block';
+                const select = document.getElementById('modalCentroCosto');
+                select.innerHTML = '<option value="">Seleccionar centro de costo...</option>' +
+                    configEmpresa.centros_de_costo.map(cc => `<option value="${cc}">${cc}</option>`).join('');
+            } else {
+                container.style.display = 'none';
+            }
+        }
+
         function cerrarModalNuevaOrden() {
             document.getElementById('modalNuevaOrden').classList.remove('active');
             ordenExistenteActual = null;
@@ -3637,6 +3663,8 @@
             document.getElementById('modalTipoExamen').value = '';
             const subempresaSelect = document.getElementById('modalSubempresa');
             if (subempresaSelect) subempresaSelect.value = '';
+            const centroCostoSelect = document.getElementById('modalCentroCosto');
+            if (centroCostoSelect) centroCostoSelect.value = '';
             const inputFecha = document.getElementById('modalFechaAtencion');
             inputFecha.value = '';
             document.getElementById('modalHoraAtencion').innerHTML = '<option value="">Primero seleccione fecha...</option>';
@@ -3845,6 +3873,10 @@
             const subempresaSelect = document.getElementById('modalSubempresa');
             const subempresa = subempresaSelect && subempresaSelect.value ? subempresaSelect.value : null;
 
+            // Obtener centro de costo si está configurado
+            const centroCostoSelect = document.getElementById('modalCentroCosto');
+            const centroDeCosto = centroCostoSelect && centroCostoSelect.value ? centroCostoSelect.value : null;
+
             const datos = {
                 codEmpresa: codEmpresa,
                 empresa: codEmpresa,
@@ -3857,6 +3889,7 @@
                 cargo: cargo,
                 ciudad: ciudad,
                 subempresa: subempresa,
+                centroDeCosto: centroDeCosto,
                 tipoExamen: tipoExamen,
                 fechaAtencion: fechaAtencion,
                 horaAtencion: horaAtencion,

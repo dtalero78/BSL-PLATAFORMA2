@@ -477,6 +477,16 @@ const initDB = async () => {
             // Columna ya existe o tabla no existe
         }
 
+        // Agregar columna centro_de_costo a HistoriaClinica si no existe
+        try {
+            await pool.query(`
+                ALTER TABLE "HistoriaClinica"
+                ADD COLUMN IF NOT EXISTS centro_de_costo VARCHAR(200)
+            `);
+        } catch (err) {
+            // Columna ya existe o tabla no existe
+        }
+
         // Crear tabla medicos_disponibilidad si no existe
         await pool.query(`
             CREATE TABLE IF NOT EXISTS medicos_disponibilidad (
@@ -917,7 +927,8 @@ const initDB = async () => {
         const empresasColumnsToAdd = [
             'ciudades JSONB DEFAULT \'[]\'::jsonb',
             'examenes JSONB DEFAULT \'[]\'::jsonb',
-            'subempresas JSONB DEFAULT \'[]\'::jsonb'
+            'subempresas JSONB DEFAULT \'[]\'::jsonb',
+            'centros_de_costo JSONB DEFAULT \'[]\'::jsonb'
         ];
 
         for (const column of empresasColumnsToAdd) {
@@ -3183,6 +3194,7 @@ app.post('/api/ordenes', async (req, res) => {
             cargo,
             ciudad,
             subempresa,
+            centroDeCosto,
             tipoExamen,
             medico,
             fechaAtencion,
@@ -3311,10 +3323,10 @@ app.post('/api/ordenes', async (req, res) => {
         const insertQuery = `
             INSERT INTO "HistoriaClinica" (
                 "_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
-                "celular", "codEmpresa", "empresa", "cargo", "ciudad", "subempresa", "tipoExamen", "medico",
+                "celular", "codEmpresa", "empresa", "cargo", "ciudad", "subempresa", "centro_de_costo", "tipoExamen", "medico",
                 "fechaAtencion", "horaAtencion", "atendido", "examenes", "_createdDate", "_updatedDate"
             ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW(), NOW()
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW(), NOW()
             )
             RETURNING "_id", "numeroId", "primerNombre", "primerApellido"
         `;
@@ -3332,6 +3344,7 @@ app.post('/api/ordenes', async (req, res) => {
             cargo || null,
             ciudad || null,
             subempresa || null,
+            centroDeCosto || null,
             tipoExamen || null,
             medico || null,
             construirFechaAtencionColombia(fechaAtencion, horaAtencion),
@@ -5551,7 +5564,7 @@ app.get('/api/empresas', async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT id, cod_empresa, empresa, nit, profesiograma, activo, created_at,
-                   ciudades, examenes, subempresas
+                   ciudades, examenes, subempresas, centros_de_costo
             FROM empresas
             WHERE activo = true
             ORDER BY empresa
@@ -5602,7 +5615,7 @@ app.get('/api/empresas/:id', async (req, res) => {
 // Crear una nueva empresa
 app.post('/api/empresas', async (req, res) => {
     try {
-        const { codEmpresa, empresa, nit, profesiograma, ciudades, examenes, subempresas } = req.body;
+        const { codEmpresa, empresa, nit, profesiograma, ciudades, examenes, subempresas, centrosDeCosto } = req.body;
 
         if (!codEmpresa || !empresa) {
             return res.status(400).json({
@@ -5612,8 +5625,8 @@ app.post('/api/empresas', async (req, res) => {
         }
 
         const result = await pool.query(`
-            INSERT INTO empresas (cod_empresa, empresa, nit, profesiograma, ciudades, examenes, subempresas)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            INSERT INTO empresas (cod_empresa, empresa, nit, profesiograma, ciudades, examenes, subempresas, centros_de_costo)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *
         `, [
             codEmpresa,
@@ -5622,7 +5635,8 @@ app.post('/api/empresas', async (req, res) => {
             profesiograma || null,
             JSON.stringify(ciudades || []),
             JSON.stringify(examenes || []),
-            JSON.stringify(subempresas || [])
+            JSON.stringify(subempresas || []),
+            JSON.stringify(centrosDeCosto || [])
         ]);
 
         console.log(`✅ Empresa creada: ${empresa} (${codEmpresa})`);
@@ -5652,7 +5666,7 @@ app.post('/api/empresas', async (req, res) => {
 app.put('/api/empresas/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { codEmpresa, empresa, nit, profesiograma, activo, ciudades, examenes, subempresas } = req.body;
+        const { codEmpresa, empresa, nit, profesiograma, activo, ciudades, examenes, subempresas, centrosDeCosto } = req.body;
 
         const result = await pool.query(`
             UPDATE empresas SET
@@ -5664,8 +5678,9 @@ app.put('/api/empresas/:id', async (req, res) => {
                 ciudades = COALESCE($6, ciudades),
                 examenes = COALESCE($7, examenes),
                 subempresas = COALESCE($8, subempresas),
+                centros_de_costo = COALESCE($9, centros_de_costo),
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = $9
+            WHERE id = $10
             RETURNING *
         `, [
             codEmpresa,
@@ -5676,6 +5691,7 @@ app.put('/api/empresas/:id', async (req, res) => {
             ciudades ? JSON.stringify(ciudades) : null,
             examenes ? JSON.stringify(examenes) : null,
             subempresas ? JSON.stringify(subempresas) : null,
+            centrosDeCosto ? JSON.stringify(centrosDeCosto) : null,
             id
         ]);
 
@@ -5743,7 +5759,7 @@ app.get('/api/empresas/codigo/:codEmpresa', async (req, res) => {
     try {
         const { codEmpresa } = req.params;
         const result = await pool.query(`
-            SELECT id, cod_empresa, empresa, nit, profesiograma, ciudades, examenes, subempresas
+            SELECT id, cod_empresa, empresa, nit, profesiograma, ciudades, examenes, subempresas, centros_de_costo
             FROM empresas
             WHERE cod_empresa = $1 AND activo = true
         `, [codEmpresa]);
