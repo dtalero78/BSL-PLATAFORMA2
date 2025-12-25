@@ -1137,7 +1137,14 @@ app.post('/api/auth/registro', async (req, res) => {
 
         // Enviar mensaje de WhatsApp de confirmación de registro
         const celularFormateado = celularWhatsapp.startsWith('57') ? celularWhatsapp : `57${celularWhatsapp}`;
-        const mensajeWhatsApp = `Hola! Recibimos tu registro a la plataforma BSL, en un momento recibiras la autorizacion de entrada.`;
+        const mensajeWhatsApp = `Hola! Recibimos tu registro a la plataforma BSL, en un momento recibiras la autorizacion de entrada.
+
+*Datos de registro:*
+- Nombre: ${nombreCompleto || 'No especificado'}
+- Empresa: ${nombreEmpresa || 'No especificada'}
+- Documento: ${numeroDocumento}
+- Email: ${email}
+- Celular: ${celularWhatsapp}`;
 
         try {
             sendWhatsAppMessage(celularFormateado, mensajeWhatsApp);
