@@ -818,8 +818,11 @@
                             <span style="color: #9CA3AF; font-size: 13px;">Sin centros de costo configurados</span>
                         </div>
                         <div class="add-input-container">
-                            <input type="text" id="inputCentroCosto" placeholder="Nombre del centro de costo...">
+                            <input type="text" id="inputCentroCosto" placeholder="Un centro o varios separados por coma...">
                             <button type="button" class="btn-add" onclick="agregarCentroCosto()">Agregar</button>
+                        </div>
+                        <div style="font-size: 11px; color: #9CA3AF; margin-top: 4px;">
+                            Tip: Puedes pegar varios valores separados por coma (ej: Centro1, Centro2, Centro3)
                         </div>
                     </div>
                 </div>
@@ -959,12 +962,24 @@
 
         function agregarCentroCosto() {
             const input = document.getElementById('inputCentroCosto');
-            const centroCosto = input.value.trim();
-            if (centroCosto && !centrosCostoSeleccionados.includes(centroCosto)) {
-                centrosCostoSeleccionados.push(centroCosto);
+            const valor = input.value.trim();
+            if (!valor) return;
+
+            // Soporta múltiples valores separados por coma
+            const centros = valor.split(',').map(c => c.trim()).filter(c => c.length > 0);
+            let agregados = 0;
+
+            centros.forEach(centroCosto => {
+                if (centroCosto && !centrosCostoSeleccionados.includes(centroCosto)) {
+                    centrosCostoSeleccionados.push(centroCosto);
+                    agregados++;
+                }
+            });
+
+            if (agregados > 0) {
                 renderChips('centrosCostoChips', centrosCostoSeleccionados, 'centroCosto');
-                input.value = '';
             }
+            input.value = '';
         }
 
         function eliminarCentroCosto(centroCosto) {
