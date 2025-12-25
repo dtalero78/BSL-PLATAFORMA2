@@ -3413,19 +3413,20 @@ app.post('/api/ordenes', async (req, res) => {
         console.log('✅ PostgreSQL: Orden guardada con _id:', wixId);
 
         // Disparar webhook a Make.com (async, no bloquea)
-        dispararWebhookMake({
-            _id: wixId,
-            celular,
-            numeroId,
-            primerNombre,
-            codEmpresa,
-            examenes,
-            ciudad,
-            fechaAtencion,
-            horaAtencion,
-            medico,
-            modalidad
-        });
+        // DESACTIVADO TEMPORALMENTE - recopilando información adicional
+        // dispararWebhookMake({
+        //     _id: wixId,
+        //     celular,
+        //     numeroId,
+        //     primerNombre,
+        //     codEmpresa,
+        //     examenes,
+        //     ciudad,
+        //     fechaAtencion,
+        //     horaAtencion,
+        //     medico,
+        //     modalidad
+        // });
 
         // 2. Sincronizar con Wix
         console.log('');
