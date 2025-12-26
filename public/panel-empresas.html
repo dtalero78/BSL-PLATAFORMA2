@@ -2120,11 +2120,8 @@
                     </svg>
                     Descargar PDF
                 </a>
-                <button class="btn btn-success" id="btnAprobar" onclick="aprobarOrden()" style="display: none; background: #10b981;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                        <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
-                    Guardar Aprobación
+                <button class="btn" id="btnAprobar" onclick="aprobarOrden()" style="display: none; background: #000; color: #fff;">
+                    Guardar
                 </button>
             </div>
         </div>
@@ -3474,12 +3471,7 @@
                 alert('Error de conexión. Intente de nuevo.');
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = `
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                        <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
-                    Guardar Aprobación
-                `;
+                btn.innerHTML = 'Guardar';
             }
         }
 
