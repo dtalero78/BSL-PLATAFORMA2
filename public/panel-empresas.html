@@ -3376,6 +3376,18 @@
                 ` : ''}
 
                 ${tienePermiso('APROBADOR') ? `
+                <div class="detail-card" style="background: #F0F9FF; border: 2px solid #0EA5E9;">
+                    <div class="detail-card-title" style="color: #0369A1;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Pruebas Psicológicas
+                    </div>
+                    <div id="resultadosPruebas" style="display: flex; flex-direction: column; gap: 12px; padding: 12px 0;">
+                        <div style="text-align: center; color: #64748B;">Cargando resultados...</div>
+                    </div>
+                </div>
+
                 <div class="detail-card" style="background: #FEF2F2; border: 2px solid #EF4444;">
                     <div class="detail-card-title" style="color: #DC2626;">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
@@ -3427,6 +3439,56 @@
             }
 
             document.getElementById('modalDetalles').classList.add('active');
+
+            // Cargar pruebas psicológicas para APROBADOR
+            if (tienePermiso('APROBADOR') && paciente.numeroId) {
+                cargarPruebasPsicologicas(paciente.numeroId);
+            }
+        }
+
+        // ========== FUNCIÓN CARGAR PRUEBAS PSICOLÓGICAS ==========
+        async function cargarPruebasPsicologicas(numeroId) {
+            const container = document.getElementById('resultadosPruebas');
+            if (!container) return;
+
+            try {
+                const response = await fetch(`/api/pruebas-psicologicas/${numeroId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const formatResultado = (resultado) => {
+                        if (typeof resultado === 'string') {
+                            return { valor: '-', interpretacion: resultado };
+                        }
+                        return resultado;
+                    };
+
+                    const ansiedad = formatResultado(data.ansiedad);
+                    const depresion = formatResultado(data.depresion);
+
+                    container.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #fff; border-radius: 8px;">
+                            <div>
+                                <div style="font-weight: 600; color: #334155;">Ansiedad</div>
+                                <div style="font-size: 13px; color: #64748B;">${ansiedad.interpretacion || ansiedad}</div>
+                            </div>
+                            <div style="font-size: 24px; font-weight: 700; color: #0369A1;">${ansiedad.valor || '-'}</div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #fff; border-radius: 8px;">
+                            <div>
+                                <div style="font-weight: 600; color: #334155;">Depresión</div>
+                                <div style="font-size: 13px; color: #64748B;">${depresion.interpretacion || depresion}</div>
+                            </div>
+                            <div style="font-size: 24px; font-weight: 700; color: #0369A1;">${depresion.valor || '-'}</div>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = '<div style="text-align: center; color: #EF4444;">Error al cargar resultados</div>';
+                }
+            } catch (error) {
+                console.error('Error cargando pruebas psicológicas:', error);
+                container.innerHTML = '<div style="text-align: center; color: #EF4444;">Error de conexión</div>';
+            }
         }
 
         // ========== FUNCIÓN APROBAR ORDEN ==========

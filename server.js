@@ -3982,6 +3982,35 @@ app.get('/api/ordenes', async (req, res) => {
     }
 });
 
+// GET /api/pruebas-psicologicas/:numeroId - Obtener resultados de ansiedad y depresión desde Wix
+app.get('/api/pruebas-psicologicas/:numeroId', async (req, res) => {
+    try {
+        const { numeroId } = req.params;
+
+        // Consultar ambos endpoints en paralelo
+        const [ansiedadRes, depresionRes] = await Promise.all([
+            fetch(`https://www.bsl.com.co/_functions/ansiedad?numeroId=${numeroId}`),
+            fetch(`https://www.bsl.com.co/_functions/depresion?numeroId=${numeroId}`)
+        ]);
+
+        const ansiedad = await ansiedadRes.json();
+        const depresion = await depresionRes.json();
+
+        res.json({
+            success: true,
+            numeroId,
+            ansiedad: ansiedad.resultado || 'NO REALIZÓ PRUEBA',
+            depresion: depresion.resultado || 'NO REALIZÓ PRUEBA'
+        });
+    } catch (error) {
+        console.error('Error consultando pruebas psicológicas:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 // GET /api/ordenes-aprobador - Listar órdenes para perfil APROBADOR (solo atendidos sin aprobación)
 app.get('/api/ordenes-aprobador', async (req, res) => {
     try {
