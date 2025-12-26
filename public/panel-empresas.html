@@ -2120,6 +2120,12 @@
                     </svg>
                     Descargar PDF
                 </a>
+                <button class="btn btn-success" id="btnAprobar" onclick="aprobarOrden()" style="display: none; background: #10b981;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    Guardar Aprobación
+                </button>
             </div>
         </div>
     </div>
@@ -2874,8 +2880,15 @@
             allData = [];
 
             try {
+                // Determinar el endpoint según el perfil
+                // APROBADOR usa endpoint especial que solo muestra atendidos sin aprobación
+                const esAprobador = tienePermiso('APROBADOR');
+                const endpoint = esAprobador
+                    ? `/api/ordenes-aprobador?codEmpresa=${encodeURIComponent(codEmpresa)}&limit=${LIMIT_POR_PAGINA}&offset=0`
+                    : `/api/ordenes?codEmpresa=${encodeURIComponent(codEmpresa)}&limit=${LIMIT_POR_PAGINA}&offset=0`;
+
                 // Primera carga: obtener stats y primera página
-                const response = await fetch(`/api/ordenes?codEmpresa=${encodeURIComponent(codEmpresa)}&limit=${LIMIT_POR_PAGINA}&offset=0`);
+                const response = await fetch(endpoint);
                 const result = await response.json();
 
                 if (result.success) {
@@ -2916,10 +2929,12 @@
             const statCargaCard = document.getElementById('statCargaCard');
             const statCargados = document.getElementById('statCargados');
             const statCargaLabel = document.getElementById('statCargaLabel');
+            const esAprobador = tienePermiso('APROBADOR');
+            const baseEndpoint = esAprobador ? '/api/ordenes-aprobador' : '/api/ordenes';
 
             while (offset < totalOrdenes) {
                 try {
-                    const response = await fetch(`/api/ordenes?codEmpresa=${encodeURIComponent(codEmpresa)}&limit=${LIMIT_POR_PAGINA}&offset=${offset}`);
+                    const response = await fetch(`${baseEndpoint}?codEmpresa=${encodeURIComponent(codEmpresa)}&limit=${LIMIT_POR_PAGINA}&offset=${offset}`);
                     const result = await response.json();
 
                     if (result.success && result.data) {
@@ -3362,6 +3377,28 @@
                     </div>
                 </div>
                 ` : ''}
+
+                ${tienePermiso('APROBADOR') ? `
+                <div class="detail-card" style="background: #FEF2F2; border: 2px solid #EF4444;">
+                    <div class="detail-card-title" style="color: #DC2626;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                        Aprobación del Certificado
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 16px 0;">
+                        <input type="checkbox" id="checkboxNoAprobar" style="width: 24px; height: 24px; cursor: pointer; accent-color: #DC2626;">
+                        <label for="checkboxNoAprobar" style="font-size: 18px; font-weight: 600; color: #DC2626; cursor: pointer;">
+                            NO APROBAR ESTE CERTIFICADO
+                        </label>
+                    </div>
+                    <p style="font-size: 13px; color: #991B1B;">
+                        Si marca esta casilla, el certificado será rechazado. De lo contrario, será aprobado automáticamente.
+                    </p>
+                </div>
+                ` : ''}
             `;
 
             // Configurar botón PDF según permisos
@@ -3386,7 +3423,64 @@
                 btnEditar.style.display = tienePermiso('EDITAR_ORDEN') ? 'inline-flex' : 'none';
             }
 
+            // Configurar botón Aprobar según permisos (solo para APROBADOR)
+            const btnAprobar = document.getElementById('btnAprobar');
+            if (btnAprobar) {
+                btnAprobar.style.display = tienePermiso('APROBADOR') ? 'inline-flex' : 'none';
+            }
+
             document.getElementById('modalDetalles').classList.add('active');
+        }
+
+        // ========== FUNCIÓN APROBAR ORDEN ==========
+        async function aprobarOrden() {
+            if (!pacienteActual) return;
+            if (!tienePermiso('APROBADOR')) {
+                alert('No tienes permiso para aprobar órdenes');
+                return;
+            }
+
+            const checkbox = document.getElementById('checkboxNoAprobar');
+            const noAprobar = checkbox ? checkbox.checked : false;
+            const valorAprobacion = noAprobar ? 'NO APROBADO' : 'APROBADO';
+
+            const btn = document.getElementById('btnAprobar');
+            btn.disabled = true;
+            btn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;">
+                    <circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="32"/>
+                </svg>
+                Guardando...
+            `;
+
+            try {
+                const response = await fetch(`/api/historia-clinica/${pacienteActual._id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ aprobacion: valorAprobacion })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    cerrarModalDetalles();
+                    actualizarDatos();
+                    alert(`Certificado ${valorAprobacion.toLowerCase()} exitosamente`);
+                } else {
+                    alert('Error al guardar: ' + (result.error || 'Error desconocido'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error de conexión. Intente de nuevo.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    Guardar Aprobación
+                `;
+            }
         }
 
         function cerrarModalDetalles() {

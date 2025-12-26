@@ -542,6 +542,16 @@ const initDB = async () => {
             // Columna ya existe o tabla no existe
         }
 
+        // Agregar columna aprobacion a HistoriaClinica si no existe (para perfil APROBADOR)
+        try {
+            await pool.query(`
+                ALTER TABLE "HistoriaClinica"
+                ADD COLUMN IF NOT EXISTS aprobacion VARCHAR(20)
+            `);
+        } catch (err) {
+            // Columna ya existe o tabla no existe
+        }
+
         // Crear tabla medicos_disponibilidad si no existe
         await pool.query(`
             CREATE TABLE IF NOT EXISTS medicos_disponibilidad (
@@ -3971,6 +3981,97 @@ app.get('/api/ordenes', async (req, res) => {
     }
 });
 
+// GET /api/ordenes-aprobador - Listar órdenes para perfil APROBADOR (solo atendidos sin aprobación)
+app.get('/api/ordenes-aprobador', async (req, res) => {
+    try {
+        const { codEmpresa, buscar, limit = 100, offset = 0 } = req.query;
+
+        // Query para APROBADOR: solo registros atendidos y sin aprobación
+        let query = `
+            SELECT h."_id", h."numeroId", h."primerNombre", h."segundoNombre", h."primerApellido", h."segundoApellido",
+                   h."codEmpresa", h."empresa", h."cargo", h."tipoExamen", h."medico", h."atendido",
+                   h."fechaAtencion", h."horaAtencion", h."examenes", h."ciudad", h."celular",
+                   h."_createdDate", h."_updatedDate", h."fechaConsulta", h."aprobacion",
+                   h."mdConceptoFinal", h."mdRecomendacionesMedicasAdicionales", h."mdObservacionesCertificado", h."mdObsParaMiDocYa",
+                   (
+                       SELECT foto_url FROM formularios
+                       WHERE (wix_id = h."_id" OR numero_id = h."numeroId") AND foto_url IS NOT NULL
+                       ORDER BY fecha_registro DESC LIMIT 1
+                   ) as foto_url
+            FROM "HistoriaClinica" h
+            WHERE h."atendido" = 'ATENDIDO' AND (h."aprobacion" IS NULL OR h."aprobacion" = '')
+        `;
+        const params = [];
+        let paramIndex = 1;
+
+        if (codEmpresa) {
+            query += ` AND h."codEmpresa" = $${paramIndex}`;
+            params.push(codEmpresa);
+            paramIndex++;
+        }
+
+        if (buscar) {
+            query += ` AND (
+                COALESCE(h."numeroId", '') || ' ' ||
+                COALESCE(h."primerNombre", '') || ' ' ||
+                COALESCE(h."primerApellido", '') || ' ' ||
+                COALESCE(h."codEmpresa", '') || ' ' ||
+                COALESCE(h."celular", '') || ' ' ||
+                COALESCE(h."empresa", '')
+            ) ILIKE $${paramIndex}`;
+            params.push(`%${buscar}%`);
+            paramIndex++;
+        }
+
+        query += ` ORDER BY h."fechaConsulta" DESC NULLS LAST, h."_createdDate" DESC`;
+        query += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+        params.push(parseInt(limit), parseInt(offset));
+
+        const result = await pool.query(query, params);
+
+        // Obtener el total para paginación
+        let countQuery = `SELECT COUNT(*) FROM "HistoriaClinica" WHERE "atendido" = 'ATENDIDO' AND ("aprobacion" IS NULL OR "aprobacion" = '')`;
+        const countParams = [];
+        let countParamIndex = 1;
+
+        if (codEmpresa) {
+            countQuery += ` AND "codEmpresa" = $${countParamIndex}`;
+            countParams.push(codEmpresa);
+            countParamIndex++;
+        }
+
+        if (buscar) {
+            countQuery += ` AND (
+                COALESCE("numeroId", '') || ' ' ||
+                COALESCE("primerNombre", '') || ' ' ||
+                COALESCE("primerApellido", '') || ' ' ||
+                COALESCE("codEmpresa", '') || ' ' ||
+                COALESCE("celular", '') || ' ' ||
+                COALESCE("empresa", '')
+            ) ILIKE $${countParamIndex}`;
+            countParams.push(`%${buscar}%`);
+        }
+
+        const countResult = await pool.query(countQuery, countParams);
+        const total = parseInt(countResult.rows[0].count);
+
+        res.json({
+            success: true,
+            data: result.rows,
+            total,
+            limit: parseInt(limit),
+            offset: parseInt(offset)
+        });
+    } catch (error) {
+        console.error('❌ Error al listar órdenes para aprobador:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al listar órdenes para aprobador',
+            error: error.message
+        });
+    }
+});
+
 // GET /api/ordenes/:id - Obtener una orden específica
 app.get('/api/ordenes/:id', async (req, res) => {
     try {
@@ -4479,7 +4580,8 @@ app.put('/api/historia-clinica/:id', async (req, res) => {
                 'celular', 'email', 'codEmpresa', 'empresa', 'cargo', 'tipoExamen',
                 'fechaAtencion', 'atendido', 'fechaConsulta', 'mdConceptoFinal', 'mdRecomendacionesMedicasAdicionales',
                 'mdObservacionesCertificado', 'mdAntecedentes', 'mdObsParaMiDocYa', 'mdDx1', 'mdDx2',
-                'talla', 'peso', 'motivoConsulta', 'diagnostico', 'tratamiento', 'pvEstado', 'medico', 'examenes'
+                'talla', 'peso', 'motivoConsulta', 'diagnostico', 'tratamiento', 'pvEstado', 'medico', 'examenes',
+                'aprobacion'
             ];
 
             const setClauses = [];
