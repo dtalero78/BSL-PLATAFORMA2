@@ -1123,6 +1123,7 @@
                         <th>Cédula</th>
                         <th>Celular</th>
                         <th>Empresa</th>
+                        <th>Creación</th>
                         <th>Hora Cita</th>
                         <th>Estado</th>
                         <th>Acciones</th>
@@ -1353,6 +1354,17 @@
             });
         }
 
+        function formatFechaCreacion(fecha) {
+            if (!fecha) return '—';
+            const date = new Date(fecha);
+            return date.toLocaleDateString('es-CO', {
+                day: '2-digit',
+                month: '2-digit',
+                year: '2-digit',
+                timeZone: 'America/Bogota'
+            });
+        }
+
         function getStatusInfo(paciente) {
             if (paciente.pvEstado === 'Pagado' || paciente.pagado === true) {
                 return { class: 'pagado', text: 'ATENDIDO - PAGADO' };
@@ -1388,6 +1400,7 @@
                         <td>${p.numeroId || '—'}</td>
                         <td>${p.celular || '—'}</td>
                         <td>${p.codEmpresa || '—'}</td>
+                        <td class="cell-fecha">${formatFechaCreacion(p._createdDate)}</td>
                         <td class="cell-fecha">${formatHora(p.fechaAtencion)}</td>
                         <td>
                             <span class="status-badge ${status.class}">
