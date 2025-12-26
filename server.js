@@ -1779,7 +1779,8 @@ const PERMISOS_DISPONIBLES = [
     { codigo: 'DUPLICAR_ORDEN', nombre: 'Duplicar Orden', descripcion: 'Duplicar órdenes existentes' },
     { codigo: 'DESCARGAR_CERTIFICADO', nombre: 'Descargar Certificado', descripcion: 'Descargar certificados PDF' },
     { codigo: 'VER_ESTADISTICAS', nombre: 'Ver Estadísticas', descripcion: 'Ver tarjetas de estadísticas' },
-    { codigo: 'VER_RESULTADOS_MEDICOS', nombre: 'Ver Resultados Médicos', descripcion: 'Ver sección de resultados médicos en detalles del paciente' }
+    { codigo: 'VER_RESULTADOS_MEDICOS', nombre: 'Ver Resultados Médicos', descripcion: 'Ver sección de resultados médicos en detalles del paciente' },
+    { codigo: 'APROBADOR', nombre: 'Aprobador', descripcion: 'Aprobar o rechazar certificados médicos atendidos' }
 ];
 
 // Lista de permisos disponibles para panel-ordenes (rol: empleado)
