@@ -1994,7 +1994,8 @@
             searchTimeout = setTimeout(async () => {
                 try {
                     buscandoEnServidor = true;
-                    document.getElementById('totalRegistros').textContent = 'Buscando...';
+                    const totalRegistrosEl = document.getElementById('totalRegistros');
+                    if (totalRegistrosEl) totalRegistrosEl.textContent = 'Buscando...';
 
                     const response = await fetch(`/api/historia-clinica/buscar?q=${encodeURIComponent(busqueda)}`);
                     const result = await response.json();
@@ -2019,7 +2020,7 @@
 
                         renderTable(resultados);
                         renderMobileCards(resultados);
-                        document.getElementById('totalRegistros').textContent = `${resultados.length} resultados (búsqueda global)`;
+                        if (totalRegistrosEl) totalRegistrosEl.textContent = `${resultados.length} resultados (búsqueda global)`;
                     }
                 } catch (error) {
                     console.error('Error en búsqueda:', error);
