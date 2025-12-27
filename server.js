@@ -959,6 +959,16 @@ const initDB = async () => {
             // Constraint ya actualizada o no existe
         }
 
+        // Migración: agregar columna empresas_excluidas para empleados
+        try {
+            await pool.query(`
+                ALTER TABLE usuarios
+                ADD COLUMN IF NOT EXISTS empresas_excluidas JSONB DEFAULT '[]'::jsonb
+            `);
+        } catch (err) {
+            // Columna ya existe
+        }
+
         // Crear tabla de sesiones
         await pool.query(`
             CREATE TABLE IF NOT EXISTS sesiones (
@@ -1105,7 +1115,7 @@ const authMiddleware = async (req, res, next) => {
 
         // Verificar que la sesión siga activa en la base de datos
         const sesionResult = await pool.query(`
-            SELECT s.*, u.estado, u.rol, u.cod_empresa, u.nombre_completo, u.email, u.numero_documento
+            SELECT s.*, u.estado, u.rol, u.cod_empresa, u.nombre_completo, u.email, u.numero_documento, u.empresas_excluidas
             FROM sesiones s
             JOIN usuarios u ON s.usuario_id = u.id
             WHERE s.token_hash = $1
@@ -1140,7 +1150,8 @@ const authMiddleware = async (req, res, next) => {
             nombreCompleto: sesion.nombre_completo,
             codEmpresa: sesion.cod_empresa,
             numeroDocumento: sesion.numero_documento,
-            sesionId: sesion.id
+            sesionId: sesion.id,
+            empresas_excluidas: sesion.empresas_excluidas || []
         };
 
         next();
@@ -3890,7 +3901,7 @@ app.post('/api/ordenes/importar-csv', upload.single('archivo'), async (req, res)
 });
 
 // GET /api/ordenes - Listar órdenes con filtros opcionales
-app.get('/api/ordenes', async (req, res) => {
+app.get('/api/ordenes', authMiddleware, async (req, res) => {
     try {
         const { codEmpresa, buscar, limit = 100, offset = 0 } = req.query;
 
@@ -3911,6 +3922,13 @@ app.get('/api/ordenes', async (req, res) => {
         `;
         const params = [];
         let paramIndex = 1;
+
+        // Filtrar empresas excluidas para empleados
+        if (req.usuario.rol === 'empleado' && req.usuario.empresas_excluidas && req.usuario.empresas_excluidas.length > 0) {
+            query += ` AND h."codEmpresa" NOT IN (${req.usuario.empresas_excluidas.map((_, i) => `$${paramIndex + i}`).join(', ')})`;
+            params.push(...req.usuario.empresas_excluidas);
+            paramIndex += req.usuario.empresas_excluidas.length;
+        }
 
         if (codEmpresa) {
             query += ` AND h."codEmpresa" = $${paramIndex}`;
@@ -3942,6 +3960,13 @@ app.get('/api/ordenes', async (req, res) => {
         let countQuery = `SELECT COUNT(*) FROM "HistoriaClinica" WHERE 1=1`;
         const countParams = [];
         let countParamIndex = 1;
+
+        // Aplicar el mismo filtro de empresas excluidas al count
+        if (req.usuario.rol === 'empleado' && req.usuario.empresas_excluidas && req.usuario.empresas_excluidas.length > 0) {
+            countQuery += ` AND "codEmpresa" NOT IN (${req.usuario.empresas_excluidas.map((_, i) => `$${countParamIndex + i}`).join(', ')})`;
+            countParams.push(...req.usuario.empresas_excluidas);
+            countParamIndex += req.usuario.empresas_excluidas.length;
+        }
 
         if (codEmpresa) {
             countQuery += ` AND "codEmpresa" = $${countParamIndex}`;
