@@ -2697,11 +2697,8 @@
                 if (dataSection) dataSection.style.display = 'none';
             }
 
-            // CREAR_ORDEN - Ocultar botón de nueva orden en sidebar
-            if (!tienePermiso('CREAR_ORDEN')) {
-                const navNuevaOrden = document.querySelector('.nav-item[onclick*="abrirModalNuevaOrden"]');
-                if (navNuevaOrden) navNuevaOrden.style.display = 'none';
-            }
+            // CREAR_ORDEN - Siempre visible (no se oculta)
+            // El botón "Nueva Orden" siempre está visible para todos los usuarios
 
             // VER_ESTADISTICAS - Siempre visible (forzar display)
             const statsGrid = document.querySelector('.stats-grid');
@@ -2853,10 +2850,10 @@
             panelScreen.classList.add('active');
             document.getElementById('empresaNameTopbar').textContent = codEmpresa || usuarioActual?.email || 'Usuario';
 
-            // Mostrar "Pregunta lo que quieras" solo para SANITHELP-JJ
+            // Mostrar "Pregunta lo que quieras" para todas las empresas
             const navPregunta = document.getElementById('navPreguntaLoQueQuieras');
             if (navPregunta) {
-                navPregunta.style.display = codEmpresa === 'SANITHELP-JJ' ? 'flex' : 'none';
+                navPregunta.style.display = 'flex';
             }
 
             actualizarDatos();
