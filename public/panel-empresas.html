@@ -2703,8 +2703,12 @@
                 if (navNuevaOrden) navNuevaOrden.style.display = 'none';
             }
 
-            // VER_ESTADISTICAS - Siempre visible (no se oculta)
-            // Las estadísticas siempre se muestran para todos los usuarios de empresa
+            // VER_ESTADISTICAS - Siempre visible (forzar display)
+            const statsGrid = document.querySelector('.stats-grid');
+            if (statsGrid) {
+                statsGrid.style.display = 'grid';
+                console.log('✅ Estadísticas forzadas a mostrarse');
+            }
         }
 
         // ========== FUNCIONES DE LOGIN ==========
