@@ -1825,6 +1825,260 @@
                 display: none !important;
             }
         }
+
+        /* ==================== ESTILOS SECCIÓN ESTADÍSTICAS ==================== */
+
+        /* Welcome Section para Estadísticas */
+        .estadisticas-welcome {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .estadisticas-welcome-title {
+            font-size: 44px;
+            font-weight: 400;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .estadisticas-welcome-subtitle {
+            font-size: 32px;
+            font-weight: 400;
+            color: var(--text-secondary);
+        }
+
+        /* Suggestion Cards para Estadísticas */
+        .estadisticas-suggestions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .estadistica-suggestion-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+        }
+
+        .estadistica-suggestion-card:hover {
+            box-shadow: var(--shadow-md);
+            border-color: #10B981;
+            transform: translateY(-2px);
+        }
+
+        .estadistica-suggestion-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: var(--bg-tertiary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+            font-size: 20px;
+        }
+
+        .estadistica-suggestion-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            line-height: 1.4;
+        }
+
+        /* Chat Area para Estadísticas */
+        .estadisticas-chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            margin-bottom: 24px;
+            min-height: 200px;
+        }
+
+        .estadisticas-message {
+            display: flex;
+            gap: 16px;
+            animation: estadisticasFadeIn 0.3s ease;
+        }
+
+        @keyframes estadisticasFadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .estadisticas-message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 18px;
+        }
+
+        .estadisticas-message-user .estadisticas-message-avatar {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            color: white;
+        }
+
+        .estadisticas-message-ai .estadisticas-message-avatar {
+            background: var(--bg-tertiary);
+        }
+
+        .estadisticas-message-content {
+            flex: 1;
+            padding: 16px 20px;
+            border-radius: 16px;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        .estadisticas-message-user .estadisticas-message-content {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .estadisticas-message-ai .estadisticas-message-content {
+            background: var(--bg-tertiary);
+        }
+
+        .estadisticas-message-ai .estadisticas-message-content p {
+            margin-bottom: 12px;
+        }
+
+        .estadisticas-message-ai .estadisticas-message-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Loading Animation para Estadísticas */
+        .estadisticas-loading-dots {
+            display: flex;
+            gap: 4px;
+            padding: 8px 0;
+        }
+
+        .estadisticas-loading-dots span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-tertiary);
+            animation: estadisticasBounce 1.4s infinite ease-in-out both;
+        }
+
+        .estadisticas-loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+        .estadisticas-loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes estadisticasBounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* Input Area para Estadísticas */
+        .estadisticas-input-area {
+            position: sticky;
+            bottom: 0;
+            background: var(--bg-primary);
+            padding: 16px 0;
+        }
+
+        .estadisticas-input-container {
+            background: var(--bg-tertiary);
+            border-radius: 28px;
+            padding: 8px 8px 8px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-color);
+            transition: all 0.2s;
+        }
+
+        .estadisticas-input-container:focus-within {
+            box-shadow: var(--shadow-md);
+            border-color: #10B981;
+        }
+
+        .estadisticas-input-field {
+            flex: 1;
+            border: none;
+            background: transparent;
+            font-size: 16px;
+            color: var(--text-primary);
+            outline: none;
+            font-family: inherit;
+        }
+
+        .estadisticas-input-field::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        .estadisticas-send-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .estadisticas-send-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .estadisticas-send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .estadisticas-send-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .estadisticas-helper-text {
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-top: 12px;
+        }
+
+        /* Responsive para Estadísticas */
+        @media (max-width: 768px) {
+            .estadisticas-welcome-title {
+                font-size: 32px;
+            }
+
+            .estadisticas-welcome-subtitle {
+                font-size: 24px;
+            }
+
+            .estadisticas-suggestions {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .estadisticas-suggestions {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ==================== FIN ESTILOS SECCIÓN ESTADÍSTICAS ==================== */
     </style>
 </head>
 <body>
@@ -2095,27 +2349,53 @@
 
                 <!-- Sección de Estadísticas -->
                 <div id="seccionEstadisticas" style="display: none;">
-                    <div class="page-header">
-                        <div class="page-header-left">
-                            <h1>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="12" cy="12" r="10"></circle>
-                                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-                                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                                </svg>
-                                Pregunta lo que quieras
-                            </h1>
-                            <p>Consulta estadísticas y análisis con IA</p>
+                    <!-- Welcome Section -->
+                    <div class="estadisticas-welcome" id="estadisticasWelcomeSection">
+                        <h1 class="estadisticas-welcome-title">Hola, <span id="estadisticasEmpresaNombre"></span></h1>
+                        <p class="estadisticas-welcome-subtitle">¿En qué puedo ayudarte hoy?</p>
+                    </div>
+
+                    <!-- Suggestion Cards -->
+                    <div class="estadisticas-suggestions" id="estadisticasSuggestionsContainer">
+                        <div class="estadistica-suggestion-card" onclick="estadisticasEnviarSugerencia('¿Cuántas personas fuman o han fumado?')">
+                            <div class="estadistica-suggestion-icon">🚬</div>
+                            <p class="estadistica-suggestion-title">¿Cuántas personas fuman o han fumado?</p>
+                        </div>
+                        <div class="estadistica-suggestion-card" onclick="estadisticasEnviarSugerencia('¿Cuántos colaboradores tienen riesgo cardiovascular?')">
+                            <div class="estadistica-suggestion-icon">❤️</div>
+                            <p class="estadistica-suggestion-title">¿Cuántos tienen riesgo cardiovascular?</p>
+                        </div>
+                        <div class="estadistica-suggestion-card" onclick="estadisticasEnviarSugerencia('¿Cuál es la edad promedio y distribución por género?')">
+                            <div class="estadistica-suggestion-icon">📊</div>
+                            <p class="estadistica-suggestion-title">¿Cuál es la edad promedio y distribución por género?</p>
+                        </div>
+                        <div class="estadistica-suggestion-card" onclick="estadisticasEnviarSugerencia('¿Cuántos tienen antecedentes familiares de diabetes o hipertensión?')">
+                            <div class="estadistica-suggestion-icon">👨‍👩‍👧</div>
+                            <p class="estadistica-suggestion-title">¿Cuántos tienen antecedentes familiares de diabetes?</p>
                         </div>
                     </div>
 
-                    <!-- Contenedor del iframe -->
-                    <div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                        <iframe
-                            src="estadisticas.html"
-                            style="width: 100%; height: calc(100vh - 250px); border: none; border-radius: 8px;"
-                            title="Estadísticas">
-                        </iframe>
+                    <!-- Chat Area -->
+                    <div class="estadisticas-chat-area" id="estadisticasChatArea"></div>
+
+                    <!-- Input Area -->
+                    <div class="estadisticas-input-area">
+                        <div class="estadisticas-input-container">
+                            <input
+                                type="text"
+                                class="estadisticas-input-field"
+                                id="estadisticasInputPregunta"
+                                placeholder="Escribe tu pregunta..."
+                                onkeypress="estadisticasHandleKeyPress(event)"
+                            >
+                            <button class="estadisticas-send-btn" id="estadisticasSendBtn" onclick="estadisticasEnviarPregunta()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="estadisticas-helper-text">En este espacio puedes conocer todo sobre la salud de tus colaboradores.</p>
                     </div>
                 </div>
                 <!-- Fin Sección de Estadísticas -->
@@ -2913,6 +3193,8 @@
             } else if (seccion === 'estadisticas') {
                 document.getElementById('seccionEstadisticas').style.display = 'block';
                 document.getElementById('navPreguntaLoQueQuieras').classList.add('active');
+                // Inicializar sección de estadísticas
+                estadisticasInicializar();
             }
         }
 
@@ -4542,6 +4824,147 @@
                 cerrarModalExpirado();
             }
         });
+
+        // ==================== FUNCIONES SECCIÓN ESTADÍSTICAS ====================
+
+        let estadisticasIsLoading = false;
+
+        function estadisticasInicializar() {
+            // Mostrar nombre de empresa
+            const empresaNombreSpan = document.getElementById('estadisticasEmpresaNombre');
+            if (empresaNombreSpan && codEmpresa) {
+                empresaNombreSpan.textContent = codEmpresa;
+            }
+        }
+
+        function estadisticasHandleKeyPress(event) {
+            if (event.key === 'Enter' && !estadisticasIsLoading) {
+                estadisticasEnviarPregunta();
+            }
+        }
+
+        function estadisticasEnviarSugerencia(pregunta) {
+            document.getElementById('estadisticasInputPregunta').value = pregunta;
+            estadisticasEnviarPregunta();
+        }
+
+        async function estadisticasEnviarPregunta() {
+            const input = document.getElementById('estadisticasInputPregunta');
+            const pregunta = input.value.trim();
+
+            if (!pregunta || estadisticasIsLoading) return;
+
+            estadisticasIsLoading = true;
+
+            // Ocultar sección de bienvenida y sugerencias después de la primera pregunta
+            document.getElementById('estadisticasWelcomeSection').style.display = 'none';
+            document.getElementById('estadisticasSuggestionsContainer').style.display = 'none';
+
+            // Mostrar mensaje del usuario
+            estadisticasAgregarMensaje(pregunta, 'user');
+            input.value = '';
+
+            // Mostrar indicador de carga
+            const loadingId = estadisticasMostrarCargando();
+
+            // Deshabilitar botón
+            document.getElementById('estadisticasSendBtn').disabled = true;
+
+            try {
+                const response = await fetch('/api/estadisticas-ia', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        codEmpresa: codEmpresa,
+                        pregunta: pregunta
+                    })
+                });
+
+                const result = await response.json();
+
+                // Remover indicador de carga
+                estadisticasRemoverCargando(loadingId);
+
+                if (result.success) {
+                    estadisticasAgregarMensaje(result.respuesta, 'ai');
+                } else {
+                    estadisticasAgregarMensaje('Lo siento, hubo un error al procesar tu consulta. Por favor intenta de nuevo.', 'ai');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                estadisticasRemoverCargando(loadingId);
+                estadisticasAgregarMensaje('Lo siento, hubo un error de conexión. Por favor intenta de nuevo.', 'ai');
+            }
+
+            estadisticasIsLoading = false;
+            document.getElementById('estadisticasSendBtn').disabled = false;
+            input.focus();
+        }
+
+        function estadisticasAgregarMensaje(contenido, tipo) {
+            const chatArea = document.getElementById('estadisticasChatArea');
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `estadisticas-message estadisticas-message-${tipo}`;
+
+            const avatar = tipo === 'user' ? '👤' : '🤖';
+
+            // Formatear contenido para IA (convertir saltos de línea)
+            let contenidoFormateado = contenido;
+            if (tipo === 'ai') {
+                contenidoFormateado = contenido
+                    .split('\n')
+                    .filter(line => line.trim())
+                    .map(line => `<p>${line}</p>`)
+                    .join('');
+            }
+
+            messageDiv.innerHTML = `
+                <div class="estadisticas-message-avatar">${avatar}</div>
+                <div class="estadisticas-message-content">${tipo === 'ai' ? contenidoFormateado : contenido}</div>
+            `;
+
+            chatArea.appendChild(messageDiv);
+
+            // Scroll al final
+            messageDiv.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+
+        function estadisticasMostrarCargando() {
+            const chatArea = document.getElementById('estadisticasChatArea');
+            const loadingId = 'estadisticas-loading-' + Date.now();
+
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = loadingId;
+            loadingDiv.className = 'estadisticas-message estadisticas-message-ai';
+            loadingDiv.innerHTML = `
+                <div class="estadisticas-message-avatar">🤖</div>
+                <div class="estadisticas-message-content">
+                    <div class="estadisticas-loading-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            `;
+
+            chatArea.appendChild(loadingDiv);
+            loadingDiv.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
+            return loadingId;
+        }
+
+        function estadisticasRemoverCargando(loadingId) {
+            const loadingDiv = document.getElementById(loadingId);
+            if (loadingDiv) {
+                loadingDiv.remove();
+            }
+        }
+
+        // ==================== FIN FUNCIONES SECCIÓN ESTADÍSTICAS ====================
     </script>
 
     <!-- Contenedor oculto para iframes de descarga -->
