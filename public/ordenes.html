@@ -6,22 +6,55 @@
     <title>Órdenes - BSL</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #F3F3F3;
+            /* Medical Color Palette - Profesional y confiable */
+            --medical-primary: #0C4A6E;
+            --medical-secondary: #0EA5E9;
+            --success-green: #059669;
+            --warning-amber: #F59E0B;
+            --error-red: #DC2626;
+            --info-blue: #3B82F6;
+
+            /* Neutrals refinados */
+            --bg-primary: #F8FAFC;
             --bg-secondary: #FFFFFF;
-            --bg-tertiary: #F3F3F3;
+            --bg-tertiary: #F1F5F9;
             --bg-input: #FFFFFF;
-            --text-primary: #181818;
-            --text-secondary: #444444;
-            --text-tertiary: #706E6B;
-            --border-color: #DDDBDA;
-            --border-light: #E5E5E5;
-            --accent-color: #0176D3;
-            --accent-hover: #014486;
-            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-            --shadow-md: 0 2px 4px rgba(0,0,0,0.1);
+            --surface-elevated: #FFFFFF;
+            --text-primary: #0F172A;
+            --text-secondary: #475569;
+            --text-muted: #94A3B8;
+            --border-color: #E2E8F0;
+            --border-subtle: #F1F5F9;
+
+            /* Legacy compatibility */
+            --accent-color: #0C4A6E;
+            --accent-hover: #0A3A54;
+            --text-tertiary: #94A3B8;
+            --border-light: #E2E8F0;
+
+            /* Shadows */
+            --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+            --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
+            --shadow-md: 0 4px 6px rgba(15, 23, 42, 0.1), 0 2px 4px rgba(15, 23, 42, 0.06);
+            --shadow-lg: 0 10px 15px rgba(15, 23, 42, 0.1), 0 4px 6px rgba(15, 23, 42, 0.05);
+            --shadow-xl: 0 20px 25px rgba(15, 23, 42, 0.1), 0 10px 10px rgba(15, 23, 42, 0.04);
+
+            /* Spacing */
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+            --spacing-2xl: 48px;
+
+            /* Border radius */
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
         }
 
         [data-theme="dark"] {
@@ -45,10 +78,11 @@
         }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-family: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
+            line-height: 1.6;
             transition: background 0.3s ease, color 0.3s ease;
         }
 
@@ -319,11 +353,11 @@
 
         .top-bar-search input {
             width: 100%;
-            padding: 10px 16px 10px 42px;
+            padding: 12px 16px 12px 44px;
             border: 1px solid var(--border-color);
-            border-radius: 10px;
+            border-radius: var(--radius-md);
             font-size: 14px;
-            font-family: inherit;
+            font-family: 'Figtree', sans-serif;
             background: var(--bg-input);
             color: var(--text-primary);
             transition: all 0.2s ease;
@@ -331,13 +365,13 @@
 
         .top-bar-search input:focus {
             outline: none;
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 3px rgba(0, 153, 178, 0.1);
+            border-color: var(--medical-primary);
+            box-shadow: 0 0 0 3px rgba(12, 74, 110, 0.1);
             background: var(--bg-secondary);
         }
 
         .top-bar-search input::placeholder {
-            color: var(--text-tertiary);
+            color: var(--text-muted);
         }
 
         .top-bar-search svg,
@@ -405,13 +439,16 @@
         }
 
         .page-header-left h1 {
-            font-size: 24px;
+            font-family: 'Figtree', sans-serif;
+            font-size: 36px;
             font-weight: 700;
-            color: var(--text-primary);
+            color: var(--medical-primary);
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 4px;
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
         }
 
         .page-header-left h1 svg,
@@ -423,21 +460,25 @@
         }
 
         .page-header-left p {
-            font-size: 14px;
+            font-size: 16px;
             color: var(--text-secondary);
             margin-left: 34px;
+            font-weight: 500;
         }
 
         .page-title {
-            font-size: 24px;
+            font-family: 'Figtree', sans-serif;
+            font-size: 36px;
             font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 4px;
+            color: var(--medical-primary);
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
         }
 
         .page-subtitle {
-            font-size: 14px;
+            font-size: 16px;
             color: var(--text-secondary);
+            font-weight: 500;
         }
 
         .header-actions {
@@ -446,35 +487,48 @@
         }
 
         .btn {
-            padding: 10px 18px;
-            border-radius: 8px;
+            padding: 12px 20px;
+            border-radius: var(--radius-md);
+            font-family: 'Figtree', sans-serif;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.15s ease;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             border: none;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: var(--spacing-sm);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn:active {
+            transform: translateY(0);
         }
 
         .btn-primary {
-            background: #2563EB;
+            background: var(--medical-primary);
             color: white;
         }
 
         .btn-primary:hover {
-            background: #1D4ED8;
+            background: #0A3A54;
         }
 
         .btn-secondary {
-            background: var(--bg-tertiary);
+            background: var(--bg-secondary);
             color: var(--text-primary);
+            border: 1px solid var(--border-color);
         }
 
         .btn-secondary:hover {
-            background: var(--border-color);
+            background: var(--bg-tertiary);
+            border-color: var(--medical-primary);
         }
 
         /* ========== TABS & FILTERS ========== */
@@ -644,10 +698,11 @@
 
         /* ========== TABLE ========== */
         .table-container {
-            background: var(--bg-secondary);
+            background: var(--surface-elevated);
             border: 1px solid var(--border-color);
-            border-radius: 12px;
+            border-radius: var(--radius-lg);
             overflow: hidden;
+            box-shadow: var(--shadow-sm);
             transition: background 0.3s ease, border-color 0.3s ease;
         }
 
@@ -658,17 +713,18 @@
 
         .data-table thead {
             background: var(--bg-tertiary);
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 2px solid var(--border-color);
         }
 
         .data-table th {
-            padding: 12px 16px;
+            font-family: 'Figtree', sans-serif;
+            padding: 16px 20px;
             text-align: left;
             font-size: 12px;
-            font-weight: 600;
-            color: var(--text-secondary);
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
         }
 
         .data-table th.sortable {
@@ -718,7 +774,7 @@
         }
 
         .data-table tbody tr {
-            border-bottom: 1px solid var(--border-light);
+            border-bottom: 1px solid var(--border-subtle);
             transition: background 0.15s ease;
             cursor: pointer;
         }
@@ -736,7 +792,7 @@
         }
 
         .data-table td {
-            padding: 16px;
+            padding: 18px 20px;
             font-size: 14px;
             color: var(--text-primary);
             vertical-align: middle;
@@ -749,16 +805,17 @@
         }
 
         .avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: #E5E7EB;
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-md);
+            background: linear-gradient(135deg, var(--medical-secondary), var(--medical-primary));
             display: flex;
             align-items: center;
             justify-content: center;
+            font-family: 'Figtree', sans-serif;
             font-size: 14px;
-            font-weight: 600;
-            color: #6B7280;
+            font-weight: 700;
+            color: white;
             flex-shrink: 0;
             overflow: hidden;
         }
@@ -775,6 +832,7 @@
         }
 
         .name-primary {
+            font-family: 'Figtree', sans-serif;
             font-weight: 600;
             color: var(--text-primary);
         }
@@ -788,25 +846,31 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 4px 10px;
-            border-radius: 20px;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-family: 'Figtree', sans-serif;
             font-size: 12px;
-            font-weight: 500;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
         }
 
         .status-badge.atendido {
-            background: #DCFCE7;
-            color: #166534;
+            background: rgba(5, 150, 105, 0.1);
+            color: var(--success-green);
+            border: 1px solid rgba(5, 150, 105, 0.2);
         }
 
         .status-badge.pendiente {
-            background: #FEF3C7;
-            color: #92400E;
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning-amber);
+            border: 1px solid rgba(245, 158, 11, 0.2);
         }
 
         .status-badge.proceso {
-            background: #DBEAFE;
-            color: #1E40AF;
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--info-blue);
+            border: 1px solid rgba(59, 130, 246, 0.2);
         }
 
         .status-dot {
