@@ -4059,12 +4059,12 @@ app.get('/api/pruebas-psicologicas/:numeroId', async (req, res) => {
     }
 });
 
-// GET /api/ordenes-aprobador - Listar órdenes para perfil APROBADOR (solo atendidos sin aprobación)
+// GET /api/ordenes-aprobador - Listar órdenes para perfil APROBADOR (todos los registros de la empresa)
 app.get('/api/ordenes-aprobador', async (req, res) => {
     try {
         const { codEmpresa, buscar, limit = 100, offset = 0 } = req.query;
 
-        // Query para APROBADOR: solo registros atendidos y sin aprobación
+        // Query para APROBADOR: todos los registros de la empresa
         let query = `
             SELECT h."_id", h."numeroId", h."primerNombre", h."segundoNombre", h."primerApellido", h."segundoApellido",
                    h."codEmpresa", h."empresa", h."cargo", h."tipoExamen", h."medico", h."atendido",
@@ -4077,7 +4077,7 @@ app.get('/api/ordenes-aprobador', async (req, res) => {
                        ORDER BY fecha_registro DESC LIMIT 1
                    ) as foto_url
             FROM "HistoriaClinica" h
-            WHERE h."atendido" = 'ATENDIDO' AND (h."aprobacion" IS NULL OR h."aprobacion" = '')
+            WHERE 1=1
         `;
         const params = [];
         let paramIndex = 1;
@@ -4108,7 +4108,7 @@ app.get('/api/ordenes-aprobador', async (req, res) => {
         const result = await pool.query(query, params);
 
         // Obtener el total para paginación
-        let countQuery = `SELECT COUNT(*) FROM "HistoriaClinica" WHERE "atendido" = 'ATENDIDO' AND ("aprobacion" IS NULL OR "aprobacion" = '')`;
+        let countQuery = `SELECT COUNT(*) FROM "HistoriaClinica" WHERE 1=1`;
         const countParams = [];
         let countParamIndex = 1;
 

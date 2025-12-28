@@ -2258,6 +2258,7 @@
                         <button class="tab active" data-filter="todos">Todos</button>
                         <button class="tab" data-filter="atendido">Atendidos</button>
                         <button class="tab" data-filter="pendiente">Pendientes</button>
+                        <button class="tab" data-filter="sin-aprobar" id="tabSinAprobar" style="display: none;">Sin Aprobar</button>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <input type="date" id="fechaDesde" class="form-input" style="padding: 8px 12px; font-size: 13px; border-radius: 8px; width: auto;" title="Fecha desde">
@@ -3029,6 +3030,17 @@
                     console.log('❌ Botón "Pregunta lo que quieras" oculto por falta de permiso');
                 }
             }
+
+            // APROBADOR - Mostrar botón "Sin Aprobar" solo para usuarios con permiso APROBADOR
+            const tabSinAprobar = document.getElementById('tabSinAprobar');
+            if (tabSinAprobar) {
+                if (tienePermiso('APROBADOR')) {
+                    tabSinAprobar.style.display = 'inline-block';
+                    console.log('✅ Botón "Sin Aprobar" habilitado para APROBADOR');
+                } else {
+                    tabSinAprobar.style.display = 'none';
+                }
+            }
         }
 
         // ========== FUNCIONES DE LOGIN ==========
@@ -3302,6 +3314,9 @@
                 data = data.filter(o => o.atendido === 'ATENDIDO');
             } else if (currentFilter === 'pendiente') {
                 data = data.filter(o => o.atendido !== 'ATENDIDO');
+            } else if (currentFilter === 'sin-aprobar') {
+                // Filtrar registros atendidos sin aprobación
+                data = data.filter(o => o.atendido === 'ATENDIDO' && (!o.aprobacion || o.aprobacion === ''));
             }
 
             // Aplicar filtro de fechas (usa fechaAtencion)
