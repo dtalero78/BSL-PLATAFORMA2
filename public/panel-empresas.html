@@ -3796,6 +3796,15 @@
 
             document.getElementById('modalDetalles').classList.add('active');
 
+            // Establecer estado del checkbox de aprobación según el valor actual
+            if (tienePermiso('APROBADOR')) {
+                const checkboxNoAprobar = document.getElementById('checkboxNoAprobar');
+                if (checkboxNoAprobar) {
+                    // Si aprobacion === 'NO APROBADO', marcar el checkbox
+                    checkboxNoAprobar.checked = paciente.aprobacion === 'NO APROBADO';
+                }
+            }
+
             // Cargar pruebas psicológicas para APROBADOR
             if (tienePermiso('APROBADOR') && paciente.numeroId) {
                 cargarPruebasPsicologicas(paciente.numeroId);
