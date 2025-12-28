@@ -1892,7 +1892,7 @@
                     <img src="/bsl-logo.png" alt="BSL - Bienestar & Salud Laboral">
                 </div>
                 <nav class="sidebar-nav">
-                    <a href="#" class="nav-item active" onclick="event.preventDefault()">
+                    <a href="#" class="nav-item active" id="navOrdenes" onclick="mostrarSeccion('ordenes'); event.preventDefault();">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                             <polyline points="14 2 14 8 20 8"></polyline>
@@ -1909,7 +1909,7 @@
                         </svg>
                         Nueva Orden
                     </a>
-                    <a href="estadisticas.html" class="nav-item" id="navPreguntaLoQueQuieras">
+                    <a href="#" class="nav-item" id="navPreguntaLoQueQuieras" onclick="mostrarSeccion('estadisticas'); event.preventDefault();">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"></circle>
                             <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
@@ -1961,6 +1961,8 @@
 
             <!-- Main Content -->
             <main class="main-content">
+                <!-- Sección de Órdenes -->
+                <div id="seccionOrdenes">
                 <div class="page-header">
                     <div class="page-header-left">
                         <h1>
@@ -2088,6 +2090,35 @@
                         </button>
                     </div>
                 </div>
+                </div>
+                <!-- Fin Sección de Órdenes -->
+
+                <!-- Sección de Estadísticas -->
+                <div id="seccionEstadisticas" style="display: none;">
+                    <div class="page-header">
+                        <div class="page-header-left">
+                            <h1>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                </svg>
+                                Pregunta lo que quieras
+                            </h1>
+                            <p>Consulta estadísticas y análisis con IA</p>
+                        </div>
+                    </div>
+
+                    <!-- Contenedor del iframe -->
+                    <div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                        <iframe
+                            src="estadisticas.html"
+                            style="width: 100%; height: calc(100vh - 250px); border: none; border-radius: 8px;"
+                            title="Estadísticas">
+                        </iframe>
+                    </div>
+                </div>
+                <!-- Fin Sección de Estadísticas -->
             </main>
         </div>
     </div>
@@ -2863,6 +2894,25 @@
         function cerrarSesion() {
             if (confirm('¿Cerrar sesión?')) {
                 Auth.logout();
+            }
+        }
+
+        // Función para cambiar entre secciones
+        function mostrarSeccion(seccion) {
+            // Ocultar todas las secciones
+            document.getElementById('seccionOrdenes').style.display = 'none';
+            document.getElementById('seccionEstadisticas').style.display = 'none';
+
+            // Remover clase active de todos los nav-items
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+
+            // Mostrar la sección seleccionada y activar su nav-item
+            if (seccion === 'ordenes') {
+                document.getElementById('seccionOrdenes').style.display = 'block';
+                document.getElementById('navOrdenes').classList.add('active');
+            } else if (seccion === 'estadisticas') {
+                document.getElementById('seccionEstadisticas').style.display = 'block';
+                document.getElementById('navPreguntaLoQueQuieras').classList.add('active');
             }
         }
 
