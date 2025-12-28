@@ -2313,8 +2313,8 @@
                 <!-- Table Container -->
                 <div class="table-container" id="tableContainer" style="display: none;">
                     <table class="data-table">
-                        <thead>
-                            <tr>
+                        <thead id="tableHead">
+                            <tr id="tableHeaderRow">
                                 <th style="width: 40px; text-align: center;">
                                     <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" title="Seleccionar todos" style="cursor: pointer;">
                                 </th>
@@ -3395,6 +3395,78 @@
             tableCount.innerHTML = '<strong>0</strong> registros';
         }
 
+        // Función para determinar exámenes faltantes
+        function obtenerExamenesFaltantes(orden) {
+            if (!orden.examenes) return [];
+
+            const examenesProgramados = orden.examenes.split(',').map(e => e.trim().toLowerCase());
+            const faltantes = [];
+
+            // Lista de exámenes a verificar
+            const examenesMap = {
+                'adc': ['adc', 'virtual'],
+                'audiometría': ['audiometria', 'audiometría'],
+                'visiometría': ['visiometria', 'visiometría'],
+                'espirometría': ['espirometria', 'espirometría']
+            };
+
+            // Verificar cada tipo de examen
+            for (const [nombre, keywords] of Object.entries(examenesMap)) {
+                const estaProgramado = keywords.some(kw => examenesProgramados.some(ep => ep.includes(kw)));
+
+                if (estaProgramado) {
+                    // Aquí deberías verificar si el examen está completado
+                    // Por ahora, lo agregamos como faltante (esto se puede mejorar con datos reales)
+                    faltantes.push(nombre.toUpperCase());
+                }
+            }
+
+            return faltantes;
+        }
+
+        // Función para formatear estado de aprobación
+        function obtenerEstadoAprobacion(aprobacion) {
+            if (!aprobacion || aprobacion === '') return 'Pendiente';
+            if (aprobacion === 'NO APROBADO') return 'No Aprobado';
+            if (aprobacion === 'APROBADO') return 'Aprobado';
+            return aprobacion;
+        }
+
+        // Función para actualizar encabezados de tabla según empresa
+        function actualizarEncabezadosTabla() {
+            const headerRow = document.getElementById('tableHeaderRow');
+            if (!headerRow) return;
+
+            if (codEmpresa === 'SITEL') {
+                // Encabezados para SITEL
+                headerRow.innerHTML = `
+                    <th style="width: 40px; text-align: center;">
+                        <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" title="Seleccionar todos" style="cursor: pointer;">
+                    </th>
+                    <th>Paciente</th>
+                    <th>Cédula</th>
+                    <th>Fecha Programada</th>
+                    <th>Fecha Consulta</th>
+                    <th>Exámenes Faltantes</th>
+                    <th>Aprobación SST</th>
+                    <th style="width: 50px; text-align: center;">Descargar</th>
+                `;
+            } else {
+                // Encabezados normales
+                headerRow.innerHTML = `
+                    <th style="width: 40px; text-align: center;">
+                        <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" title="Seleccionar todos" style="cursor: pointer;">
+                    </th>
+                    <th>Paciente</th>
+                    <th>Cédula</th>
+                    <th>Fecha Programada</th>
+                    <th>Fecha Consulta</th>
+                    <th>Estado</th>
+                    <th style="width: 50px; text-align: center;">Descargar</th>
+                `;
+            }
+        }
+
         function renderTabla() {
             if (filteredData.length === 0) {
                 mostrarEmpty();
@@ -3405,6 +3477,9 @@
             emptyState.style.display = 'none';
             tableContainer.style.display = 'block';
 
+            // Actualizar encabezados según empresa
+            actualizarEncabezadosTabla();
+
             const totalPages = Math.ceil(filteredData.length / pageSize);
             const start = currentPage * pageSize;
             const end = Math.min(start + pageSize, filteredData.length);
@@ -3412,45 +3487,100 @@
 
             tableCount.innerHTML = `<strong>${filteredData.length}</strong> registros`;
 
-            tableBody.innerHTML = pageData.map(orden => {
-                const nombre = `${orden.primerNombre || ''} ${orden.segundoNombre || ''} ${orden.primerApellido || ''} ${orden.segundoApellido || ''}`.trim();
-                const cedula = orden.numeroId || '-';
-                const fechaConsulta = orden.fechaConsulta ? new Date(orden.fechaConsulta).toLocaleDateString('es-CO') : '-';
-                const fechaAtencion = orden.fechaAtencion ? new Date(orden.fechaAtencion).toLocaleDateString('es-CO') : '-';
-                const estado = orden.atendido || 'PENDIENTE';
-                const statusClass = estado === 'ATENDIDO' ? 'atendido' : (estado === 'EN PROCESO' ? 'proceso' : 'pendiente');
-                const initials = nombre.split(' ').slice(0, 2).map(n => n.charAt(0)).join('').toUpperCase() || '?';
-                const hasFoto = orden.foto_url ? 'has-photo' : '';
+            // Renderizar filas según empresa
+            if (codEmpresa === 'SITEL') {
+                // Vista SITEL con columnas personalizadas
+                tableBody.innerHTML = pageData.map(orden => {
+                    const nombre = `${orden.primerNombre || ''} ${orden.segundoNombre || ''} ${orden.primerApellido || ''} ${orden.segundoApellido || ''}`.trim();
+                    const cedula = orden.numeroId || '-';
+                    const fechaConsulta = orden.fechaConsulta ? new Date(orden.fechaConsulta).toLocaleDateString('es-CO') : '-';
+                    const fechaProgramada = orden.fechaAtencion ? new Date(orden.fechaAtencion).toLocaleDateString('es-CO') : '-';
+                    const initials = nombre.split(' ').slice(0, 2).map(n => n.charAt(0)).join('').toUpperCase() || '?';
+                    const hasFoto = orden.foto_url ? 'has-photo' : '';
 
-                return `
-                    <tr>
-                        <td style="text-align: center;" onclick="event.stopPropagation();">
-                            <input type="checkbox" class="orden-checkbox" data-id="${orden._id}" onchange="actualizarSeleccion()" style="cursor: pointer; width: 18px; height: 18px;">
-                        </td>
-                        <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;">
-                            <div class="cell-name">
-                                <div class="avatar ${hasFoto}">${orden.foto_url ? `<img src="${orden.foto_url}" alt="">` : initials}</div>
-                                <div class="name-info">
-                                    <span class="name-primary">${nombre || 'Sin nombre'}</span>
+                    // Obtener exámenes faltantes
+                    const examenesFaltantes = obtenerExamenesFaltantes(orden);
+                    const examenesTags = examenesFaltantes.length > 0
+                        ? examenesFaltantes.map(ex => `<span style="display: inline-block; padding: 4px 8px; background: #FEF3C7; color: #92400E; border-radius: 4px; font-size: 11px; margin: 2px;">${ex}</span>`).join(' ')
+                        : '<span style="color: #10B981; font-weight: 500;">✓ Completo</span>';
+
+                    // Obtener estado de aprobación
+                    const estadoAprobacion = obtenerEstadoAprobacion(orden.aprobacion);
+                    const aprobacionColor = estadoAprobacion === 'Aprobado' ? '#10B981' : (estadoAprobacion === 'No Aprobado' ? '#EF4444' : '#F59E0B');
+                    const aprobacionBadge = `<span style="display: inline-block; padding: 6px 12px; background: ${aprobacionColor}20; color: ${aprobacionColor}; border-radius: 6px; font-size: 13px; font-weight: 600;">${estadoAprobacion}</span>`;
+
+                    return `
+                        <tr>
+                            <td style="text-align: center;" onclick="event.stopPropagation();">
+                                <input type="checkbox" class="orden-checkbox" data-id="${orden._id}" onchange="actualizarSeleccion()" style="cursor: pointer; width: 18px; height: 18px;">
+                            </td>
+                            <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;">
+                                <div class="cell-name">
+                                    <div class="avatar ${hasFoto}">${orden.foto_url ? `<img src="${orden.foto_url}" alt="">` : initials}</div>
+                                    <div class="name-info">
+                                        <span class="name-primary">${nombre || 'Sin nombre'}</span>
+                                    </div>
                                 </div>
-                            </div>
-                        </td>
-                        <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;">${cedula}</td>
-                        <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;">${fechaAtencion}</td>
-                        <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;">${fechaConsulta}</td>
-                        <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;"><span class="status-badge ${statusClass}"><span class="status-dot"></span>${estado}</span></td>
-                        <td style="text-align: center;" onclick="event.stopPropagation();">
-                            <button class="btn-icon-small" onclick="descargarCertificado('${orden._id}')" title="Descargar certificado" style="padding: 6px; border: none; background: #F3F4F6; border-radius: 6px; cursor: pointer;">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                    <polyline points="7 10 12 15 17 10"/>
-                                    <line x1="12" y1="15" x2="12" y2="3"/>
-                                </svg>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
+                            </td>
+                            <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;">${cedula}</td>
+                            <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;">${fechaProgramada}</td>
+                            <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;">${fechaConsulta}</td>
+                            <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;">${examenesTags}</td>
+                            <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;">${aprobacionBadge}</td>
+                            <td style="text-align: center;" onclick="event.stopPropagation();">
+                                <button class="btn-icon-small" onclick="descargarCertificado('${orden._id}')" title="Descargar certificado" style="padding: 6px; border: none; background: #F3F4F6; border-radius: 6px; cursor: pointer;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                        <polyline points="7 10 12 15 17 10"/>
+                                        <line x1="12" y1="15" x2="12" y2="3"/>
+                                    </svg>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } else {
+                // Vista normal para otras empresas
+                tableBody.innerHTML = pageData.map(orden => {
+                    const nombre = `${orden.primerNombre || ''} ${orden.segundoNombre || ''} ${orden.primerApellido || ''} ${orden.segundoApellido || ''}`.trim();
+                    const cedula = orden.numeroId || '-';
+                    const fechaConsulta = orden.fechaConsulta ? new Date(orden.fechaConsulta).toLocaleDateString('es-CO') : '-';
+                    const fechaAtencion = orden.fechaAtencion ? new Date(orden.fechaAtencion).toLocaleDateString('es-CO') : '-';
+                    const estado = orden.atendido || 'PENDIENTE';
+                    const statusClass = estado === 'ATENDIDO' ? 'atendido' : (estado === 'EN PROCESO' ? 'proceso' : 'pendiente');
+                    const initials = nombre.split(' ').slice(0, 2).map(n => n.charAt(0)).join('').toUpperCase() || '?';
+                    const hasFoto = orden.foto_url ? 'has-photo' : '';
+
+                    return `
+                        <tr>
+                            <td style="text-align: center;" onclick="event.stopPropagation();">
+                                <input type="checkbox" class="orden-checkbox" data-id="${orden._id}" onchange="actualizarSeleccion()" style="cursor: pointer; width: 18px; height: 18px;">
+                            </td>
+                            <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;">
+                                <div class="cell-name">
+                                    <div class="avatar ${hasFoto}">${orden.foto_url ? `<img src="${orden.foto_url}" alt="">` : initials}</div>
+                                    <div class="name-info">
+                                        <span class="name-primary">${nombre || 'Sin nombre'}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;">${cedula}</td>
+                            <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;">${fechaAtencion}</td>
+                            <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;">${fechaConsulta}</td>
+                            <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;"><span class="status-badge ${statusClass}"><span class="status-dot"></span>${estado}</span></td>
+                            <td style="text-align: center;" onclick="event.stopPropagation();">
+                                <button class="btn-icon-small" onclick="descargarCertificado('${orden._id}')" title="Descargar certificado" style="padding: 6px; border: none; background: #F3F4F6; border-radius: 6px; cursor: pointer;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                        <polyline points="7 10 12 15 17 10"/>
+                                        <line x1="12" y1="15" x2="12" y2="3"/>
+                                    </svg>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
 
             // Render mobile cards
             renderMobileCards(pageData);
