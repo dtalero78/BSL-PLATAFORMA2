@@ -3017,6 +3017,18 @@
                 statsGrid.style.display = 'grid';
                 console.log('✅ Estadísticas forzadas a mostrarse');
             }
+
+            // PREGUNTA_LO_QUE_QUIERAS - Mostrar/ocultar botón según permiso
+            const navPregunta = document.getElementById('navPreguntaLoQueQuieras');
+            if (navPregunta) {
+                if (tienePermiso('PREGUNTA_LO_QUE_QUIERAS')) {
+                    navPregunta.style.display = 'flex';
+                    console.log('✅ Botón "Pregunta lo que quieras" habilitado');
+                } else {
+                    navPregunta.style.display = 'none';
+                    console.log('❌ Botón "Pregunta lo que quieras" oculto por falta de permiso');
+                }
+            }
         }
 
         // ========== FUNCIONES DE LOGIN ==========
@@ -3160,12 +3172,6 @@
             loginScreen.style.display = 'none';
             panelScreen.classList.add('active');
             document.getElementById('empresaNameTopbar').textContent = codEmpresa || usuarioActual?.email || 'Usuario';
-
-            // Mostrar "Pregunta lo que quieras" para todas las empresas
-            const navPregunta = document.getElementById('navPreguntaLoQueQuieras');
-            if (navPregunta) {
-                navPregunta.style.display = 'flex';
-            }
 
             actualizarDatos();
         }

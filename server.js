@@ -1813,7 +1813,8 @@ const PERMISOS_DISPONIBLES = [
     { codigo: 'DESCARGAR_CERTIFICADO', nombre: 'Descargar Certificado', descripcion: 'Descargar certificados PDF' },
     { codigo: 'VER_ESTADISTICAS', nombre: 'Ver Estadísticas', descripcion: 'Ver tarjetas de estadísticas' },
     { codigo: 'VER_RESULTADOS_MEDICOS', nombre: 'Ver Resultados Médicos', descripcion: 'Ver sección de resultados médicos en detalles del paciente' },
-    { codigo: 'APROBADOR', nombre: 'Aprobador', descripcion: 'Aprobar o rechazar certificados médicos atendidos' }
+    { codigo: 'APROBADOR', nombre: 'Aprobador', descripcion: 'Aprobar o rechazar certificados médicos atendidos' },
+    { codigo: 'PREGUNTA_LO_QUE_QUIERAS', nombre: 'Pregunta lo que quieras', descripcion: 'Acceder a la sección de análisis con IA' }
 ];
 
 // Lista de permisos disponibles para panel-ordenes (rol: empleado)
