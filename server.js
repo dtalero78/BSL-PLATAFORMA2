@@ -1067,7 +1067,7 @@ const initDB = async () => {
             `);
             await pool.query(`
                 ALTER TABLE usuarios ADD CONSTRAINT usuarios_rol_check
-                CHECK (rol IN ('empresa', 'admin', 'empleado', 'agente_chat'))
+                CHECK (rol IN ('empresa', 'admin', 'empleado', 'agente_chat', 'supervisor_chat'))
             `);
         } catch (err) {
             // Constraint ya actualizada o no existe
@@ -2002,10 +2002,10 @@ app.put('/api/admin/usuarios/:id/aprobar', authMiddleware, requireAdmin, async (
         }
 
         // Validar que se envió un rol
-        if (!rol || !['empresa', 'empleado', 'admin', 'agente_chat'].includes(rol)) {
+        if (!rol || !['empresa', 'empleado', 'admin', 'agente_chat', 'supervisor_chat'].includes(rol)) {
             return res.status(400).json({
                 success: false,
-                message: 'Debe especificar un rol válido (empresa, empleado, admin, agente_chat)'
+                message: 'Debe especificar un rol válido (empresa, empleado, admin, agente_chat, supervisor_chat)'
             });
         }
 

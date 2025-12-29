@@ -466,9 +466,9 @@
                 return;
             }
 
-            // Verificar que sea admin
-            if (usuario.rol !== 'admin') {
-                alert('Solo administradores pueden acceder a este panel');
+            // Verificar que sea admin o supervisor_chat
+            if (usuario.rol !== 'admin' && usuario.rol !== 'supervisor_chat') {
+                alert('Solo administradores y supervisores de chat pueden acceder a este panel');
                 window.location.href = '/';
                 return;
             }

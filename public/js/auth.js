@@ -192,6 +192,8 @@ const Auth = {
                 window.location.href = '/panel-admin.html';
             } else if (usuario.rol === 'agente_chat') {
                 window.location.href = '/panel-agentes.html';
+            } else if (usuario.rol === 'supervisor_chat') {
+                window.location.href = '/panel-supervisor-chats.html';
             } else {
                 window.location.href = '/panel-empresas.html';
             }
@@ -209,6 +211,8 @@ const Auth = {
             window.location.href = '/panel-admin.html';
         } else if (rol === 'agente_chat') {
             window.location.href = '/panel-agentes.html';
+        } else if (rol === 'supervisor_chat') {
+            window.location.href = '/panel-supervisor-chats.html';
         } else {
             window.location.href = '/panel-empresas.html';
         }
