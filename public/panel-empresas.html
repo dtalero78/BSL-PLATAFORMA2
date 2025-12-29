@@ -3454,7 +3454,6 @@
                     <th>Fecha Programada</th>
                     <th>Fecha Consulta</th>
                     <th>Estado</th>
-                    <th>Exámenes Faltantes</th>
                     <th>Aprobación SST</th>
                     <th style="width: 50px; text-align: center;">Descargar</th>
                 `;
@@ -3509,21 +3508,6 @@
                     const estado = orden.atendido || 'PENDIENTE';
                     const statusClass = estado === 'ATENDIDO' ? 'atendido' : (estado === 'EN PROCESO' ? 'proceso' : 'pendiente');
 
-                    // Obtener exámenes pendientes según el campo examenes
-                    const examenesProgramados = orden.examenes || '';
-                    let examenesTags = '';
-
-                    if (orden.atendido === 'ATENDIDO') {
-                        // Si está atendido, mostrar que debe ver detalles para estado exacto
-                        examenesTags = '<span style="color: #3B82F6; font-size: 12px; cursor: pointer;" title="Ver detalles">📋 Ver detalles</span>';
-                    } else {
-                        // Si no está atendido, mostrar exámenes programados
-                        const examenesFaltantes = obtenerExamenesFaltantes(orden);
-                        examenesTags = examenesFaltantes.length > 0
-                            ? examenesFaltantes.map(ex => `<span style="display: inline-block; padding: 4px 8px; background: #FEF3C7; color: #92400E; border-radius: 4px; font-size: 11px; margin: 2px;">${ex}</span>`).join(' ')
-                            : '<span style="color: #F59E0B; font-weight: 500;">⏳ En proceso</span>';
-                    }
-
                     // Obtener estado de aprobación
                     const estadoAprobacion = obtenerEstadoAprobacion(orden.aprobacion);
                     const aprobacionColor = estadoAprobacion === 'Aprobado' ? '#10B981' : (estadoAprobacion === 'No Aprobado' ? '#EF4444' : '#F59E0B');
@@ -3546,7 +3530,6 @@
                             <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;">${fechaProgramada}</td>
                             <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;">${fechaConsulta}</td>
                             <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;"><span class="status-badge ${statusClass}"><span class="status-dot"></span>${estado}</span></td>
-                            <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;">${examenesTags}</td>
                             <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;">${aprobacionBadge}</td>
                             <td style="text-align: center;" onclick="event.stopPropagation();">
                                 ${tienePermiso('DESCARGAR_CERTIFICADO_TABLA') ? `
