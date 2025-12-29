@@ -3866,8 +3866,6 @@
 
                 ${estadoPruebas && estadoPruebas.pruebas ? (() => {
                     const p = estadoPruebas.pruebas;
-                    let tagsCompletados = [];
-                    let tagsPendientes = [];
 
                     // Mapeo de nombre de prueba a tipo de prueba para el backend
                     const tiposPrueba = {
@@ -3877,46 +3875,38 @@
                         'Visual': 'visiometria'
                     };
 
-                    // Formulario
-                    if (p.formulario.completado) {
-                        tagsCompletados.push('Formulario');
-                    } else if (p.formulario.requerido) {
-                        tagsPendientes.push('Formulario');
-                    }
+                    // Definir orden de escalera: 1. Formulario, 2. ADC, 3. Audiometría, 4. Visual
+                    const ordenPruebas = [
+                        { numero: 1, nombre: 'Formulario', key: 'formulario' },
+                        { numero: 2, nombre: 'Pruebas ADC', key: 'adc' },
+                        { numero: 3, nombre: 'Audiometría', key: 'audiometria' },
+                        { numero: 4, nombre: 'Visual', key: 'visiometria' }
+                    ];
 
-                    // Pruebas ADC
-                    if (p.adc.completado) {
-                        tagsCompletados.push('Pruebas ADC');
-                    } else if (p.adc.requerido) {
-                        tagsPendientes.push('Pruebas ADC');
-                    }
+                    let tagsCompletados = [];
+                    let tagsPendientes = [];
 
-                    // Audiometría
-                    if (p.audiometria.completado) {
-                        tagsCompletados.push('Audiometría');
-                    } else if (p.audiometria.requerido) {
-                        tagsPendientes.push('Audiometría');
-                    }
+                    // Procesar pruebas en orden de escalera
+                    ordenPruebas.forEach(prueba => {
+                        if (p[prueba.key].completado) {
+                            tagsCompletados.push({ ...prueba });
+                        } else if (p[prueba.key].requerido) {
+                            tagsPendientes.push({ ...prueba });
+                        }
+                    });
 
-                    // Visual (Visiometría)
-                    if (p.visiometria.completado) {
-                        tagsCompletados.push('Visual');
-                    } else if (p.visiometria.requerido) {
-                        tagsPendientes.push('Visual');
-                    }
-
-                    const tagsCompletadosHTML = tagsCompletados.map(tag =>
-                        `<span style="display: inline-block; padding: 6px 12px; background: #D1FAE5; color: #065F46; border-radius: 6px; font-size: 13px; margin: 4px;">${tag} ✓</span>`
+                    const tagsCompletadosHTML = tagsCompletados.map(prueba =>
+                        `<span style="display: inline-block; padding: 6px 12px; background: #D1FAE5; color: #065F46; border-radius: 6px; font-size: 13px; margin: 4px;">${prueba.numero}. ${prueba.nombre} ✓</span>`
                     ).join('');
 
                     // Si el codEmpresa es Sitel, hacer los tags pendientes clickeables
                     const esSitel = paciente.codEmpresa && paciente.codEmpresa.toUpperCase() === 'SITEL';
                     const ordenId = paciente._id;
-                    const tagsPendientesHTML = tagsPendientes.map(tag => {
+                    const tagsPendientesHTML = tagsPendientes.map(prueba => {
                         if (esSitel) {
-                            return `<span class="prueba-tag-pendiente" data-tipo="${tiposPrueba[tag]}" data-orden="${ordenId}" onclick="enviarLinkPrueba(this)" style="display: inline-block; padding: 6px 12px; background: #FEF3C7; color: #92400E; border-radius: 6px; font-size: 13px; margin: 4px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#FDE68A'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#FEF3C7'; this.style.transform='translateY(0)'">${tag} ⏳</span>`;
+                            return `<span class="prueba-tag-pendiente" data-tipo="${tiposPrueba[prueba.nombre]}" data-orden="${ordenId}" onclick="enviarLinkPrueba(this)" style="display: inline-block; padding: 6px 12px; background: #FEF3C7; color: #92400E; border-radius: 6px; font-size: 13px; margin: 4px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#FDE68A'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#FEF3C7'; this.style.transform='translateY(0)'">${prueba.numero}. ${prueba.nombre} ⚠️</span>`;
                         } else {
-                            return `<span style="display: inline-block; padding: 6px 12px; background: #FEF3C7; color: #92400E; border-radius: 6px; font-size: 13px; margin: 4px;">${tag} ⏳</span>`;
+                            return `<span style="display: inline-block; padding: 6px 12px; background: #FEF3C7; color: #92400E; border-radius: 6px; font-size: 13px; margin: 4px;">${prueba.numero}. ${prueba.nombre} ⚠️</span>`;
                         }
                     }).join('');
 
