@@ -3910,7 +3910,7 @@
                     ).join('');
 
                     // Si el codEmpresa es Sitel, hacer los tags pendientes clickeables
-                    const esSitel = paciente.codEmpresa === 'Sitel';
+                    const esSitel = paciente.codEmpresa && paciente.codEmpresa.toUpperCase() === 'SITEL';
                     const ordenId = paciente._id;
                     const tagsPendientesHTML = tagsPendientes.map(tag => {
                         if (esSitel) {
