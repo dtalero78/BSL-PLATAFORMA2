@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supervisión de Agentes - WhatsApp</title>
+    <link rel="stylesheet" href="css/chat-agentes.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .supervisor-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: #f5f7fa;
+        }
+
+        .supervisor-header {
+            background: white;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .supervisor-header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin: 0;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .supervisor-main {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        .stat-subtext {
+            font-size: 0.75rem;
+            color: #9ca3af;
+            margin-top: 0.25rem;
+        }
+
+        .section {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin: 0;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table thead {
+            background: #f9fafb;
+        }
+
+        .table th {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .table td {
+            padding: 1rem;
+            border-top: 1px solid #e5e7eb;
+            font-size: 0.875rem;
+        }
+
+        .table tbody tr:hover {
+            background: #f9fafb;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-disponible {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-ocupado {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-ausente {
+            background: #fed7aa;
+            color: #9a3412;
+        }
+
+        .badge-offline {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-activa {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-nueva {
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+
+        .badge-cerrada {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+
+        .btn-sm {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.75rem;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .filter-group select {
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.875rem;
+        }
+
+        .agente-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .agente-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: #6b7280;
+        }
+
+        .agente-nombre {
+            font-weight: 500;
+            color: #1f2937;
+        }
+
+        .agente-email {
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+
+        .time-ago {
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+
+        .btn-logout {
+            background: #dc2626;
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            cursor: pointer;
+        }
+
+        .btn-logout:hover {
+            background: #b91c1c;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            padding: 2rem;
+            color: #9ca3af;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #9ca3af;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #9ca3af;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.875rem;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="supervisor-container">
+        <!-- Header -->
+        <header class="supervisor-header">
+            <h1>📊 Supervisión de Agentes WhatsApp</h1>
+            <div class="header-actions">
+                <span id="nombreSupervisor" style="color: #6b7280; font-size: 0.875rem;"></span>
+                <button onclick="volverAdmin()" class="btn-secondary">← Volver a Admin</button>
+                <button onclick="cerrarSesion()" class="btn-logout">Cerrar sesión</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="supervisor-main">
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Agentes en Línea</div>
+                    <div class="stat-value" id="statAgentesOnline">-</div>
+                    <div class="stat-subtext">De <span id="statAgentesTotal">-</span> totales</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Conversaciones Activas</div>
+                    <div class="stat-value" id="statConversacionesActivas">-</div>
+                    <div class="stat-subtext">En este momento</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Tiempo Respuesta</div>
+                    <div class="stat-value" id="statTiempoRespuesta">-</div>
+                    <div class="stat-subtext">Promedio últimas 24h</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Conversaciones Hoy</div>
+                    <div class="stat-value" id="statConversacionesHoy">-</div>
+                    <div class="stat-subtext">Desde las 00:00</div>
+                </div>
+            </div>
+
+            <!-- Sección: Agentes -->
+            <section class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Agentes de Chat</h2>
+                    <button onclick="refrescarDatos()" class="btn-sm btn-secondary">🔄 Actualizar</button>
+                </div>
+                <div id="tablaAgentesContainer">
+                    <div class="loading-spinner">Cargando agentes...</div>
+                </div>
+            </section>
+
+            <!-- Sección: Todas las Conversaciones -->
+            <section class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Todas las Conversaciones</h2>
+                    <div class="filter-group">
+                        <select id="filtroEstadoConv" onchange="cargarConversaciones()">
+                            <option value="activa">Activas</option>
+                            <option value="nueva">Nuevas</option>
+                            <option value="todas">Todas</option>
+                            <option value="cerrada">Cerradas</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="tablaConversacionesContainer">
+                    <div class="loading-spinner">Cargando conversaciones...</div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal: Asignar Conversación -->
+    <div id="modalAsignar" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Asignar Conversación</h3>
+                <button class="modal-close" onclick="cerrarModalAsignar()">×</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Paciente:</label>
+                <div id="modalPacienteInfo" style="font-weight: 500;"></div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Asignar a:</label>
+                <select id="modalAgenteSelect" class="form-select">
+                    <option value="">Selecciona un agente...</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="cerrarModalAsignar()">Cancelar</button>
+                <button class="btn-primary" onclick="confirmarAsignacion()">Asignar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script>
+        let agentes = [];
+        let conversaciones = [];
+        let conversacionSeleccionada = null;
+        let autoRefreshInterval = null;
+
+        // Auth Helper (usando el módulo global)
+        const AuthLocal = window.Auth;
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', async () => {
+            const usuario = AuthLocal.getUser();
+            if (!usuario) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            // Verificar que sea admin
+            if (usuario.rol !== 'admin') {
+                alert('Solo administradores pueden acceder a este panel');
+                window.location.href = '/';
+                return;
+            }
+
+            document.getElementById('nombreSupervisor').textContent = usuario.nombre_completo || usuario.email;
+
+            // Cargar datos iniciales
+            await cargarDatos();
+
+            // Auto-refresh cada 10 segundos
+            autoRefreshInterval = setInterval(() => {
+                cargarDatos();
+            }, 10000);
+        });
+
+        async function cargarDatos() {
+            await Promise.all([
+                cargarAgentes(),
+                cargarConversaciones(),
+                cargarEstadisticas()
+            ]);
+        }
+
+        async function cargarAgentes() {
+            try {
+                const response = await AuthLocal.fetchAuth('/api/admin/agentes');
+                const data = await response.json();
+
+                if (data.success) {
+                    agentes = data.data;
+                    renderizarTablaAgentes();
+                }
+            } catch (error) {
+                console.error('Error cargando agentes:', error);
+            }
+        }
+
+        function renderizarTablaAgentes() {
+            const container = document.getElementById('tablaAgentesContainer');
+
+            if (agentes.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">👥</div><p>No hay agentes registrados</p></div>';
+                return;
+            }
+
+            const html = `
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Agente</th>
+                            <th>Estado</th>
+                            <th>Conversaciones</th>
+                            <th>Última Actividad</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${agentes.map(a => `
+                            <tr>
+                                <td>
+                                    <div class="agente-info">
+                                        <div class="agente-avatar">${obtenerIniciales(a.nombre_completo)}</div>
+                                        <div>
+                                            <div class="agente-nombre">${a.nombre_completo || 'Sin nombre'}</div>
+                                            <div class="agente-email">${a.email}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge badge-${a.estado || 'offline'}">
+                                        ${obtenerIconoEstado(a.estado)} ${(a.estado || 'offline').toUpperCase()}
+                                    </span>
+                                </td>
+                                <td>${a.conversaciones_activas || 0} / ${a.max_conversaciones || 5}</td>
+                                <td><span class="time-ago">${formatearFechaRelativa(a.ultima_actividad)}</span></td>
+                                <td>
+                                    <button class="btn-sm btn-secondary" onclick="verConversacionesAgente(${a.id})">
+                                        Ver conversaciones
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        async function cargarConversaciones() {
+            try {
+                const estado = document.getElementById('filtroEstadoConv').value;
+                const response = await AuthLocal.fetchAuth(`/api/admin/conversaciones?estado=${estado}&limit=100`);
+                const data = await response.json();
+
+                if (data.success) {
+                    conversaciones = data.data;
+                    renderizarTablaConversaciones();
+                }
+            } catch (error) {
+                console.error('Error cargando conversaciones:', error);
+            }
+        }
+
+        function renderizarTablaConversaciones() {
+            const container = document.getElementById('tablaConversacionesContainer');
+
+            if (conversaciones.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">💬</div><p>No hay conversaciones</p></div>';
+                return;
+            }
+
+            const html = `
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Paciente</th>
+                            <th>Asignado a</th>
+                            <th>Canal</th>
+                            <th>Estado</th>
+                            <th>Última Actividad</th>
+                            <th>Mensajes</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${conversaciones.map(c => `
+                            <tr>
+                                <td>
+                                    <div>
+                                        <div style="font-weight: 500;">${c.nombre_paciente || c.celular}</div>
+                                        <div style="font-size: 0.75rem; color: #9ca3af;">📱 ${c.celular}</div>
+                                    </div>
+                                </td>
+                                <td>${c.agente_nombre || '<span style="color: #dc2626;">Sin asignar</span>'}</td>
+                                <td>${c.canal === 'bot' ? '🤖 Bot' : '👤 Humano'}</td>
+                                <td><span class="badge badge-${c.estado}">${c.estado.toUpperCase()}</span></td>
+                                <td><span class="time-ago">${formatearFechaRelativa(c.fecha_ultima_actividad)}</span></td>
+                                <td>${c.mensajes_no_leidos > 0 ? `<span style="color: #dc2626; font-weight: 600;">${c.mensajes_no_leidos} nuevos</span>` : '-'}</td>
+                                <td>
+                                    ${!c.asignado_a ? `
+                                        <button class="btn-sm btn-primary" onclick="abrirModalAsignar(${c.id})">
+                                            Asignar
+                                        </button>
+                                    ` : `
+                                        <button class="btn-sm btn-secondary" onclick="reasignar(${c.id})">
+                                            Reasignar
+                                        </button>
+                                    `}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        async function cargarEstadisticas() {
+            try {
+                const response = await AuthLocal.fetchAuth('/api/admin/estadisticas-chat');
+                const data = await response.json();
+
+                if (data.success) {
+                    const stats = data.data;
+                    document.getElementById('statAgentesOnline').textContent = stats.agentes_online || 0;
+                    document.getElementById('statAgentesTotal').textContent = stats.agentes_total || 0;
+                    document.getElementById('statConversacionesActivas').textContent = stats.conversaciones_activas || 0;
+                    document.getElementById('statTiempoRespuesta').textContent = stats.tiempo_respuesta_promedio || '0 min';
+                    document.getElementById('statConversacionesHoy').textContent = stats.conversaciones_hoy || 0;
+                }
+            } catch (error) {
+                console.error('Error cargando estadísticas:', error);
+            }
+        }
+
+        function abrirModalAsignar(conversacionId) {
+            conversacionSeleccionada = conversaciones.find(c => c.id === conversacionId);
+            if (!conversacionSeleccionada) return;
+
+            document.getElementById('modalPacienteInfo').textContent =
+                `${conversacionSeleccionada.nombre_paciente || conversacionSeleccionada.celular} (${conversacionSeleccionada.celular})`;
+
+            // Llenar select de agentes disponibles
+            const select = document.getElementById('modalAgenteSelect');
+            select.innerHTML = '<option value="">Selecciona un agente...</option>' +
+                agentes
+                    .filter(a => a.estado === 'disponible' || a.estado === 'ocupado')
+                    .map(a => `
+                        <option value="${a.id}">
+                            ${a.nombre_completo} - ${a.conversaciones_activas}/${a.max_conversaciones} conversaciones
+                        </option>
+                    `).join('');
+
+            document.getElementById('modalAsignar').classList.add('active');
+        }
+
+        function cerrarModalAsignar() {
+            document.getElementById('modalAsignar').classList.remove('active');
+            conversacionSeleccionada = null;
+        }
+
+        async function confirmarAsignacion() {
+            const agenteId = document.getElementById('modalAgenteSelect').value;
+            if (!agenteId) {
+                alert('Selecciona un agente');
+                return;
+            }
+
+            try {
+                const response = await AuthLocal.fetchAuth(`/api/admin/asignar-conversacion/${conversacionSeleccionada.id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ agente_id: parseInt(agenteId) })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Conversación asignada correctamente');
+                    cerrarModalAsignar();
+                    await cargarDatos();
+                } else {
+                    alert(data.message || 'Error al asignar conversación');
+                }
+            } catch (error) {
+                console.error('Error asignando conversación:', error);
+                alert('Error al asignar conversación');
+            }
+        }
+
+        function reasignar(conversacionId) {
+            abrirModalAsignar(conversacionId);
+        }
+
+        function verConversacionesAgente(agenteId) {
+            const agente = agentes.find(a => a.id === agenteId);
+            if (!agente) return;
+
+            const convs = conversaciones.filter(c => c.asignado_a === agenteId);
+
+            if (convs.length === 0) {
+                alert(`${agente.nombre_completo} no tiene conversaciones asignadas`);
+                return;
+            }
+
+            alert(`${agente.nombre_completo} tiene ${convs.length} conversación(es):\n\n${
+                convs.map(c => `• ${c.nombre_paciente || c.celular} (${c.estado})`).join('\n')
+            }`);
+        }
+
+        function refrescarDatos() {
+            cargarDatos();
+        }
+
+        function volverAdmin() {
+            window.location.href = '/panel-admin.html';
+        }
+
+        function cerrarSesion() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+            AuthLocal.logout();
+        }
+
+        // Utilidades
+        function obtenerIniciales(nombre) {
+            if (!nombre) return '?';
+            const partes = nombre.split(' ');
+            if (partes.length >= 2) {
+                return (partes[0][0] + partes[1][0]).toUpperCase();
+            }
+            return nombre.substring(0, 2).toUpperCase();
+        }
+
+        function obtenerIconoEstado(estado) {
+            const iconos = {
+                'disponible': '🟢',
+                'ocupado': '🟡',
+                'ausente': '🟠',
+                'offline': '🔴'
+            };
+            return iconos[estado] || '⚪';
+        }
+
+        function formatearFechaRelativa(fecha) {
+            if (!fecha) return 'Nunca';
+
+            const ahora = new Date();
+            const entonces = new Date(fecha);
+            const diff = Math.floor((ahora - entonces) / 1000); // segundos
+
+            if (diff < 60) return 'Ahora';
+            if (diff < 3600) return `Hace ${Math.floor(diff / 60)} min`;
+            if (diff < 86400) return `Hace ${Math.floor(diff / 3600)}h`;
+            return `Hace ${Math.floor(diff / 86400)} días`;
+        }
+
+        // Limpiar interval al salir
+        window.addEventListener('beforeunload', () => {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        });
+    </script>
+</body>
+</html>
