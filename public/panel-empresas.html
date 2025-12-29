@@ -3909,8 +3909,8 @@
                             // Primera pendiente: clickeable con cursor pointer y hover
                             return `<span class="prueba-tag-pendiente" data-tipo="${tiposPrueba[prueba.nombre]}" data-orden="${ordenId}" onclick="enviarLinkPrueba(this)" style="display: inline-block; padding: 6px 12px; background: #FEF3C7; color: #92400E; border-radius: 6px; font-size: 13px; margin: 4px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#FDE68A'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#FEF3C7'; this.style.transform='translateY(0)'">${prueba.numero}. ${prueba.nombre} ⚠️</span>`;
                         } else {
-                            // Resto de pendientes: no clickeable, estilo deshabilitado
-                            return `<span style="display: inline-block; padding: 6px 12px; background: #F3F4F6; color: #9CA3AF; border-radius: 6px; font-size: 13px; margin: 4px; opacity: 0.6;">${prueba.numero}. ${prueba.nombre} ⚠️</span>`;
+                            // Resto de pendientes: visible pero no clickeable
+                            return `<span style="display: inline-block; padding: 6px 12px; background: #FEF3C7; color: #92400E; border-radius: 6px; font-size: 13px; margin: 4px; opacity: 0.5; cursor: not-allowed;">${prueba.numero}. ${prueba.nombre} ⚠️</span>`;
                         }
                     }).join('');
 
