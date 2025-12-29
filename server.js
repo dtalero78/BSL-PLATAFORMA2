@@ -3914,7 +3914,7 @@ app.get('/api/ordenes', authMiddleware, async (req, res) => {
                    h."fechaAtencion", h."horaAtencion", h."examenes", h."ciudad", h."celular",
                    h."_createdDate", h."_updatedDate", h."fechaConsulta",
                    h."mdConceptoFinal", h."mdRecomendacionesMedicasAdicionales", h."mdObservacionesCertificado", h."mdObsParaMiDocYa",
-                   h."centro_de_costo",
+                   h."centro_de_costo", h."aprobacion",
                    (
                        SELECT foto_url FROM formularios
                        WHERE (wix_id = h."_id" OR numero_id = h."numeroId") AND foto_url IS NOT NULL
