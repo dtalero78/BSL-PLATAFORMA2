@@ -5108,8 +5108,9 @@ app.put('/api/historia-clinica/:id', async (req, res) => {
                         const fecha = fechaHora[0];
                         const hora = fechaHora[1] || '08:00';
                         values.push(construirFechaAtencionColombia(fecha, hora));
-                    } else if (['fechaNacimiento', 'fechaConsulta'].includes(campo) && datos[campo]) {
-                        values.push(new Date(datos[campo]));
+                    } else if (['fechaNacimiento', 'fechaConsulta'].includes(campo)) {
+                        // Permitir null para fechaConsulta (cuando se cambia a PENDIENTE)
+                        values.push(datos[campo] ? new Date(datos[campo]) : null);
                     } else {
                         values.push(datos[campo] === '' ? null : datos[campo]);
                     }

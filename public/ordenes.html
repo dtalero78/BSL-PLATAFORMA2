@@ -4406,6 +4406,11 @@
                 const formId = allData.id;
                 const ordenId = allData.hc_id;
 
+                // Si el estado cambió a PENDIENTE, borrar fechaConsulta
+                if (historiaClinicaData.atendido === 'PENDIENTE') {
+                    historiaClinicaData.fechaConsulta = null;
+                }
+
                 // Guardar datos de formularios si existe el ID
                 if (formId && Object.keys(formulariosData).length > 0) {
                     const formResponse = await fetch(`/api/formularios/${formId}`, {
