@@ -10259,7 +10259,10 @@ app.get('/api/whatsapp/stream', async (req, res) => {
     // Autenticación por query string (EventSource no soporta headers)
     const token = req.query.token || req.headers.authorization?.replace('Bearer ', '');
 
+    console.log('[SSE] Intento de conexión, token recibido:', token ? 'Sí' : 'No');
+
     if (!token) {
+        console.log('[SSE] Error: Token no proporcionado');
         return res.status(401).json({ success: false, message: 'Token requerido' });
     }
 
@@ -10267,13 +10270,20 @@ app.get('/api/whatsapp/stream', async (req, res) => {
     let usuario;
     try {
         const decoded = verificarToken(token);
+        console.log('[SSE] Token decodificado, userId:', decoded.userId);
+
         const result = await pool.query('SELECT * FROM usuarios WHERE id = $1 AND activo = true', [decoded.userId]);
+
         if (result.rows.length === 0) {
+            console.log('[SSE] Error: Usuario no encontrado o inactivo, userId:', decoded.userId);
             return res.status(401).json({ success: false, message: 'Usuario no válido' });
         }
+
         usuario = result.rows[0];
+        console.log('[SSE] Usuario válido:', usuario.email, 'rol:', usuario.rol);
     } catch (error) {
-        return res.status(401).json({ success: false, message: 'Token inválido' });
+        console.error('[SSE] Error verificando token:', error.message);
+        return res.status(401).json({ success: false, message: 'Token inválido', error: error.message });
     }
 
     const userId = usuario.id;
