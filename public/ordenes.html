@@ -2509,6 +2509,10 @@
                                 <input type="datetime-local" class="form-input" id="edit-hc-fechaAtencion" name="hc_fechaAtencion">
                             </div>
                             <div class="form-group">
+                                <label class="form-label">Fecha de Consulta</label>
+                                <input type="datetime-local" class="form-input" id="edit-hc-fechaConsulta" name="hc_fechaConsulta">
+                            </div>
+                            <div class="form-group">
                                 <label class="form-label">Talla (cm)</label>
                                 <input type="text" class="form-input" id="edit-hc-talla" name="hc_talla">
                             </div>
@@ -4210,6 +4214,22 @@
                 } else {
                     document.getElementById('edit-hc-fechaAtencion').value = '';
                 }
+
+                // Fecha de consulta (formato datetime-local: YYYY-MM-DDTHH:MM) - siempre en hora Colombia
+                if (orden.fechaConsulta) {
+                    const fc = new Date(orden.fechaConsulta);
+                    // Convertir a hora Colombia (UTC-5)
+                    const colombiaTimeConsulta = new Date(fc.toLocaleString('en-US', { timeZone: 'America/Bogota' }));
+                    const yearC = colombiaTimeConsulta.getFullYear();
+                    const monthC = String(colombiaTimeConsulta.getMonth() + 1).padStart(2, '0');
+                    const dayC = String(colombiaTimeConsulta.getDate()).padStart(2, '0');
+                    const hoursC = String(colombiaTimeConsulta.getHours()).padStart(2, '0');
+                    const minutesC = String(colombiaTimeConsulta.getMinutes()).padStart(2, '0');
+                    document.getElementById('edit-hc-fechaConsulta').value = `${yearC}-${monthC}-${dayC}T${hoursC}:${minutesC}`;
+                } else {
+                    document.getElementById('edit-hc-fechaConsulta').value = '';
+                }
+
                 document.getElementById('edit-hc-talla').value = orden.talla || '';
                 document.getElementById('edit-hc-peso').value = orden.peso || '';
 
