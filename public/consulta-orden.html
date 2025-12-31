@@ -8,26 +8,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg-primary: #F8FAFC;
-            --bg-secondary: #FFFFFF;
-            --bg-tertiary: #F1F5F9;
-            --text-primary: #0F172A;
-            --text-secondary: #475569;
-            --text-tertiary: #94A3B8;
-            --border-color: #E2E8F0;
-            --accent-color: #0176D3;
-            --accent-hover: #014486;
-            --success-color: #10B981;
-            --success-bg: #D1FAE5;
-            --warning-color: #F59E0B;
-            --warning-bg: #FEF3C7;
-            --error-color: #DC2626;
-            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
-            --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
-        }
-
         * {
             margin: 0;
             padding: 0;
@@ -35,94 +15,91 @@
         }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: var(--text-primary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #F3F3F3;
             min-height: 100vh;
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            padding: 0;
+            color: #181818;
         }
 
         .container {
             max-width: 800px;
-            width: 100%;
+            margin: 0 auto;
+            padding: 40px 20px;
+            min-height: 100vh;
         }
 
-        .header {
-            text-align: center;
-            margin-bottom: 32px;
-        }
-
+        /* Logo */
         .logo {
-            background: white;
-            width: 100px;
-            height: 100px;
-            border-radius: 20px;
-            margin: 0 auto 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: var(--shadow-lg);
+            margin-bottom: 40px;
+            text-align: center;
         }
 
-        .logo img {
-            max-width: 80px;
-            height: auto;
+        .logo-img {
+            max-height: 80px;
+            width: auto;
         }
 
-        h1 {
-            color: white;
+        /* Header */
+        .page-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .page-title {
             font-size: 32px;
-            font-weight: 700;
+            font-weight: 600;
+            color: #1F2937;
             margin-bottom: 8px;
         }
 
-        .subtitle {
-            color: rgba(255, 255, 255, 0.9);
+        .page-subtitle {
             font-size: 16px;
+            color: #6B7280;
         }
 
+        /* Search Card */
         .search-card {
             background: white;
-            border-radius: 16px;
+            border-radius: 12px;
             padding: 32px;
-            box-shadow: var(--shadow-lg);
-            margin-bottom: 24px;
+            margin-bottom: 32px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
 
-        .form-group label {
+        .form-label {
             display: block;
             font-size: 14px;
-            font-weight: 600;
-            color: var(--text-secondary);
+            font-weight: 500;
+            color: #374151;
             margin-bottom: 8px;
         }
 
-        .form-group input {
+        .form-input {
             width: 100%;
             padding: 12px 16px;
-            border: 1px solid var(--border-color);
+            border: 1px solid #E5E7EB;
             border-radius: 8px;
             font-size: 16px;
+            font-family: inherit;
+            color: #1F2937;
             transition: border-color 0.2s;
         }
 
-        .form-group input:focus {
+        .form-input:focus {
             outline: none;
-            border-color: var(--accent-color);
+            border-color: #0176D3;
             box-shadow: 0 0 0 3px rgba(1, 118, 211, 0.1);
         }
 
         .btn-search {
             width: 100%;
             padding: 14px;
-            background: var(--accent-color);
+            background: #0176D3;
             color: white;
             border: none;
             border-radius: 8px;
@@ -133,17 +110,15 @@
         }
 
         .btn-search:hover {
-            background: var(--accent-hover);
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-md);
+            background: #014486;
         }
 
         .btn-search:disabled {
-            background: var(--text-tertiary);
+            background: #9CA3AF;
             cursor: not-allowed;
-            transform: none;
         }
 
+        /* Results */
         .results-container {
             display: none;
         }
@@ -152,131 +127,174 @@
             display: block;
         }
 
+        /* Orden Card - Same style as nuevaorden1.html resumen */
         .orden-card {
             background: white;
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: var(--shadow-md);
-            margin-bottom: 16px;
-            transition: all 0.2s;
-        }
-
-        .orden-card:hover {
-            box-shadow: var(--shadow-lg);
+            border-radius: 12px;
+            padding: 0;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
 
         .orden-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 16px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid var(--border-color);
+            background: #F9FAFB;
+            padding: 20px 24px;
+            border-bottom: 1px solid #E5E7EB;
         }
 
-        .orden-info h3 {
+        .orden-title {
             font-size: 20px;
-            font-weight: 700;
+            font-weight: 600;
+            color: #1F2937;
             margin-bottom: 4px;
         }
 
-        .orden-meta {
+        .orden-subtitle {
             font-size: 14px;
-            color: var(--text-secondary);
+            color: #6B7280;
         }
 
         .status-badge {
-            padding: 6px 12px;
+            display: inline-block;
+            padding: 4px 12px;
             border-radius: 12px;
             font-size: 12px;
             font-weight: 600;
-            text-transform: uppercase;
+            margin-top: 8px;
         }
 
         .status-badge.atendido {
-            background: var(--success-bg);
-            color: var(--success-color);
+            background: #D1FAE5;
+            color: #059669;
         }
 
         .status-badge.pendiente {
-            background: var(--warning-bg);
-            color: var(--warning-color);
+            background: #FEF3C7;
+            color: #D97706;
         }
 
+        /* Resumen - Same style as nuevaorden1.html */
+        .resumen-container {
+            background: #F9FAFB;
+            padding: 24px;
+        }
+
+        .resumen-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        .resumen-item:last-child {
+            border-bottom: none;
+        }
+
+        .resumen-label {
+            color: #6B7280;
+            font-size: 14px;
+        }
+
+        .resumen-value {
+            color: #1F2937;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: right;
+            max-width: 60%;
+        }
+
+        /* Pruebas Section */
         .pruebas-section {
-            margin-top: 16px;
+            padding: 24px;
+            background: white;
         }
 
         .pruebas-title {
             font-size: 14px;
             font-weight: 600;
-            color: var(--text-secondary);
-            margin-bottom: 12px;
+            color: #374151;
+            margin-bottom: 16px;
         }
 
-        .pruebas-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 8px;
-        }
-
-        .prueba-tag {
-            padding: 8px 12px;
+        .prueba-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            background: #FEF3C7;
+            border: 1px solid #FDE68A;
             border-radius: 8px;
-            font-size: 13px;
-            font-weight: 500;
-            text-align: center;
+            margin-bottom: 12px;
+            cursor: pointer;
             transition: all 0.2s;
         }
 
-        .prueba-tag.completado {
-            background: var(--success-bg);
-            color: var(--success-color);
-        }
-
-        .prueba-tag.pendiente {
-            background: var(--warning-bg);
-            color: var(--warning-color);
-            cursor: pointer;
-        }
-
-        .prueba-tag.pendiente:hover {
+        .prueba-item:hover {
             background: #FDE68A;
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-sm);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
 
-        .prueba-tag.pendiente.clickeable {
-            position: relative;
+        .prueba-item:last-child {
+            margin-bottom: 0;
         }
 
-        .prueba-tag.pendiente.clickeable::after {
-            content: '→';
-            margin-left: 6px;
+        .prueba-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .prueba-numero {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background: #F59E0B;
+            color: white;
+            border-radius: 50%;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .prueba-nombre {
+            font-size: 15px;
+            font-weight: 500;
+            color: #92400E;
+        }
+
+        .prueba-arrow {
+            color: #F59E0B;
+            font-size: 18px;
             font-weight: 700;
         }
 
         .hint-text {
             font-size: 12px;
-            color: var(--text-tertiary);
-            margin-top: 8px;
+            color: #6B7280;
+            margin-top: 12px;
             font-style: italic;
-        }
-
-        .empty-state {
             text-align: center;
-            padding: 40px;
-            color: var(--text-secondary);
         }
 
-        .empty-state img {
-            width: 120px;
-            opacity: 0.5;
-            margin-bottom: 16px;
+        /* Completado Badge */
+        .completado-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: #D1FAE5;
+            color: #059669;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
         }
 
+        /* Alert */
         .alert {
-            padding: 12px 16px;
+            padding: 16px;
             border-radius: 8px;
             margin-bottom: 16px;
             font-size: 14px;
@@ -288,26 +306,32 @@
             border: 1px solid #FCA5A5;
         }
 
+        .alert-success {
+            background: #D1FAE5;
+            color: #065F46;
+            border: 1px solid #6EE7B7;
+        }
+
         .alert-info {
             background: #DBEAFE;
             color: #1E40AF;
             border: 1px solid #93C5FD;
         }
 
+        /* Loading */
         .loading {
             text-align: center;
-            padding: 20px;
-            color: var(--text-secondary);
+            padding: 40px;
         }
 
         .spinner {
-            border: 3px solid var(--border-color);
-            border-top: 3px solid var(--accent-color);
+            border: 3px solid #E5E7EB;
+            border-top: 3px solid #0176D3;
             border-radius: 50%;
             width: 40px;
             height: 40px;
             animation: spin 1s linear infinite;
-            margin: 0 auto 12px;
+            margin: 0 auto 16px;
         }
 
         @keyframes spin {
@@ -315,48 +339,84 @@
             100% { transform: rotate(360deg); }
         }
 
+        .loading-text {
+            color: #6B7280;
+            font-size: 14px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        .empty-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .empty-text {
+            font-size: 14px;
+            color: #6B7280;
+        }
+
         @media (max-width: 768px) {
-            h1 {
+            .container {
+                padding: 20px 16px;
+            }
+
+            .page-title {
                 font-size: 24px;
             }
 
             .search-card {
-                padding: 24px;
-            }
-
-            .orden-card {
-                padding: 20px;
+                padding: 24px 20px;
             }
 
             .orden-header {
-                flex-direction: column;
-                gap: 12px;
+                padding: 16px 20px;
             }
 
-            .pruebas-grid {
-                grid-template-columns: 1fr;
+            .pruebas-section {
+                padding: 20px;
+            }
+
+            .resumen-container {
+                padding: 20px;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <div class="logo">
-                <img src="/bsl-logo.png" alt="BSL Logo">
-            </div>
-            <h1>Consultar Mi Orden</h1>
-            <p class="subtitle">Verifica el estado de tus exámenes médicos</p>
+        <!-- Logo -->
+        <div class="logo">
+            <img src="/bsl-logo.png" alt="BSL Logo" class="logo-img">
         </div>
 
-        <!-- Formulario de búsqueda -->
+        <!-- Header -->
+        <div class="page-header">
+            <h1 class="page-title">Consultar Mi Orden</h1>
+            <p class="page-subtitle">Verifica el estado de tus exámenes médicos</p>
+        </div>
+
+        <!-- Search Form -->
         <div class="search-card">
             <form id="searchForm" onsubmit="buscarOrdenes(event)">
                 <div class="form-group">
-                    <label for="numeroDocumento">Número de Documento</label>
+                    <label for="numeroDocumento" class="form-label">Número de Documento</label>
                     <input
                         type="text"
                         id="numeroDocumento"
+                        class="form-input"
                         placeholder="Ej: 1234567890"
                         required
                         autocomplete="off"
@@ -364,10 +424,11 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="celular">Número de Celular</label>
+                    <label for="celular" class="form-label">Número de Celular</label>
                     <input
                         type="tel"
                         id="celular"
+                        class="form-input"
                         placeholder="Ej: 3001234567"
                         required
                         autocomplete="off"
@@ -380,7 +441,7 @@
             </form>
         </div>
 
-        <!-- Contenedor de resultados -->
+        <!-- Results Container -->
         <div class="results-container" id="resultsContainer">
             <div id="ordenesLista"></div>
         </div>
@@ -398,16 +459,15 @@
             const resultsContainer = document.getElementById('resultsContainer');
             const ordenesLista = document.getElementById('ordenesLista');
 
-            // Validar campos
             if (!numeroDocumento || !celular) {
                 mostrarError('Por favor completa todos los campos');
                 return;
             }
 
-            // Mostrar loading
+            // Show loading
             btnBuscar.disabled = true;
             btnBuscar.textContent = 'Buscando...';
-            ordenesLista.innerHTML = '<div class="loading"><div class="spinner"></div><p>Buscando tus órdenes...</p></div>';
+            ordenesLista.innerHTML = '<div class="loading"><div class="spinner"></div><p class="loading-text">Buscando tus órdenes...</p></div>';
             resultsContainer.classList.add('show');
 
             try {
@@ -450,7 +510,9 @@
             if (ordenes.length === 0) {
                 ordenesLista.innerHTML = `
                     <div class="empty-state">
-                        <p>No se encontraron órdenes</p>
+                        <div class="empty-icon">📋</div>
+                        <h3 class="empty-title">No se encontraron órdenes</h3>
+                        <p class="empty-text">Verifica que los datos ingresados sean correctos</p>
                     </div>
                 `;
                 return;
@@ -458,96 +520,90 @@
 
             ordenesLista.innerHTML = ordenes.map(orden => {
                 const nombreCompleto = `${orden.primerNombre || ''} ${orden.segundoNombre || ''} ${orden.primerApellido || ''} ${orden.segundoApellido || ''}`.trim();
-                const fechaAtencion = orden.fechaAtencion ? formatearFecha(orden.fechaAtencion) : 'Pendiente';
+                const fechaAtencion = orden.fechaAtencion ? formatearFecha(orden.fechaAtencion) : 'Pendiente de agendar';
                 const isAtendido = orden.atendido && orden.atendido.toUpperCase() === 'ATENDIDO';
 
-                // Generar tags de pruebas
-                const { completadas, pendientes } = generarTagsPruebas(orden.estadoPruebas, orden._id);
+                // Generar pruebas pendientes
+                const pruebasPendientes = generarPruebasPendientes(orden.estadoPruebas, orden._id);
+                const todasCompletadas = pruebasPendientes.length === 0;
 
                 return `
                     <div class="orden-card">
                         <div class="orden-header">
-                            <div class="orden-info">
-                                <h3>${nombreCompleto}</h3>
-                                <div class="orden-meta">
-                                    <div><strong>Empresa:</strong> ${orden.empresa || 'N/A'}</div>
-                                    <div><strong>Cargo:</strong> ${orden.cargo || 'N/A'}</div>
-                                    <div><strong>Fecha de Atención:</strong> ${fechaAtencion}</div>
-                                </div>
-                            </div>
+                            <h3 class="orden-title">${nombreCompleto}</h3>
+                            <p class="orden-subtitle">${orden.empresa || 'Sin empresa'} - ${orden.cargo || 'Sin cargo'}</p>
                             <span class="status-badge ${isAtendido ? 'atendido' : 'pendiente'}">
-                                ${isAtendido ? 'Atendido' : 'Pendiente'}
+                                ${isAtendido ? '✓ Atendido' : '⏳ Pendiente'}
                             </span>
                         </div>
 
-                        <div class="pruebas-section">
-                            ${completadas.length > 0 ? `
-                                <div class="pruebas-title" style="color: var(--success-color);">✓ Pruebas Completadas</div>
-                                <div class="pruebas-grid">${completadas.join('')}</div>
-                            ` : ''}
-
-                            ${pendientes.length > 0 ? `
-                                <div class="pruebas-title" style="color: var(--warning-color); margin-top: ${completadas.length > 0 ? '16px' : '0'};">
-                                    ⚠ Pruebas Pendientes
-                                </div>
-                                <div class="pruebas-grid">${pendientes.join('')}</div>
-                                <div class="hint-text">Haz clic en la primera prueba pendiente para continuar</div>
-                            ` : ''}
-
-                            ${completadas.length === 0 && pendientes.length === 0 ? `
-                                <div class="alert alert-info">
-                                    No hay pruebas registradas para esta orden
-                                </div>
+                        <div class="resumen-container">
+                            <div class="resumen-item">
+                                <span class="resumen-label">Fecha de Atención</span>
+                                <span class="resumen-value">${fechaAtencion}</span>
+                            </div>
+                            <div class="resumen-item">
+                                <span class="resumen-label">Documento</span>
+                                <span class="resumen-value">${orden.numeroId}</span>
+                            </div>
+                            ${orden.mdConceptoFinal ? `
+                            <div class="resumen-item">
+                                <span class="resumen-label">Concepto Médico</span>
+                                <span class="resumen-value">${orden.mdConceptoFinal}</span>
+                            </div>
                             ` : ''}
                         </div>
+
+                        ${!todasCompletadas ? `
+                        <div class="pruebas-section">
+                            <div class="pruebas-title">⚠ Pruebas Pendientes</div>
+                            ${pruebasPendientes.map((prueba, index) => `
+                                <div class="prueba-item" onclick="irAPrueba('${prueba.url}')">
+                                    <div class="prueba-info">
+                                        <div class="prueba-numero">${index + 1}</div>
+                                        <div class="prueba-nombre">${prueba.nombre}</div>
+                                    </div>
+                                    <div class="prueba-arrow">→</div>
+                                </div>
+                            `).join('')}
+                            <div class="hint-text">Haz clic en cualquier prueba para completarla</div>
+                        </div>
+                        ` : `
+                        <div class="pruebas-section">
+                            <div style="text-align: center; padding: 20px;">
+                                <span class="completado-badge">
+                                    <span>✓</span>
+                                    <span>Todas las pruebas completadas</span>
+                                </span>
+                            </div>
+                        </div>
+                        `}
                     </div>
                 `;
             }).join('');
         }
 
-        function generarTagsPruebas(estadoPruebas, ordenId) {
-            const completadas = [];
+        function generarPruebasPendientes(estadoPruebas, ordenId) {
             const pendientes = [];
 
             const mapaPruebas = {
-                'formulario': { nombre: 'Formulario', url: `/?_id=${ordenId}` },
-                'adc': { nombre: 'Pruebas ADC', url: `/adc.html?_id=${ordenId}` },
+                'formulario': { nombre: 'Formulario de Salud', url: `/?_id=${ordenId}` },
+                'adc': { nombre: 'Pruebas Psicotécnicas', url: `/adc.html?_id=${ordenId}` },
                 'audiometria': { nombre: 'Audiometría', url: `/audiometria.html?orden=${ordenId}` },
                 'visiometria': { nombre: 'Visiometría', url: `/visiometria.html?orden=${ordenId}` }
             };
 
-            let numeroPendiente = 1;
-            let primeraPendiente = true;
-
             Object.keys(mapaPruebas).forEach(key => {
                 const prueba = estadoPruebas[key];
-                if (!prueba.requerido) return;
-
-                const info = mapaPruebas[key];
-
-                if (prueba.completado) {
-                    completadas.push(`
-                        <div class="prueba-tag completado">
-                            ${info.nombre} ✓
-                        </div>
-                    `);
-                } else {
-                    const esClickeable = primeraPendiente;
-                    const clickHandler = esClickeable ? `onclick="irAPrueba('${info.url}')"` : '';
-                    const claseClickeable = esClickeable ? 'clickeable' : '';
-
-                    pendientes.push(`
-                        <div class="prueba-tag pendiente ${claseClickeable}" ${clickHandler}>
-                            ${numeroPendiente}. ${info.nombre}
-                        </div>
-                    `);
-
-                    numeroPendiente++;
-                    primeraPendiente = false;
+                if (prueba.requerido && !prueba.completado) {
+                    pendientes.push({
+                        nombre: mapaPruebas[key].nombre,
+                        url: mapaPruebas[key].url
+                    });
                 }
             });
 
-            return { completadas, pendientes };
+            return pendientes;
         }
 
         function irAPrueba(url) {
