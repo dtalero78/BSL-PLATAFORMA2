@@ -7094,15 +7094,22 @@ app.get('/api/turnos-disponibles', async (req, res) => {
             const tiempoConsulta = medico.tiempoConsulta;
 
             // Obtener citas existentes del médico para esa fecha
+            // IMPORTANTE: Usamos horaAtencion en lugar de extraer hora de fechaAtencion
+            // porque fechaAtencion está en UTC y horaAtencion está en hora Colombia
             const citasResult = await pool.query(`
-                SELECT TO_CHAR("fechaAtencion", 'HH24:MI') as hora
+                SELECT "horaAtencion" as hora
                 FROM "HistoriaClinica"
                 WHERE "fechaAtencion" >= $1::timestamp
                   AND "fechaAtencion" < ($1::timestamp + interval '1 day')
                   AND "medico" = $2
+                  AND "horaAtencion" IS NOT NULL
             `, [fecha, medicoNombre]);
 
-            const horasOcupadas = citasResult.rows.map(r => r.hora).filter(Boolean);
+            const horasOcupadas = citasResult.rows.map(r => {
+                if (!r.hora) return null;
+                // Normalizar a formato HH:MM (quitar segundos si existen)
+                return r.hora.substring(0, 5);
+            }).filter(Boolean);
 
             // Generar horarios para TODOS los rangos de este médico
             for (const rango of medico.rangos) {
