@@ -207,6 +207,58 @@ function determinarGeneroWebhook(examenes) {
     return examenes.includes('Serología') ? 'FEMENINO' : '';
 }
 
+// Mapear ciudad a formato Make.com (sin acentos, sin espacios, todo en mayúsculas)
+function mapearCiudadWebhook(ciudad) {
+    if (!ciudad) return '';
+
+    // Mapeo de ciudades a formato esperado por Make.com
+    const mapaCiudades = {
+        'Bogotá': 'BOGOTA',
+        'Medellín': 'MEDELLIN',
+        'Cali': 'CALI',
+        'Barranquilla': 'BARRANQUILLA',
+        'Cartagena': 'CARTAGENA',
+        'Cúcuta': 'CUCUTA',
+        'Bucaramanga': 'BUCARAMANGA',
+        'Pereira': 'PEREIRA',
+        'Santa Marta': 'SANTAMARTA',
+        'Ibagué': 'IBAGUE',
+        'Pasto': 'PASTO',
+        'Manizales': 'MANIZALES',
+        'Neiva': 'NEIVA',
+        'Villavicencio': 'VILLAVICENCIO',
+        'Armenia': 'ARMENIA',
+        'Valledupar': 'VALLEDUPAR',
+        'Montería': 'MONTERIA',
+        'Sincelejo': 'SINCELEJO',
+        'Popayán': 'POPAYAN',
+        'Floridablanca': 'FLORIDABLANCA',
+        'Buenaventura': 'BUENAVENTURA',
+        'Soledad': 'SOLEDAD',
+        'Itagüí': 'ITAGUI',
+        'Soacha': 'SOACHA',
+        'Bello': 'BELLO',
+        'Palmira': 'PALMIRA',
+        'Tunja': 'TUNJA',
+        'Girardot': 'GIRARDOT',
+        'Riohacha': 'RIOHACHA',
+        'Barrancabermeja': 'BARRANCABERMEJA',
+        'Dosquebradas': 'DOSQUEBRADAS',
+        'Envigado': 'ENVIGADO',
+        'Tuluá': 'TULUA',
+        'Sogamoso': 'SOGAMOSO',
+        'Duitama': 'DUITAMA',
+        'Zipaquirá': 'ZIPAQUIRA',
+        'Facatativá': 'FACATATIVA',
+        'Chía': 'CHIA',
+        'Fusagasugá': 'FUSAGASUGA',
+        'Otro': 'OTRA'
+    };
+
+    // Buscar en el mapa, si no existe usar la función de limpieza genérica
+    return mapaCiudades[ciudad] || limpiarStringWebhook(ciudad).toUpperCase();
+}
+
 // Disparar webhook a Make.com
 async function dispararWebhookMake(orden) {
     try {
@@ -219,7 +271,7 @@ async function dispararWebhookMake(orden) {
             nombre: limpiarStringWebhook(orden.primerNombre),
             empresa: limpiarStringWebhook(orden.codEmpresa),
             genero: determinarGeneroWebhook(orden.examenes),
-            ciudad: limpiarStringWebhook(orden.ciudad),
+            ciudad: mapearCiudadWebhook(orden.ciudad),
             fecha: orden.fechaAtencion ? new Date(orden.fechaAtencion).toLocaleDateString('es-CO') : '',
             hora: orden.horaAtencion || '',
             medico: medicoWebhook,
@@ -3999,21 +4051,20 @@ app.post('/api/ordenes', async (req, res) => {
         const pgResult = await pool.query(insertQuery, insertValues);
         console.log('✅ PostgreSQL: Orden guardada con _id:', wixId);
 
-        // Disparar webhook a Make.com (async, no bloquea)
-        // DESACTIVADO TEMPORALMENTE - recopilando información adicional
-        // dispararWebhookMake({
-        //     _id: wixId,
-        //     celular,
-        //     numeroId,
-        //     primerNombre,
-        //     codEmpresa,
-        //     examenes,
-        //     ciudad,
-        //     fechaAtencion,
-        //     horaAtencion,
-        //     medico,
-        //     modalidad
-        // });
+        // Disparar webhook a Make.com (async, no bloquea) para enviar WhatsApp
+        dispararWebhookMake({
+            _id: wixId,
+            celular,
+            numeroId,
+            primerNombre,
+            codEmpresa,
+            examenes,
+            ciudad,
+            fechaAtencion,
+            horaAtencion,
+            medico,
+            modalidad
+        });
 
         // 2. Sincronizar con Wix
         console.log('');
