@@ -323,7 +323,15 @@ async function notificarCoordinadorNuevaOrden(orden) {
     try {
         // VALIDACIÓN: Solo notificar si es modalidad PRESENCIAL y ciudad diferente a Bogotá y Barranquilla
         const modalidadPresencial = !orden.modalidad || orden.modalidad === 'presencial';
-        const ciudadExcluida = ['Bogotá', 'Barranquilla'].includes(orden.ciudad);
+
+        // Normalizar ciudad para comparación (sin acentos, minúsculas)
+        const ciudadNormalizada = orden.ciudad ?
+            orden.ciudad.toLowerCase()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            : '';
+
+        const ciudadesExcluidas = ['bogota', 'barranquilla'];
+        const ciudadExcluida = ciudadesExcluidas.includes(ciudadNormalizada);
 
         if (!modalidadPresencial || ciudadExcluida) {
             console.log(`⏭️ No se notifica al coordinador - Modalidad: ${orden.modalidad || 'presencial'}, Ciudad: ${orden.ciudad}`);
