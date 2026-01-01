@@ -4320,7 +4320,9 @@ app.post('/api/ordenes/previsualizar-csv', upload.single('archivo'), async (req,
             'TIPO DE EXAMEN': 'tipoExamen',
             'ROL': 'cargo',
             'OBSERVACION': 'examenes',
-            'OBSERVACIÓN': 'examenes'
+            'OBSERVACIÓN': 'examenes',
+            'MEDICO': 'medico',
+            'MÉDICO': 'medico'
         };
 
         // Normalizar headers
@@ -4674,7 +4676,9 @@ app.post('/api/ordenes/importar-csv', upload.single('archivo'), async (req, res)
             'TIPO DE EXAMEN': 'tipoExamen',
             'ROL': 'cargo',
             'OBSERVACION': 'examenes',
-            'OBSERVACIÓN': 'examenes'
+            'OBSERVACIÓN': 'examenes',
+            'MEDICO': 'medico',
+            'MÉDICO': 'medico'
         };
 
         // Normalizar headers
