@@ -657,4 +657,106 @@ router.get('/examenes-alegra', async (req, res) => {
     }
 });
 
+/**
+ * GET /api/facturacion/preview
+ * Obtener preview de exámenes para facturar
+ */
+router.get('/preview', async (req, res) => {
+    const pool = req.app.locals.pool;
+
+    try {
+        const { codEmpresa, fechaInicio, fechaFin } = req.query;
+
+        if (!codEmpresa) {
+            return res.status(400).json({
+                success: false,
+                message: 'Se requiere codEmpresa'
+            });
+        }
+
+        // Consultar exámenes pendientes de facturación
+        let query = `
+            SELECT
+                hc._id,
+                hc."primerNombre",
+                hc."primerApellido",
+                hc."numeroId",
+                hc."fechaAtencion",
+                TRIM(examen_individual) as tipo_examen,
+                e.id as examen_id,
+                e.nombre as examen_nombre,
+                e.precio as examen_precio
+            FROM "HistoriaClinica" hc
+            CROSS JOIN LATERAL unnest(string_to_array(hc.examenes, ',')) AS examen_individual
+            LEFT JOIN examenes e ON UPPER(TRIM(examen_individual)) = UPPER(TRIM(e.nombre))
+            WHERE hc."codEmpresa" = $1
+            AND hc.atendido = true
+            AND (hc.pagado = false OR hc.pagado IS NULL)
+            AND hc.examenes IS NOT NULL
+            AND hc.examenes != ''
+        `;
+
+        const params = [codEmpresa];
+        let paramIndex = 2;
+
+        if (fechaInicio) {
+            query += ` AND hc."fechaAtencion" >= $${paramIndex}`;
+            params.push(fechaInicio);
+            paramIndex++;
+        }
+
+        if (fechaFin) {
+            query += ` AND hc."fechaAtencion" <= $${paramIndex}`;
+            params.push(fechaFin);
+            paramIndex++;
+        }
+
+        query += ` ORDER BY hc."fechaAtencion" DESC`;
+
+        const result = await pool.query(query, params);
+
+        // Agrupar por tipo de examen
+        const examenesPorTipo = {};
+        let totalExamenes = 0;
+        let totalPacientes = new Set();
+        let totalMonto = 0;
+
+        result.rows.forEach(row => {
+            if (row.examen_id && row.examen_precio) {
+                const tipoExamen = row.examen_nombre;
+                if (!examenesPorTipo[tipoExamen]) {
+                    examenesPorTipo[tipoExamen] = {
+                        cantidad: 0,
+                        precio: parseFloat(row.examen_precio),
+                        subtotal: 0
+                    };
+                }
+                examenesPorTipo[tipoExamen].cantidad++;
+                examenesPorTipo[tipoExamen].subtotal += parseFloat(row.examen_precio);
+                totalExamenes++;
+                totalMonto += parseFloat(row.examen_precio);
+                totalPacientes.add(row._id);
+            }
+        });
+
+        res.json({
+            success: true,
+            data: {
+                totalExamenes,
+                totalPacientes: totalPacientes.size,
+                totalMonto,
+                examenesPorTipo
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Error al obtener preview:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener preview',
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;
