@@ -304,6 +304,12 @@ function mapearCiudadWebhook(ciudad) {
 // Disparar webhook a Make.com
 async function dispararWebhookMake(orden) {
     try {
+        // No enviar webhook para SANITHELP-JJ
+        if (orden.codEmpresa === 'SANITHELP-JJ') {
+            console.log('⏭️  Webhook Make.com omitido para SANITHELP-JJ:', orden._id);
+            return;
+        }
+
         // Si la modalidad es presencial, enviar "PRESENCIAL" como médico
         const medicoWebhook = orden.modalidad === 'presencial' ? 'PRESENCIAL' : limpiarStringWebhook(orden.medico);
 
