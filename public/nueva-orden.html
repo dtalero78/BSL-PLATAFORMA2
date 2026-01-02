@@ -1651,6 +1651,16 @@
             datos.numeroId = document.getElementById('inputNumeroId').value.trim();
             console.log('📤 Datos a enviar:', JSON.stringify(datos, null, 2));
             console.log('📋 Médico seleccionado:', document.getElementById('selectMedico').value);
+
+            // Validar que si hay horaAtencion, también haya fechaAtencion
+            if (datos.horaAtencion && !datos.fechaAtencion) {
+                errorText.textContent = 'Debe seleccionar una fecha de atención si seleccionó una hora';
+                errorMessage.classList.add('show');
+                submitBtn.classList.remove('btn-loading');
+                submitBtn.disabled = false;
+                return;
+            }
+
             // Capitalizar nombres y apellidos
             if (datos.primerNombre) datos.primerNombre = capitalize(datos.primerNombre);
             if (datos.segundoNombre) datos.segundoNombre = capitalize(datos.segundoNombre);
