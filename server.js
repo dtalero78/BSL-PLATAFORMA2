@@ -7261,6 +7261,9 @@ app.get('/api/empresas/codigo/:codEmpresa', async (req, res) => {
 // ENDPOINTS PARA FACTURACIÓN CON ALEGRA
 // ============================================
 
+// Exponer pool para que las rutas de facturación puedan acceder
+app.locals.pool = pool;
+
 const facturacionRoutes = require('./routes/facturacion');
 app.use('/api/facturacion', facturacionRoutes);
 
