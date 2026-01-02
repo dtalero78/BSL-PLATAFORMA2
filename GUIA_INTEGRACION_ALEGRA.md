@@ -149,14 +149,65 @@ Hacer un POST a `/api/facturacion/configuracion` con:
 
 ```json
 {
-  "codEmpresa": "SIIGO",
+  "codEmpresa": "KAWAK",
   "alegraClientId": "123",
   "terminosCondiciones": "Pago a 30 días. Transferencia bancaria.",
   "observacionesDefault": "Factura por servicios médicos ocupacionales",
   "diasVencimiento": 30,
-  "incluirRetencion": false
+  "incluirRetencion": false,
+  "paymentForm": "CREDIT",
+  "paymentMethod": null,
+  "tipoFactura": "NATIONAL",
+  "generarFacturaElectronica": true
 }
 ```
+
+**O ejecutar directamente en PostgreSQL:**
+
+```sql
+INSERT INTO configuracion_facturacion_empresa (
+    cod_empresa,
+    alegra_client_id,
+    terminos_condiciones,
+    observaciones_default,
+    dias_vencimiento,
+    incluir_retencion,
+    payment_form,
+    payment_method,
+    tipo_factura,
+    generar_factura_electronica,
+    activo
+) VALUES (
+    'KAWAK',
+    '123', -- Reemplazar con el ID del cliente en Alegra
+    'Pago a 30 días. Transferencia bancaria.',
+    'Factura por servicios médicos ocupacionales',
+    30,
+    false,
+    'CREDIT', -- CASH o CREDIT
+    NULL, -- Solo requerido si payment_form es CASH (ej: '1' para efectivo)
+    'NATIONAL', -- NATIONAL, EXPORT, etc.
+    true, -- true para generar factura electrónica con stamp
+    true
+) ON CONFLICT (cod_empresa)
+DO UPDATE SET
+    alegra_client_id = EXCLUDED.alegra_client_id,
+    terminos_condiciones = EXCLUDED.terminos_condiciones,
+    observaciones_default = EXCLUDED.observaciones_default,
+    dias_vencimiento = EXCLUDED.dias_vencimiento,
+    incluir_retencion = EXCLUDED.incluir_retencion,
+    payment_form = EXCLUDED.payment_form,
+    payment_method = EXCLUDED.payment_method,
+    tipo_factura = EXCLUDED.tipo_factura,
+    generar_factura_electronica = EXCLUDED.generar_factura_electronica,
+    updated_at = NOW();
+```
+
+**Campos específicos para Colombia:**
+- **paymentForm**: `CASH` (contado) o `CREDIT` (crédito). Requerido para facturación electrónica 2.1
+- **paymentMethod**: Método de pago específico (ej: `'1'` para efectivo, `'2'` para cheque). Solo requerido si `paymentForm` es `CASH` y facturación electrónica 2.1 está activa
+- **tipoFactura**: Tipo de factura (`NATIONAL` para nacional, `EXPORT` para exportación)
+- **generarFacturaElectronica**: `true` para generar factura electrónica con stamp (sello digital de la DIAN)
 
 ### Paso 6: Generar Primera Factura de Prueba
 
@@ -339,6 +390,24 @@ client.createInvoice(facturaData).then(result => {
 4. **Sincronización**: Las facturas se marcan en ambos sistemas (PostgreSQL y Alegra). Si Alegra falla, la transacción debe revertirse.
 
 5. **Permisos**: Solo usuarios con rol ADMIN deben poder generar facturas. Agregar middleware `requireAdmin` a las rutas.
+
+6. **Facturación Electrónica Colombia (DIAN)**:
+   - El campo `stamp.generateStamp = true` activa la generación de factura electrónica con sello digital
+   - Alegra automáticamente enviará la factura a la DIAN para validación
+   - `paymentForm` es REQUERIDO cuando facturación electrónica 2.1 está activa
+   - `paymentMethod` solo es requerido cuando `paymentForm = 'CASH'`
+   - La factura debe cumplir con resolución de facturación vigente en Alegra
+   - Valores válidos para `paymentMethod`:
+     - `'1'`: Efectivo
+     - `'2'`: Cheque
+     - `'10'`: Tarjeta de crédito
+     - `'48'`: Transferencia bancaria
+     - Y otros según tabla de la DIAN
+
+7. **Tipos de Factura Colombia**:
+   - `NATIONAL`: Factura nacional (uso normal)
+   - `EXPORT`: Factura de exportación
+   - Para servicios médicos locales usar siempre `NATIONAL`
 
 ## 🔐 Seguridad
 

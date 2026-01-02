@@ -17,6 +17,12 @@ CREATE TABLE IF NOT EXISTS configuracion_facturacion_empresa (
     incluir_retencion BOOLEAN DEFAULT false,
     porcentaje_retencion DECIMAL(5,2),
 
+    -- Configuración de facturación electrónica Colombia (Alegra)
+    payment_form VARCHAR(20) DEFAULT 'CREDIT', -- CASH o CREDIT
+    payment_method VARCHAR(10), -- Método de pago (requerido si payment_form es CASH)
+    tipo_factura VARCHAR(20) DEFAULT 'NATIONAL', -- NATIONAL, EXPORT, etc.
+    generar_factura_electronica BOOLEAN DEFAULT true, -- Si debe generar stamp electrónico
+
     -- Metadata
     activo BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT NOW(),

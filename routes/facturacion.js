@@ -191,7 +191,12 @@ router.post('/generar-lote', async (req, res) => {
             date: fechaFactura,
             dueDate: fechaVencimientoStr,
             observations: observaciones || config.observaciones_default || `Factura por servicios médicos - ${codEmpresa}`,
-            termsConditions: terminos || config.terminos_condiciones || ''
+            termsConditions: terminos || config.terminos_condiciones || '',
+            // Campos específicos para facturación electrónica Colombia
+            paymentForm: config.payment_form || 'CREDIT',
+            paymentMethod: config.payment_method || undefined,
+            type: config.tipo_factura || 'NATIONAL',
+            stamp: config.generar_factura_electronica !== false ? { generateStamp: true } : undefined
         };
 
         // Validar antes de enviar
