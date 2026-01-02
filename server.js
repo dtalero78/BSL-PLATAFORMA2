@@ -168,6 +168,48 @@ function construirFechaAtencionColombia(fecha, hora) {
     return resultado;
 }
 
+// ========== HELPER: Normalizar teléfono con prefijo 57 ==========
+// Agrega el prefijo 57 (Colombia) si el teléfono no tiene prefijo internacional
+// Detecta si ya tiene un prefijo internacional diferente (ej: +1, +34, etc.)
+function normalizarTelefonoConPrefijo57(celular) {
+    if (!celular) return null;
+
+    // Limpiar espacios, guiones y paréntesis
+    let telefono = celular.toString().replace(/[\s\-\(\)]/g, '');
+
+    // Si ya tiene el símbolo +, verificar si es Colombia o internacional
+    if (telefono.startsWith('+')) {
+        // Ya tiene prefijo internacional, dejarlo tal cual
+        return telefono;
+    }
+
+    // Si empieza con 57 y tiene longitud correcta (57 + 10 dígitos = 12)
+    if (telefono.startsWith('57') && telefono.length === 12) {
+        return telefono;
+    }
+
+    // Si empieza con otro prefijo internacional común (1, 34, 52, etc.)
+    const prefijoInternacional = /^(1|7|20|27|30|31|32|33|34|36|39|40|41|43|44|45|46|47|48|49|51|52|53|54|55|56|58|60|61|62|63|64|65|66|81|82|84|86|90|91|92|93|94|95|98|212|213|216|218|220|221|222|223|224|225|226|227|228|229|230|231|232|233|234|235|236|237|238|239|240|241|242|243|244|245|246|247|248|249|250|251|252|253|254|255|256|257|258|260|261|262|263|264|265|266|267|268|269|290|291|297|298|299|350|351|352|353|354|355|356|357|358|359|370|371|372|373|374|375|376|377|378|380|381|382|383|385|386|387|389|420|421|423|500|501|502|503|504|505|506|507|508|509|590|591|592|593|594|595|596|597|598|599|670|672|673|674|675|676|677|678|679|680|681|682|683|685|686|687|688|689|690|691|692|850|852|853|855|856|880|886|960|961|962|963|964|965|966|967|968|970|971|972|973|974|975|976|977|992|993|994|995|996|998)\d+/;
+
+    if (prefijoInternacional.test(telefono)) {
+        // Es un número internacional, dejarlo tal cual
+        return telefono;
+    }
+
+    // Si tiene exactamente 10 dígitos, es un número colombiano sin prefijo
+    if (telefono.length === 10 && /^\d{10}$/.test(telefono)) {
+        return '57' + telefono;
+    }
+
+    // Si tiene 3 seguido de 9 dígitos (formato celular colombiano común)
+    if (telefono.length === 10 && telefono.startsWith('3')) {
+        return '57' + telefono;
+    }
+
+    // En cualquier otro caso, asumir que es colombiano y agregar 57
+    return '57' + telefono;
+}
+
 // ========== SERVER-SENT EVENTS (SSE) ==========
 // Clientes conectados para notificaciones en tiempo real
 let sseClients = [];
@@ -4520,6 +4562,55 @@ app.post('/api/ordenes/importar-desde-preview', async (req, res) => {
 
                 await pool.query(insertQuery, insertValues);
 
+                // Crear/actualizar conversación de WhatsApp si hay celular
+                if (registro.celular) {
+                    try {
+                        const telefonoNormalizado = normalizarTelefonoConPrefijo57(registro.celular);
+
+                        if (telefonoNormalizado) {
+                            // Verificar si ya existe una conversación para este teléfono
+                            const conversacionExistente = await pool.query(
+                                'SELECT id FROM conversaciones_whatsapp WHERE celular = $1 AND estado != $2',
+                                [telefonoNormalizado, 'cerrada']
+                            );
+
+                            if (conversacionExistente.rows.length === 0) {
+                                // No existe conversación activa, crear una nueva
+                                await pool.query(`
+                                    INSERT INTO conversaciones_whatsapp (
+                                        celular, paciente_id, nombre_paciente, bot_activo, estado, canal
+                                    ) VALUES ($1, $2, $3, $4, $5, $6)
+                                    ON CONFLICT (celular) WHERE estado != 'cerrada'
+                                    DO UPDATE SET
+                                        bot_activo = false,
+                                        fecha_ultima_actividad = NOW()
+                                `, [
+                                    telefonoNormalizado,
+                                    ordenId,
+                                    `${registro.primerNombre} ${registro.primerApellido}`,
+                                    false, // bot_activo = false (stopBot = true)
+                                    'nueva',
+                                    'bot'
+                                ]);
+
+                                console.log(`📱 Conversación WhatsApp creada para ${telefonoNormalizado} (bot detenido)`);
+                            } else {
+                                // Ya existe, actualizar para detener el bot
+                                await pool.query(`
+                                    UPDATE conversaciones_whatsapp
+                                    SET bot_activo = false, fecha_ultima_actividad = NOW()
+                                    WHERE celular = $1 AND estado != 'cerrada'
+                                `, [telefonoNormalizado]);
+
+                                console.log(`📱 Conversación WhatsApp actualizada para ${telefonoNormalizado} (bot detenido)`);
+                            }
+                        }
+                    } catch (whatsappError) {
+                        console.log(`⚠️ Error al crear/actualizar conversación WhatsApp: ${whatsappError.message}`);
+                        // No detener el proceso si falla la creación de la conversación
+                    }
+                }
+
                 // Sincronizar con Wix
                 try {
                     let examenesArray = [];
@@ -4807,6 +4898,55 @@ app.post('/api/ordenes/importar-csv', upload.single('archivo'), async (req, res)
                 ];
 
                 await pool.query(insertQuery, insertValues);
+
+                // Crear/actualizar conversación de WhatsApp si hay celular
+                if (row.celular) {
+                    try {
+                        const telefonoNormalizado = normalizarTelefonoConPrefijo57(row.celular);
+
+                        if (telefonoNormalizado) {
+                            // Verificar si ya existe una conversación para este teléfono
+                            const conversacionExistente = await pool.query(
+                                'SELECT id FROM conversaciones_whatsapp WHERE celular = $1 AND estado != $2',
+                                [telefonoNormalizado, 'cerrada']
+                            );
+
+                            if (conversacionExistente.rows.length === 0) {
+                                // No existe conversación activa, crear una nueva
+                                await pool.query(`
+                                    INSERT INTO conversaciones_whatsapp (
+                                        celular, paciente_id, nombre_paciente, bot_activo, estado, canal
+                                    ) VALUES ($1, $2, $3, $4, $5, $6)
+                                    ON CONFLICT (celular) WHERE estado != 'cerrada'
+                                    DO UPDATE SET
+                                        bot_activo = false,
+                                        fecha_ultima_actividad = NOW()
+                                `, [
+                                    telefonoNormalizado,
+                                    ordenId,
+                                    `${row.primerNombre} ${row.primerApellido}`,
+                                    false, // bot_activo = false (stopBot = true)
+                                    'nueva',
+                                    'bot'
+                                ]);
+
+                                console.log(`📱 Conversación WhatsApp creada para ${telefonoNormalizado} (bot detenido)`);
+                            } else {
+                                // Ya existe, actualizar para detener el bot
+                                await pool.query(`
+                                    UPDATE conversaciones_whatsapp
+                                    SET bot_activo = false, fecha_ultima_actividad = NOW()
+                                    WHERE celular = $1 AND estado != 'cerrada'
+                                `, [telefonoNormalizado]);
+
+                                console.log(`📱 Conversación WhatsApp actualizada para ${telefonoNormalizado} (bot detenido)`);
+                            }
+                        }
+                    } catch (whatsappError) {
+                        console.log(`⚠️ Error al crear/actualizar conversación WhatsApp: ${whatsappError.message}`);
+                        // No detener el proceso si falla la creación de la conversación
+                    }
+                }
 
                 // Sincronizar con Wix
                 try {
