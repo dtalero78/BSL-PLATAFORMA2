@@ -2432,6 +2432,12 @@
                     </svg>
                     Descargar PDF
                 </a>
+                <a href="#" target="_blank" class="btn btn-primary" id="btnResultadoPsicologico" style="display: none;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Resultado Psicológico
+                </a>
                 <button class="btn" id="btnAprobar" onclick="aprobarOrden()" style="display: none; background: #000; color: #fff;">
                     Guardar
                 </button>
@@ -3894,6 +3900,7 @@
 
                 ${estadoPruebas && estadoPruebas.pruebas ? (() => {
                     const p = estadoPruebas.pruebas;
+                    const esKM2 = paciente.codEmpresa === 'KM2';
 
                     // Mapeo de nombre de prueba a tipo de prueba para el backend
                     const tiposPrueba = {
@@ -3903,13 +3910,23 @@
                         'Visual': 'visiometria'
                     };
 
-                    // Definir orden de escalera: 1. Formulario, 2. ADC, 3. Audiometría, 4. Visual
-                    const ordenPruebas = [
+                    // Definir orden de escalera: 1. Formulario, 2. ADC (excepto KM2), 3. Audiometría, 4. Visual
+                    let ordenPruebas = [
                         { numero: 1, nombre: 'Formulario', key: 'formulario' },
                         { numero: 2, nombre: 'Pruebas ADC', key: 'adc' },
                         { numero: 3, nombre: 'Audiometría', key: 'audiometria' },
                         { numero: 4, nombre: 'Visual', key: 'visiometria' }
                     ];
+
+                    // Si es KM2, quitar Pruebas ADC del orden
+                    if (esKM2) {
+                        ordenPruebas = ordenPruebas.filter(prueba => prueba.key !== 'adc');
+                        // Renumerar después de filtrar
+                        ordenPruebas = ordenPruebas.map((prueba, index) => ({
+                            ...prueba,
+                            numero: index + 1
+                        }));
+                    }
 
                     let tagsCompletados = [];
                     let tagsPendientes = [];
@@ -4037,6 +4054,15 @@
                 btnPDF.href = '#';
                 btnPDF.style.opacity = '0.5';
                 btnPDF.style.pointerEvents = 'none';
+            }
+
+            // Configurar botón Resultado Psicológico solo para KM2
+            const btnResultadoPsicologico = document.getElementById('btnResultadoPsicologico');
+            if (paciente.codEmpresa === 'KM2') {
+                btnResultadoPsicologico.style.display = 'inline-flex';
+                btnResultadoPsicologico.href = `https://www.bsl.com.co/km2-resultados/${paciente._id}`;
+            } else {
+                btnResultadoPsicologico.style.display = 'none';
             }
 
             // Configurar botón Editar según permisos
