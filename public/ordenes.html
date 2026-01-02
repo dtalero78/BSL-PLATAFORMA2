@@ -2248,6 +2248,10 @@
                     <i data-feather="grid"></i>
                     <span>Panel Empresas</span>
                 </a>
+                <div class="nav-item" onclick="abrirModalFacturacion()" data-tooltip="Generar Factura" style="cursor: pointer; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white;">
+                    <i data-feather="dollar-sign"></i>
+                    <span>Generar Factura</span>
+                </div>
             </nav>
         </aside>
 
@@ -2288,9 +2292,6 @@
                     <input type="date" id="fechaHasta">
                     <button class="btn-filter" id="btnFiltrarFechas">Filtrar</button>
                     <button class="btn-clear-dates" id="btnLimpiarFechas">Limpiar</button>
-                    <button class="btn-facturacion" id="btnAbrirFacturacion" onclick="abrirModalFacturacion()" style="margin-left: 12px; background: #059669; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 500;">
-                        💰 Generar Factura
-                    </button>
                 </div>
             </div>
 
