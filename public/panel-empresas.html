@@ -3918,10 +3918,21 @@
                         { numero: 4, nombre: 'Visual', key: 'visiometria' }
                     ];
 
-                    // Si es KM2, quitar Pruebas ADC del orden
+                    // Si es KM2, quitar Pruebas ADC del orden y agregar Psicológica si no tiene audiometría
                     if (esKM2) {
                         ordenPruebas = ordenPruebas.filter(prueba => prueba.key !== 'adc');
-                        // Renumerar después de filtrar
+
+                        // Si no tiene audiometría completada, agregar prueba "Psicológica"
+                        if (!p.audiometria.completado) {
+                            ordenPruebas.push({
+                                numero: 2,
+                                nombre: 'Psicológica',
+                                key: 'psicologica',
+                                urlKM2: `https://www.bsl.com.co/km2/${paciente.numeroId}`
+                            });
+                        }
+
+                        // Renumerar después de filtrar/agregar
                         ordenPruebas = ordenPruebas.map((prueba, index) => ({
                             ...prueba,
                             numero: index + 1
@@ -3933,7 +3944,10 @@
 
                     // Procesar pruebas en orden de escalera
                     ordenPruebas.forEach(prueba => {
-                        if (p[prueba.key].completado) {
+                        // Para KM2, la prueba psicológica es un link externo, siempre pendiente si está en la lista
+                        if (prueba.key === 'psicologica') {
+                            tagsPendientes.push({ ...prueba });
+                        } else if (p[prueba.key].completado) {
                             tagsCompletados.push({ ...prueba });
                         } else if (p[prueba.key].requerido) {
                             tagsPendientes.push({ ...prueba });
@@ -3950,6 +3964,11 @@
                     const tagsPendientesHTML = tagsPendientes.map((prueba, index) => {
                         const esPrimeraPendiente = index === 0; // Solo la primera pendiente es clickeable
 
+                        // Para KM2: Prueba Psicológica es un link externo clickeable
+                        if (esKM2 && prueba.key === 'psicologica') {
+                            return `<a href="${prueba.urlKM2}" target="_blank" style="display: inline-block; padding: 6px 12px; background: #FEF3C7; color: #92400E; border-radius: 6px; font-size: 13px; margin: 4px; cursor: pointer; transition: all 0.2s; text-decoration: none;" onmouseover="this.style.background='#FDE68A'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#FEF3C7'; this.style.transform='translateY(0)'">${prueba.numero}. ${prueba.nombre} ⚠️</a>`;
+                        }
+
                         if (esSitel && esPrimeraPendiente) {
                             // Primera pendiente: clickeable con cursor pointer y hover
                             return `<span class="prueba-tag-pendiente" data-tipo="${tiposPrueba[prueba.nombre]}" data-orden="${ordenId}" onclick="enviarLinkPrueba(this)" style="display: inline-block; padding: 6px 12px; background: #FEF3C7; color: #92400E; border-radius: 6px; font-size: 13px; margin: 4px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#FDE68A'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#FEF3C7'; this.style.transform='translateY(0)'">${prueba.numero}. ${prueba.nombre} ⚠️</span>`;
@@ -3961,6 +3980,8 @@
 
                     const hintText = esSitel && tagsPendientes.length > 0
                         ? `<div class="detail-field-label" style="color: #F59E0B; margin-top: 12px;">Pendientes <span style="font-size: 11px; font-weight: 400; color: #6B7280;">(clic en la siguiente prueba para enviar link por WhatsApp)</span></div>`
+                        : esKM2 && tagsPendientes.some(p => p.key === 'psicologica')
+                        ? `<div class="detail-field-label" style="color: #F59E0B; margin-top: 12px;">Pendientes <span style="font-size: 11px; font-weight: 400; color: #6B7280;">(clic en Psicológica para ir a la prueba)</span></div>`
                         : `<div class="detail-field-label" style="color: #F59E0B; margin-top: 12px;">Pendientes</div>`;
 
                     return `
