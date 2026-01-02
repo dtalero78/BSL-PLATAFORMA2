@@ -71,7 +71,7 @@ router.post('/generar-lote', async (req, res) => {
             LEFT JOIN examenes_alegra ea ON e.id = ea.examen_id
             WHERE hc."codEmpresa" = $1
             AND (hc.atendido = 'true' OR hc.atendido = '1' OR hc.atendido = 't')
-            AND (hc.pagado IS NULL OR hc.pagado = '' OR hc.pagado = 'false')
+            AND (hc.pagado IS NULL OR CAST(hc.pagado AS TEXT) = '' OR CAST(hc.pagado AS TEXT) = 'false')
             AND hc.examenes IS NOT NULL
             AND hc.examenes != ''
         `;
@@ -691,7 +691,7 @@ router.get('/preview', async (req, res) => {
             LEFT JOIN examenes e ON UPPER(TRIM(examen_individual)) = UPPER(TRIM(e.nombre))
             WHERE hc."codEmpresa" = $1
             AND (hc.atendido = 'true' OR hc.atendido = '1' OR hc.atendido = 't')
-            AND (hc.pagado IS NULL OR hc.pagado = '' OR hc.pagado = 'false')
+            AND (hc.pagado IS NULL OR CAST(hc.pagado AS TEXT) = '' OR CAST(hc.pagado AS TEXT) = 'false')
             AND hc.examenes IS NOT NULL
             AND hc.examenes != ''
         `;
