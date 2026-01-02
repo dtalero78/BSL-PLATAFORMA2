@@ -4861,11 +4861,7 @@
         // Cargar empresas con configuración de facturación
         async function cargarEmpresasFacturacion() {
             try {
-                const response = await fetch('/api/empresas', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
+                const response = await fetch('/api/empresas');
 
                 if (!response.ok) throw new Error('Error al cargar empresas');
 
@@ -4917,11 +4913,7 @@
                 if (fechaDesde) params.append('fechaDesde', fechaDesde);
                 if (fechaHasta) params.append('fechaHasta', fechaHasta);
 
-                const response = await fetch(`/api/historia-clinica?${params.toString()}`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
+                const response = await fetch(`/api/historia-clinica?${params.toString()}`);
 
                 if (!response.ok) throw new Error('Error al cargar preview');
 
@@ -5012,8 +5004,7 @@
                 const response = await fetch('/api/facturacion/generar-lote', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                         codEmpresa,
