@@ -2288,6 +2288,9 @@
                     <input type="date" id="fechaHasta">
                     <button class="btn-filter" id="btnFiltrarFechas">Filtrar</button>
                     <button class="btn-clear-dates" id="btnLimpiarFechas">Limpiar</button>
+                    <button class="btn-facturacion" id="btnAbrirFacturacion" onclick="abrirModalFacturacion()" style="margin-left: 12px; background: #059669; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 500;">
+                        💰 Generar Factura
+                    </button>
                 </div>
             </div>
 
@@ -2990,6 +2993,83 @@
                 </form>
             </div>
             <div style="text-align: center; padding: 4px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0;">modalEdicion</div>
+        </div>
+    </div>
+
+    <!-- Modal: Generar Factura -->
+    <div id="modalFacturacion" class="modal-overlay" style="display: none;">
+        <div class="modal" style="max-width: 600px;">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title">💰 Generar Factura por Lote</h2>
+                    <p style="font-size: 14px; color: var(--text-secondary); margin-top: 4px;">Genera una factura en Alegra para todos los exámenes de una empresa</p>
+                </div>
+                <button class="btn-close" onclick="cerrarModalFacturacion()">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="formFacturacion" onsubmit="generarFactura(event)">
+                    <!-- Selector de Empresa -->
+                    <div class="form-group">
+                        <label class="form-label">Empresa <span style="color: #DC2626;">*</span></label>
+                        <select class="form-input" id="factura-empresa" required onchange="cargarPreviewFactura()">
+                            <option value="">Seleccionar empresa...</option>
+                        </select>
+                        <small style="color: var(--text-muted); display: block; margin-top: 4px;">
+                            Solo empresas con configuración de facturación en Alegra
+                        </small>
+                    </div>
+
+                    <!-- Rango de Fechas -->
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Fecha Desde</label>
+                            <input type="date" class="form-input" id="factura-fecha-desde" onchange="cargarPreviewFactura()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Fecha Hasta</label>
+                            <input type="date" class="form-input" id="factura-fecha-hasta" onchange="cargarPreviewFactura()">
+                        </div>
+                    </div>
+
+                    <!-- Preview de Exámenes -->
+                    <div id="facturaPreview" style="background: var(--bg-tertiary); border-radius: 8px; padding: 16px; margin: 16px 0; display: none;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h4 style="font-size: 14px; font-weight: 600; color: var(--text-primary);">📋 Preview de Factura</h4>
+                            <button type="button" onclick="cargarPreviewFactura()" style="background: none; border: none; cursor: pointer; color: var(--medical-secondary); font-size: 20px;" title="Refrescar">↻</button>
+                        </div>
+                        <div id="facturaPreviewContent">
+                            <div style="text-align: center; padding: 20px; color: var(--text-muted);">
+                                Selecciona una empresa para ver el preview
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Observaciones -->
+                    <div class="form-group">
+                        <label class="form-label">Observaciones</label>
+                        <textarea class="form-input" id="factura-observaciones" rows="3" placeholder="Ej: Factura mensual - Enero 2025"></textarea>
+                    </div>
+
+                    <!-- Días de Vencimiento -->
+                    <div class="form-group">
+                        <label class="form-label">Días de Vencimiento</label>
+                        <input type="number" class="form-input" id="factura-dias-vencimiento" value="30" min="1" max="365">
+                    </div>
+
+                    <!-- Botones -->
+                    <div style="display: flex; gap: 12px; margin-top: 24px;">
+                        <button type="button" class="btn btn-secondary" onclick="cerrarModalFacturacion()" style="flex: 1;">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="btnGenerarFactura" style="flex: 2; background: #059669;">
+                            Generar Factura en Alegra
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Resultado -->
+                <div id="facturaResultado" style="display: none; margin-top: 20px; padding: 16px; border-radius: 8px;"></div>
+            </div>
         </div>
     </div>
 
@@ -4754,6 +4834,265 @@
                 });
             });
         });
+
+        // ==================== FACTURACIÓN ALEGRA ====================
+
+        // Abrir modal de facturación
+        async function abrirModalFacturacion() {
+            const modal = document.getElementById('modalFacturacion');
+            modal.style.display = 'flex';
+
+            // Cargar empresas disponibles
+            await cargarEmpresasFacturacion();
+
+            // Resetear formulario
+            document.getElementById('formFacturacion').reset();
+            document.getElementById('factura-dias-vencimiento').value = 30;
+            document.getElementById('facturaPreview').style.display = 'none';
+            document.getElementById('facturaResultado').style.display = 'none';
+        }
+
+        // Cerrar modal de facturación
+        function cerrarModalFacturacion() {
+            const modal = document.getElementById('modalFacturacion');
+            modal.style.display = 'none';
+        }
+
+        // Cargar empresas con configuración de facturación
+        async function cargarEmpresasFacturacion() {
+            try {
+                const response = await fetch('/api/empresas', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Error al cargar empresas');
+
+                const empresas = await response.json();
+                const select = document.getElementById('factura-empresa');
+
+                // Limpiar opciones excepto la primera
+                select.innerHTML = '<option value="">Seleccionar empresa...</option>';
+
+                // Agregar empresas activas
+                empresas.filter(e => e.activo).forEach(empresa => {
+                    const option = document.createElement('option');
+                    option.value = empresa.cod_empresa;
+                    option.textContent = `${empresa.empresa} (${empresa.cod_empresa})`;
+                    select.appendChild(option);
+                });
+
+            } catch (error) {
+                console.error('Error al cargar empresas:', error);
+                alert('Error al cargar la lista de empresas');
+            }
+        }
+
+        // Cargar preview de la factura
+        async function cargarPreviewFactura() {
+            const codEmpresa = document.getElementById('factura-empresa').value;
+            const fechaDesde = document.getElementById('factura-fecha-desde').value;
+            const fechaHasta = document.getElementById('factura-fecha-hasta').value;
+
+            const previewDiv = document.getElementById('facturaPreview');
+            const contentDiv = document.getElementById('facturaPreviewContent');
+
+            if (!codEmpresa) {
+                previewDiv.style.display = 'none';
+                return;
+            }
+
+            previewDiv.style.display = 'block';
+            contentDiv.innerHTML = '<div style="text-align: center; padding: 20px;"><div class="loading-spinner"></div></div>';
+
+            try {
+                // Construir query params
+                const params = new URLSearchParams({
+                    codEmpresa,
+                    atendido: 'true',
+                    pagado: 'false'
+                });
+
+                if (fechaDesde) params.append('fechaDesde', fechaDesde);
+                if (fechaHasta) params.append('fechaHasta', fechaHasta);
+
+                const response = await fetch(`/api/historia-clinica?${params.toString()}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Error al cargar preview');
+
+                const { data } = await response.json();
+
+                // Contar exámenes por tipo
+                const examenesPorTipo = {};
+                let totalExamenes = 0;
+
+                data.forEach(paciente => {
+                    if (paciente.examenes) {
+                        const examenesArray = paciente.examenes.split(',').map(e => e.trim());
+                        examenesArray.forEach(examen => {
+                            if (examen) {
+                                examenesPorTipo[examen] = (examenesPorTipo[examen] || 0) + 1;
+                                totalExamenes++;
+                            }
+                        });
+                    }
+                });
+
+                // Renderizar preview
+                if (totalExamenes === 0) {
+                    contentDiv.innerHTML = `
+                        <div style="text-align: center; padding: 20px; color: var(--warning-amber);">
+                            ⚠️ No se encontraron exámenes para facturar
+                        </div>
+                    `;
+                } else {
+                    let html = `
+                        <div style="margin-bottom: 16px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span style="font-weight: 600; color: var(--text-primary);">Total de Exámenes:</span>
+                                <span style="font-weight: 700; color: var(--medical-primary); font-size: 18px;">${totalExamenes}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="font-weight: 600; color: var(--text-primary);">Pacientes:</span>
+                                <span style="font-weight: 600; color: var(--text-secondary);">${data.length}</span>
+                            </div>
+                        </div>
+                        <div style="border-top: 1px solid var(--border-color); padding-top: 12px;">
+                            <div style="font-weight: 600; margin-bottom: 8px; color: var(--text-primary);">Detalle por Examen:</div>
+                    `;
+
+                    Object.entries(examenesPorTipo).sort((a, b) => b[1] - a[1]).forEach(([examen, cantidad]) => {
+                        html += `
+                            <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border-subtle);">
+                                <span style="color: var(--text-secondary);">${examen}</span>
+                                <span style="font-weight: 600; color: var(--text-primary);">${cantidad}</span>
+                            </div>
+                        `;
+                    });
+
+                    html += '</div>';
+                    contentDiv.innerHTML = html;
+                }
+
+            } catch (error) {
+                console.error('Error al cargar preview:', error);
+                contentDiv.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: var(--error-red);">
+                        ❌ Error al cargar preview
+                    </div>
+                `;
+            }
+        }
+
+        // Generar factura
+        async function generarFactura(event) {
+            event.preventDefault();
+
+            const btnGenerar = document.getElementById('btnGenerarFactura');
+            const resultadoDiv = document.getElementById('facturaResultado');
+
+            // Obtener datos del formulario
+            const codEmpresa = document.getElementById('factura-empresa').value;
+            const fechaInicio = document.getElementById('factura-fecha-desde').value;
+            const fechaFin = document.getElementById('factura-fecha-hasta').value;
+            const observaciones = document.getElementById('factura-observaciones').value;
+            const diasVencimiento = parseInt(document.getElementById('factura-dias-vencimiento').value);
+
+            // Deshabilitar botón
+            btnGenerar.disabled = true;
+            btnGenerar.textContent = 'Generando factura...';
+            resultadoDiv.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/facturacion/generar-lote', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        codEmpresa,
+                        fechaInicio: fechaInicio || undefined,
+                        fechaFin: fechaFin || undefined,
+                        observaciones: observaciones || undefined,
+                        diasVencimiento
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Mostrar resultado exitoso
+                    resultadoDiv.style.display = 'block';
+                    resultadoDiv.style.background = '#D1FAE5';
+                    resultadoDiv.style.border = '1px solid #059669';
+                    resultadoDiv.innerHTML = `
+                        <div style="color: #065F46;">
+                            <h4 style="margin-bottom: 12px; font-size: 16px; font-weight: 600;">✅ Factura Generada Exitosamente</h4>
+                            <div style="font-size: 14px; line-height: 1.8;">
+                                <p><strong>Número de Factura:</strong> ${result.data.alegra_invoice_number || 'N/A'}</p>
+                                <p><strong>ID Alegra:</strong> ${result.data.alegra_invoice_id}</p>
+                                <p><strong>Total:</strong> $${result.data.total?.toLocaleString('es-CO') || '0'}</p>
+                                <p><strong>Exámenes Facturados:</strong> ${result.data.examenes_facturados}</p>
+                                <p><strong>Items en Factura:</strong> ${result.data.items_count}</p>
+                            </div>
+                            <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #059669;">
+                                <small style="font-size: 12px;">Los exámenes han sido marcados como pagados en la base de datos.</small>
+                            </div>
+                        </div>
+                    `;
+
+                    // Recargar órdenes para reflejar cambios
+                    setTimeout(() => {
+                        cargarFormularios();
+                    }, 1500);
+
+                } else {
+                    // Mostrar error
+                    resultadoDiv.style.display = 'block';
+                    resultadoDiv.style.background = '#FEE2E2';
+                    resultadoDiv.style.border = '1px solid #DC2626';
+                    resultadoDiv.innerHTML = `
+                        <div style="color: #991B1B;">
+                            <h4 style="margin-bottom: 8px; font-size: 16px; font-weight: 600;">❌ Error al Generar Factura</h4>
+                            <p style="font-size: 14px;">${result.message}</p>
+                            ${result.examenes_no_procesados ? `
+                                <details style="margin-top: 12px; font-size: 13px;">
+                                    <summary style="cursor: pointer; font-weight: 600;">Ver exámenes no procesados (${result.examenes_no_procesados.length})</summary>
+                                    <ul style="margin-top: 8px; padding-left: 20px;">
+                                        ${result.examenes_no_procesados.map(e => `<li>${e}</li>`).join('')}
+                                    </ul>
+                                </details>
+                            ` : ''}
+                        </div>
+                    `;
+                }
+
+            } catch (error) {
+                console.error('Error al generar factura:', error);
+                resultadoDiv.style.display = 'block';
+                resultadoDiv.style.background = '#FEE2E2';
+                resultadoDiv.style.border = '1px solid #DC2626';
+                resultadoDiv.innerHTML = `
+                    <div style="color: #991B1B;">
+                        <h4 style="margin-bottom: 8px;">❌ Error de Conexión</h4>
+                        <p style="font-size: 14px;">${error.message}</p>
+                    </div>
+                `;
+            } finally {
+                // Rehabilitar botón
+                btnGenerar.disabled = false;
+                btnGenerar.textContent = 'Generar Factura en Alegra';
+            }
+        }
+
+        // ==================== FIN FACTURACIÓN ====================
+
     </script>
 </body>
 </html>
