@@ -207,6 +207,17 @@ const Auth = {
      * Redirigir según rol del usuario
      */
     redirigirSegunRol(rol) {
+        // Verificar si hay un parámetro redirect en la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectUrl = urlParams.get('redirect');
+
+        // Si hay redirect y el usuario es admin, redirigir allí
+        if (redirectUrl && (rol === 'admin' || rol === 'ADMIN')) {
+            window.location.href = redirectUrl;
+            return;
+        }
+
+        // Redirección normal según rol
         if (rol === 'admin') {
             window.location.href = '/panel-admin.html';
         } else if (rol === 'agente_chat') {
