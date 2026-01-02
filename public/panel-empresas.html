@@ -3570,7 +3570,21 @@
                     const nombre = `${orden.primerNombre || ''} ${orden.segundoNombre || ''} ${orden.primerApellido || ''} ${orden.segundoApellido || ''}`.trim();
                     const cedula = orden.numeroId || '-';
                     const fechaConsulta = orden.fechaConsulta ? new Date(orden.fechaConsulta).toLocaleDateString('es-CO') : '-';
-                    const fechaAtencion = orden.fechaAtencion ? new Date(orden.fechaAtencion).toLocaleDateString('es-CO') : '-';
+
+                    // Fecha de atención con hora
+                    let fechaAtencion = '-';
+                    if (orden.fechaAtencion) {
+                        const fecha = new Date(orden.fechaAtencion);
+                        const fechaStr = fecha.toLocaleDateString('es-CO', { timeZone: 'America/Bogota' });
+                        const horaStr = fecha.toLocaleTimeString('es-CO', {
+                            timeZone: 'America/Bogota',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true
+                        });
+                        fechaAtencion = `${fechaStr} ${horaStr}`;
+                    }
+
                     const estado = orden.atendido || 'PENDIENTE';
                     const statusClass = estado === 'ATENDIDO' ? 'atendido' : (estado === 'EN PROCESO' ? 'proceso' : 'pendiente');
                     const initials = nombre.split(' ').slice(0, 2).map(n => n.charAt(0)).join('').toUpperCase() || '?';
