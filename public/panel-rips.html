@@ -529,16 +529,12 @@
         </div>
     </div>
 
+    <script src="/js/auth.js"></script>
     <script>
         // Estado global
         let examenes = [];
         let ripsGenerado = null;
-
-        // Verificar autenticación
-        const token = localStorage.getItem('token');
-        if (!token) {
-            window.location.href = '/login.html?redirect=/panel-rips.html';
-        }
+        let usuarioActual = null;
 
         // Cambiar entre tabs
         function cambiarTab(index) {
@@ -564,7 +560,7 @@
         async function cargarExamenes() {
             try {
                 const response = await fetch('/api/rips/examenes', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
                 });
 
                 const data = await response.json();
@@ -636,7 +632,7 @@
                     fetch(`/api/rips/examenes/${examen.id}`, {
                         method: 'PUT',
                         headers: {
-                            'Authorization': `Bearer ${token}`,
+                            'Authorization': `Bearer ${Auth.getToken()}`,
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
@@ -676,7 +672,7 @@
             try {
                 const response = await fetch(
                     `/api/rips/generar?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`,
-                    { headers: { 'Authorization': `Bearer ${token}` } }
+                    { headers: { 'Authorization': `Bearer ${Auth.getToken()}` } }
                 );
 
                 const data = await response.json();
@@ -791,7 +787,7 @@
                 const response = await fetch('/api/rips/exportar', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${token}`,
+                        'Authorization': `Bearer ${Auth.getToken()}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ fecha_inicio: fechaInicio, fecha_fin: fechaFin })
@@ -815,7 +811,7 @@
         async function cargarHistorico() {
             try {
                 const response = await fetch('/api/rips/exportaciones', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
                 });
 
                 const data = await response.json();
@@ -885,7 +881,11 @@
         }
 
         // Inicialización
-        window.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('DOMContentLoaded', async () => {
+            // Proteger página - solo admin puede acceder
+            usuarioActual = await Auth.protegerPagina(['admin']);
+            if (!usuarioActual) return;
+
             cargarExamenes();
 
             // Setear fecha de hoy por defecto
