@@ -1,0 +1,73 @@
+<!-- Top Bar con buscador global -->
+<div class="top-bar">
+    <div class="top-bar-search">
+        <i data-feather="search"></i>
+        <input type="text" id="globalSearchInput" placeholder="Buscar órdenes por nombre, cédula o empresa..." onkeypress="buscarGlobal(event)">
+    </div>
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" style="display: none;">
+        <i data-feather="moon" id="themeIcon"></i>
+        <span id="themeText">Dark</span>
+    </button>
+</div>
+
+<script>
+// Función de búsqueda global
+function buscarGlobal(event) {
+    if (event.key === 'Enter') {
+        const query = document.getElementById('globalSearchInput').value.trim();
+        if (query) {
+            // Redirigir a ordenes.html con el parámetro de búsqueda
+            window.location.href = `/ordenes.html?search=${encodeURIComponent(query)}`;
+        }
+    }
+}
+
+// Toggle theme (dark/light mode)
+function toggleTheme() {
+    const html = document.documentElement;
+    const currentTheme = html.getAttribute('data-theme') || 'light';
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+    html.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+
+    updateThemeButton(newTheme);
+}
+
+function updateThemeButton(theme) {
+    const themeIcon = document.getElementById('themeIcon');
+    const themeText = document.getElementById('themeText');
+
+    if (themeIcon && themeText) {
+        if (theme === 'dark') {
+            themeIcon.setAttribute('data-feather', 'sun');
+            themeText.textContent = 'Light';
+        } else {
+            themeIcon.setAttribute('data-feather', 'moon');
+            themeText.textContent = 'Dark';
+        }
+
+        // Re-render feather icons
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+    }
+}
+
+// Initialize theme on page load
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    updateThemeButton(savedTheme);
+}
+
+// Auto-initialize
+document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
+
+    // Reemplazar iconos de feather
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+});
+</script>

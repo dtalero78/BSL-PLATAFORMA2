@@ -2196,76 +2196,12 @@
 <body>
     <div class="app-container">
         <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
-                <i data-feather="chevron-left"></i>
-            </button>
-            <div class="sidebar-logo">
-                <img src="/bsl-logo.png" alt="BSL - Bienestar & Salud Laboral">
-            </div>
-            <nav class="sidebar-nav">
-                <a href="/ordenes.html" class="nav-item active" data-tooltip="Ordenes">
-                    <i data-feather="clipboard-list"></i>
-                    <span>Ordenes</span>
-                </a>
-                <a href="/nueva-orden.html" class="nav-item" data-tooltip="Nueva Orden">
-                    <i data-feather="plus-circle"></i>
-                    <span>Nueva Orden</span>
-                </a>
-                <a href="/subir-lote.html" target="_blank" class="nav-item" data-tooltip="Subir Lote">
-                    <i data-feather="upload"></i>
-                    <span>Subir Lote</span>
-                </a>
-                <div class="nav-group">
-                    <div class="nav-item has-submenu" data-tooltip="Calendario" onclick="toggleNavGroup(this)">
-                        <i data-feather="calendar"></i>
-                        <span>Calendario</span>
-                    </div>
-                    <div class="nav-submenu">
-                        <a href="/calendario.html" class="nav-item" data-tooltip="Ver Calendario">
-                            <i data-feather="eye"></i>
-                            <span>Ver Calendario</span>
-                        </a>
-                        <a href="/calendario.html" class="nav-item" data-tooltip="Fijar Tiempo">
-                            <i data-feather="clock"></i>
-                            <span>Fijar Tiempo</span>
-                        </a>
-                    </div>
-                </div>
-                <a href="/medicos.html" class="nav-item" data-tooltip="Médicos">
-                    <i data-feather="users"></i>
-                    <span>Médicos</span>
-                </a>
-                <a href="/examenes.html" class="nav-item" data-tooltip="Exámenes">
-                    <i data-feather="activity"></i>
-                    <span>Exámenes</span>
-                </a>
-                <a href="/empresas.html" class="nav-item" data-tooltip="Empresas">
-                    <i data-feather="briefcase"></i>
-                    <span>Empresas</span>
-                </a>
-                <a href="https://bsl-plataforma.com/panel-empresas.html" class="nav-item" target="_blank" data-tooltip="Panel Empresas">
-                    <i data-feather="grid"></i>
-                    <span>Panel Empresas</span>
-                </a>
-                <div class="nav-item" onclick="abrirModalFacturacion()" data-tooltip="Generar Factura" style="cursor: pointer; background: #10B981; color: white;">
-                    <i data-feather="dollar-sign"></i>
-                    <span>Generar Factura</span>
-                </div>
-            </nav>
-        </aside>
+        <!-- Sidebar (cargado dinámicamente) -->
+        <div id="sidebar-container"></div>
 
         <!-- Top Bar con buscador global -->
-        <div class="top-bar">
-            <div class="top-bar-search">
-                <i data-feather="search"></i>
-                <input type="text" id="searchInput" placeholder="Buscar órdenes por nombre, cédula o empresa...">
-            </div>
-            <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
-                <i data-feather="moon" id="themeIcon"></i>
-                <span id="themeText">Dark</span>
-            </button>
-        </div>
+        <!-- Top Bar (cargado dinámicamente) -->
+        <div id="topbar-container"></div>
 
         <!-- Main Content -->
         <main class="main-content">
@@ -5084,5 +5020,9 @@
         // ==================== FIN FACTURACIÓN ====================
 
     </script>
+    <!-- Cargar componentes compartidos -->
+    <script src="/js/modal-disponibilidad.js"></script>
+    <script src="/js/load-sidebar.js"></script>
+    <script src="/js/load-topbar.js"></script>
 </body>
 </html>

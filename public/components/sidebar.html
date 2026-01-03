@@ -1,0 +1,64 @@
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+    <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
+        <i data-feather="chevron-left"></i>
+    </button>
+    <div class="sidebar-logo">
+        <img src="/bsl-logo.png" alt="BSL - Bienestar & Salud Laboral">
+        <div>Sistema Médico</div>
+    </div>
+    <nav class="sidebar-nav">
+        <a href="/" class="nav-item" data-tooltip="Formulario Médico" data-page="index">
+            <i data-feather="file-text"></i>
+            <span>Formulario Médico</span>
+        </a>
+        <a href="/ordenes.html" class="nav-item" data-tooltip="Ordenes" data-page="ordenes">
+            <i data-feather="clipboard-list"></i>
+            <span>Ordenes</span>
+        </a>
+        <a href="/nueva-orden.html" class="nav-item" data-tooltip="Nueva Orden" data-page="nueva-orden">
+            <i data-feather="plus-circle"></i>
+            <span>Nueva Orden</span>
+        </a>
+        <a href="/subir-lote.html" target="_blank" class="nav-item" data-tooltip="Subir Lote">
+            <i data-feather="upload"></i>
+            <span>Subir Lote</span>
+        </a>
+        <a href="/calendario.html" class="nav-item" data-tooltip="Calendario" data-page="calendario">
+            <i data-feather="calendar"></i>
+            <span>Calendario</span>
+        </a>
+        <div class="nav-group">
+            <div class="nav-item has-submenu" data-tooltip="Médicos" onclick="toggleNavGroup(this)">
+                <i data-feather="users"></i>
+                <span>Médicos</span>
+            </div>
+            <div class="nav-submenu">
+                <a href="/medicos.html" class="nav-item" data-tooltip="Ver Médicos" data-page="medicos">
+                    <i data-feather="eye"></i>
+                    <span>Ver Médicos</span>
+                </a>
+                <a href="#" class="nav-item" data-tooltip="Fijar Tiempo" id="btnFijarTiempoConsulta">
+                    <i data-feather="clock"></i>
+                    <span>Fijar Tiempo</span>
+                </a>
+            </div>
+        </div>
+        <a href="/examenes.html" class="nav-item" data-tooltip="Exámenes" data-page="examenes">
+            <i data-feather="activity"></i>
+            <span>Exámenes</span>
+        </a>
+        <a href="/empresas.html" class="nav-item" data-tooltip="Empresas" data-page="empresas">
+            <i data-feather="briefcase"></i>
+            <span>Empresas</span>
+        </a>
+        <a href="https://bsl-plataforma.com/panel-empresas.html" class="nav-item" target="_blank" data-tooltip="Panel Empresas">
+            <i data-feather="grid"></i>
+            <span>Panel Empresas</span>
+        </a>
+        <div class="nav-item" onclick="abrirModalFacturacion()" data-tooltip="Generar Factura" style="cursor: pointer; background: #10B981; color: white;">
+            <i data-feather="dollar-sign"></i>
+            <span>Generar Factura</span>
+        </div>
+    </nav>
+</aside>

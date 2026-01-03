@@ -397,5 +397,16 @@
     </div>
 
     <script src="script.js"></script>
+    <!-- Cargar componentes compartidos -->
+    <script src="/js/modal-disponibilidad.js"></script>
+    <script src="/js/load-sidebar.js"></script>
+    <script src="/js/load-topbar.js">
+
+        // Toggle navigation group (para menú con submenús)
+        function toggleNavGroup(element) {
+            const group = element.closest('.nav-group');
+            group.classList.toggle('open');
+        }
+</script>
 </body>
 </html>

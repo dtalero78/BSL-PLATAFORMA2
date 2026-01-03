@@ -103,6 +103,49 @@
             color: #2563EB;
         }
 
+        /* Menú con subitems desplegables */
+        .nav-group {
+            position: relative;
+        }
+
+        .nav-item.has-submenu {
+            cursor: pointer;
+        }
+
+        .nav-item.has-submenu::after {
+            content: '';
+            width: 0;
+            height: 0;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 5px solid #64748B;
+            margin-left: auto;
+            transition: transform 0.2s ease;
+        }
+
+        .nav-group.open .nav-item.has-submenu::after {
+            transform: rotate(180deg);
+        }
+
+        .nav-submenu {
+            display: none;
+            overflow: hidden;
+        }
+
+        .nav-group.open .nav-submenu {
+            display: block;
+        }
+
+        .nav-submenu .nav-item {
+            padding-left: 44px;
+            font-size: 13px;
+        }
+
+        .nav-submenu .nav-item i {
+            width: 16px;
+            height: 16px;
+        }
+
         /* Lista médicos tiempo consulta */
         .medico-tiempo-item {
             display: flex;
@@ -182,320 +225,7 @@
             margin-left: 8px;
         }
 
-        /* Estilos para disponibilidad de médicos */
-        .disponibilidad-section {
-            margin-top: 24px;
-            padding-top: 20px;
-            border-top: 1px solid #E2E8F0;
-        }
-
-        .disponibilidad-section h4 {
-            font-size: 14px;
-            font-weight: 600;
-            color: #1E293B;
-            margin-bottom: 16px;
-        }
-
-        .dia-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 12px;
-            background: #F8FAFC;
-            border-radius: 8px;
-            margin-bottom: 8px;
-        }
-
-        .dia-row:hover {
-            background: #F1F5F9;
-        }
-
-        .dia-checkbox {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            min-width: 120px;
-        }
-
-        .dia-checkbox input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            accent-color: #2563EB;
-            cursor: pointer;
-        }
-
-        .dia-checkbox label {
-            font-size: 14px;
-            color: #374151;
-            cursor: pointer;
-        }
-
-        .dia-horarios {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex: 1;
-        }
-
-        .dia-horarios select {
-            padding: 6px 10px;
-            border: 1px solid #D1D5DB;
-            border-radius: 6px;
-            font-size: 13px;
-            background: white;
-            cursor: pointer;
-        }
-
-        .dia-horarios select:focus {
-            outline: none;
-            border-color: #2563EB;
-        }
-
-        .dia-horarios select:disabled {
-            background: #F3F4F6;
-            color: #9CA3AF;
-            cursor: not-allowed;
-        }
-
-        .dia-horarios span {
-            color: #64748B;
-            font-size: 13px;
-        }
-
-        /* Contenedor de rangos horarios múltiples */
-        .dia-container {
-            background: #F8FAFC;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            padding: 10px 12px;
-        }
-
-        .dia-container:hover {
-            background: #F1F5F9;
-        }
-
-        .dia-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .rangos-container {
-            margin-top: 8px;
-            padding-left: 130px;
-        }
-
-        .rango-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 6px;
-        }
-
-        .rango-row select {
-            padding: 6px 10px;
-            border: 1px solid #D1D5DB;
-            border-radius: 6px;
-            font-size: 13px;
-            background: white;
-            cursor: pointer;
-        }
-
-        .rango-row select:focus {
-            outline: none;
-            border-color: #2563EB;
-        }
-
-        .rango-row select:disabled {
-            background: #F3F4F6;
-            color: #9CA3AF;
-            cursor: not-allowed;
-        }
-
-        .btn-agregar-rango {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 4px 8px;
-            font-size: 14px;
-            color: #2563EB;
-            background: #EFF6FF;
-            border: 1px solid #BFDBFE;
-            border-radius: 4px;
-            cursor: pointer;
-            min-width: 26px;
-        }
-
-        .btn-agregar-rango:hover {
-            background: #DBEAFE;
-        }
-
-        .btn-eliminar-rango {
-            padding: 4px 8px;
-            font-size: 14px;
-            color: #DC2626;
-            background: #FEE2E2;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .btn-eliminar-rango:hover {
-            background: #FECACA;
-        }
-
-        .btn-copiar-todos {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 10px;
-            font-size: 12px;
-            color: #059669;
-            background: #D1FAE5;
-            border: 1px solid #6EE7B7;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 8px;
-        }
-
-        .btn-copiar-todos:hover {
-            background: #A7F3D0;
-        }
-
-        .medico-selector {
-            margin-bottom: 20px;
-        }
-
-        .medico-selector select {
-            width: 100%;
-            padding: 12px 14px;
-            border: 1px solid #D1D5DB;
-            border-radius: 8px;
-            font-size: 14px;
-            background: white;
-            cursor: pointer;
-        }
-
-        .medico-selector select:focus {
-            outline: none;
-            border-color: #2563EB;
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-        }
-
-        .tiempo-consulta-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 16px;
-            background: #EFF6FF;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-
-        .tiempo-consulta-row label {
-            font-size: 14px;
-            color: #1E40AF;
-            font-weight: 500;
-        }
-
-        .tiempo-consulta-row input {
-            width: 70px;
-            padding: 8px 10px;
-            border: 1px solid #93C5FD;
-            border-radius: 6px;
-            font-size: 14px;
-            text-align: center;
-            background: white;
-        }
-
-        .tiempo-consulta-row input:focus {
-            outline: none;
-            border-color: #2563EB;
-        }
-
-        .tiempo-consulta-row span {
-            color: #1E40AF;
-            font-size: 13px;
-        }
-
-        .btn-guardar-disponibilidad {
-            width: 100%;
-            padding: 12px;
-            background: #2563EB;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.15s ease;
-            margin-top: 16px;
-        }
-
-        .btn-guardar-disponibilidad:hover {
-            background: #1D4ED8;
-        }
-
-        .btn-guardar-disponibilidad:disabled {
-            background: #9CA3AF;
-            cursor: not-allowed;
-        }
-
-        .disponibilidad-guardada {
-            display: none;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            color: #10B981;
-            font-size: 14px;
-            margin-top: 12px;
-        }
-
-        .disponibilidad-guardada.show {
-            display: flex;
-        }
-
-        /* Tabs de Modalidad */
-        .modalidad-tabs {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 16px;
-            background: #F1F5F9;
-            padding: 4px;
-            border-radius: 10px;
-        }
-
-        .modalidad-tab {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 10px 16px;
-            border: none;
-            background: transparent;
-            color: #64748B;
-            font-size: 14px;
-            font-weight: 500;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .modalidad-tab:hover {
-            color: #374151;
-        }
-
-        .modalidad-tab.active {
-            background: white;
-            color: #2563EB;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        .modalidad-tab svg {
-            width: 18px;
-            height: 18px;
-        }
+        /* Estilos de disponibilidad médica ahora están en modal-disponibilidad.html */
 
         /* Top Bar Fijo */
         .top-bar {
@@ -1448,55 +1178,11 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="sidebar-logo">
-                <img src="/bsl-logo.png" alt="BSL - Bienestar & Salud Laboral">
-                <span>Sistema Médico</span>
-            </div>
-            <nav class="sidebar-nav">
-                <a href="/" class="nav-item">
-                    <i data-feather="file-text"></i>
-                    Formulario Médico
-                </a>
-                <a href="/ordenes.html" class="nav-item">
-                    <i data-feather="clipboard"></i>
-                    Órdenes
-                </a>
-                <a href="/nueva-orden.html" class="nav-item">
-                    <i data-feather="plus-circle"></i>
-                    Nueva Orden
-                </a>
-                <a href="/calendario.html" class="nav-item active">
-                    <i data-feather="calendar"></i>
-                    Calendario
-                </a>
-                <a href="#" class="nav-item nav-subitem" onclick="abrirModalTiempoConsulta(); return false;">
-                    <i data-feather="clock"></i>
-                    Fijar Tiempo Consulta
-                </a>
-                <a href="/medicos.html" class="nav-item">
-                    <i data-feather="user-check"></i>
-                    Médicos
-                </a>
-                <a href="/examenes.html" class="nav-item">
-                    <i data-feather="activity"></i>
-                    Exámenes
-                </a>
-                <a href="/empresas.html" class="nav-item">
-                    <i data-feather="briefcase"></i>
-                    Empresas
-                </a>
-            </nav>
-        </aside>
+        <!-- Sidebar (cargado dinámicamente) -->
+        <div id="sidebar-container"></div>
 
-        <!-- Top Bar con buscador global -->
-        <div class="top-bar">
-            <div class="top-bar-search">
-                <i data-feather="search"></i>
-                <input type="text" id="globalSearchInput" placeholder="Buscar órdenes por nombre, cédula o empresa..." onkeypress="buscarGlobal(event)">
-            </div>
-        </div>
+        <!-- Top Bar (cargado dinámicamente) -->
+        <div id="topbar-container"></div>
 
         <!-- Main Content -->
         <main class="main-content">
@@ -1599,6 +1285,14 @@
                 <div class="day-view-header">
                     <div class="day-view-title" id="dayViewTitle">Viernes 5 de Diciembre de 2025</div>
                     <div class="day-view-subtitle">Agenda médica del día</div>
+                    <div class="medico-filter-container" style="margin: 15px 0;">
+                        <label for="medicoFilterSelect" style="margin-right: 10px; font-weight: 500;">
+                            <i data-feather="filter"></i> Filtrar por médico:
+                        </label>
+                        <select id="medicoFilterSelect" onchange="aplicarFiltroMedico(this.value)" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #e5e7eb; min-width: 200px; cursor: pointer;">
+                            <option value="">Todos los médicos</option>
+                        </select>
+                    </div>
                     <div class="day-view-stats">
                         <div class="day-stat">
                             <div class="day-stat-icon">
@@ -1714,71 +1408,7 @@
         </div>
     </div>
 
-    <!-- Modal Disponibilidad Médicos -->
-    <div id="modalTiempoConsulta" class="modal">
-        <div class="modal-content" style="max-width: 550px;">
-            <div class="modal-header">
-                <h2 class="modal-title">Configurar Disponibilidad</h2>
-                <button class="modal-close" onclick="cerrarModalTiempoConsulta()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p style="color: #64748B; margin-bottom: 16px; font-size: 14px;">
-                    Seleccione un médico para configurar su tiempo de consulta y los días/horarios en que está disponible.
-                </p>
-
-                <!-- Selector de médico -->
-                <div class="medico-selector">
-                    <select id="selectMedicoDisponibilidad" onchange="cargarDisponibilidadMedico()">
-                        <option value="">Seleccionar médico...</option>
-                    </select>
-                </div>
-
-                <!-- Contenido que aparece al seleccionar médico -->
-                <div id="contenidoDisponibilidad" style="display: none;">
-                    <!-- Tiempo de consulta -->
-                    <div class="tiempo-consulta-row">
-                        <label>Duración de consulta:</label>
-                        <input type="number" id="inputTiempoConsulta" value="10" min="5" max="120">
-                        <span>minutos</span>
-                    </div>
-
-                    <!-- Tabs de Modalidad -->
-                    <div class="modalidad-tabs">
-                        <button type="button" class="modalidad-tab active" data-modalidad="presencial" onclick="cambiarModalidad('presencial')">
-                            <i data-feather="users"></i> Presencial
-                        </button>
-                        <button type="button" class="modalidad-tab" data-modalidad="virtual" onclick="cambiarModalidad('virtual')">
-                            <i data-feather="video"></i> Virtual
-                        </button>
-                    </div>
-
-                    <!-- Días de la semana con múltiples rangos -->
-                    <div class="disponibilidad-section">
-                        <h4>Días y horarios de trabajo <span id="modalidadActualLabel" style="font-weight: normal; color: #2563EB;">(Presencial)</span></h4>
-                        <p style="font-size: 12px; color: #64748B; margin-bottom: 12px;">Puedes agregar múltiples rangos por día (ej: mañana y tarde)</p>
-
-                        <div id="diasContainer">
-                            <!-- Los días se generan dinámicamente -->
-                        </div>
-                    </div>
-
-                    <button class="btn-guardar-disponibilidad" onclick="guardarDisponibilidad()">
-                        Guardar Configuración
-                    </button>
-                    <div id="disponibilidadGuardada" class="disponibilidad-guardada">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                        Configuración guardada correctamente
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn-modal secondary" onclick="cerrarModalTiempoConsulta()">Cerrar</button>
-            </div>
-            <div style="text-align: center; padding: 4px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0;">modalTiempoConsulta</div>
-        </div>
-    </div>
+    <!-- Modal Disponibilidad Médicos (cargado dinámicamente desde componente compartido) -->
 
     <script>
         // Función de búsqueda global
@@ -2086,8 +1716,15 @@
 
         function quitarFiltroMedico() {
             medicoFiltrado = null;
+            document.getElementById('medicoFilterSelect').value = '';
             actualizarTitulosAgenda(selectedDate, null);
             cargarCitasDia(selectedDate, null);
+        }
+
+        function aplicarFiltroMedico(medico) {
+            medicoFiltrado = medico || null;
+            actualizarTitulosAgenda(selectedDate, medicoFiltrado);
+            cargarCitasDia(selectedDate, medicoFiltrado);
         }
 
         function cambiarDia(delta) {
@@ -2125,6 +1762,26 @@
             timeline.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><p>Cargando agenda...</p></div>';
 
             try {
+                // Cargar médicos activos desde la base de datos
+                const responseMedicos = await fetch('/api/medicos');
+                const resultMedicos = await responseMedicos.json();
+
+                if (resultMedicos.success) {
+                    // Poblar dropdown con médicos de la base de datos
+                    const select = document.getElementById('medicoFilterSelect');
+
+                    select.innerHTML = '<option value="">Todos los médicos</option>';
+                    resultMedicos.data.forEach(m => {
+                        const option = document.createElement('option');
+                        // Usar alias como valor (es lo que está en HistoriaClinica.medico)
+                        option.value = m.alias;
+                        option.textContent = m.alias;
+                        if (m.alias === medico) option.selected = true;
+                        select.appendChild(option);
+                    });
+                }
+
+                // Cargar citas filtradas si hay un médico seleccionado
                 let url = `/api/calendario/dia?fecha=${dateStr}`;
                 if (medico) {
                     url += `&medico=${encodeURIComponent(medico)}`;
@@ -2397,444 +2054,18 @@
 
         // ========== MODAL DISPONIBILIDAD MÉDICOS ==========
 
-        let medicoSeleccionadoId = null;
-        let modalidadActual = 'presencial';
-        // Almacenar la configuración de disponibilidad por modalidad
-        // Nuevo formato: { presencial: { 0: { activo, rangos: [{hora_inicio, hora_fin}, ...] }, ... }, virtual: { ... } }
-        let disponibilidadPorModalidad = {
-            presencial: {},
-            virtual: {}
-        };
+        // Funciones de disponibilidad médica ahora están en modal-disponibilidad.js como globales
 
-        const diasNombres = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-
-        function abrirModalTiempoConsulta() {
-            document.getElementById('modalTiempoConsulta').classList.add('active');
-            document.getElementById('disponibilidadGuardada').classList.remove('show');
-            poblarSelectMedicosDisponibilidad();
-            modalidadActual = 'presencial';
-            actualizarTabsModalidad();
-            renderizarDias();
-            feather.replace();
+        // Toggle navigation group (para menú con submenús)
+        function toggleNavGroup(element) {
+            const group = element.closest('.nav-group');
+            group.classList.toggle('open');
         }
-
-        function cerrarModalTiempoConsulta() {
-            document.getElementById('modalTiempoConsulta').classList.remove('active');
-            document.getElementById('selectMedicoDisponibilidad').value = '';
-            document.getElementById('contenidoDisponibilidad').style.display = 'none';
-            medicoSeleccionadoId = null;
-            modalidadActual = 'presencial';
-            disponibilidadPorModalidad = { presencial: {}, virtual: {} };
-        }
-
-        function cambiarModalidad(modalidad) {
-            // Guardar configuración actual antes de cambiar
-            guardarConfiguracionEnMemoria(modalidadActual);
-
-            // Cambiar modalidad
-            modalidadActual = modalidad;
-            actualizarTabsModalidad();
-
-            // Renderizar días con la nueva modalidad
-            renderizarDias();
-        }
-
-        function actualizarTabsModalidad() {
-            document.querySelectorAll('.modalidad-tab').forEach(tab => {
-                tab.classList.toggle('active', tab.dataset.modalidad === modalidadActual);
-            });
-            const label = modalidadActual === 'presencial' ? '(Presencial)' : '(Virtual)';
-            document.getElementById('modalidadActualLabel').textContent = label;
-            feather.replace();
-        }
-
-        function generarOpcionesHora() {
-            let opciones = '';
-            for (let hora = 6; hora <= 22; hora++) {
-                for (let minuto = 0; minuto < 60; minuto += 30) {
-                    const horaStr = `${String(hora).padStart(2, '0')}:${String(minuto).padStart(2, '0')}`;
-                    const hora12 = hora > 12 ? hora - 12 : hora;
-                    const minutoStr = String(minuto).padStart(2, '0');
-                    const ampm = hora >= 12 ? 'PM' : 'AM';
-                    opciones += `<option value="${horaStr}">${hora12}:${minutoStr} ${ampm}</option>`;
-                }
-            }
-            return opciones;
-        }
-
-        function renderizarDias() {
-            const container = document.getElementById('diasContainer');
-            const config = disponibilidadPorModalidad[modalidadActual];
-            const opcionesHora = generarOpcionesHora();
-
-            // Orden: Lunes(1) a Sábado(6), luego Domingo(0)
-            const ordenDias = [1, 2, 3, 4, 5, 6, 0];
-
-            let html = '';
-            for (const dia of ordenDias) {
-                const diaConfig = config[dia] || { activo: false, rangos: [] };
-                const activo = diaConfig.activo;
-                const rangos = diaConfig.rangos && diaConfig.rangos.length > 0
-                    ? diaConfig.rangos
-                    : [{ hora_inicio: '08:00', hora_fin: '17:00' }];
-
-                html += `
-                    <div class="dia-container" data-dia="${dia}">
-                        <div class="dia-header">
-                            <div class="dia-checkbox">
-                                <input type="checkbox" id="dia-${dia}" ${activo ? 'checked' : ''} onchange="toggleDia(${dia})">
-                                <label for="dia-${dia}">${diasNombres[dia]}</label>
-                            </div>
-                        </div>
-                        <div class="rangos-container" id="rangos-${dia}" style="${activo ? '' : 'display: none;'}">
-                            ${rangos.map((rango, idx) => `
-                                <div class="rango-row" data-rango-idx="${idx}">
-                                    <select class="rango-inicio" ${!activo ? 'disabled' : ''}>
-                                        ${opcionesHora.replace(`value="${rango.hora_inicio}"`, `value="${rango.hora_inicio}" selected`)}
-                                    </select>
-                                    <span>a</span>
-                                    <select class="rango-fin" ${!activo ? 'disabled' : ''}>
-                                        ${opcionesHora.replace(`value="${rango.hora_fin}"`, `value="${rango.hora_fin}" selected`)}
-                                    </select>
-                                    ${rangos.length > 1 ? `<button type="button" class="btn-eliminar-rango" onclick="eliminarRango(${dia}, ${idx})">×</button>` : ''}
-                                    <button type="button" class="btn-agregar-rango" onclick="agregarRango(${dia})">+</button>
-                                </div>
-                            `).join('')}
-                            <button type="button" class="btn-copiar-todos" onclick="copiarATodos(${dia})" id="btn-copiar-${dia}">
-                                Copiar a todos los días
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }
-
-            container.innerHTML = html;
-        }
-
-        function toggleDia(dia) {
-            const checkbox = document.getElementById(`dia-${dia}`);
-            const rangosContainer = document.getElementById(`rangos-${dia}`);
-            const activo = checkbox.checked;
-
-            rangosContainer.style.display = activo ? 'block' : 'none';
-
-            // Habilitar/deshabilitar selects
-            rangosContainer.querySelectorAll('select').forEach(select => {
-                select.disabled = !activo;
-            });
-        }
-
-        function copiarATodos(diaOrigen) {
-            // Obtener los rangos del día origen
-            const rangosContainer = document.getElementById(`rangos-${diaOrigen}`);
-            const rangosRows = rangosContainer.querySelectorAll('.rango-row');
-
-            const rangosOrigen = [];
-            rangosRows.forEach(row => {
-                const inicio = row.querySelector('.rango-inicio');
-                const fin = row.querySelector('.rango-fin');
-                if (inicio && fin) {
-                    rangosOrigen.push({
-                        hora_inicio: inicio.value,
-                        hora_fin: fin.value
-                    });
-                }
-            });
-
-            if (rangosOrigen.length === 0) return;
-
-            // Aplicar a TODOS los días (incluyendo el origen)
-            const ordenDias = [0, 1, 2, 3, 4, 5, 6];
-            for (const dia of ordenDias) {
-                // Activar el checkbox (si no es el origen, ya está activo)
-                if (dia !== diaOrigen) {
-                    const checkbox = document.getElementById(`dia-${dia}`);
-                    checkbox.checked = true;
-                }
-
-                // Actualizar la configuración en memoria para TODOS los días
-                disponibilidadPorModalidad[modalidadActual][dia] = {
-                    activo: true,
-                    rangos: [...rangosOrigen]
-                };
-            }
-
-            // Re-renderizar para mostrar los cambios
-            renderizarDias();
-
-            // Mostrar confirmación visual
-            const btn = document.getElementById(`btn-copiar-${diaOrigen}`);
-            const textoOriginal = btn.textContent;
-            btn.textContent = '✓ Copiado';
-            btn.style.background = '#10B981';
-            btn.style.color = 'white';
-            setTimeout(() => {
-                btn.textContent = textoOriginal;
-                btn.style.background = '';
-                btn.style.color = '';
-            }, 1500);
-        }
-
-        function agregarRango(dia) {
-            const opcionesHora = generarOpcionesHora();
-            const rangosContainer = document.getElementById(`rangos-${dia}`);
-            const rangos = rangosContainer.querySelectorAll('.rango-row');
-            const nuevoIdx = rangos.length;
-
-            const nuevoRango = document.createElement('div');
-            nuevoRango.className = 'rango-row';
-            nuevoRango.dataset.rangoIdx = nuevoIdx;
-            nuevoRango.innerHTML = `
-                <select class="rango-inicio">
-                    ${opcionesHora.replace('value="14:00"', 'value="14:00" selected')}
-                </select>
-                <span>a</span>
-                <select class="rango-fin">
-                    ${opcionesHora.replace('value="18:00"', 'value="18:00" selected')}
-                </select>
-                <button type="button" class="btn-eliminar-rango" onclick="eliminarRango(${dia}, ${nuevoIdx})">×</button>
-                <button type="button" class="btn-agregar-rango" onclick="agregarRango(${dia})">+</button>
-            `;
-
-            rangosContainer.insertBefore(nuevoRango, rangosContainer.querySelector('.btn-copiar-todos'));
-
-            // Agregar botón eliminar al primer rango si ahora hay más de uno
-            if (rangos.length === 1) {
-                const primerRango = rangos[0];
-                if (!primerRango.querySelector('.btn-eliminar-rango')) {
-                    const btnEliminar = document.createElement('button');
-                    btnEliminar.type = 'button';
-                    btnEliminar.className = 'btn-eliminar-rango';
-                    btnEliminar.onclick = () => eliminarRango(dia, 0);
-                    btnEliminar.textContent = '×';
-                    // Insertar antes del botón "+"
-                    const btnAgregar = primerRango.querySelector('.btn-agregar-rango');
-                    primerRango.insertBefore(btnEliminar, btnAgregar);
-                }
-            }
-        }
-
-        function eliminarRango(dia, idx) {
-            const rangosContainer = document.getElementById(`rangos-${dia}`);
-            const rangos = rangosContainer.querySelectorAll('.rango-row');
-
-            if (rangos.length <= 1) return; // No eliminar si es el único
-
-            rangos[idx].remove();
-
-            // Re-indexar rangos y actualizar onclick
-            const nuevosRangos = rangosContainer.querySelectorAll('.rango-row');
-            nuevosRangos.forEach((rango, nuevoIdx) => {
-                rango.dataset.rangoIdx = nuevoIdx;
-                const btn = rango.querySelector('.btn-eliminar-rango');
-                if (btn) {
-                    btn.onclick = () => eliminarRango(dia, nuevoIdx);
-                }
-            });
-
-            // Si solo queda uno, quitar el botón eliminar
-            if (nuevosRangos.length === 1) {
-                const btn = nuevosRangos[0].querySelector('.btn-eliminar-rango');
-                if (btn) btn.remove();
-            }
-        }
-
-        function guardarConfiguracionEnMemoria(modalidad) {
-            disponibilidadPorModalidad[modalidad] = {};
-
-            const ordenDias = [0, 1, 2, 3, 4, 5, 6];
-            for (const dia of ordenDias) {
-                const checkbox = document.getElementById(`dia-${dia}`);
-                if (!checkbox) continue;
-
-                const activo = checkbox.checked;
-                const rangosContainer = document.getElementById(`rangos-${dia}`);
-                const rangosRows = rangosContainer ? rangosContainer.querySelectorAll('.rango-row') : [];
-
-                const rangos = [];
-                rangosRows.forEach(row => {
-                    const inicio = row.querySelector('.rango-inicio');
-                    const fin = row.querySelector('.rango-fin');
-                    if (inicio && fin) {
-                        rangos.push({
-                            hora_inicio: inicio.value,
-                            hora_fin: fin.value
-                        });
-                    }
-                });
-
-                disponibilidadPorModalidad[modalidad][dia] = {
-                    activo,
-                    rangos: rangos.length > 0 ? rangos : [{ hora_inicio: '08:00', hora_fin: '17:00' }]
-                };
-            }
-        }
-
-        function poblarSelectMedicosDisponibilidad() {
-            const select = document.getElementById('selectMedicoDisponibilidad');
-            select.innerHTML = '<option value="">Seleccionar médico...</option>';
-
-            medicos.forEach(medico => {
-                const option = document.createElement('option');
-                option.value = medico.id;
-                option.textContent = `${medico.primer_nombre} ${medico.primer_apellido}`;
-                option.dataset.tiempoConsulta = medico.tiempo_consulta || 10;
-                select.appendChild(option);
-            });
-        }
-
-        async function cargarDisponibilidadMedico() {
-            const select = document.getElementById('selectMedicoDisponibilidad');
-            const medicoId = select.value;
-            const contenido = document.getElementById('contenidoDisponibilidad');
-
-            if (!medicoId) {
-                contenido.style.display = 'none';
-                medicoSeleccionadoId = null;
-                return;
-            }
-
-            medicoSeleccionadoId = medicoId;
-            contenido.style.display = 'block';
-            document.getElementById('disponibilidadGuardada').classList.remove('show');
-
-            // Obtener tiempo de consulta del médico seleccionado
-            const option = select.options[select.selectedIndex];
-            document.getElementById('inputTiempoConsulta').value = option.dataset.tiempoConsulta || 10;
-
-            // Resetear configuración en memoria
-            disponibilidadPorModalidad = { presencial: {}, virtual: {} };
-
-            // Cargar disponibilidad existente para AMBAS modalidades
-            try {
-                // Cargar presencial (agrupado por día con múltiples rangos)
-                const responsePresencial = await fetch(`/api/medicos/${medicoId}/disponibilidad?modalidad=presencial&agrupado=true`);
-                const resultPresencial = await responsePresencial.json();
-
-                if (resultPresencial.success && resultPresencial.data.length > 0) {
-                    resultPresencial.data.forEach(config => {
-                        const dia = config.dia_semana;
-                        disponibilidadPorModalidad.presencial[dia] = {
-                            activo: true,
-                            rangos: config.rangos || [{ hora_inicio: '08:00', hora_fin: '17:00' }]
-                        };
-                    });
-                }
-
-                // Cargar virtual (agrupado por día con múltiples rangos)
-                const responseVirtual = await fetch(`/api/medicos/${medicoId}/disponibilidad?modalidad=virtual&agrupado=true`);
-                const resultVirtual = await responseVirtual.json();
-
-                if (resultVirtual.success && resultVirtual.data.length > 0) {
-                    resultVirtual.data.forEach(config => {
-                        const dia = config.dia_semana;
-                        disponibilidadPorModalidad.virtual[dia] = {
-                            activo: true,
-                            rangos: config.rangos || [{ hora_inicio: '08:00', hora_fin: '17:00' }]
-                        };
-                    });
-                }
-
-                // Mostrar la modalidad actual (presencial por defecto)
-                modalidadActual = 'presencial';
-                actualizarTabsModalidad();
-                renderizarDias();
-
-            } catch (error) {
-                console.error('Error al cargar disponibilidad:', error);
-            }
-        }
-
-        async function guardarDisponibilidad() {
-            if (!medicoSeleccionadoId) {
-                alert('Seleccione un médico primero');
-                return;
-            }
-
-            const btn = document.querySelector('.btn-guardar-disponibilidad');
-            btn.disabled = true;
-            btn.textContent = 'Guardando...';
-
-            // Guardar configuración actual en memoria antes de enviar
-            guardarConfiguracionEnMemoria(modalidadActual);
-
-            try {
-                // 1. Guardar tiempo de consulta
-                const tiempoConsulta = parseInt(document.getElementById('inputTiempoConsulta').value);
-
-                await fetch(`/api/medicos/${medicoSeleccionadoId}/tiempo-consulta`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ tiempoConsulta })
-                });
-
-                // 2. Guardar disponibilidad PRESENCIAL (con múltiples rangos)
-                const disponibilidadPresencial = [];
-                for (let dia = 0; dia <= 6; dia++) {
-                    const config = disponibilidadPorModalidad.presencial[dia];
-                    disponibilidadPresencial.push({
-                        dia_semana: dia,
-                        activo: config ? config.activo : false,
-                        rangos: config && config.rangos ? config.rangos : [{ hora_inicio: '08:00', hora_fin: '17:00' }]
-                    });
-                }
-
-                await fetch(`/api/medicos/${medicoSeleccionadoId}/disponibilidad`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ disponibilidad: disponibilidadPresencial, modalidad: 'presencial' })
-                });
-
-                // 3. Guardar disponibilidad VIRTUAL (con múltiples rangos)
-                const disponibilidadVirtual = [];
-                for (let dia = 0; dia <= 6; dia++) {
-                    const config = disponibilidadPorModalidad.virtual[dia];
-                    disponibilidadVirtual.push({
-                        dia_semana: dia,
-                        activo: config ? config.activo : false,
-                        rangos: config && config.rangos ? config.rangos : [{ hora_inicio: '08:00', hora_fin: '17:00' }]
-                    });
-                }
-
-                const response = await fetch(`/api/medicos/${medicoSeleccionadoId}/disponibilidad`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ disponibilidad: disponibilidadVirtual, modalidad: 'virtual' })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    document.getElementById('disponibilidadGuardada').classList.add('show');
-
-                    // Actualizar tiempo consulta en memoria
-                    const medicoIndex = medicos.findIndex(m => m.id == medicoSeleccionadoId);
-                    if (medicoIndex !== -1) {
-                        medicos[medicoIndex].tiempo_consulta = tiempoConsulta;
-                    }
-
-                    // Actualizar dataset del option
-                    const select = document.getElementById('selectMedicoDisponibilidad');
-                    const option = select.options[select.selectedIndex];
-                    option.dataset.tiempoConsulta = tiempoConsulta;
-                } else {
-                    alert('Error: ' + result.message);
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error al guardar la configuración');
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Guardar Configuración';
-            }
-        }
-
-        // Cerrar modal al hacer clic fuera
-        document.getElementById('modalTiempoConsulta').addEventListener('click', (e) => {
-            if (e.target.classList.contains('modal')) {
-                cerrarModalTiempoConsulta();
-            }
-        });
     </script>
+
+    <!-- Cargar componentes compartidos -->
+    <script src="/js/load-sidebar.js"></script>
+    <script src="/js/load-topbar.js"></script>
+    <script src="/js/modal-disponibilidad.js"></script>
 </body>
 </html>

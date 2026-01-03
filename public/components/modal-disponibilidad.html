@@ -1,0 +1,331 @@
+<!-- Modal Disponibilidad Médicos -->
+<div id="modalTiempoConsulta" class="modal">
+    <div class="modal-content" style="max-width: 550px;">
+        <div class="modal-header">
+            <h2 class="modal-title">Configurar Disponibilidad</h2>
+            <button class="modal-close" onclick="cerrarModalTiempoConsulta()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="color: #64748B; margin-bottom: 16px; font-size: 14px;">
+                Seleccione un médico para configurar su tiempo de consulta y los días/horarios en que está disponible.
+            </p>
+
+            <!-- Selector de médico -->
+            <div class="medico-selector">
+                <select id="selectMedicoDisponibilidad" onchange="cargarDisponibilidadMedico()">
+                    <option value="">Seleccionar médico...</option>
+                </select>
+            </div>
+
+            <!-- Contenido que aparece al seleccionar médico -->
+            <div id="contenidoDisponibilidad" style="display: none;">
+                <!-- Tiempo de consulta -->
+                <div class="tiempo-consulta-row">
+                    <label>Duración de consulta:</label>
+                    <input type="number" id="inputTiempoConsulta" value="10" min="5" max="120">
+                    <span>minutos</span>
+                </div>
+
+                <!-- Tabs de Modalidad -->
+                <div class="modalidad-tabs">
+                    <button type="button" class="modalidad-tab active" data-modalidad="presencial" onclick="cambiarModalidad('presencial')">
+                        <i data-feather="users"></i> Presencial
+                    </button>
+                    <button type="button" class="modalidad-tab" data-modalidad="virtual" onclick="cambiarModalidad('virtual')">
+                        <i data-feather="video"></i> Virtual
+                    </button>
+                </div>
+
+                <!-- Días de la semana con múltiples rangos -->
+                <div class="disponibilidad-section">
+                    <h4>Días y horarios de trabajo <span id="modalidadActualLabel" style="font-weight: normal; color: #2563EB;">(Presencial)</span></h4>
+                    <p style="font-size: 12px; color: #64748B; margin-bottom: 12px;">Puedes agregar múltiples rangos por día (ej: mañana y tarde)</p>
+
+                    <div id="diasContainer">
+                        <!-- Los días se generan dinámicamente -->
+                    </div>
+                </div>
+
+                <button class="btn-guardar-disponibilidad" onclick="guardarDisponibilidad()">
+                    Guardar Configuración
+                </button>
+                <div id="disponibilidadGuardada" class="disponibilidad-guardada">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    Configuración guardada correctamente
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-modal secondary" onclick="cerrarModalTiempoConsulta()">Cerrar</button>
+        </div>
+        <div style="text-align: center; padding: 4px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0;">modalTiempoConsulta</div>
+    </div>
+</div>
+
+<style>
+    /* Estilos para disponibilidad de médicos */
+    .disponibilidad-section {
+        margin-top: 24px;
+        padding-top: 20px;
+        border-top: 1px solid #E2E8F0;
+    }
+
+    .disponibilidad-section h4 {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1E293B;
+        margin-bottom: 16px;
+    }
+
+    /* Contenedor de rangos horarios múltiples */
+    .dia-container {
+        background: #F8FAFC;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        padding: 10px 12px;
+    }
+
+    .dia-container:hover {
+        background: #F1F5F9;
+    }
+
+    .dia-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .dia-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 120px;
+    }
+
+    .dia-checkbox input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        accent-color: #2563EB;
+        cursor: pointer;
+    }
+
+    .dia-checkbox label {
+        font-size: 14px;
+        color: #374151;
+        cursor: pointer;
+    }
+
+    .rangos-container {
+        margin-top: 8px;
+        padding-left: 130px;
+    }
+
+    .rango-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+    }
+
+    .rango-row select {
+        padding: 6px 10px;
+        border: 1px solid #D1D5DB;
+        border-radius: 6px;
+        font-size: 13px;
+        background: white;
+        cursor: pointer;
+    }
+
+    .rango-row select:focus {
+        outline: none;
+        border-color: #2563EB;
+    }
+
+    .rango-row select:disabled {
+        background: #F3F4F6;
+        color: #9CA3AF;
+        cursor: not-allowed;
+    }
+
+    .btn-agregar-rango {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px 8px;
+        font-size: 14px;
+        color: #2563EB;
+        background: #EFF6FF;
+        border: 1px solid #BFDBFE;
+        border-radius: 4px;
+        cursor: pointer;
+        min-width: 26px;
+    }
+
+    .btn-agregar-rango:hover {
+        background: #DBEAFE;
+    }
+
+    .btn-eliminar-rango {
+        padding: 4px 8px;
+        font-size: 14px;
+        color: #DC2626;
+        background: #FEE2E2;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .btn-eliminar-rango:hover {
+        background: #FECACA;
+    }
+
+    .btn-copiar-todos {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        font-size: 12px;
+        color: #059669;
+        background: #D1FAE5;
+        border: 1px solid #6EE7B7;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-top: 8px;
+    }
+
+    .btn-copiar-todos:hover {
+        background: #A7F3D0;
+    }
+
+    .medico-selector {
+        margin-bottom: 20px;
+    }
+
+    .medico-selector select {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid #D1D5DB;
+        border-radius: 8px;
+        font-size: 14px;
+        background: white;
+        cursor: pointer;
+    }
+
+    .medico-selector select:focus {
+        outline: none;
+        border-color: #2563EB;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .tiempo-consulta-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px;
+        background: #EFF6FF;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .tiempo-consulta-row label {
+        font-size: 14px;
+        color: #1E40AF;
+        font-weight: 500;
+    }
+
+    .tiempo-consulta-row input {
+        width: 70px;
+        padding: 8px 10px;
+        border: 1px solid #93C5FD;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+
+    .tiempo-consulta-row input:focus {
+        outline: none;
+        border-color: #2563EB;
+    }
+
+    .tiempo-consulta-row span {
+        color: #1E40AF;
+        font-size: 13px;
+    }
+
+    .btn-guardar-disponibilidad {
+        width: 100%;
+        padding: 12px;
+        background: #2563EB;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        margin-bottom: 12px;
+    }
+
+    .btn-guardar-disponibilidad:hover {
+        background: #1D4ED8;
+    }
+
+    .btn-guardar-disponibilidad:disabled {
+        background: #9CA3AF;
+        cursor: not-allowed;
+    }
+
+    .disponibilidad-guardada {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        color: #10B981;
+        font-size: 14px;
+    }
+
+    .disponibilidad-guardada.show {
+        display: flex;
+    }
+
+    /* Tabs de Modalidad */
+    .modalidad-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        background: #F1F5F9;
+        padding: 4px;
+        border-radius: 8px;
+    }
+
+    .modalidad-tab {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: transparent;
+        border: none;
+        border-radius: 6px;
+        font-size: 13px;
+        color: #64748B;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .modalidad-tab:hover {
+        color: #374151;
+    }
+
+    .modalidad-tab.active {
+        background: white;
+        color: #2563EB;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .modalidad-tab svg {
+        width: 18px;
+        height: 18px;
+    }
+</style>
