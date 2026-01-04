@@ -1450,6 +1450,16 @@
             usuarioActual = await Auth.protegerPagina(['admin']);
             if (!usuarioActual) return;
 
+            // Actualizar nombre en topbar (con retry por si aún no está cargado)
+            const updateTopbar = () => {
+                if (typeof window.updateTopbarUserName === 'function') {
+                    window.updateTopbarUserName(usuarioActual);
+                } else {
+                    setTimeout(updateTopbar, 50);
+                }
+            };
+            updateTopbar();
+
             // Initialize feather icons
             feather.replace();
 

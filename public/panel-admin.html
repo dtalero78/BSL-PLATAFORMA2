@@ -1413,6 +1413,16 @@
             usuarioActual = await Auth.protegerPagina(['admin']);
             if (!usuarioActual) return;
 
+            // Actualizar nombre en topbar (con retry por si aún no está cargado)
+            const updateTopbar = () => {
+                if (typeof window.updateTopbarUserName === 'function') {
+                    window.updateTopbarUserName(usuarioActual);
+                } else {
+                    setTimeout(updateTopbar, 50);
+                }
+            };
+            updateTopbar();
+
             // Actualizar UI con datos del usuario
             document.getElementById('userName').textContent = usuarioActual.nombreCompleto || 'Administrador';
             document.getElementById('userAvatar').textContent = (usuarioActual.nombreCompleto || 'A').charAt(0).toUpperCase();

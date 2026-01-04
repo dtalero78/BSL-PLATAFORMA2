@@ -1440,6 +1440,16 @@
             // Usuario autenticado, continuar con inicialización
             console.log('Usuario autenticado:', usuarioActual.nombre);
 
+            // Actualizar nombre en topbar (con retry por si aún no está cargado)
+            const updateTopbar = () => {
+                if (typeof window.updateTopbarUserName === 'function') {
+                    window.updateTopbarUserName(usuarioActual);
+                } else {
+                    setTimeout(updateTopbar, 50);
+                }
+            };
+            updateTopbar();
+
             feather.replace();
             cargarMedicos();
             cargarExamenesDisponibles();
@@ -2076,7 +2086,7 @@
 
     <!-- Cargar componentes compartidos -->
     <script src="/js/load-sidebar.js"></script>
-    <script src="/js/load-topbar.js"></script>
+    <script src="/js/load-topbar.js?v=3"></script>
     <script src="/js/modal-disponibilidad.js"></script>
 </body>
 </html>

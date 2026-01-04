@@ -4,11 +4,71 @@
         <i data-feather="search"></i>
         <input type="text" id="searchInput" placeholder="Buscar órdenes por nombre, cédula o empresa...">
     </div>
-    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" style="display: none;">
-        <i data-feather="moon" id="themeIcon"></i>
-        <span id="themeText">Dark</span>
-    </button>
+    <div class="top-bar-actions">
+        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" style="display: none;">
+            <i data-feather="moon" id="themeIcon"></i>
+            <span id="themeText">Dark</span>
+        </button>
+        <div class="user-menu">
+            <span class="user-name" id="topbarUserName">Usuario</span>
+            <button class="btn-logout" onclick="handleLogout()" title="Cerrar sesión">
+                <i data-feather="log-out"></i>
+            </button>
+        </div>
+    </div>
 </div>
+
+<style>
+    .top-bar-actions {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .user-menu {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+    }
+
+    .user-name {
+        font-size: 14px;
+        color: #334155;
+        font-weight: 500;
+    }
+
+    .btn-logout {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        background: transparent;
+        border: 1px solid #E2E8F0;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-logout:hover {
+        background: #FEE2E2;
+        border-color: #F87171;
+    }
+
+    .btn-logout i {
+        width: 18px;
+        height: 18px;
+        color: #64748B;
+    }
+
+    .btn-logout:hover i {
+        color: #DC2626;
+    }
+</style>
 
 <script>
 // Nota: El event listener 'input' se conecta desde cada página (ej: ordenes.html línea 4705)
@@ -53,9 +113,48 @@ function initTheme() {
     updateThemeButton(savedTheme);
 }
 
+// Función para cerrar sesión
+function handleLogout() {
+    if (confirm('¿Estás seguro que deseas cerrar sesión?')) {
+        if (window.Auth && typeof window.Auth.logout === 'function') {
+            window.Auth.logout();
+        } else {
+            // Fallback si Auth no está disponible
+            localStorage.removeItem('bsl_auth_token');
+            localStorage.removeItem('bsl_user');
+            window.location.href = '/login.html';
+        }
+    }
+}
+
+// Función para actualizar el nombre del usuario en el topbar (global)
+window.updateTopbarUserName = function(usuario) {
+    const userNameElement = document.getElementById('topbarUserName');
+    if (!userNameElement) return;
+
+    // Si se pasa un objeto usuario, usarlo directamente
+    if (usuario) {
+        // Intentar nombre, nombreCompleto, o email en ese orden
+        const displayName = usuario.nombre || usuario.nombreCompleto || usuario.email || 'Usuario';
+        userNameElement.textContent = displayName;
+        return;
+    }
+
+    // Si no, intentar obtenerlo de Auth
+    if (window.Auth && typeof window.Auth.getUser === 'function') {
+        const usuarioAuth = window.Auth.getUser();
+        if (usuarioAuth) {
+            const displayName = usuarioAuth.nombre || usuarioAuth.nombreCompleto || usuarioAuth.email || 'Usuario';
+            userNameElement.textContent = displayName;
+        }
+    }
+};
+
 // Auto-initialize
 document.addEventListener('DOMContentLoaded', () => {
     initTheme();
+    // Intentar actualizar el nombre (puede no estar disponible aún)
+    window.updateTopbarUserName();
 
     // Reemplazar iconos de feather
     if (typeof feather !== 'undefined') {
