@@ -595,11 +595,12 @@
             // Orden del circuito de pruebas
             const ordenCircuito = ['formulario', 'adc', 'audiometria', 'visiometria'];
 
+            const baseUrl = 'https://bsl-plataforma.com';
             const mapaPruebas = {
-                'formulario': { nombre: 'Formulario de Salud', url: `/?_id=${ordenId}` },
-                'adc': { nombre: 'Pruebas Psicotécnicas', url: `/adc.html?_id=${ordenId}` },
-                'audiometria': { nombre: 'Audiometría', url: `/audiometria-virtual.html?orden=${ordenId}` },
-                'visiometria': { nombre: 'Visiometría', url: `/visiometria-virtual.html?orden=${ordenId}` }
+                'formulario': { nombre: 'Formulario de Salud', url: `${baseUrl}/?_id=${ordenId}` },
+                'adc': { nombre: 'Pruebas Psicotécnicas', url: `${baseUrl}/pruebas-adc.html?ordenId=${ordenId}` },
+                'audiometria': { nombre: 'Audiometría', url: `${baseUrl}/audiometria-virtual.html?ordenId=${ordenId}` },
+                'visiometria': { nombre: 'Visiometría', url: `${baseUrl}/visiometria-virtual.html?ordenId=${ordenId}` }
             };
 
             // Buscar la PRIMERA prueba pendiente en el orden del circuito
