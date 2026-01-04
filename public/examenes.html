@@ -628,7 +628,7 @@
         // Cargar exámenes al iniciar
         document.addEventListener('DOMContentLoaded', () => {
         // Proteger página con autenticación
-        Auth.protegerPagina(["admin","ADMIN"]).then(usuarioActual => {
+        Auth.protegerPagina(["admin","ADMIN","usuario_ips"]).then(usuarioActual => {
             if (!usuarioActual) return; // Redirigido a login
 
             // Usuario autenticado, continuar con inicialización
