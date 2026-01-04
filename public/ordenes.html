@@ -4674,7 +4674,7 @@
             if (!usuarioActual) return; // Redirigido a login
 
             // Usuario autenticado, continuar con inicialización
-            console.log('Usuario autenticado:', usuarioActual.nombre);
+            console.log('Usuario autenticado:', usuarioActual.nombreCompleto || usuarioActual.email);
 
             // Actualizar nombre en topbar (con retry por si aún no está cargado)
             const updateTopbar = () => {
@@ -4698,40 +4698,52 @@
                 columnaInicial.classList.add(direccionOrden === 'asc' ? 'sort-asc' : 'sort-desc');
             }
 
-            // Check for search query in URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const buscarParam = urlParams.get('buscar');
-            if (buscarParam) {
-                busquedaActual = buscarParam;
-                document.getElementById('searchInput').value = buscarParam;
-            }
-
             // Load data
             cargarFormularios();
             cargarExamenesDisponibles();
             cargarMedicosDisponibles();
 
-            // Search - Búsqueda server-side con debounce (usa índice GIN pg_trgm)
-            document.getElementById('searchInput').addEventListener('input', async function(e) {
-                busquedaActual = e.target.value.trim();
-
-                // Cancelar búsqueda anterior
-                clearTimeout(searchTimeout);
-
-                // Si tiene menos de 2 caracteres, volver a cargar sin filtro
-                if (busquedaActual.length < 2) {
-                    if (busquedaActual.length === 0) {
-                        buscandoEnServidor = false;
-                        cargarFormularios(1);
-                    }
+            // Configurar searchbar cuando esté disponible
+            const setupSearchBar = () => {
+                const searchInput = document.getElementById('searchInput');
+                if (!searchInput) {
+                    // Si el searchInput aún no está cargado, reintentar
+                    setTimeout(setupSearchBar, 50);
                     return;
                 }
 
-                // Búsqueda server-side con debounce de 300ms
-                searchTimeout = setTimeout(async () => {
-                    buscandoEnServidor = true;
-                    cargarFormularios(1); // Reiniciar a página 1 con búsqueda
-                }, 300);
+                // Check for search query in URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const buscarParam = urlParams.get('buscar');
+                if (buscarParam) {
+                    busquedaActual = buscarParam;
+                    searchInput.value = buscarParam;
+                }
+
+                // Search - Búsqueda server-side con debounce (usa índice GIN pg_trgm)
+                searchInput.addEventListener('input', async function(e) {
+                    busquedaActual = e.target.value.trim();
+
+                    // Cancelar búsqueda anterior
+                    clearTimeout(searchTimeout);
+
+                    // Si tiene menos de 2 caracteres, volver a cargar sin filtro
+                    if (busquedaActual.length < 2) {
+                        if (busquedaActual.length === 0) {
+                            buscandoEnServidor = false;
+                            cargarFormularios(1);
+                        }
+                        return;
+                    }
+
+                    // Búsqueda server-side con debounce de 300ms
+                    searchTimeout = setTimeout(async () => {
+                        buscandoEnServidor = true;
+                        cargarFormularios(1); // Reiniciar a página 1 con búsqueda
+                    }, 300);
+                });
+            };
+            setupSearchBar();
         }); // Fin Auth.protegerPagina
             });
 
