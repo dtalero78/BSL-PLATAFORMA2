@@ -8295,7 +8295,6 @@ app.get('/api/nubia/pacientes', async (req, res) => {
               AND h."fechaAtencion" >= $1
               AND h."fechaAtencion" <= $2
             ORDER BY h."fechaAtencion" ASC
-            LIMIT 100
         `, [inicioDelDia.toISOString(), finDelDia.toISOString()]);
 
         // Contar atendidos y pagados
