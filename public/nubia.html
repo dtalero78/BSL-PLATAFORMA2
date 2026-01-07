@@ -1092,6 +1092,50 @@
                 padding: 24px 16px 8px;
                 background: #F2F2F7;
             }
+
+            /* Barra de filtros y acciones masivas en móvil */
+            .search-bar + div {
+                margin: 0 16px 16px;
+                padding: 12px;
+                border-radius: 12px;
+                background: white;
+                flex-direction: column;
+                align-items: stretch !important;
+                gap: 12px;
+            }
+
+            .search-bar + div > div:first-child {
+                flex-direction: column;
+                align-items: stretch !important;
+                gap: 10px;
+            }
+
+            .search-bar + div label {
+                padding: 10px;
+                background: #F2F2F7;
+                border-radius: 8px;
+                justify-content: center;
+            }
+
+            .search-bar + div #contadorSeleccionados {
+                text-align: center;
+                padding: 8px;
+                background: #EFF6FF;
+                border-radius: 8px;
+                color: #1E40AF !important;
+            }
+
+            .search-bar + div > div:last-child {
+                width: 100%;
+            }
+
+            .search-bar + div #btnEnviarMasivo {
+                width: 100%;
+                padding: 14px;
+                font-size: 15px;
+                font-weight: 600;
+                border-radius: 10px;
+            }
         }
     </style>
 </head>
@@ -1491,6 +1535,7 @@
             container.innerHTML = data.map(p => {
                 const isAtendido = p.atendido === 'ATENDIDO';
                 const isPagado = p.pvEstado === 'Pagado' || p.pagado === true;
+                const puedeConfirmar = isAtendido && !isPagado;
                 const initials = ((p.primerNombre || '')[0] || '') + ((p.primerApellido || '')[0] || '');
 
                 // Determinar qué botón mostrar y su estado
@@ -1508,8 +1553,16 @@
                     ? `<img src="${p.foto}" alt="">`
                     : initials.toUpperCase();
 
+                // Checkbox para selección (solo si puede confirmar)
+                const checkbox = puedeConfirmar ? `
+                    <div style="position: absolute; top: 12px; right: 12px; z-index: 10;" onclick="event.stopPropagation()">
+                        <input type="checkbox" class="checkbox-paciente" data-id="${p._id}" onchange="actualizarSeleccion()" style="width: 20px; height: 20px; cursor: pointer;">
+                    </div>
+                ` : '';
+
                 return `
-                    <div class="mobile-card" onclick="abrirModalDetalles('${p._id}')">
+                    <div class="mobile-card" onclick="abrirModalDetalles('${p._id}')" style="position: relative;">
+                        ${checkbox}
                         <div class="mobile-card-avatar">${avatarContent}</div>
                         <div class="mobile-card-content">
                             <div class="mobile-card-title">${p.primerNombre || ''} ${p.primerApellido || ''}</div>
