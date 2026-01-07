@@ -8258,12 +8258,11 @@ app.post('/api/nubia/cobrar/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Actualizar estado a Pagado
+        // Obtener datos del paciente (sin modificar pvEstado)
         const result = await pool.query(`
-            UPDATE "HistoriaClinica"
-            SET "pvEstado" = 'Pagado'
+            SELECT *
+            FROM "HistoriaClinica"
             WHERE "_id" = $1
-            RETURNING *
         `, [id]);
 
         if (result.rows.length === 0) {
@@ -8272,24 +8271,25 @@ app.post('/api/nubia/cobrar/:id', async (req, res) => {
 
         const paciente = result.rows[0];
 
-        // Enviar mensaje con link de descarga
+        // Enviar mensaje de confirmación de continuidad del proceso
         if (paciente.celular) {
             const telefonoLimpio = paciente.celular.replace(/\s+/g, '').replace(/[^\d]/g, '');
             const toNumber = telefonoLimpio.startsWith('57') ? telefonoLimpio : `57${telefonoLimpio}`;
 
-            const mensaje = `Descargalo del siguiente link: https://www.bsl.com.co/descargar`;
+            const nombreCompleto = `${paciente.primerNombre || ''} ${paciente.segundoNombre || ''}`.trim();
+            const mensaje = `Hola ${nombreCompleto}. Necesitamos saber si continúas con el proceso o eliminamos el certificado. Gracias!`;
 
             try {
                 await sendWhatsAppMessage(toNumber, mensaje);
-                console.log(`📱 [NUBIA] Link de descarga enviado a ${paciente.primerNombre} (${toNumber})`);
+                console.log(`📱 [NUBIA] Mensaje de confirmación enviado a ${nombreCompleto} (${toNumber})`);
             } catch (sendError) {
                 console.error(`Error enviando mensaje:`, sendError);
             }
         }
 
-        res.json({ success: true, data: paciente, message: 'Marcado como pagado y mensaje enviado' });
+        res.json({ success: true, data: paciente, message: 'Mensaje de confirmación enviado' });
     } catch (error) {
-        console.error('❌ Error marcando como pagado:', error);
+        console.error('❌ Error enviando mensaje de confirmación:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });

@@ -1415,8 +1415,8 @@
                                 <button class="btn-action atender" onclick="marcarAtendido('${p._id}')" ${isAtendido ? 'disabled' : ''}>
                                     ✓ Atender
                                 </button>
-                                <button class="btn-action cobrar" onclick="marcarCobrar('${p._id}')" ${isPagado || !isAtendido ? 'disabled' : ''}>
-                                    💰 Cobrar
+                                <button class="btn-action cobrar" onclick="marcarCobrar('${p._id}')" ${!isAtendido || isPagado ? 'disabled' : ''}>
+                                    💬 Confirmar
                                 </button>
                             </div>
                         </td>
@@ -1443,7 +1443,7 @@
                 if (isPagado) {
                     actionBtn = `<span class="mobile-status-indicator pagado"><span class="mobile-status-dot"></span>Pagado</span>`;
                 } else if (isAtendido) {
-                    actionBtn = `<button class="mobile-card-action-btn cobrar" onclick="event.stopPropagation(); marcarCobrar('${p._id}')">Cobrar</button>`;
+                    actionBtn = `<button class="mobile-card-action-btn cobrar" onclick="event.stopPropagation(); marcarCobrar('${p._id}')">Confirmar</button>`;
                 } else {
                     actionBtn = `<button class="mobile-card-action-btn atender" onclick="event.stopPropagation(); marcarAtendido('${p._id}')">Atender</button>`;
                 }
@@ -1674,7 +1674,7 @@
             footer.innerHTML = `
                 <button class="btn btn-primary" onclick="enviarMensajeModal()">📩 Enviar Mensaje</button>
                 <button class="btn btn-success" onclick="marcarAtendidoModal()" ${isAtendido ? 'disabled' : ''}>✓ Atender</button>
-                <button class="btn btn-warning" onclick="marcarCobrarModal()" ${isPagado || !isAtendido ? 'disabled' : ''}>💰 Cobrar</button>
+                <button class="btn btn-warning" onclick="marcarCobrarModal()" ${!isAtendido || isPagado ? 'disabled' : ''}>💬 Confirmar</button>
                 <button class="btn btn-secondary" onclick="editarOrdenModal()">✏️ Editar</button>
                 <button class="btn btn-danger" onclick="eliminarPacienteModal()">🗑 Eliminar</button>
                 <button class="btn btn-secondary" onclick="cerrarModalDetalles()">Cerrar</button>
@@ -1972,7 +1972,7 @@
 
         async function marcarCobrar(id) {
             try {
-                showMessage('Procesando cobro...');
+                showMessage('Enviando mensaje de confirmación...');
 
                 const response = await fetch(`/api/nubia/cobrar/${id}`, {
                     method: 'POST'
@@ -1980,14 +1980,14 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    showMessage('Marcado como PAGADO y link enviado', 'success');
+                    showMessage('Mensaje de confirmación enviado', 'success');
                     await cargarPacientes();
                 } else {
-                    showMessage(result.message || 'Error al procesar', 'error');
+                    showMessage(result.message || 'Error al enviar mensaje', 'error');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                showMessage('Error al procesar cobro', 'error');
+                showMessage('Error al enviar mensaje de confirmación', 'error');
             }
         }
 
