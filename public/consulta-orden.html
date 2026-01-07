@@ -494,7 +494,9 @@
                 }
 
                 ordenes = data.ordenes;
-                renderOrdenes(ordenes);
+                // Mostrar solo la orden más reciente (la primera del array ya viene ordenada por fecha desc)
+                const ordenMasReciente = ordenes.length > 0 ? [ordenes[0]] : [];
+                renderOrdenes(ordenMasReciente);
 
             } catch (error) {
                 console.error('Error:', error);
