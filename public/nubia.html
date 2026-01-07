@@ -1096,45 +1096,26 @@
             /* Barra de filtros y acciones masivas en móvil */
             .search-bar + div {
                 margin: 0 16px 16px;
-                padding: 12px;
-                border-radius: 12px;
-                background: white;
-                flex-direction: column;
-                align-items: stretch !important;
-                gap: 12px;
-            }
-
-            .search-bar + div > div:first-child {
-                flex-direction: column;
-                align-items: stretch !important;
-                gap: 10px;
             }
 
             .search-bar + div label {
-                padding: 10px;
+                padding: 12px;
                 background: #F2F2F7;
-                border-radius: 8px;
-                justify-content: center;
+                border-radius: 10px;
             }
 
             .search-bar + div #contadorSeleccionados {
-                text-align: center;
-                padding: 8px;
+                padding: 10px;
                 background: #EFF6FF;
-                border-radius: 8px;
+                border-radius: 10px;
                 color: #1E40AF !important;
             }
 
-            .search-bar + div > div:last-child {
-                width: 100%;
-            }
-
             .search-bar + div #btnEnviarMasivo {
-                width: 100%;
-                padding: 14px;
-                font-size: 15px;
-                font-weight: 600;
-                border-radius: 10px;
+                padding: 14px !important;
+                font-size: 15px !important;
+                font-weight: 600 !important;
+                border-radius: 10px !important;
             }
         }
     </style>
@@ -1179,18 +1160,18 @@
         </div>
 
         <!-- Filtros y Acciones Masivas -->
-        <div style="background: white; border: 1px solid #E5E7EB; border-radius: 12px; padding: 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
-            <div style="display: flex; gap: 12px; align-items: center;">
+        <div style="background: white; border: 1px solid #E5E7EB; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+            <div style="display: flex; flex-direction: column; gap: 12px;">
                 <label style="display: flex; align-items: center; gap: 6px; font-size: 14px; color: #374151; cursor: pointer;">
                     <input type="checkbox" id="filtroSinPagar" onchange="aplicarFiltros()" style="width: 16px; height: 16px; cursor: pointer;">
                     <span>Solo sin pagar</span>
                 </label>
+
                 <span id="contadorSeleccionados" style="font-size: 14px; color: #6B7280; display: none;">
                     <strong id="numeroSeleccionados">0</strong> seleccionados
                 </span>
-            </div>
-            <div style="display: flex; gap: 8px;">
-                <button class="btn btn-warning" id="btnEnviarMasivo" onclick="enviarMensajeMasivo()" style="display: none;">
+
+                <button class="btn btn-warning" id="btnEnviarMasivo" onclick="enviarMensajeMasivo()" style="display: none; width: 100%;">
                     Enviar mensaje de confirmación
                 </button>
             </div>
