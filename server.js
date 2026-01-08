@@ -8231,6 +8231,7 @@ app.get('/api/nubia/pacientes', async (req, res) => {
                    (SELECT f.email FROM formularios f WHERE f.numero_id = h."numeroId" ORDER BY f.fecha_registro DESC LIMIT 1) as email
             FROM "HistoriaClinica" h
             WHERE h."medico" ILIKE '%NUBIA%'
+              AND h."codEmpresa" = 'SANITHELP-JJ'
               AND h."fechaAtencion" >= $1
               AND h."fechaAtencion" <= $2
             ORDER BY h."fechaAtencion" ASC
