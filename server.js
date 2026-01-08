@@ -3982,6 +3982,7 @@ app.post('/api/ordenes', async (req, res) => {
                 if (codEmpresa === 'KM2') {
                     medicosDisponibles.push(med.nombre);
                 } else {
+                    // Solo contar como ocupados los turnos PENDIENTES (no los ATENDIDOS)
                     const citaExistente = await pool.query(`
                         SELECT COUNT(*) as total
                         FROM "HistoriaClinica"
@@ -3989,6 +3990,7 @@ app.post('/api/ordenes', async (req, res) => {
                           AND "fechaAtencion" < ($1::timestamp + interval '1 day')
                           AND "medico" = $2
                           AND "horaAtencion" = $3
+                          AND "atendido" = 'PENDIENTE'
                     `, [fechaAtencion, med.nombre, horaAtencion]);
 
                     if (parseInt(citaExistente.rows[0].total) === 0) {
@@ -7515,6 +7517,7 @@ app.get('/api/horarios-disponibles', async (req, res) => {
         }
 
         // Obtener citas existentes del médico para esa fecha (todas las modalidades ocupan el mismo horario)
+        // Solo contar como ocupados los turnos PENDIENTES (no los ATENDIDOS)
         const citasResult = await pool.query(`
             SELECT "horaAtencion" as hora
             FROM "HistoriaClinica"
@@ -7522,6 +7525,7 @@ app.get('/api/horarios-disponibles', async (req, res) => {
               AND "fechaAtencion" < ($1::timestamp + interval '1 day')
               AND "medico" = $2
               AND "horaAtencion" IS NOT NULL
+              AND "atendido" = 'PENDIENTE'
         `, [fecha, medico]);
 
         const horasOcupadas = citasResult.rows.map(r => r.hora);
@@ -7646,6 +7650,7 @@ app.get('/api/turnos-disponibles', async (req, res) => {
             // Obtener citas existentes del médico para esa fecha
             // IMPORTANTE: Usamos horaAtencion en lugar de extraer hora de fechaAtencion
             // porque fechaAtencion está en UTC y horaAtencion está en hora Colombia
+            // Solo contar como ocupados los turnos PENDIENTES (no los ATENDIDOS)
             const citasResult = await pool.query(`
                 SELECT "horaAtencion" as hora
                 FROM "HistoriaClinica"
@@ -7653,6 +7658,7 @@ app.get('/api/turnos-disponibles', async (req, res) => {
                   AND "fechaAtencion" < ($1::timestamp + interval '1 day')
                   AND "medico" = $2
                   AND "horaAtencion" IS NOT NULL
+                  AND "atendido" = 'PENDIENTE'
             `, [fecha, medicoNombre]);
 
             const horasOcupadas = citasResult.rows.map(r => {
