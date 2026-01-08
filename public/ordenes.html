@@ -4036,7 +4036,34 @@
             try {
                 const response = await fetch('/api/examenes');
                 const data = await response.json();
-                examenesData = data.filter(e => e.activo !== false);
+                const examenesActivos = data.filter(e => e.activo !== false);
+
+                // Orden prioritario de exámenes
+                const ordenPrioridad = [
+                    'EXAMEN MÉDICO OCUPACIONAL OSTEOMUSCULAR',
+                    'AUDIOMETRÍA',
+                    'OPTOMETRÍA',
+                    'ÉNFASIS CARDIOVASCULAR',
+                    'ÉNFASIS VASCULAR',
+                    'ESPIROMETRÍA',
+                    'Perfil Psicológico ADC'
+                ];
+
+                // Separar exámenes prioritarios y resto
+                const examenesPrioritarios = [];
+                const examenesResto = [];
+
+                examenesActivos.forEach(examen => {
+                    const indice = ordenPrioridad.indexOf(examen.nombre);
+                    if (indice !== -1) {
+                        examenesPrioritarios[indice] = examen;
+                    } else {
+                        examenesResto.push(examen);
+                    }
+                });
+
+                // Combinar: prioritarios primero (sin undefined), luego el resto
+                examenesData = examenesPrioritarios.filter(e => e !== undefined).concat(examenesResto);
             } catch (error) {
                 console.error('Error al cargar exámenes:', error);
             }
