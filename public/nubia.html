@@ -1171,7 +1171,7 @@
                     <strong id="numeroSeleccionados">0</strong> seleccionados
                 </span>
 
-                <button class="btn btn-warning" id="btnEnviarMasivo" onclick="enviarMensajeMasivo()" style="display: none; width: 100%;">
+                <button class="btn btn-warning" id="btnEnviarMasivo" onclick="enviarMensajeMasivo()" style="width: 100%; display: none;">
                     Enviar mensaje de confirmación
                 </button>
             </div>
@@ -2113,8 +2113,8 @@
             const btnMasivoEl = document.getElementById('btnEnviarMasivo');
 
             if (count > 0) {
-                contadorEl.style.display = 'inline';
-                btnMasivoEl.style.display = 'inline-block';
+                contadorEl.style.display = 'block';
+                btnMasivoEl.style.display = 'block';
                 numeroEl.textContent = count;
             } else {
                 contadorEl.style.display = 'none';
