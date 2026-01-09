@@ -3087,6 +3087,7 @@
         let fechaDesde = '';
         let fechaHasta = '';
         const detallesCache = {};
+        let ultimaOrdenSolicitada = null; // Prevenir race conditions
         let formularioActual = null;
         let searchTimeout = null;
         let buscandoEnServidor = false;
@@ -3506,6 +3507,9 @@
             const modal = document.getElementById('modalDetalles');
             const body = document.getElementById('modalDetallesBody');
 
+            // Guardar cuál es la última orden solicitada para prevenir race conditions
+            ultimaOrdenSolicitada = ordenId;
+
             modal.classList.add('active');
             body.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><p>Cargando...</p></div>';
 
@@ -3519,6 +3523,12 @@
                     const ordenResult = await ordenResponse.json();
                     if (!ordenResult.success) throw new Error('No se pudo cargar la orden');
 
+                    // Verificar que sigue siendo la orden solicitada (prevenir race condition)
+                    if (ultimaOrdenSolicitada !== ordenId) {
+                        console.log('Request cancelado: se solicitó otra orden');
+                        return;
+                    }
+
                     const orden = ordenResult.data;
                     datos = { orden, formulario: null, estadoPruebas: null };
 
@@ -3531,6 +3541,12 @@
                         }
                     } catch (e) {
                         console.log('No se encontró formulario para este paciente');
+                    }
+
+                    // Verificar de nuevo antes de cachear
+                    if (ultimaOrdenSolicitada !== ordenId) {
+                        console.log('Request cancelado: se solicitó otra orden');
+                        return;
                     }
 
                     detallesCache[ordenId] = datos;
@@ -3547,10 +3563,19 @@
                     console.log('No se pudo cargar estado de pruebas');
                 }
 
+                // Verificar una última vez antes de renderizar
+                if (ultimaOrdenSolicitada !== ordenId) {
+                    console.log('Request cancelado: se solicitó otra orden');
+                    return;
+                }
+
                 renderModalDetalles(datos);
 
             } catch (error) {
-                body.innerHTML = `<div class="empty-state"><p class="empty-state-title">Error al cargar</p></div>`;
+                // Solo mostrar error si esta sigue siendo la orden actual
+                if (ultimaOrdenSolicitada === ordenId) {
+                    body.innerHTML = `<div class="empty-state"><p class="empty-state-title">Error al cargar</p></div>`;
+                }
             }
         }
 
