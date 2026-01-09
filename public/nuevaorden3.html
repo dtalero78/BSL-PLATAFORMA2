@@ -1,0 +1,1750 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Programar Cita - BSL</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #F3F3F3;
+            min-height: 100vh;
+            padding: 0;
+            color: #181818;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Logo */
+        .logo {
+            margin-bottom: 40px;
+            text-align: left;
+        }
+
+        .logo-img {
+            max-height: 60px;
+            width: auto;
+        }
+
+        /* Progress bar */
+        .progress-container {
+            width: 100%;
+            height: 4px;
+            background: #E5E7EB;
+            border-radius: 2px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: #0176D3;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* Question counter */
+        .question-counter {
+            font-size: 14px;
+            color: #0176D3;
+            font-weight: 600;
+            margin-bottom: 40px;
+        }
+
+        /* Question slides */
+        .question-slide {
+            display: none;
+            animation: fadeIn 0.4s ease-in-out;
+            flex: 1;
+        }
+
+        .question-slide.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .question-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Question label */
+        .question-label {
+            font-size: 32px;
+            font-weight: 600;
+            color: #1F2937;
+            margin-bottom: 32px;
+            line-height: 1.3;
+            display: block;
+        }
+
+        .required {
+            color: #EF4444;
+        }
+
+        /* Input styles */
+        .question-input {
+            width: 100%;
+            padding: 16px 0;
+            border: none;
+            border-bottom: 2px solid #E5E7EB;
+            font-size: 18px;
+            font-family: 'Figtree', sans-serif;
+            color: #1F2937;
+            background: transparent;
+            transition: border-color 0.3s ease;
+            outline: none;
+        }
+
+        .question-input:focus {
+            border-bottom-color: #0176D3;
+        }
+
+        .question-input::placeholder {
+            color: #9CA3AF;
+        }
+
+        /* Select dropdown */
+        .question-select {
+            width: 100%;
+            padding: 16px 0;
+            border: none;
+            border-bottom: 2px solid #E5E7EB;
+            font-size: 18px;
+            font-family: 'Figtree', sans-serif;
+            color: #1F2937;
+            background: transparent;
+            transition: border-color 0.3s ease;
+            outline: none;
+            cursor: pointer;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0 center;
+            background-size: 24px;
+        }
+
+        .question-select:focus {
+            border-bottom-color: #0176D3;
+        }
+
+        /* Form row */
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #6B7280;
+            margin-bottom: 8px;
+        }
+
+        /* Options grid */
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .options-2col {
+            grid-template-columns: repeat(2, 1fr);
+            max-width: 400px;
+        }
+
+        /* Option cards */
+        .option-card {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px 20px;
+            border: 2px solid #E5E7EB;
+            border-radius: 8px;
+            background: #FFFFFF;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 16px;
+            font-weight: 500;
+            color: #4B5563;
+        }
+
+        .option-card:hover {
+            border-color: #0176D3;
+            background: #EAF5FE;
+        }
+
+        .option-card input[type="radio"],
+        .option-card input[type="checkbox"] {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .option-card input[type="radio"]:checked ~ span,
+        .option-card input[type="checkbox"]:checked ~ span {
+            color: #0176D3;
+        }
+
+        .option-card:has(input:checked) {
+            border-color: #0176D3;
+            background: #EAF5FE;
+        }
+
+        .option-card.selected {
+            border-color: #0176D3;
+            background: #EAF5FE;
+            color: #0176D3;
+        }
+
+        .option-card svg {
+            width: 24px;
+            height: 24px;
+            margin-right: 10px;
+            stroke: currentColor;
+        }
+
+        /* Exámenes checkboxes */
+        .examenes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .examen-option {
+            display: flex;
+            align-items: center;
+            padding: 14px 16px;
+            border: 2px solid #E5E7EB;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 15px;
+            color: #4B5563;
+        }
+
+        .examen-option:hover {
+            border-color: #0176D3;
+            background: #EAF5FE;
+        }
+
+        .examen-option.selected {
+            border-color: #0176D3;
+            background: #EAF5FE;
+            color: #0176D3;
+        }
+
+        .examen-option input {
+            margin-right: 12px;
+            width: 18px;
+            height: 18px;
+            accent-color: #0176D3;
+        }
+
+        /* Navigation */
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 40px;
+            gap: 16px;
+        }
+
+        .nav-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #0176D3;
+            color: white;
+        }
+
+        .nav-btn:hover {
+            background: #014486;
+            transform: translateY(-1px);
+        }
+
+        .nav-btn:active {
+            transform: translateY(0);
+        }
+
+        .nav-btn:disabled {
+            background: #9CA3AF;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .prev-btn {
+            background: transparent;
+            color: #6B7280;
+            border: 2px solid #E5E7EB;
+        }
+
+        .prev-btn:hover {
+            background: #F9FAFB;
+            border-color: #D1D5DB;
+            color: #374151;
+        }
+
+        .next-btn {
+            margin-left: auto;
+        }
+
+        .submit-btn {
+            background: #0176D3;
+            color: white;
+            min-width: 160px;
+        }
+
+        .submit-btn:hover {
+            background: #014486;
+        }
+
+        /* Resumen */
+        .resumen-container {
+            background: #F9FAFB;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .resumen-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        .resumen-item:last-child {
+            border-bottom: none;
+        }
+
+        .resumen-label {
+            color: #6B7280;
+            font-size: 14px;
+        }
+
+        .resumen-value {
+            color: #1F2937;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: right;
+            max-width: 60%;
+        }
+
+        /* Success */
+        .success-container {
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: #D1FAE5;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+        }
+
+        .success-icon svg {
+            width: 40px;
+            height: 40px;
+            stroke: #10B981;
+            stroke-width: 3;
+        }
+
+        .success-title {
+            font-size: 28px;
+            font-weight: 600;
+            color: #1F2937;
+            margin-bottom: 12px;
+        }
+
+        .success-message {
+            font-size: 16px;
+            color: #6B7280;
+            margin-bottom: 32px;
+        }
+
+        /* Alert */
+        .alert {
+            padding: 14px 18px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            display: none;
+            font-size: 14px;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-error {
+            background: #FEE2E2;
+            color: #991B1B;
+            border: 1px solid #FECACA;
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.95);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .loading-overlay.show {
+            display: flex;
+        }
+
+        .loading-content {
+            text-align: center;
+        }
+
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #DDDBDA;
+            border-top-color: #0176D3;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 16px;
+            color: #6B7280;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .question-label {
+                font-size: 24px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .options-2col {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .examenes-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .navigation {
+                flex-direction: column;
+            }
+
+            .nav-btn {
+                width: 100%;
+            }
+
+            .prev-btn {
+                order: 2;
+            }
+
+            .next-btn {
+                order: 1;
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Logo -->
+        <div class="logo">
+            <img src="bsl-logo.png" alt="BSL Logo" class="logo-img">
+        </div>
+
+        <!-- Progress bar -->
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <!-- Question counter -->
+        <div class="question-counter">
+            Paso <span id="currentStep">1</span> de <span id="totalSteps">5</span>
+        </div>
+
+        <div id="alertContainer" class="alert alert-error"></div>
+
+        <form id="formCita">
+            <!-- Step 1: Verificación de Documento -->
+            <div class="question-slide active" data-step="1">
+                <div class="question-content" id="step1-verificar">
+                    <label class="question-label">Ingresa tu número de cédula</label>
+
+                    <div class="form-group">
+                        <label>Número de Cédula <span class="required">*</span></label>
+                        <input type="text" class="question-input" id="numeroId" placeholder="Ej: 1234567890" required>
+                    </div>
+                </div>
+
+                <div class="navigation" id="nav-step1-verificar">
+                    <button type="button" class="nav-btn next-btn" id="btnVerificarCedula" onclick="verificarCedulaYContinuar()">Continuar →</button>
+                </div>
+            </div>
+
+            <!-- Step 1b: Resto de Datos Personales (oculto hasta verificación) -->
+            <div class="question-slide" data-step="1b">
+                <div class="question-content">
+                    <label class="question-label">¿Cuáles son tus datos personales?</label>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Número de Cédula</label>
+                            <input type="text" class="question-input" id="displayNumeroId" readonly style="background: #F3F4F6;">
+                        </div>
+                        <div class="form-group">
+                            <label>Celular <span class="required">*</span></label>
+                            <input type="tel" class="question-input" id="celular" placeholder="Ej: 3001234567" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Primer Nombre <span class="required">*</span></label>
+                            <input type="text" class="question-input" id="primerNombre" placeholder="Ej: Juan" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Segundo Nombre</label>
+                            <input type="text" class="question-input" id="segundoNombre" placeholder="Ej: Carlos">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Primer Apellido <span class="required">*</span></label>
+                            <input type="text" class="question-input" id="primerApellido" placeholder="Ej: García" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Segundo Apellido</label>
+                            <input type="text" class="question-input" id="segundoApellido" placeholder="Ej: López">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="navigation">
+                    <button type="button" class="nav-btn prev-btn" onclick="volverAVerificarCedula()">← Atrás</button>
+                    <button type="button" class="nav-btn next-btn" onclick="siguientePaso()">Continuar →</button>
+                </div>
+            </div>
+
+            <!-- Step 2: Tipo de Consulta -->
+            <div class="question-slide" data-step="2">
+                <div class="question-content">
+                    <label class="question-label">¿Qué tipo de consulta necesitas?</label>
+
+                    <div class="options-grid options-2col" style="margin-bottom: 32px;">
+                        <div class="option-card" onclick="seleccionarTipoConsulta('Telemedicina', this)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                                <line x1="8" y1="21" x2="16" y2="21"></line>
+                                <line x1="12" y1="17" x2="12" y2="21"></line>
+                            </svg>
+                            <span>Telemedicina</span>
+                        </div>
+                        <div class="option-card" onclick="seleccionarTipoConsulta('Presencial', this)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                <circle cx="12" cy="10" r="3"></circle>
+                            </svg>
+                            <span>Presencial</span>
+                        </div>
+                    </div>
+                    <input type="hidden" id="tipoConsulta" value="">
+
+                    <div class="form-group">
+                        <label>¿A nombre de quién es la cita? <span class="required">*</span></label>
+                        <select class="question-select" id="aNombreDe" onchange="toggleEmpresa()">
+                            <option value="">Seleccionar...</option>
+                            <option value="PARTICULAR">Particular</option>
+                            <option value="EMPRESA">Empresa</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="empresaContainer" style="display: none;">
+                        <label>Empresa <span class="required">*</span></label>
+                        <input type="text" class="question-input" id="empresa" placeholder="Nombre de la empresa">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cargo (opcional)</label>
+                        <input type="text" class="question-input" id="cargo" placeholder="Ej: Analista, Operario, etc.">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Ciudad de Residencia <span class="required">*</span></label>
+                        <select class="question-select" id="ciudad" required>
+                            <option value="">Seleccionar ciudad...</option>
+                            <option value="Bogotá">Bogotá D.C.</option>
+                            <option value="Medellín">Medellín</option>
+                            <option value="Cali">Cali</option>
+                            <option value="Barranquilla">Barranquilla</option>
+                            <option value="Cartagena">Cartagena</option>
+                            <option value="Cúcuta">Cúcuta</option>
+                            <option value="Bucaramanga">Bucaramanga</option>
+                            <option value="Pereira">Pereira</option>
+                            <option value="Santa Marta">Santa Marta</option>
+                            <option value="Ibagué">Ibagué</option>
+                            <option value="Pasto">Pasto</option>
+                            <option value="Manizales">Manizales</option>
+                            <option value="Neiva">Neiva</option>
+                            <option value="Villavicencio">Villavicencio</option>
+                            <option value="Armenia">Armenia</option>
+                            <option value="Valledupar">Valledupar</option>
+                            <option value="Montería">Montería</option>
+                            <option value="Sincelejo">Sincelejo</option>
+                            <option value="Popayán">Popayán</option>
+                            <option value="Floridablanca">Floridablanca</option>
+                            <option value="Buenaventura">Buenaventura</option>
+                            <option value="Soledad">Soledad</option>
+                            <option value="Itagüí">Itagüí</option>
+                            <option value="Soacha">Soacha</option>
+                            <option value="Bello">Bello</option>
+                            <option value="Palmira">Palmira</option>
+                            <option value="Tunja">Tunja</option>
+                            <option value="Girardot">Girardot</option>
+                            <option value="Riohacha">Riohacha</option>
+                            <option value="Barrancabermeja">Barrancabermeja</option>
+                            <option value="Dosquebradas">Dosquebradas</option>
+                            <option value="Envigado">Envigado</option>
+                            <option value="Tuluá">Tuluá</option>
+                            <option value="Sogamoso">Sogamoso</option>
+                            <option value="Duitama">Duitama</option>
+                            <option value="Zipaquirá">Zipaquirá</option>
+                            <option value="Facatativá">Facatativá</option>
+                            <option value="Chía">Chía</option>
+                            <option value="Fusagasugá">Fusagasugá</option>
+                            <option value="Otro">Otra ciudad</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="navigation">
+                    <button type="button" class="nav-btn prev-btn" onclick="pasoAnterior()">← Atrás</button>
+                    <button type="button" class="nav-btn next-btn" onclick="siguientePaso()">Continuar →</button>
+                </div>
+            </div>
+
+            <!-- Step 3: Fecha y Hora -->
+            <div class="question-slide" data-step="3">
+                <div class="question-content">
+                    <label class="question-label">¿Cuándo te gustaría agendar tu cita?</label>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Mes <span class="required">*</span></label>
+                            <select class="question-select" id="mes" onchange="actualizarDias()">
+                                <option value="">Seleccionar...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Día <span class="required">*</span></label>
+                            <select class="question-select" id="dia" onchange="actualizarHoras()">
+                                <option value="">Seleccionar...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Hora <span class="required">*</span></label>
+                        <select class="question-select" id="horaSelect">
+                            <option value="">Primero selecciona un día</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="navigation">
+                    <button type="button" class="nav-btn prev-btn" onclick="pasoAnterior()">← Atrás</button>
+                    <button type="button" class="nav-btn next-btn" onclick="siguientePaso()">Continuar →</button>
+                </div>
+            </div>
+
+            <!-- Step 4: Exámenes -->
+            <div class="question-slide" data-step="4">
+                <div class="question-content">
+                    <label class="question-label">¿Qué exámenes necesitas realizarte?</label>
+
+                    <div class="examenes-grid" id="examenesGrid">
+                        <!-- Se llenan dinámicamente -->
+                    </div>
+                </div>
+
+                <div class="navigation">
+                    <button type="button" class="nav-btn prev-btn" onclick="pasoAnterior()">← Atrás</button>
+                    <button type="button" class="nav-btn next-btn" onclick="siguientePaso()">Continuar →</button>
+                </div>
+            </div>
+
+            <!-- Step 5: Confirmación -->
+            <div class="question-slide" data-step="5">
+                <div class="question-content">
+                    <label class="question-label">Confirma los datos de tu cita</label>
+
+                    <div class="resumen-container" id="resumenCita">
+                        <!-- Se llena dinámicamente -->
+                    </div>
+                </div>
+
+                <div class="navigation">
+                    <button type="button" class="nav-btn prev-btn" onclick="pasoAnterior()">← Atrás</button>
+                    <button type="button" class="nav-btn submit-btn" id="btnConfirmar" onclick="confirmarCita()">Confirmar Cita</button>
+                </div>
+            </div>
+
+            <!-- Step 6: Éxito -->
+            <div class="question-slide" data-step="6">
+                <div class="question-content">
+                    <div class="success-container">
+                        <div class="success-icon">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        </div>
+                        <h2 class="success-title">¡Cita Programada!</h2>
+                        <p class="success-message">Tu cita ha sido registrada exitosamente.<br>Recibirás un recordatorio antes de tu cita.</p>
+
+                        <div class="resumen-container" id="citaFinal">
+                            <!-- Se llena dinámicamente -->
+                        </div>
+
+                        <a href="/" class="nav-btn" style="text-decoration: none; display: inline-flex;">Ir al Inicio</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">Registrando tu cita...</p>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let pasoActual = 1;
+        const totalPasos = 5;
+        let tipoConsultaSeleccionado = '';
+        let examenesSeleccionados = [];
+        let examenesData = [];
+
+        // Función para capitalizar (primera letra mayúscula de cada palabra)
+        function capitalize(str) {
+            if (!str) return str;
+            return str.trim().toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
+        }
+
+        // Obtener parámetros de URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const refEmpresa = urlParams.get('ref');
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', () => {
+            actualizarProgreso();
+            cargarMeses();
+            cargarExamenes();
+
+            if (refEmpresa) {
+                configurarPorReferencia(refEmpresa);
+            }
+        });
+
+        function actualizarProgreso() {
+            const progreso = (pasoActual / totalPasos) * 100;
+            document.getElementById('progressBar').style.width = progreso + '%';
+            document.getElementById('currentStep').textContent = pasoActual;
+        }
+
+        function configurarPorReferencia(ref) {
+            const empresasEspeciales = {
+                'DeStori': { codEmpresa: 'STORI', empresa: 'Stori Card', tipoExamen: 'Ingreso' },
+                'EVERTEC': { codEmpresa: 'EVERTEC', empresa: 'EVERTEC', tipoExamen: 'Ingreso' },
+                'rippling': { codEmpresa: 'RIPPLING', empresa: 'Rippling', tipoExamen: 'Ingreso' },
+                'ripplingperiodico': { codEmpresa: 'RIPPLING', empresa: 'Rippling', tipoExamen: 'Periódico' },
+                'ripplingegreso': { codEmpresa: 'RIPPLING', empresa: 'Rippling', tipoExamen: 'Egreso' },
+                'ATR': { codEmpresa: 'ATR', empresa: 'ATR', tipoExamen: 'Ingreso' }
+            };
+
+            if (empresasEspeciales[ref]) {
+                document.getElementById('aNombreDe').value = 'EMPRESA';
+            }
+        }
+
+        // Cargar meses disponibles
+        function cargarMeses() {
+            const select = document.getElementById('mes');
+            // Usar timezone Colombia para obtener la fecha actual
+            const ahora = new Date();
+            const colombiaTime = ahora.toLocaleString('en-US', { timeZone: 'America/Bogota' });
+            const hoy = new Date(colombiaTime);
+            const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                          'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+            select.innerHTML = '<option value="">Seleccionar...</option>';
+
+            for (let i = 0; i < 3; i++) {
+                const fecha = new Date(hoy.getFullYear(), hoy.getMonth() + i, 1);
+                const mesIndex = fecha.getMonth();
+                const year = fecha.getFullYear();
+                select.innerHTML += `<option value="${mesIndex + 1}-${year}">${meses[mesIndex]} ${year}</option>`;
+            }
+        }
+
+        function actualizarDias() {
+            const mesValue = document.getElementById('mes').value;
+            if (!mesValue) return;
+
+            const [mes, year] = mesValue.split('-').map(Number);
+            const select = document.getElementById('dia');
+            // Usar timezone Colombia para obtener la fecha actual
+            const ahora = new Date();
+            const colombiaTime = ahora.toLocaleString('en-US', { timeZone: 'America/Bogota' });
+            const hoy = new Date(colombiaTime);
+            hoy.setHours(0, 0, 0, 0);
+
+            const primerDia = new Date(year, mes - 1, 1);
+            const ultimoDia = new Date(year, mes, 0);
+
+            let diaInicio = primerDia;
+            if (mes - 1 === hoy.getMonth() && year === hoy.getFullYear()) {
+                diaInicio = hoy;
+            }
+
+            const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+            select.innerHTML = '<option value="">Seleccionar...</option>';
+
+            let diaActual = new Date(diaInicio);
+            while (diaActual <= ultimoDia) {
+                const diaSemana = diasSemana[diaActual.getDay()];
+                const diaNum = diaActual.getDate();
+                const esHoy = diaActual.getTime() === hoy.getTime();
+                const fechaISO = diaActual.toISOString().split('T')[0];
+
+                select.innerHTML += `<option value="${fechaISO}">${esHoy ? 'Hoy' : diaSemana + ' ' + diaNum}</option>`;
+                diaActual.setDate(diaActual.getDate() + 1);
+            }
+
+            document.getElementById('horaSelect').innerHTML = '<option value="">Primero selecciona un día</option>';
+        }
+
+        function actualizarHoras() {
+            const fecha = document.getElementById('dia').value;
+            if (!fecha) return;
+
+            // NUBIA no tiene restricción de cupo - genera horas directamente sin verificar ocupación
+            generarHorasDisponibles(fecha);
+        }
+
+        function generarHorasDisponibles(fecha) {
+            const select = document.getElementById('horaSelect');
+
+            // Usar hora Colombia (UTC-5) independiente de la zona del usuario
+            const ahora = new Date();
+            const colombiaTime = ahora.toLocaleString('en-US', { timeZone: 'America/Bogota' });
+            const ahoraColombia = new Date(colombiaTime);
+            const fechaHoyColombia = ahora.toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+            const esHoy = fecha === fechaHoyColombia;
+
+            // Horario de 8 AM a 8 PM (20:00)
+            let horaInicio = 8;
+            let horaFin = 20;
+            let minutoInicio = 0;
+
+            // Si es hoy, agregar buffer de 1 hora desde la hora actual Colombia
+            if (esHoy) {
+                const horaMinima = ahoraColombia.getHours() + 1;
+                const minutoMinimo = ahoraColombia.getMinutes();
+
+                if (horaMinima >= horaFin) {
+                    select.innerHTML = '<option value="">No hay horas disponibles para hoy</option>';
+                    return;
+                }
+
+                if (horaMinima > horaInicio) {
+                    horaInicio = horaMinima;
+                    // Redondear al siguiente intervalo de 10 minutos
+                    minutoInicio = Math.ceil(minutoMinimo / 10) * 10;
+                    if (minutoInicio >= 60) {
+                        minutoInicio = 0;
+                        horaInicio++;
+                    }
+                }
+            }
+
+            select.innerHTML = '<option value="">Seleccionar hora...</option>';
+            let hayHoras = false;
+
+            for (let hora = horaInicio; hora < horaFin; hora++) {
+                const startMinuto = (hora === horaInicio) ? minutoInicio : 0;
+                for (let minuto = startMinuto; minuto < 60; minuto += 10) {
+                    const horaStr = String(hora).padStart(2, '0');
+                    const minutoStr = String(minuto).padStart(2, '0');
+                    const horaCompleta = `${horaStr}:${minutoStr}`;
+
+                    // Sin restricción de cupo - NUBIA acepta citas simultáneas
+                    const hora12 = hora > 12 ? hora - 12 : (hora === 0 ? 12 : hora);
+                    const ampm = hora >= 12 ? 'PM' : 'AM';
+                    select.innerHTML += `<option value="${horaCompleta}">${hora12}:${minutoStr} ${ampm}</option>`;
+                    hayHoras = true;
+                }
+            }
+
+            if (!hayHoras) {
+                select.innerHTML = '<option value="">No hay horas disponibles</option>';
+            }
+        }
+
+
+        // Exámenes permitidos en este endpoint (nombres exactos de la BD)
+        const examenesPermitidos = [
+            'EXAMEN MÉDICO OCUPACIONAL OSTEOMUSCULAR',
+            'AUDIOMETRÍA',
+            'OPTOMETRÍA',
+            'VISIOMETRÍA'
+        ];
+
+        function cargarExamenes() {
+            // Usar lista fija de exámenes permitidos
+            examenesData = examenesPermitidos.map((nombre, index) => ({
+                id: index + 1,
+                nombre: nombre
+            }));
+            renderExamenes();
+        }
+
+        function renderExamenes() {
+            const grid = document.getElementById('examenesGrid');
+
+            grid.innerHTML = examenesData.map(examen => `
+                <div class="examen-option ${examenesSeleccionados.includes(examen.nombre) ? 'selected' : ''}"
+                     onclick="toggleExamen('${examen.nombre.replace(/'/g, "\\'")}', this)"
+                     data-examen="${examen.nombre}">
+                    <input type="checkbox" ${examenesSeleccionados.includes(examen.nombre) ? 'checked' : ''}>
+                    <span>${examen.nombre}</span>
+                </div>
+            `).join('');
+        }
+
+        function toggleExamen(nombre, element) {
+            const index = examenesSeleccionados.indexOf(nombre);
+
+            if (index === -1) {
+                // Si selecciona Optometría, deseleccionar Visiometría y viceversa
+                if (nombre === 'OPTOMETRÍA') {
+                    const visioIndex = examenesSeleccionados.indexOf('VISIOMETRÍA');
+                    if (visioIndex !== -1) {
+                        examenesSeleccionados.splice(visioIndex, 1);
+                    }
+                } else if (nombre === 'VISIOMETRÍA') {
+                    const optoIndex = examenesSeleccionados.indexOf('OPTOMETRÍA');
+                    if (optoIndex !== -1) {
+                        examenesSeleccionados.splice(optoIndex, 1);
+                    }
+                }
+
+                examenesSeleccionados.push(nombre);
+            } else {
+                examenesSeleccionados.splice(index, 1);
+            }
+
+            // Re-renderizar para actualizar estado visual
+            renderExamenes();
+        }
+
+        function toggleEmpresa() {
+            const valor = document.getElementById('aNombreDe').value;
+            document.getElementById('empresaContainer').style.display = valor === 'EMPRESA' ? 'block' : 'none';
+        }
+
+        function seleccionarTipoConsulta(tipo, element) {
+            tipoConsultaSeleccionado = tipo;
+            document.getElementById('tipoConsulta').value = tipo;
+
+            document.querySelectorAll('.options-2col .option-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            element.classList.add('selected');
+
+            // Cuando cambia el tipo de consulta, actualizar horarios según la modalidad
+            const dia = document.getElementById('dia').value;
+            if (dia) {
+                actualizarHoras();
+            }
+        }
+
+        function siguientePaso() {
+            if (!validarPasoActual()) return;
+
+            const slides = document.querySelectorAll('.question-slide');
+            slides.forEach(s => s.classList.remove('active'));
+
+            // Si estamos en paso 1b, pasar a paso 2
+            if (enPaso1b) {
+                pasoActual = 2;
+                enPaso1b = false;
+            } else {
+                pasoActual++;
+            }
+
+            if (pasoActual === 5) {
+                generarResumen();
+            }
+
+            document.querySelector(`.question-slide[data-step="${pasoActual}"]`).classList.add('active');
+            actualizarProgreso();
+            ocultarAlerta();
+        }
+
+        function pasoAnterior() {
+            const slides = document.querySelectorAll('.question-slide');
+            slides.forEach(s => s.classList.remove('active'));
+
+            pasoActual--;
+            document.querySelector(`.question-slide[data-step="${pasoActual}"]`).classList.add('active');
+            actualizarProgreso();
+            ocultarAlerta();
+        }
+
+        function validarPasoActual() {
+            let camposFaltantes = [];
+
+            // Si estamos en paso 1b (datos personales después de verificar cédula)
+            if (enPaso1b) {
+                if (!document.getElementById('primerNombre').value.trim()) camposFaltantes.push('Primer Nombre');
+                if (!document.getElementById('primerApellido').value.trim()) camposFaltantes.push('Primer Apellido');
+                if (!document.getElementById('celular').value.trim()) camposFaltantes.push('Celular');
+            } else if (pasoActual === 1) {
+                // Paso 1 original ya no se usa para validación (se usa verificarCedulaYContinuar)
+                if (!document.getElementById('numeroId').value.trim()) camposFaltantes.push('Número de Cédula');
+            } else if (pasoActual === 2) {
+                if (!document.getElementById('tipoConsulta').value) camposFaltantes.push('Tipo de Consulta');
+                if (!document.getElementById('aNombreDe').value) camposFaltantes.push('A nombre de');
+                if (document.getElementById('aNombreDe').value === 'EMPRESA' && !document.getElementById('empresa').value) {
+                    camposFaltantes.push('Empresa');
+                }
+                if (!document.getElementById('ciudad').value) camposFaltantes.push('Ciudad de Residencia');
+            } else if (pasoActual === 3) {
+                if (!document.getElementById('mes').value) camposFaltantes.push('Mes');
+                if (!document.getElementById('dia').value) camposFaltantes.push('Día');
+                if (!document.getElementById('horaSelect').value) camposFaltantes.push('Hora');
+            } else if (pasoActual === 4) {
+                if (examenesSeleccionados.length === 0) camposFaltantes.push('Al menos un examen');
+            }
+
+            if (camposFaltantes.length > 0) {
+                mostrarAlerta(`Por favor complete: ${camposFaltantes.join(', ')}`);
+                return false;
+            }
+
+            return true;
+        }
+
+        function mostrarAlerta(mensaje) {
+            const alert = document.getElementById('alertContainer');
+            alert.textContent = mensaje;
+            alert.classList.add('show');
+        }
+
+        function ocultarAlerta() {
+            document.getElementById('alertContainer').classList.remove('show');
+        }
+
+        function generarResumen() {
+            const fecha = document.getElementById('dia').value;
+            const hora = document.getElementById('horaSelect').value;
+            const fechaObj = new Date(fecha + 'T' + hora);
+
+            const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const fechaFormateada = fechaObj.toLocaleDateString('es-CO', opciones);
+
+            const hora12 = parseInt(hora.split(':')[0]) > 12 ?
+                (parseInt(hora.split(':')[0]) - 12) + ':' + hora.split(':')[1] + ' PM' :
+                hora + ' AM';
+
+            const aNombreDe = document.getElementById('aNombreDe').value;
+            const empresaNombre = aNombreDe === 'EMPRESA' ? document.getElementById('empresa').value : 'Particular';
+
+            const resumen = `
+                <div class="resumen-item">
+                    <span class="resumen-label">Paciente</span>
+                    <span class="resumen-value">${document.getElementById('primerNombre').value} ${document.getElementById('primerApellido').value}</span>
+                </div>
+                <div class="resumen-item">
+                    <span class="resumen-label">Cédula</span>
+                    <span class="resumen-value">${document.getElementById('numeroId').value}</span>
+                </div>
+                <div class="resumen-item">
+                    <span class="resumen-label">Celular</span>
+                    <span class="resumen-value">${document.getElementById('celular').value}</span>
+                </div>
+                <div class="resumen-item">
+                    <span class="resumen-label">Tipo</span>
+                    <span class="resumen-value">${document.getElementById('tipoConsulta').value}</span>
+                </div>
+                <div class="resumen-item">
+                    <span class="resumen-label">A nombre de</span>
+                    <span class="resumen-value">${empresaNombre}</span>
+                </div>
+                <div class="resumen-item">
+                    <span class="resumen-label">Fecha</span>
+                    <span class="resumen-value">${fechaFormateada}</span>
+                </div>
+                <div class="resumen-item">
+                    <span class="resumen-label">Hora</span>
+                    <span class="resumen-value">${hora12}</span>
+                </div>
+                <div class="resumen-item">
+                    <span class="resumen-label">Exámenes</span>
+                    <span class="resumen-value">${examenesSeleccionados.join(', ')}</span>
+                </div>
+            `;
+
+            document.getElementById('resumenCita').innerHTML = resumen;
+        }
+
+        async function confirmarCita() {
+            const btnConfirmar = document.getElementById('btnConfirmar');
+            btnConfirmar.disabled = true;
+
+            document.getElementById('loadingOverlay').classList.add('show');
+
+            const fecha = document.getElementById('dia').value; // YYYY-MM-DD
+            const hora = document.getElementById('horaSelect').value; // HH:MM
+
+            const aNombreDe = document.getElementById('aNombreDe').value;
+            // Siempre PARTICULAR para codEmpresa (nuevaorden3.html)
+            let codEmpresa = 'PARTICULAR';
+            let empresaNombre = '';
+
+            if (aNombreDe === 'PARTICULAR') {
+                empresaNombre = 'PARTICULAR';
+            } else if (aNombreDe === 'EMPRESA') {
+                empresaNombre = document.getElementById('empresa').value.trim() || '';
+            }
+
+            // Tipo de examen por defecto
+            let tipoExamenFinal = 'Ingreso';
+
+            const datos = {
+                primerNombre: capitalize(document.getElementById('primerNombre').value),
+                segundoNombre: document.getElementById('segundoNombre').value.trim() ? capitalize(document.getElementById('segundoNombre').value) : null,
+                primerApellido: capitalize(document.getElementById('primerApellido').value),
+                segundoApellido: document.getElementById('segundoApellido').value.trim() ? capitalize(document.getElementById('segundoApellido').value) : null,
+                numeroId: document.getElementById('numeroId').value.replace(/\D/g, ''),
+                celular: document.getElementById('celular').value.replace(/\D/g, ''),
+                tipoConsulta: document.getElementById('tipoConsulta').value,
+                codEmpresa: codEmpresa,
+                empresa: empresaNombre,
+                cargo: document.getElementById('cargo').value.trim() || null,
+                fechaAtencion: fecha,  // YYYY-MM-DD - el backend construye el timestamp con hora Colombia
+                horaAtencion: hora,    // HH:MM - hora Colombia, el backend lo usa para construir fechaAtencion
+                examenes: examenesSeleccionados.join(', '),
+                tipoExamen: tipoExamenFinal,
+                atendido: 'PENDIENTE',
+                ciudad: document.getElementById('ciudad').value,
+                medico: 'NUBIA'
+            };
+
+            try {
+                const response = await fetch('/api/ordenes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(datos)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Redirigir al formulario de historia clínica (Paso 2)
+                    const ordenId = result.data._id;
+                    window.location.href = `/?_id=${ordenId}`;
+                } else {
+                    throw new Error(result.message || 'Error al registrar la cita');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('loadingOverlay').classList.remove('show');
+                mostrarAlerta('Error al registrar la cita. Por favor intenta de nuevo.');
+                btnConfirmar.disabled = false;
+            }
+        }
+
+        function mostrarExito(datos) {
+            document.getElementById('loadingOverlay').classList.remove('show');
+
+            const slides = document.querySelectorAll('.question-slide');
+            slides.forEach(s => s.classList.remove('active'));
+            document.querySelector('.question-slide[data-step="6"]').classList.add('active');
+
+            document.getElementById('progressBar').style.width = '100%';
+            document.getElementById('currentStep').textContent = '5';
+
+            const fecha = new Date(datos.fechaAtencion);
+            const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const fechaFormateada = fecha.toLocaleDateString('es-CO', opciones);
+
+            const hora = datos.horaAtencion;
+            const hora12 = parseInt(hora.split(':')[0]) > 12 ?
+                (parseInt(hora.split(':')[0]) - 12) + ':' + hora.split(':')[1] + ' PM' :
+                hora + ' AM';
+
+            document.getElementById('citaFinal').innerHTML = `
+                <div class="resumen-item">
+                    <span class="resumen-label">Paciente</span>
+                    <span class="resumen-value">${datos.primerNombre} ${datos.primerApellido}</span>
+                </div>
+                <div class="resumen-item">
+                    <span class="resumen-label">Fecha</span>
+                    <span class="resumen-value">${fechaFormateada}</span>
+                </div>
+                <div class="resumen-item">
+                    <span class="resumen-label">Hora</span>
+                    <span class="resumen-value">${hora12}</span>
+                </div>
+                <div class="resumen-item">
+                    <span class="resumen-label">Tipo</span>
+                    <span class="resumen-value">${datos.tipoConsulta}</span>
+                </div>
+                <div class="resumen-item">
+                    <span class="resumen-label">Exámenes</span>
+                    <span class="resumen-value">${datos.examenes}</span>
+                </div>
+            `;
+        }
+
+        // ========== VERIFICACIÓN DE CÉDULA Y DUPLICADOS ==========
+
+        let ordenExistenteActual = null;
+        let enPaso1b = false;
+
+        async function verificarCedulaYContinuar() {
+            const numeroId = document.getElementById('numeroId').value.trim();
+
+            if (!numeroId) {
+                mostrarAlerta('Por favor ingrese su número de cédula');
+                return;
+            }
+
+            const btn = document.getElementById('btnVerificarCedula');
+            btn.disabled = true;
+            btn.textContent = 'Verificando...';
+            ocultarAlerta();
+
+            try {
+                const response = await fetch(`/api/ordenes/verificar-duplicado/${encodeURIComponent(numeroId)}`);
+                const result = await response.json();
+
+                if (result.success && result.hayDuplicado) {
+                    btn.disabled = false;
+                    btn.textContent = 'Continuar →';
+
+                    if (result.tipo === 'atendido') {
+                        // Mostrar modal de certificado existente
+                        mostrarModalAtendido(result.ordenExistente);
+                    } else if (result.tipo === 'expirado') {
+                        // Mostrar modal de cita expirada
+                        mostrarModalExpirado(result.ordenExistente);
+                    } else {
+                        // Mostrar modal de orden pendiente
+                        mostrarModalDuplicado(result.ordenExistente);
+                    }
+                } else {
+                    // No hay duplicado, pasar al paso 1b
+                    mostrarPaso1b();
+                }
+            } catch (error) {
+                console.error('Error al verificar:', error);
+                mostrarAlerta('Error al verificar. Intente de nuevo.');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Continuar →';
+            }
+        }
+
+        function mostrarPaso1b() {
+            const numeroId = document.getElementById('numeroId').value.trim();
+            document.getElementById('displayNumeroId').value = numeroId;
+
+            // Ocultar step 1, mostrar step 1b
+            document.querySelectorAll('.question-slide').forEach(s => s.classList.remove('active'));
+            document.querySelector('.question-slide[data-step="1b"]').classList.add('active');
+            enPaso1b = true;
+            ocultarAlerta();
+        }
+
+        function volverAVerificarCedula() {
+            // Volver al paso 1
+            document.querySelectorAll('.question-slide').forEach(s => s.classList.remove('active'));
+            document.querySelector('.question-slide[data-step="1"]').classList.add('active');
+            enPaso1b = false;
+            pasoActual = 1;
+            actualizarProgreso();
+            ocultarAlerta();
+        }
+
+        function mostrarModalDuplicado(ordenExistente) {
+            ordenExistenteActual = ordenExistente;
+
+            const fechaCreacion = new Date(ordenExistente.fechaCreacion).toLocaleDateString('es-CO', {
+                year: 'numeric', month: 'long', day: 'numeric'
+            });
+
+            document.getElementById('ordenExistenteInfo').innerHTML = `
+                <div class="resumen-item">
+                    <span class="resumen-label">Fecha de creación</span>
+                    <span class="resumen-value">${fechaCreacion}</span>
+                </div>
+            `;
+
+            const mensajeFormulario = document.getElementById('mensajeFormularioDup');
+            if (ordenExistente.tieneFormulario) {
+                mensajeFormulario.innerHTML = 'Esta orden <strong>ya tiene</strong> formulario completado.';
+            } else {
+                mensajeFormulario.innerHTML = 'Esta orden <strong>no tiene</strong> formulario completado.';
+            }
+
+            document.getElementById('modalDuplicado').classList.add('show');
+        }
+
+        function cerrarModalDuplicado() {
+            document.getElementById('modalDuplicado').classList.remove('show');
+            ordenExistenteActual = null;
+        }
+
+        // Función para mostrar modal de ATENDIDO
+        function mostrarModalAtendido(ordenExistente) {
+            ordenExistenteActual = ordenExistente;
+
+            let fechaAtencionStr = 'No disponible';
+            if (ordenExistente.fechaAtencion) {
+                fechaAtencionStr = new Date(ordenExistente.fechaAtencion).toLocaleDateString('es-CO', {
+                    year: 'numeric', month: 'long', day: 'numeric'
+                });
+            } else if (ordenExistente.fechaCreacion) {
+                fechaAtencionStr = new Date(ordenExistente.fechaCreacion).toLocaleDateString('es-CO', {
+                    year: 'numeric', month: 'long', day: 'numeric'
+                });
+            }
+
+            document.getElementById('ordenAtendidaInfo').innerHTML = `
+                <div class="resumen-item">
+                    <span class="resumen-label">Fecha de consulta</span>
+                    <span class="resumen-value">${fechaAtencionStr}</span>
+                </div>
+            `;
+
+            document.getElementById('modalAtendido').classList.add('show');
+        }
+
+        function cerrarModalAtendido() {
+            document.getElementById('modalAtendido').classList.remove('show');
+            ordenExistenteActual = null;
+        }
+
+        function crearNuevaOrdenAtendido() {
+            cerrarModalAtendido();
+            mostrarPaso1b();
+        }
+
+        function usarOrdenExistente() {
+            if (ordenExistenteActual) {
+                window.location.href = `/?_id=${ordenExistenteActual._id}`;
+            }
+        }
+
+        function crearNuevaOrden() {
+            cerrarModalDuplicado();
+            mostrarPaso1b();
+        }
+
+        // Funciones para modal de CITA EXPIRADA
+        function mostrarModalExpirado(ordenExistente) {
+            ordenExistenteActual = ordenExistente;
+
+            let fechaAtencionStr = 'No disponible';
+            if (ordenExistente.fechaAtencion) {
+                fechaAtencionStr = new Date(ordenExistente.fechaAtencion).toLocaleDateString('es-CO', {
+                    year: 'numeric', month: 'long', day: 'numeric'
+                });
+            }
+
+            document.getElementById('ordenExpiradaInfo').innerHTML = `
+                <div class="resumen-item">
+                    <span class="resumen-label">Fecha programada</span>
+                    <span class="resumen-value" style="color: #DC2626;">${fechaAtencionStr} (Expirada)</span>
+                </div>
+            `;
+
+            // Cargar meses disponibles para el modal
+            cargarMesesModalExpirado();
+
+            document.getElementById('modalExpirado').classList.add('show');
+        }
+
+        function cerrarModalExpirado() {
+            document.getElementById('modalExpirado').classList.remove('show');
+            ordenExistenteActual = null;
+        }
+
+        function cargarMesesModalExpirado() {
+            const select = document.getElementById('mesExpirado');
+            // Usar timezone Colombia para obtener la fecha actual
+            const ahora = new Date();
+            const colombiaTime = ahora.toLocaleString('en-US', { timeZone: 'America/Bogota' });
+            const hoy = new Date(colombiaTime);
+            const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                          'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+            select.innerHTML = '<option value="">Seleccionar...</option>';
+            for (let i = 0; i < 3; i++) {
+                const fecha = new Date(hoy.getFullYear(), hoy.getMonth() + i, 1);
+                const mesIndex = fecha.getMonth();
+                const year = fecha.getFullYear();
+                select.innerHTML += `<option value="${mesIndex + 1}-${year}">${meses[mesIndex]} ${year}</option>`;
+            }
+        }
+
+        function actualizarDiasExpirado() {
+            const mesValue = document.getElementById('mesExpirado').value;
+            if (!mesValue) return;
+
+            const [mes, year] = mesValue.split('-').map(Number);
+            const select = document.getElementById('diaExpirado');
+            // Usar timezone Colombia para obtener la fecha actual
+            const ahora = new Date();
+            const colombiaTime = ahora.toLocaleString('en-US', { timeZone: 'America/Bogota' });
+            const hoy = new Date(colombiaTime);
+            hoy.setHours(0, 0, 0, 0);
+
+            const primerDia = new Date(year, mes - 1, 1);
+            const ultimoDia = new Date(year, mes, 0);
+
+            let diaInicio = primerDia;
+            if (mes - 1 === hoy.getMonth() && year === hoy.getFullYear()) {
+                diaInicio = hoy;
+            }
+
+            const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+            select.innerHTML = '<option value="">Seleccionar...</option>';
+
+            let diaActual = new Date(diaInicio);
+            while (diaActual <= ultimoDia) {
+                const diaSemana = diasSemana[diaActual.getDay()];
+                const diaNum = diaActual.getDate();
+                const esHoy = diaActual.getTime() === hoy.getTime();
+                const fechaISO = diaActual.toISOString().split('T')[0];
+
+                select.innerHTML += `<option value="${fechaISO}">${esHoy ? 'Hoy' : diaSemana + ' ' + diaNum}</option>`;
+                diaActual.setDate(diaActual.getDate() + 1);
+            }
+
+            document.getElementById('horaExpirado').innerHTML = '<option value="">Primero selecciona un día</option>';
+        }
+
+        function actualizarHorasExpirado() {
+            const fecha = document.getElementById('diaExpirado').value;
+            if (!fecha) return;
+
+            const select = document.getElementById('horaExpirado');
+            const ahora = new Date();
+            const fechaSeleccionada = new Date(fecha + 'T00:00:00');
+            const esHoy = fechaSeleccionada.toDateString() === ahora.toDateString();
+
+            let horaInicio = 8;
+            let horaFin = 20;
+            let minutoInicio = 0;
+
+            if (esHoy) {
+                const horaMinima = ahora.getHours() + 1;
+                const minutoMinimo = ahora.getMinutes();
+
+                if (horaMinima >= horaFin) {
+                    select.innerHTML = '<option value="">No hay horas disponibles para hoy</option>';
+                    return;
+                }
+
+                if (horaMinima > horaInicio) {
+                    horaInicio = horaMinima;
+                    minutoInicio = Math.ceil(minutoMinimo / 10) * 10;
+                    if (minutoInicio >= 60) {
+                        minutoInicio = 0;
+                        horaInicio++;
+                    }
+                }
+            }
+
+            select.innerHTML = '<option value="">Seleccionar hora...</option>';
+
+            for (let hora = horaInicio; hora < horaFin; hora++) {
+                const startMinuto = (hora === horaInicio) ? minutoInicio : 0;
+                for (let minuto = startMinuto; minuto < 60; minuto += 10) {
+                    const horaStr = String(hora).padStart(2, '0');
+                    const minutoStr = String(minuto).padStart(2, '0');
+                    const horaCompleta = `${horaStr}:${minutoStr}`;
+                    const hora12 = hora > 12 ? hora - 12 : (hora === 0 ? 12 : hora);
+                    const ampm = hora >= 12 ? 'PM' : 'AM';
+                    select.innerHTML += `<option value="${horaCompleta}">${hora12}:${minutoStr} ${ampm}</option>`;
+                }
+            }
+        }
+
+        async function actualizarFechaYContinuar() {
+            const dia = document.getElementById('diaExpirado').value;
+            const hora = document.getElementById('horaExpirado').value;
+
+            if (!dia || !hora) {
+                alert('Por favor selecciona una nueva fecha y hora');
+                return;
+            }
+
+            const btn = document.getElementById('btnActualizarFecha');
+            btn.disabled = true;
+            btn.textContent = 'Actualizando...';
+
+            try {
+                const response = await fetch(`/api/ordenes/${ordenExistenteActual._id}/fecha-atencion`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fechaAtencion: dia,   // YYYY-MM-DD
+                        horaAtencion: hora    // HH:MM - hora Colombia
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Redirigir al formulario médico con la orden actualizada
+                    window.location.href = `/?_id=${ordenExistenteActual._id}`;
+                } else {
+                    alert('Error al actualizar la fecha: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al actualizar la fecha. Intente de nuevo.');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Reagendar y continuar';
+            }
+        }
+
+        function crearNuevaOrdenExpirado() {
+            cerrarModalExpirado();
+            mostrarPaso1b();
+        }
+    </script>
+
+    <!-- Modal de orden duplicada (PENDIENTE) -->
+    <div class="modal-overlay" id="modalDuplicado" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 16px; max-width: 450px; width: 90%; padding: 32px; margin: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.2);">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <div style="width: 64px; height: 64px; background: #FEF3C7; border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" width="32" height="32">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                </div>
+                <h3 style="font-size: 20px; font-weight: 600; color: #1F2937; margin-bottom: 8px;">Ya tienes una cita pendiente</h3>
+                <p style="color: #6B7280; font-size: 14px;">Encontramos una orden existente con tu número de cédula.</p>
+            </div>
+
+            <div class="resumen-container" id="ordenExistenteInfo" style="background: #F9FAFB; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+                <!-- Se llena dinámicamente -->
+            </div>
+
+            <p id="mensajeFormularioDup" style="text-align: center; font-size: 14px; color: #64748B; margin-bottom: 24px;"></p>
+
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <button type="button" class="nav-btn" onclick="usarOrdenExistente()" style="width: 100%;">
+                    Continuar con mi cita existente
+                </button>
+                <button type="button" class="nav-btn prev-btn" onclick="crearNuevaOrden()" style="width: 100%; background: #F59E0B; color: white; border-color: #F59E0B;">
+                    Crear nueva cita de todos modos
+                </button>
+                <button type="button" class="nav-btn prev-btn" onclick="cerrarModalDuplicado()" style="width: 100%;">
+                    Cancelar
+                </button>
+            </div>
+            <div style="text-align: center; padding: 4px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; margin-top: 16px;">modalDuplicado</div>
+        </div>
+    </div>
+
+    <!-- Modal de certificado existente (ATENDIDO) -->
+    <div class="modal-overlay" id="modalAtendido" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 16px; max-width: 450px; width: 90%; padding: 32px; margin: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.2);">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <div style="width: 64px; height: 64px; background: #DBEAFE; border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" width="32" height="32">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                </div>
+                <h3 style="font-size: 20px; font-weight: 600; color: #1F2937; margin-bottom: 8px;">Ya tienes un certificado</h3>
+                <p style="color: #6B7280; font-size: 14px;">Ya existe un certificado médico con tu número de cédula.</p>
+            </div>
+
+            <div class="resumen-container" id="ordenAtendidaInfo" style="background: #F9FAFB; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+                <!-- Se llena dinámicamente -->
+            </div>
+
+            <p style="text-align: center; font-size: 14px; color: #64748B; margin-bottom: 24px;">Si necesitas agendar una nueva cita, puedes continuar.</p>
+
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <button type="button" class="nav-btn prev-btn" onclick="crearNuevaOrdenAtendido()" style="width: 100%; background: #F59E0B; color: white; border-color: #F59E0B;">
+                    Crear nueva cita
+                </button>
+                <button type="button" class="nav-btn prev-btn" onclick="cerrarModalAtendido()" style="width: 100%;">
+                    Cancelar
+                </button>
+            </div>
+            <div style="text-align: center; padding: 4px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; margin-top: 16px;">modalAtendido</div>
+        </div>
+    </div>
+
+    <!-- Modal de cita expirada (PENDIENTE con fecha vencida) -->
+    <div class="modal-overlay" id="modalExpirado" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 16px; max-width: 500px; width: 90%; padding: 32px; margin: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto;">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <div style="width: 64px; height: 64px; background: #FEE2E2; border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" width="32" height="32">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                </div>
+                <h3 style="font-size: 20px; font-weight: 600; color: #1F2937; margin-bottom: 8px;">Tu cita ha expirado</h3>
+                <p style="color: #6B7280; font-size: 14px;">Tenías una cita programada pero la fecha ya pasó. Puedes reagendar tu cita.</p>
+            </div>
+
+            <div class="resumen-container" id="ordenExpiradaInfo" style="background: #FEF2F2; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                <!-- Se llena dinámicamente -->
+            </div>
+
+            <div style="background: #F0FDF4; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                <h4 style="font-size: 14px; font-weight: 600; color: #166534; margin-bottom: 12px;">Selecciona nueva fecha y hora:</h4>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                    <div>
+                        <label style="font-size: 12px; color: #374151; display: block; margin-bottom: 4px;">Mes</label>
+                        <select id="mesExpirado" onchange="actualizarDiasExpirado()" style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 14px;">
+                            <option value="">Seleccionar...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 12px; color: #374151; display: block; margin-bottom: 4px;">Día</label>
+                        <select id="diaExpirado" onchange="actualizarHorasExpirado()" style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 14px;">
+                            <option value="">Seleccionar...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label style="font-size: 12px; color: #374151; display: block; margin-bottom: 4px;">Hora</label>
+                    <select id="horaExpirado" style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 14px;">
+                        <option value="">Primero selecciona un día</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <button type="button" class="nav-btn" id="btnActualizarFecha" onclick="actualizarFechaYContinuar()" style="width: 100%; background: #10B981; border-color: #10B981;">
+                    Reagendar y continuar
+                </button>
+                <button type="button" class="nav-btn prev-btn" onclick="crearNuevaOrdenExpirado()" style="width: 100%; background: #F59E0B; color: white; border-color: #F59E0B;">
+                    Crear nueva orden
+                </button>
+                <button type="button" class="nav-btn prev-btn" onclick="cerrarModalExpirado()" style="width: 100%;">
+                    Cancelar
+                </button>
+            </div>
+            <div style="text-align: center; padding: 4px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; margin-top: 16px;">modalExpirado</div>
+        </div>
+    </div>
+
+    <style>
+        #modalDuplicado.show {
+            display: flex !important;
+        }
+        #modalAtendido.show {
+            display: flex !important;
+        }
+        #modalExpirado.show {
+            display: flex !important;
+        }
+    </style>
+</body>
+</html>
