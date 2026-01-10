@@ -6413,19 +6413,16 @@ app.get('/api/validar-certificado/:numeroId', async (req, res) => {
 
         console.log('🔍 Validando certificado para documento:', numeroId);
 
-        // Buscar en HistoriaClinica con estado ATENDIDO y que tenga mdConceptoFinal
+        // Buscar en HistoriaClinica con estado ATENDIDO
         const result = await pool.query(`
             SELECT
                 "primerNombre",
                 "primerApellido",
                 "fechaConsulta",
-                "examenes",
-                "mdConceptoFinal"
+                "examenes"
             FROM "HistoriaClinica"
             WHERE "numeroId" = $1
             AND "atendido" = 'ATENDIDO'
-            AND "mdConceptoFinal" IS NOT NULL
-            AND "mdConceptoFinal" != ''
             ORDER BY "fechaConsulta" DESC
             LIMIT 1
         `, [numeroId]);
