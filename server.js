@@ -405,6 +405,11 @@ async function sendWhatsAppFreeText(toNumber, messageBody) {
             formattedNumber = `whatsapp:${formattedNumber}`;
         }
 
+        // Log para debugging de saltos de línea
+        console.log('📝 Mensaje a enviar (raw):', JSON.stringify(messageBody));
+        console.log('📝 Contiene \\n?', messageBody.includes('\n'));
+        console.log('📝 Saltos de línea encontrados:', (messageBody.match(/\n/g) || []).length);
+
         const messageParams = {
             body: messageBody, // Texto libre del mensaje
             from: process.env.TWILIO_WHATSAPP_FROM,
