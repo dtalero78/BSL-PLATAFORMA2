@@ -627,9 +627,10 @@
         // Actualizar conversación después de recibir mensaje
         async function actualizarConversacionDespuesDeMensaje(data) {
             // Pequeño delay para asegurar que el backend guardó el mensaje
-            await new Promise(resolve => setTimeout(resolve, 100));
-            // Forzar recarga completa de conversaciones
-            await cargarConversaciones(true);
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            // Recargar solo para detectar cambios incrementales
+            await cargarConversaciones(false);
         }
 
         // Parpadeo del título (como WhatsApp)
@@ -689,7 +690,9 @@
                 conversacionesWhatsApp = nuevasConversaciones;
 
                 // Si hay cambios o es forzado, actualizar UI
-                if (forzarRerender || conversacionesCambiadas.length > 0) {
+                if (forzarRerender) {
+                    renderConversaciones();
+                } else if (conversacionesCambiadas.length > 0) {
                     actualizarConversacionesCambiadas(conversacionesCambiadas);
                 }
 
@@ -725,29 +728,14 @@
                 return;
             }
 
-            // Actualizar solo las conversaciones cambiadas
-            conversacionesWhatsApp.forEach(conv => {
-                const existingItem = lista.querySelector(`[data-conv-id="${conv.id}"]`);
+            // Si hay conversaciones cambiadas, hacer render completo para respetar el orden
+            // (el backend ordena por último mensaje, necesitamos reflejar ese orden)
+            if (idsConversacionesCambiadas.length > 0) {
+                renderConversaciones();
+                return;
+            }
 
-                // Si cambió o no existe, actualizar
-                if (idsConversacionesCambiadas.includes(conv.id) || !existingItem) {
-                    const nuevoHTML = generarHTMLConversacion(conv);
-
-                    if (existingItem) {
-                        // Reemplazar el elemento existente
-                        const tempDiv = document.createElement('div');
-                        tempDiv.innerHTML = nuevoHTML;
-                        existingItem.replaceWith(tempDiv.firstChild);
-                    } else {
-                        // Agregar nueva conversación al inicio
-                        const tempDiv = document.createElement('div');
-                        tempDiv.innerHTML = nuevoHTML;
-                        lista.insertBefore(tempDiv.firstChild, lista.firstChild);
-                    }
-                }
-            });
-
-            feather.replace();
+            // Si no hay cambios, no hacer nada (evita parpadeos innecesarios)
         }
 
         // Generar HTML para una conversación individual
