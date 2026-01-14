@@ -375,7 +375,8 @@ async function sendWhatsAppMessage(toNumber, messageBody, variables = {}, templa
         const messageParams = {
             contentSid: contentSid,
             from: process.env.TWILIO_WHATSAPP_FROM,
-            to: formattedNumber
+            to: formattedNumber,
+            statusCallback: `${process.env.BASE_URL || 'https://bsl-plataforma.com'}/api/whatsapp/status`
         };
 
         // Si hay variables para el template, agregarlas
@@ -417,7 +418,8 @@ async function sendWhatsAppFreeText(toNumber, messageBody) {
         const messageParams = {
             body: messageBody, // Texto libre del mensaje
             from: process.env.TWILIO_WHATSAPP_FROM,
-            to: formattedNumber
+            to: formattedNumber,
+            statusCallback: `${process.env.BASE_URL || 'https://bsl-plataforma.com'}/api/whatsapp/status`
         };
 
         const message = await twilioClient.messages.create(messageParams);
@@ -2863,6 +2865,51 @@ app.get('/api/admin/whatsapp/conversaciones/:id/mensajes', authMiddleware, requi
     }
 });
 
+// GET - Proxy para media de Twilio (requiere autenticación)
+app.get('/api/admin/whatsapp/media/proxy', authMiddleware, requireAdmin, async (req, res) => {
+    try {
+        const { url } = req.query;
+
+        if (!url) {
+            return res.status(400).json({ success: false, message: 'URL no proporcionada' });
+        }
+
+        // Validar que la URL sea de Twilio
+        if (!url.startsWith('https://api.twilio.com/')) {
+            return res.status(400).json({ success: false, message: 'URL no válida' });
+        }
+
+        console.log('🖼️ Proxying media from Twilio:', url);
+
+        // Fetch con autenticación básica de Twilio
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': 'Basic ' + Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString('base64')
+            }
+        });
+
+        if (!response.ok) {
+            console.error('❌ Error fetching media from Twilio:', response.status, response.statusText);
+            return res.status(response.status).json({ success: false, message: 'Error al obtener media de Twilio' });
+        }
+
+        // Obtener el tipo de contenido
+        const contentType = response.headers.get('content-type');
+
+        // Pipe la respuesta directamente al cliente
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache por 1 año
+
+        // Stream la respuesta
+        const buffer = await response.arrayBuffer();
+        res.send(Buffer.from(buffer));
+
+    } catch (error) {
+        console.error('❌ Error al proxear media:', error);
+        res.status(500).json({ success: false, message: 'Error al obtener archivo multimedia' });
+    }
+});
+
 // POST - Enviar mensaje en una conversación
 app.post('/api/admin/whatsapp/conversaciones/:id/mensajes', authMiddleware, requireAdmin, async (req, res) => {
     try {
@@ -3066,6 +3113,152 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
     } catch (error) {
         console.error('❌ Error en webhook WhatsApp:', error);
         res.status(500).send('Error');
+    }
+});
+
+// POST - Status Callback de Twilio para mensajes salientes
+app.post('/api/whatsapp/status', async (req, res) => {
+    try {
+        const { MessageSid, MessageStatus, To, From, Body, NumMedia } = req.body;
+
+        console.log('📊 Status callback de Twilio:', {
+            sid: MessageSid,
+            status: MessageStatus,
+            to: To,
+            from: From,
+            body: Body,
+            numMedia: NumMedia
+        });
+
+        // Solo procesar cuando el mensaje fue enviado exitosamente
+        if (MessageStatus === 'sent' || MessageStatus === 'delivered') {
+            const numeroCliente = To.replace('whatsapp:', '');
+
+            // Verificar si el mensaje ya existe en la base de datos
+            const mensajeExistente = await pool.query(`
+                SELECT id FROM mensajes_whatsapp WHERE sid_twilio = $1
+            `, [MessageSid]);
+
+            // Si el mensaje ya existe, no hacer nada (ya fue registrado por el envío directo)
+            if (mensajeExistente.rows.length > 0) {
+                console.log('✅ Mensaje ya registrado:', MessageSid);
+                res.sendStatus(200);
+                return;
+            }
+
+            // El mensaje NO existe, fue enviado desde otra plataforma
+            console.log('📝 Registrando mensaje enviado desde plataforma externa');
+
+            // Buscar o crear conversación
+            let conversacion = await pool.query(`
+                SELECT id FROM conversaciones_whatsapp WHERE celular = $1
+            `, [numeroCliente]);
+
+            let conversacionId;
+
+            if (conversacion.rows.length === 0) {
+                // Crear nueva conversación
+                const nuevaConv = await pool.query(`
+                    INSERT INTO conversaciones_whatsapp (
+                        celular,
+                        nombre_paciente,
+                        estado_actual,
+                        fecha_inicio,
+                        fecha_ultima_actividad,
+                        bot_activo
+                    )
+                    VALUES ($1, $2, 'activa', NOW(), NOW(), true)
+                    RETURNING id
+                `, [numeroCliente, 'Usuario WhatsApp']);
+
+                conversacionId = nuevaConv.rows[0].id;
+            } else {
+                conversacionId = conversacion.rows[0].id;
+
+                // Actualizar última actividad
+                await pool.query(`
+                    UPDATE conversaciones_whatsapp
+                    SET fecha_ultima_actividad = NOW()
+                    WHERE id = $1
+                `, [conversacionId]);
+            }
+
+            // Capturar multimedia si existe
+            const numMedia = parseInt(NumMedia) || 0;
+            const mediaUrls = [];
+            const mediaTypes = [];
+
+            for (let i = 0; i < numMedia; i++) {
+                const mediaUrl = req.body[`MediaUrl${i}`];
+                const mediaType = req.body[`MediaContentType${i}`];
+                if (mediaUrl) {
+                    mediaUrls.push(mediaUrl);
+                    mediaTypes.push(mediaType || 'unknown');
+                }
+            }
+
+            // Determinar tipo de mensaje
+            let tipoMensaje = 'text';
+            if (numMedia > 0) {
+                const mainMediaType = mediaTypes[0];
+                if (mainMediaType.startsWith('image/')) {
+                    tipoMensaje = 'image';
+                } else if (mainMediaType.startsWith('video/')) {
+                    tipoMensaje = 'video';
+                } else if (mainMediaType.startsWith('audio/')) {
+                    tipoMensaje = 'audio';
+                } else if (mainMediaType === 'application/pdf') {
+                    tipoMensaje = 'document';
+                } else {
+                    tipoMensaje = 'media';
+                }
+            }
+
+            // Guardar mensaje saliente desde plataforma externa
+            const mensajeResult = await pool.query(`
+                INSERT INTO mensajes_whatsapp (
+                    conversacion_id,
+                    contenido,
+                    direccion,
+                    sid_twilio,
+                    tipo_mensaje,
+                    media_url,
+                    media_type,
+                    timestamp
+                )
+                VALUES ($1, $2, 'saliente', $3, $4, $5, $6, NOW())
+                RETURNING *
+            `, [
+                conversacionId,
+                Body || '📎 Archivo adjunto',
+                MessageSid,
+                tipoMensaje,
+                mediaUrls.length > 0 ? JSON.stringify(mediaUrls) : null,
+                mediaTypes.length > 0 ? JSON.stringify(mediaTypes) : null
+            ]);
+
+            console.log('✅ Mensaje externo guardado en conversación:', conversacionId);
+
+            // Emitir evento WebSocket para actualización en tiempo real
+            if (global.emitWhatsAppEvent) {
+                global.emitWhatsAppEvent('nuevo_mensaje', {
+                    conversacion_id: conversacionId,
+                    numero_cliente: numeroCliente,
+                    contenido: Body || '📎 Archivo adjunto',
+                    direccion: 'saliente',
+                    fecha_envio: new Date().toISOString(),
+                    sid_twilio: MessageSid,
+                    tipo_mensaje: tipoMensaje,
+                    media_url: mediaUrls.length > 0 ? JSON.stringify(mediaUrls) : null,
+                    media_type: mediaTypes.length > 0 ? JSON.stringify(mediaTypes) : null
+                });
+            }
+        }
+
+        res.sendStatus(200);
+    } catch (error) {
+        console.error('❌ Error en status callback:', error);
+        res.sendStatus(200); // Siempre responder 200 a Twilio
     }
 });
 

@@ -1124,24 +1124,29 @@ Llave Breb: @talero585`
                             mediaUrls.forEach((url, index) => {
                                 const type = mediaTypes[index] || 'unknown';
 
+                                // Usar proxy para URLs de Twilio
+                                const proxiedUrl = url.startsWith('https://api.twilio.com/')
+                                    ? `/api/admin/whatsapp/media/proxy?url=${encodeURIComponent(url)}`
+                                    : url;
+
                                 if (type.startsWith('image/')) {
                                     // Imagen
-                                    contenidoHTML += `<img src="${url}" alt="Imagen" style="max-width: 250px; border-radius: 8px; cursor: pointer;" onclick="window.open('${url}', '_blank')">`;
+                                    contenidoHTML += `<img src="${proxiedUrl}" alt="Imagen" style="max-width: 250px; border-radius: 8px; cursor: pointer;" onclick="window.open('${proxiedUrl}', '_blank')">`;
                                 } else if (type.startsWith('video/')) {
                                     // Video
-                                    contenidoHTML += `<video controls style="max-width: 250px; border-radius: 8px;"><source src="${url}" type="${type}"></video>`;
+                                    contenidoHTML += `<video controls style="max-width: 250px; border-radius: 8px;"><source src="${proxiedUrl}" type="${type}"></video>`;
                                 } else if (type.startsWith('audio/')) {
                                     // Audio
-                                    contenidoHTML += `<audio controls style="width: 250px;"><source src="${url}" type="${type}"></audio>`;
+                                    contenidoHTML += `<audio controls style="width: 250px;"><source src="${proxiedUrl}" type="${type}"></audio>`;
                                 } else if (type === 'application/pdf') {
                                     // PDF
-                                    contenidoHTML += `<a href="${url}" target="_blank" style="display: flex; align-items: center; gap: 8px; color: inherit; text-decoration: none;">
+                                    contenidoHTML += `<a href="${proxiedUrl}" target="_blank" style="display: flex; align-items: center; gap: 8px; color: inherit; text-decoration: none;">
                                         <i data-feather="file-text"></i>
                                         <span>📄 Documento PDF</span>
                                     </a>`;
                                 } else {
                                     // Otro archivo
-                                    contenidoHTML += `<a href="${url}" target="_blank" style="display: flex; align-items: center; gap: 8px; color: inherit; text-decoration: none;">
+                                    contenidoHTML += `<a href="${proxiedUrl}" target="_blank" style="display: flex; align-items: center; gap: 8px; color: inherit; text-decoration: none;">
                                         <i data-feather="paperclip"></i>
                                         <span>📎 Archivo adjunto</span>
                                     </a>`;
