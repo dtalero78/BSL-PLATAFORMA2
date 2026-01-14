@@ -354,7 +354,7 @@ const twilioClient = twilio(
 
 // Función para enviar mensajes de WhatsApp via Twilio con Content Template
 // Usado para notificaciones automáticas pre-aprobadas
-async function sendWhatsAppMessage(toNumber, messageBody, variables = {}) {
+async function sendWhatsAppMessage(toNumber, messageBody, variables = {}, templateSid = null) {
     try {
         // Formatear número: si empieza con 57, agregar whatsapp:+, si no, agregar whatsapp:+57
         let formattedNumber = toNumber;
@@ -367,9 +367,13 @@ async function sendWhatsAppMessage(toNumber, messageBody, variables = {}) {
             formattedNumber = `whatsapp:${formattedNumber}`;
         }
 
+        // Determinar qué template usar
+        // Si se proporciona templateSid, usarlo; si no, usar el por defecto
+        const contentSid = templateSid || process.env.TWILIO_CONTENT_TEMPLATE_SID;
+
         // Usar Content Template para cumplir con políticas de WhatsApp
         const messageParams = {
-            contentSid: process.env.TWILIO_CONTENT_TEMPLATE_SID,
+            contentSid: contentSid,
             from: process.env.TWILIO_WHATSAPP_FROM,
             to: formattedNumber
         };
@@ -381,7 +385,7 @@ async function sendWhatsAppMessage(toNumber, messageBody, variables = {}) {
 
         const message = await twilioClient.messages.create(messageParams);
 
-        console.log(`📱 WhatsApp template enviado a ${toNumber} (Twilio SID: ${message.sid})`);
+        console.log(`📱 WhatsApp template enviado a ${toNumber} (Template: ${contentSid}, SID: ${message.sid})`);
         return { success: true, sid: message.sid, status: message.status };
     } catch (err) {
         console.error(`❌ Error enviando WhatsApp template a ${toNumber}:`, err.message);
@@ -8416,7 +8420,17 @@ async function barridoNubiaEnviarLink() {
             const messageBody = `Hola ${primerNombre}, tu cita está próxima..\n\nComunícate ya haciendo clic en este link:\n\n${url}`;
 
             try {
-                await sendWhatsAppMessage(toNumber, messageBody);
+                // Usar template específico de recordatorio de cita
+                // Variables: {{1}} = nombre, {{2}} = _id (para URL del botón)
+                await sendWhatsAppMessage(
+                    toNumber,
+                    messageBody,
+                    {
+                        '1': primerNombre,
+                        '2': historiaId
+                    },
+                    process.env.TWILIO_TEMPLATE_RECORDATORIO_CITA
+                );
 
                 // Marcar que ya se envió el recordatorio
                 await pool.query(`
@@ -8800,7 +8814,13 @@ app.post('/api/nubia/cobrar/:id', async (req, res) => {
             const mensaje = `Hola ${nombreCompleto}. Necesitamos saber si continúas con el proceso o eliminamos el certificado. Gracias!`;
 
             try {
-                await sendWhatsAppMessage(toNumber, mensaje);
+                // Usar template específico de confirmación de proceso
+                await sendWhatsAppMessage(
+                    toNumber,
+                    mensaje,
+                    { nombre: nombreCompleto },
+                    process.env.TWILIO_TEMPLATE_CONFIRMACION_PROCESO
+                );
                 console.log(`📱 [NUBIA] Mensaje de confirmación enviado a ${nombreCompleto} (${toNumber})`);
             } catch (sendError) {
                 console.error(`Error enviando mensaje:`, sendError);
@@ -8856,7 +8876,13 @@ app.post('/api/nubia/enviar-masivo', async (req, res) => {
                     const mensaje = `Hola ${nombreCompleto}. Necesitamos saber si continúas con el proceso o eliminamos el certificado. Gracias!`;
 
                     try {
-                        await sendWhatsAppMessage(toNumber, mensaje);
+                        // Usar template específico de confirmación de proceso
+                        await sendWhatsAppMessage(
+                            toNumber,
+                            mensaje,
+                            { nombre: nombreCompleto },
+                            process.env.TWILIO_TEMPLATE_CONFIRMACION_PROCESO
+                        );
                         console.log(`✅ [NUBIA] ${i + 1}/${ids.length} - Mensaje enviado a ${nombreCompleto} (${toNumber})`);
                         enviados++;
 
