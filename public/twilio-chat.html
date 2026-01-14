@@ -807,9 +807,11 @@
                 // Limpiar input
                 input.value = '';
 
-                // Recargar mensajes
-                await cargarMensajes(conversacionActualId);
-                await cargarConversaciones();
+                // Recargar mensajes sin hacer scroll automático
+                await cargarMensajes(conversacionActualId, false);
+
+                // Forzar actualización completa de conversaciones para reflejar el nuevo mensaje
+                await cargarConversaciones(true);
             } catch (error) {
                 console.error('Error enviando mensaje:', error);
                 alert('Error al enviar el mensaje. Por favor intenta de nuevo.');
