@@ -361,7 +361,7 @@ async function sendWhatsAppMessage(toNumber, messageBody, variables = {}) {
         // Usar Content Template para cumplir con políticas de WhatsApp
         const messageParams = {
             contentSid: process.env.TWILIO_CONTENT_TEMPLATE_SID,
-            from: process.env.TWILIO_WHATSAPP_FROM,
+            messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
             to: formattedNumber
         };
 
@@ -398,7 +398,7 @@ async function sendWhatsAppFreeText(toNumber, messageBody) {
 
         const messageParams = {
             body: messageBody, // Texto libre del mensaje
-            from: process.env.TWILIO_WHATSAPP_FROM,
+            messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
             to: formattedNumber
         };
 
