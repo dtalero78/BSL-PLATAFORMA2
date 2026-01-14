@@ -2809,7 +2809,14 @@ app.get('/api/admin/whatsapp/conversaciones', authMiddleware, requireAdmin, asyn
                 c.agente_asignado as agente_id,
                 c.fecha_inicio,
                 c.fecha_ultima_actividad,
-                0 as no_leidos,
+                COALESCE(
+                    (SELECT COUNT(*)::int
+                     FROM mensajes_whatsapp m
+                     WHERE m.conversacion_id = c.id
+                       AND m.direccion = 'entrante'
+                       AND m.leido_por_agente = false),
+                    0
+                ) as no_leidos,
                 c.bot_activo,
                 c.agente_asignado as agente_nombre,
                 (
@@ -2857,6 +2864,16 @@ app.get('/api/admin/whatsapp/conversaciones/:id/mensajes', authMiddleware, requi
         `;
 
         const result = await pool.query(query, [id]);
+
+        // Marcar todos los mensajes entrantes de esta conversación como leídos
+        await pool.query(`
+            UPDATE mensajes_whatsapp
+            SET leido_por_agente = true,
+                fecha_lectura = NOW()
+            WHERE conversacion_id = $1
+              AND direccion = 'entrante'
+              AND leido_por_agente = false
+        `, [id]);
 
         res.json({ success: true, mensajes: result.rows });
     } catch (error) {

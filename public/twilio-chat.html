@@ -1210,6 +1210,13 @@ Llave Breb: @talero585`
                 if (!silencioso || estabaCasiAbajo) {
                     chatMensajes.scrollTop = chatMensajes.scrollHeight;
                 }
+
+                // Actualizar contador de no leídos a 0 para esta conversación
+                const conversacion = conversacionesWhatsApp.find(c => c.id === conversacionId);
+                if (conversacion) {
+                    conversacion.no_leidos = 0;
+                    renderConversaciones();
+                }
             } catch (error) {
                 console.error('Error cargando mensajes:', error);
             }
