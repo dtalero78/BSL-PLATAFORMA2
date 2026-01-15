@@ -564,30 +564,38 @@ async function guardarMensajeSaliente(numeroCliente, contenido, twilioSid, tipoM
             `, [conversacionId]);
         }
 
-        // Guardar mensaje saliente
-        await pool.query(`
-            INSERT INTO mensajes_whatsapp (
-                conversacion_id,
-                contenido,
-                direccion,
-                sid_twilio,
-                tipo_mensaje,
-                media_url,
-                media_type,
-                timestamp
-            )
-            VALUES ($1, $2, 'saliente', $3, $4, $5, $6, NOW())
-            ON CONFLICT (sid_twilio) DO NOTHING
-        `, [
-            conversacionId,
-            contenido,
-            twilioSid,
-            tipoMensaje,
-            mediaUrl ? JSON.stringify([mediaUrl]) : null,
-            mediaType ? JSON.stringify([mediaType]) : null
-        ]);
+        // Verificar si el mensaje ya existe
+        const mensajeExiste = await pool.query(`
+            SELECT id FROM mensajes_whatsapp WHERE sid_twilio = $1
+        `, [twilioSid]);
 
-        console.log(`✅ Mensaje guardado en conversación ${conversacionId} (SID: ${twilioSid})`);
+        if (mensajeExiste.rows.length === 0) {
+            // Guardar mensaje saliente solo si no existe
+            await pool.query(`
+                INSERT INTO mensajes_whatsapp (
+                    conversacion_id,
+                    contenido,
+                    direccion,
+                    sid_twilio,
+                    tipo_mensaje,
+                    media_url,
+                    media_type,
+                    timestamp
+                )
+                VALUES ($1, $2, 'saliente', $3, $4, $5, $6, NOW())
+            `, [
+                conversacionId,
+                contenido,
+                twilioSid,
+                tipoMensaje,
+                mediaUrl ? JSON.stringify([mediaUrl]) : null,
+                mediaType ? JSON.stringify([mediaType]) : null
+            ]);
+
+            console.log(`✅ Mensaje guardado en conversación ${conversacionId} (SID: ${twilioSid})`);
+        } else {
+            console.log(`ℹ️  Mensaje ${twilioSid} ya existe, omitiendo duplicado`);
+        }
 
         // Emitir evento WebSocket para actualización en tiempo real
         if (global.emitWhatsAppEvent) {
