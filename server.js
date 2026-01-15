@@ -9277,11 +9277,78 @@ app.post('/api/nubia/atender/:id', async (req, res) => {
 
             try {
                 // Usar sendWhatsAppFreeText para enviar texto libre (requiere ventana de 24h)
-                const result = await sendWhatsAppFreeText(toNumber, mensaje);
-                if (result.success) {
+                const twilioResult = await sendWhatsAppFreeText(toNumber, mensaje);
+                if (twilioResult.success) {
                     console.log(`📱 [NUBIA] Mensaje de certificado enviado a ${paciente.primerNombre} (${toNumber})`);
+
+                    // Guardar mensaje en base de datos para que aparezca en el chat
+                    const numeroCliente = toNumber.startsWith('57') ? `+${toNumber}` : `+57${toNumber}`;
+
+                    // Buscar o crear conversación
+                    let conversacion = await pool.query(`
+                        SELECT id FROM conversaciones_whatsapp WHERE celular = $1
+                    `, [numeroCliente]);
+
+                    let conversacionId;
+
+                    if (conversacion.rows.length === 0) {
+                        // Crear nueva conversación
+                        const nombreCompleto = `${paciente.primerNombre} ${paciente.primerApellido || ''}`.trim();
+                        const nuevaConv = await pool.query(`
+                            INSERT INTO conversaciones_whatsapp (
+                                celular,
+                                nombre_paciente,
+                                estado_actual,
+                                fecha_inicio,
+                                fecha_ultima_actividad,
+                                bot_activo
+                            )
+                            VALUES ($1, $2, 'activa', NOW(), NOW(), false)
+                            RETURNING id
+                        `, [numeroCliente, nombreCompleto]);
+
+                        conversacionId = nuevaConv.rows[0].id;
+                        console.log(`📝 Conversación creada: ${conversacionId} para ${numeroCliente}`);
+                    } else {
+                        conversacionId = conversacion.rows[0].id;
+
+                        // Actualizar última actividad
+                        await pool.query(`
+                            UPDATE conversaciones_whatsapp
+                            SET fecha_ultima_actividad = NOW()
+                            WHERE id = $1
+                        `, [conversacionId]);
+                    }
+
+                    // Guardar mensaje saliente
+                    await pool.query(`
+                        INSERT INTO mensajes_whatsapp (
+                            conversacion_id,
+                            contenido,
+                            direccion,
+                            sid_twilio,
+                            tipo_mensaje,
+                            timestamp
+                        )
+                        VALUES ($1, $2, 'saliente', $3, 'text', NOW())
+                    `, [conversacionId, mensaje, twilioResult.sid]);
+
+                    console.log(`✅ Mensaje guardado en conversación ${conversacionId}`);
+
+                    // Emitir evento WebSocket para actualización en tiempo real
+                    if (global.emitWhatsAppEvent) {
+                        global.emitWhatsAppEvent('nuevo_mensaje', {
+                            conversacion_id: conversacionId,
+                            numero_cliente: numeroCliente,
+                            contenido: mensaje,
+                            direccion: 'saliente',
+                            fecha_envio: new Date().toISOString(),
+                            sid_twilio: twilioResult.sid,
+                            tipo_mensaje: 'text'
+                        });
+                    }
                 } else {
-                    console.error(`❌ [NUBIA] Error enviando mensaje a ${paciente.primerNombre}:`, result.error);
+                    console.error(`❌ [NUBIA] Error enviando mensaje a ${paciente.primerNombre}:`, twilioResult.error);
                 }
             } catch (sendError) {
                 console.error(`Error enviando mensaje:`, sendError);
