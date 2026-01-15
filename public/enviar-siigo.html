@@ -205,6 +205,22 @@
             background: var(--bg-tertiary);
         }
 
+        tbody tr.selected {
+            background: rgba(14, 165, 233, 0.08);
+        }
+
+        .checkbox-cell {
+            width: 40px;
+            text-align: center;
+        }
+
+        .row-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--medical-primary);
+        }
+
         .btn-sm {
             padding: 6px 12px;
             font-size: 12px;
@@ -296,6 +312,10 @@
                 <div class="value" id="totalRegistros">0</div>
             </div>
             <div class="stat-card">
+                <h3>Registros Seleccionados</h3>
+                <div class="value" id="totalSeleccionados">0</div>
+            </div>
+            <div class="stat-card">
                 <h3>Mensajes Enviados</h3>
                 <div class="value" id="totalEnviados">0</div>
             </div>
@@ -343,6 +363,7 @@
     <script>
         let registrosActuales = [];
         let tipoMensajeActual = 'pendientes';
+        let registrosSeleccionados = new Set();
 
         // Función para agregar log a la consola
         function log(mensaje, tipo = 'info') {
@@ -351,6 +372,59 @@
             const prefix = tipo === 'error' ? '❌' : tipo === 'success' ? '✅' : tipo === 'warning' ? '⚠️' : 'ℹ️';
             console.textContent += `[${timestamp}] ${prefix} ${mensaje}\n`;
             console.scrollTop = console.scrollHeight;
+        }
+
+        // Actualizar contador de seleccionados
+        function actualizarContadorSeleccionados() {
+            document.getElementById('totalSeleccionados').textContent = registrosSeleccionados.size;
+            document.getElementById('btnEnvioMasivo').disabled = registrosSeleccionados.size === 0;
+        }
+
+        // Toggle selección de un registro
+        function toggleSeleccion(index) {
+            const row = document.querySelector(`tr[data-index="${index}"]`);
+
+            if (registrosSeleccionados.has(index)) {
+                registrosSeleccionados.delete(index);
+                row.classList.remove('selected');
+            } else {
+                registrosSeleccionados.add(index);
+                row.classList.add('selected');
+            }
+
+            actualizarContadorSeleccionados();
+            actualizarCheckboxSelectAll();
+        }
+
+        // Seleccionar/deseleccionar todos
+        function toggleSelectAll(checkbox) {
+            if (checkbox.checked) {
+                registrosActuales.forEach((_, index) => {
+                    registrosSeleccionados.add(index);
+                    const row = document.querySelector(`tr[data-index="${index}"]`);
+                    if (row) row.classList.add('selected');
+                    const rowCheckbox = document.getElementById(`checkbox-${index}`);
+                    if (rowCheckbox) rowCheckbox.checked = true;
+                });
+            } else {
+                registrosSeleccionados.clear();
+                document.querySelectorAll('tbody tr').forEach(row => {
+                    row.classList.remove('selected');
+                });
+                document.querySelectorAll('.row-checkbox').forEach(cb => {
+                    cb.checked = false;
+                });
+            }
+
+            actualizarContadorSeleccionados();
+        }
+
+        // Actualizar checkbox de seleccionar todos
+        function actualizarCheckboxSelectAll() {
+            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = registrosSeleccionados.size === registrosActuales.length && registrosActuales.length > 0;
+            }
         }
 
         // Cargar registros desde el backend
@@ -368,8 +442,12 @@
                 const data = await response.json();
                 registrosActuales = data.data;
 
+                // Resetear selecciones
+                registrosSeleccionados.clear();
+
                 document.getElementById('totalRegistros').textContent = registrosActuales.length;
-                document.getElementById('btnEnvioMasivo').disabled = registrosActuales.length === 0;
+                document.getElementById('totalSeleccionados').textContent = '0';
+                document.getElementById('btnEnvioMasivo').disabled = true;
 
                 renderTable(registrosActuales);
                 log(`✅ ${registrosActuales.length} registros cargados`, 'success');
@@ -399,6 +477,9 @@
                 <table>
                     <thead>
                         <tr>
+                            <th class="checkbox-cell">
+                                <input type="checkbox" class="row-checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" title="Seleccionar todos">
+                            </th>
                             <th>Datos</th>
                             <th>Ciudad</th>
                             <th>Fecha Creación</th>
@@ -425,7 +506,10 @@
                             const datos = `${reg.primerNombre} ${reg.primerApellido} - ${reg.numeroId} - ${celularLimpio}`;
 
                             return `
-                                <tr>
+                                <tr data-index="${index}">
+                                    <td class="checkbox-cell">
+                                        <input type="checkbox" class="row-checkbox" id="checkbox-${index}" onchange="toggleSeleccion(${index})">
+                                    </td>
                                     <td>${datos}</td>
                                     <td>${reg.ciudad || '-'}</td>
                                     <td>${diaCreacion}/${mesCreacion}</td>
@@ -494,12 +578,16 @@
 
         // Envío masivo
         async function envioMasivo() {
-            if (registrosActuales.length === 0) {
-                log('No hay registros para enviar', 'warning');
+            if (registrosSeleccionados.size === 0) {
+                log('No hay registros seleccionados para enviar', 'warning');
+                alert('Por favor, selecciona al menos un registro para enviar');
                 return;
             }
 
-            if (!confirm(`¿Estás seguro de enviar ${registrosActuales.length} mensajes?`)) {
+            // Obtener solo los registros seleccionados
+            const registrosParaEnviar = Array.from(registrosSeleccionados).map(index => registrosActuales[index]);
+
+            if (!confirm(`¿Estás seguro de enviar ${registrosParaEnviar.length} mensajes a los registros seleccionados?`)) {
                 return;
             }
 
@@ -510,7 +598,7 @@
             document.getElementById('totalEnviados').textContent = '0';
             document.getElementById('totalErrores').textContent = '0';
 
-            log(`🚀 Iniciando envío masivo de ${registrosActuales.length} mensajes...`, 'info');
+            log(`🚀 Iniciando envío masivo de ${registrosParaEnviar.length} mensajes seleccionados...`, 'info');
 
             try {
                 const response = await fetch('/api/envio-siigo/enviar-masivo', {
@@ -519,7 +607,7 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        registros: registrosActuales,
+                        registros: registrosParaEnviar,
                         tipoMensaje: tipoMensajeActual
                     })
                 });
