@@ -14,9 +14,19 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const twilio = require('twilio');
+const { OpenAI } = require('openai');
 
 // Configuración de multer para uploads en memoria
 const upload = multer({ storage: multer.memoryStorage() });
+
+// Configurar OpenAI para clasificación de imágenes
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+});
+
+// Map para gestión de estado de flujo de pagos
+const estadoPagos = new Map();
+const ESTADO_ESPERANDO_DOCUMENTO = 'esperando_documento';
 
 const app = express();
 const server = http.createServer(app);
@@ -652,6 +662,281 @@ async function guardarMensajeSaliente(numeroCliente, contenido, twilioSid, tipoM
     } catch (error) {
         console.error('❌ Error guardando mensaje saliente:', error);
         return { success: false, error: error.message };
+    }
+}
+
+// ========== VALIDACIÓN AUTOMÁTICA DE PAGOS CON OPENAI VISION ==========
+
+/**
+ * Clasifica una imagen usando OpenAI Vision API
+ * @param {string} base64Image - Imagen en base64
+ * @param {string} mimeType - Tipo MIME de la imagen (image/jpeg, image/png, etc.)
+ * @returns {Promise<string>} - Clasificación: 'comprobante_pago', 'listado_examenes', 'certificado_medico', 'otra_imagen', 'error'
+ */
+async function clasificarImagen(base64Image, mimeType) {
+    try {
+        const systemPrompt = `Eres un clasificador de imágenes especializado en documentos médicos y financieros.
+
+Analiza la imagen y clasifícala en UNA de estas 3 categorías:
+
+1. "comprobante_pago" - Capturas de transferencias bancarias, PSE, Nequi, Daviplata, comprobantes de pago
+   Características: fecha, monto, número de referencia, nombre del banco/app
+
+2. "listado_examenes" - Listas de exámenes médicos requeridos por empresas
+   Características: membrete de empresa, lista de exámenes, puede tener logos
+
+3. "otra_imagen" - Cualquier otra imagen que no encaje en las anteriores
+   Ejemplos: fotos personales, memes, capturas de WhatsApp, certificados médicos
+
+RESPONDE SOLO CON UNA DE ESTAS PALABRAS:
+comprobante_pago
+listado_examenes
+otra_imagen
+
+NO AGREGUES EXPLICACIONES NI PUNTUACIÓN ADICIONAL.`;
+
+        const response = await openai.chat.completions.create({
+            model: 'gpt-4o',
+            messages: [
+                {
+                    role: 'system',
+                    content: systemPrompt
+                },
+                {
+                    role: 'user',
+                    content: [
+                        {
+                            type: 'text',
+                            text: 'Clasifica esta imagen:'
+                        },
+                        {
+                            type: 'image_url',
+                            image_url: {
+                                url: `data:${mimeType};base64,${base64Image}`,
+                                detail: 'low' // Más rápido y económico
+                            }
+                        }
+                    ]
+                }
+            ],
+            max_tokens: 50,
+            temperature: 0.1 // Muy determinista
+        });
+
+        const clasificacion = response.choices[0].message.content.trim().toLowerCase();
+        console.log(`🔍 Clasificación de imagen: ${clasificacion}`);
+
+        return clasificacion;
+    } catch (error) {
+        console.error('❌ Error clasificando imagen con OpenAI:', error);
+        return 'error';
+    }
+}
+
+/**
+ * Valida si un texto es un número de documento válido
+ * @param {string} texto - Texto a validar
+ * @returns {boolean} - true si es documento válido
+ */
+function esCedula(texto) {
+    const numero = texto.trim();
+    // Solo números, entre 6 y 10 dígitos
+    return /^\d{6,10}$/.test(numero);
+}
+
+/**
+ * Marca un registro en HistoriaClinica como pagado
+ * @param {string} numeroDocumento - Número de cédula del paciente
+ * @returns {Promise<object>} - Resultado con success, data o error
+ */
+async function marcarPagadoHistoriaClinica(numeroDocumento) {
+    try {
+        const result = await pool.query(`
+            UPDATE "HistoriaClinica"
+            SET
+                "pvEstado" = 'Pagado',
+                fecha_pago = NOW()
+            WHERE "numeroId" = $1
+            RETURNING _id, "numeroId", "primerNombre", "primerApellido", "pvEstado", fecha_pago
+        `, [numeroDocumento]);
+
+        if (result.rows.length > 0) {
+            console.log(`✅ Pago marcado en HistoriaClinica para documento: ${numeroDocumento}`);
+            return {
+                success: true,
+                data: result.rows[0]
+            };
+        } else {
+            console.log(`⚠️ No se encontró registro en HistoriaClinica para documento: ${numeroDocumento}`);
+            return {
+                success: false,
+                message: 'No se encontró el registro en la base de datos'
+            };
+        }
+    } catch (error) {
+        console.error('❌ Error marcando pago en HistoriaClinica:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
+/**
+ * Procesa el flujo completo de validación de pagos
+ * @param {object} message - Mensaje parseado de Twilio
+ * @param {string} from - Número del usuario en formato whatsapp:+573XXXXXXXXX
+ * @returns {Promise<string>} - Mensaje de respuesta para el usuario
+ */
+async function procesarFlujoPagos(message, from) {
+    try {
+        const messageText = (message.Body || '').trim();
+        const numMedia = parseInt(message.NumMedia) || 0;
+        const estadoPago = estadoPagos.get(from);
+
+        console.log(`📸 Procesando flujo de pagos - Usuario: ${from}, Media: ${numMedia}, Estado: ${estadoPago}`);
+
+        // Caso 1: Usuario envía IMAGEN (nueva)
+        if (numMedia > 0) {
+            const mediaUrl = message.MediaUrl0;
+            const mediaType = message.MediaContentType0 || 'image/jpeg';
+
+            // Descargar imagen desde Twilio
+            console.log(`⬇️ Descargando imagen desde Twilio: ${mediaUrl}`);
+
+            const axios = require('axios');
+            const accountSid = process.env.TWILIO_ACCOUNT_SID;
+            const authToken = process.env.TWILIO_AUTH_TOKEN;
+
+            const imageResponse = await axios.get(mediaUrl, {
+                auth: {
+                    username: accountSid,
+                    password: authToken
+                },
+                responseType: 'arraybuffer',
+                timeout: 60000
+            });
+
+            const base64Image = Buffer.from(imageResponse.data).toString('base64');
+
+            // Clasificar imagen con OpenAI
+            const clasificacion = await clasificarImagen(base64Image, mediaType);
+
+            // Router de clasificación
+            if (clasificacion === 'comprobante_pago') {
+                // Pedir documento
+                await sendWhatsAppFreeText(from.replace('whatsapp:', ''),
+                    '✅ Comprobante recibido.\n\n¿Cuál es tu número de documento? (solo números, sin puntos)');
+
+                estadoPagos.set(from, ESTADO_ESPERANDO_DOCUMENTO);
+                return 'Comprobante validado, esperando documento';
+            }
+            else if (clasificacion === 'listado_examenes') {
+                // Enviar información de servicios
+                const mensajeExamenes = `📋 *¡Perfecto! Veo que te pidieron exámenes ocupacionales.*
+
+🩺 *Nuestras opciones:*
+
+*Virtual – $52.000 COP*
+• 100% online desde cualquier lugar
+• Disponible 7am-7pm todos los días
+• Duración: 35 minutos
+• Incluye: Médico, audiometría, optometría
+
+*Presencial – $69.000 COP*
+• Calle 134 No. 7-83, Bogotá
+• Lunes a Viernes 7:30am-4:30pm
+• Sábados 8am-11:30am
+
+📲 *Agenda aquí:* https://bsl-plataforma.com/nuevaorden1.html
+
+¿Tienes alguna pregunta sobre los exámenes?`;
+
+                await sendWhatsAppFreeText(from.replace('whatsapp:', ''), mensajeExamenes);
+                return 'Información de servicios enviada';
+            }
+            else {
+                // otra_imagen o error -> transferir a asesor
+                await sendWhatsAppFreeText(from.replace('whatsapp:', ''),
+                    'Déjame transferirte con un asesor que te ayudará mejor. Un momento por favor...');
+
+                // Marcar bot como detenido
+                await pool.query(`
+                    UPDATE conversaciones_whatsapp
+                    SET bot_activo = false
+                    WHERE celular = $1
+                `, [from.replace('whatsapp:', '')]);
+
+                return 'Transferido a asesor';
+            }
+        }
+
+        // Caso 2: Usuario envía TEXTO (documento) con flujo activo
+        if (messageText && estadoPago === ESTADO_ESPERANDO_DOCUMENTO) {
+            const documento = messageText.trim();
+
+            // Validar formato de documento
+            if (!esCedula(documento)) {
+                await sendWhatsAppFreeText(from.replace('whatsapp:', ''),
+                    'Por favor envía solo números, sin puntos ni guiones.\n\nEjemplo: 1234567890');
+                return 'Documento inválido';
+            }
+
+            // Marcar como pagado en base de datos
+            console.log(`⏳ Procesando pago para documento: ${documento}`);
+
+            await sendWhatsAppFreeText(from.replace('whatsapp:', ''),
+                `⏳ Procesando pago para documento ${documento}...`);
+
+            const resultado = await marcarPagadoHistoriaClinica(documento);
+
+            if (resultado.success) {
+                const data = resultado.data;
+                const nombre = `${data.primerNombre || ''} ${data.primerApellido || ''}`.trim();
+
+                await sendWhatsAppFreeText(from.replace('whatsapp:', ''),
+                    `🎉 *¡Pago registrado exitosamente!*\n\n👤 ${nombre}\n📄 Documento: ${documento}\n\n✅ Tu pago ha sido validado. En breve podrás descargar tu certificado médico desde el panel de pacientes.\n\nGracias por confiar en BSL.`);
+
+                // Limpiar estado
+                estadoPagos.delete(from);
+
+                // Detener bot
+                await pool.query(`
+                    UPDATE conversaciones_whatsapp
+                    SET bot_activo = false
+                    WHERE celular = $1
+                `, [from.replace('whatsapp:', '')]);
+
+                console.log(`✅ Pago procesado exitosamente para ${documento}`);
+                return 'Pago confirmado';
+            } else {
+                // No se encontró el registro
+                await sendWhatsAppFreeText(from.replace('whatsapp:', ''),
+                    `❌ No encontré un registro con el documento ${documento}.\n\nVerifica que:\n• El número esté correcto\n• Ya hayas realizado tu examen médico\n\nSi necesitas ayuda, un asesor te contactará pronto.`);
+
+                // Limpiar estado
+                estadoPagos.delete(from);
+                return 'Documento no encontrado';
+            }
+        }
+
+        // Caso 3: Texto sin flujo activo -> ignorar (lo procesa el webhook normal)
+        return null;
+
+    } catch (error) {
+        console.error('❌ Error en procesarFlujoPagos:', error);
+
+        try {
+            await sendWhatsAppFreeText(from.replace('whatsapp:', ''),
+                'Lo siento, hubo un error procesando tu solicitud. Un asesor te contactará pronto.');
+        } catch (err) {
+            console.error('❌ Error enviando mensaje de error:', err);
+        }
+
+        // Limpiar estado en caso de error
+        estadoPagos.delete(from);
+
+        return 'Error en flujo de pagos';
     }
 }
 
@@ -3429,6 +3714,24 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
             `, [conversacionId]);
         }
 
+        // 📸 PROCESAR FLUJO DE VALIDACIÓN DE PAGOS SI HAY IMÁGENES
+        if (numMedia > 0) {
+            const mainMediaType = mediaTypes[0];
+
+            // Solo procesar imágenes para el flujo de pagos
+            if (mainMediaType && mainMediaType.startsWith('image/')) {
+                console.log('📸 Imagen detectada - activando flujo de validación de pagos');
+
+                // Procesar flujo de pagos (maneja clasificación y respuestas)
+                try {
+                    await procesarFlujoPagos(req.body, From);
+                } catch (error) {
+                    console.error('❌ Error procesando flujo de pagos:', error);
+                    // Continuar con el flujo normal si falla
+                }
+            }
+        }
+
         // Determinar tipo de mensaje
         let tipoMensaje = 'text';
         if (numMedia > 0) {
@@ -3484,6 +3787,21 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
                 media_url: mediaUrls.length > 0 ? JSON.stringify(mediaUrls) : null,
                 media_type: mediaTypes.length > 0 ? JSON.stringify(mediaTypes) : null
             });
+        }
+
+        // 💬 PROCESAR TEXTO SI ESTÁ EN FLUJO DE PAGOS (esperando documento)
+        if (Body && numMedia === 0) {
+            const estadoPago = estadoPagos.get(From);
+
+            if (estadoPago === ESTADO_ESPERANDO_DOCUMENTO) {
+                console.log('📝 Usuario envió texto en flujo de pagos - procesando documento');
+
+                try {
+                    await procesarFlujoPagos(req.body, From);
+                } catch (error) {
+                    console.error('❌ Error procesando documento en flujo de pagos:', error);
+                }
+            }
         }
 
         // Responder a Twilio con 200 OK (vacío o con TwiML si quieres auto-responder)

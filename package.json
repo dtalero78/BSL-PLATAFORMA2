@@ -28,6 +28,7 @@
     "multer": "^2.0.2",
     "node-cron": "^4.2.1",
     "node-fetch": "^3.3.0",
+    "openai": "^6.16.0",
     "pg": "^8.11.3",
     "playwright": "^1.57.0",
     "puppeteer": "^24.34.0",
