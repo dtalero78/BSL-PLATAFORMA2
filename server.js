@@ -754,10 +754,11 @@ async function marcarPagadoHistoriaClinica(numeroDocumento) {
         const result = await pool.query(`
             UPDATE "HistoriaClinica"
             SET
+                "pagado" = true,
                 "pvEstado" = 'Pagado',
                 fecha_pago = NOW()
             WHERE "numeroId" = $1
-            RETURNING _id, "numeroId", "primerNombre", "primerApellido", "pvEstado", fecha_pago
+            RETURNING _id, "numeroId", "primerNombre", "primerApellido", "pagado", "pvEstado", fecha_pago
         `, [numeroDocumento]);
 
         if (result.rows.length > 0) {
