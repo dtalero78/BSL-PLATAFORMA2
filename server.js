@@ -12514,23 +12514,28 @@ app.post('/api/envio-siigo/enviar-individual', async (req, res) => {
             // Template para otras ciudades (virtual con cita)
             templateSid = 'HXeb45e56eb2e8dc4eaa35433282e12709';
 
-            // Formatear fecha y hora si existe
+            // Formatear fecha y hora si existe (convertir a hora de Colombia UTC-5)
             let fechaFormateada = "fecha pendiente";
             let horaFormateada = "hora pendiente";
 
             if (fechaAtencion) {
-                const fecha = new Date(fechaAtencion);
+                // Convertir a hora de Colombia (UTC-5)
+                const fechaUTC = new Date(fechaAtencion);
+                const offsetColombia = -5 * 60; // Colombia UTC-5 en minutos
+                const offsetLocal = fechaUTC.getTimezoneOffset(); // Offset del servidor
+                const fechaColombia = new Date(fechaUTC.getTime() + (offsetLocal + offsetColombia) * 60000);
+
                 const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
                 const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
-                const diaSemana = diasSemana[fecha.getDay()];
-                const dia = fecha.getDate();
-                const mes = meses[fecha.getMonth()];
+                const diaSemana = diasSemana[fechaColombia.getDay()];
+                const dia = fechaColombia.getDate();
+                const mes = meses[fechaColombia.getMonth()];
 
                 fechaFormateada = `${diaSemana} ${dia} de ${mes}`;
 
-                const horas = fecha.getHours().toString().padStart(2, '0');
-                const minutos = fecha.getMinutes().toString().padStart(2, '0');
+                const horas = fechaColombia.getHours().toString().padStart(2, '0');
+                const minutos = fechaColombia.getMinutes().toString().padStart(2, '0');
                 horaFormateada = `${horas}:${minutos}`;
             }
 
@@ -12702,18 +12707,23 @@ https://www.bsl.com.co/autoagendamiento/${item.numeroId}
                         let horaFormateada = "hora pendiente";
 
                         if (item.fechaAtencion) {
-                            const fecha = new Date(item.fechaAtencion);
+                            // Convertir a hora de Colombia (UTC-5)
+                            const fechaUTC = new Date(item.fechaAtencion);
+                            const offsetColombia = -5 * 60; // Colombia UTC-5 en minutos
+                            const offsetLocal = fechaUTC.getTimezoneOffset(); // Offset del servidor
+                            const fechaColombia = new Date(fechaUTC.getTime() + (offsetLocal + offsetColombia) * 60000);
+
                             const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
                             const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
-                            const diaSemana = diasSemana[fecha.getDay()];
-                            const dia = fecha.getDate();
-                            const mes = meses[fecha.getMonth()];
+                            const diaSemana = diasSemana[fechaColombia.getDay()];
+                            const dia = fechaColombia.getDate();
+                            const mes = meses[fechaColombia.getMonth()];
 
                             fechaFormateada = `${diaSemana} ${dia} de ${mes}`;
 
-                            const horas = fecha.getHours().toString().padStart(2, '0');
-                            const minutos = fecha.getMinutes().toString().padStart(2, '0');
+                            const horas = fechaColombia.getHours().toString().padStart(2, '0');
+                            const minutos = fechaColombia.getMinutes().toString().padStart(2, '0');
                             horaFormateada = `${horas}:${minutos}`;
                         }
 
