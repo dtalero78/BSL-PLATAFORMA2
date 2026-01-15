@@ -28,10 +28,6 @@ const openai = new OpenAI({
 const estadoPagos = new Map();
 const ESTADO_ESPERANDO_DOCUMENTO = 'esperando_documento';
 
-// Map para gestión de estado de usuarios nuevos
-const estadoUsuariosNuevos = new Map();
-const ESTADO_ESPERANDO_OPCION_MENU = 'esperando_opcion_menu';
-
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
@@ -1054,56 +1050,6 @@ async function esUsuarioNuevo(numeroCelular) {
     }
 }
 
-/**
- * Procesa la respuesta del menú de opciones para usuarios nuevos
- * @param {string} from - Número del remitente con prefijo whatsapp:
- * @param {string} opcion - Opción seleccionada por el usuario
- */
-async function procesarMenuUsuarioNuevo(from, opcion) {
-    try {
-        const numeroCliente = from.replace('whatsapp:', '');
-        const opcionNormalizada = opcion.trim();
-
-        if (opcionNormalizada === '1') {
-            const mensaje = `Agendar tu teleconsulta es muy fácil:
-
-✅ Diligencia tus datos y escoge la hora que te convenga
-
-✅ Realiza las pruebas de audición y visión necesarias desde tu celular o computador
-
-✅ El médico se comunicará contigo a través de WhatsApp video
-
-💵 Paga después de la consulta usando Bancolombia, Nequi o Daviplata
-
-✅ ¡Listo! Descarga inmediatamente tu certificado
-
-*Para comenzar:*
-
-💰 52.000: Paquete básico Osteomuscular, audiometría, visio/optometría
-
-🔗 https://bsl-plataforma.com/nuevaorden1.html`;
-
-            await sendWhatsAppFreeText(numeroCliente, mensaje);
-            console.log('✅ Mensaje de agendamiento enviado a usuario nuevo:', numeroCliente);
-
-            // Limpiar estado
-            estadoUsuariosNuevos.delete(from);
-
-        } else if (opcionNormalizada === '2') {
-            // Opción 2: No hacer nada, solo limpiar el estado
-            console.log('📝 Usuario nuevo seleccionó opción 2 (Otro) - no se envía respuesta');
-            estadoUsuariosNuevos.delete(from);
-        } else {
-            // Opción inválida, pedir de nuevo
-            await sendWhatsAppFreeText(numeroCliente,
-                'Por favor, responde con *1* o *2* según la opción que desees.');
-        }
-
-    } catch (error) {
-        console.error('❌ Error procesando menú de usuario nuevo:', error);
-        estadoUsuariosNuevos.delete(from);
-    }
-}
 
 // Configuración de números de alerta por empresa
 const NUMEROS_ALERTA_POR_EMPRESA = {
@@ -3804,31 +3750,26 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
             `, [conversacionId]);
         }
 
-        // 🆕 DETECTAR Y PROCESAR USUARIOS NUEVOS
-        let esNuevo = false;
+        // 🆕 DETECTAR Y ENVIAR MENSAJE A USUARIOS NUEVOS
         if (conversacion.rows.length === 0) {
-            // Es la primera vez que escribe
-            esNuevo = await esUsuarioNuevo(numeroCliente);
+            // Primera vez que escribe por WhatsApp
+            const esNuevo = await esUsuarioNuevo(numeroCliente);
 
             if (esNuevo) {
-                console.log('🆕 Primer mensaje de usuario nuevo - enviando menú de opciones');
+                console.log('🆕 Usuario nuevo detectado - enviando información de agendamiento');
 
-                const mensajeBienvenida = `Hola:
-
-Marca:
-1. Deseas agendar una consulta médica ocupacional
-2. Otro`;
+                const mensajeBienvenida = `Hola:\n\n` +
+                    `Si deseas agendar una consulta esta es la información\n\n` +
+                    `Diligencia tus datos y escoge la hora que te convenga\n\n` +
+                    `Realiza las pruebas desde tu celular o computador\n\n` +
+                    `El médico se comunicará contigo\n\n` +
+                    `¡Listo! Descarga inmediatamente tu certificado\n\n` +
+                    `*Para comenzar:*\n` +
+                    `https://bsl-plataforma.com/nuevaorden1.html\n` +
+                    `52.000: Paquete básico Osteomuscular, audiometría, visio/optometría`;
 
                 await sendWhatsAppFreeText(numeroCliente, mensajeBienvenida);
-                estadoUsuariosNuevos.set(From, ESTADO_ESPERANDO_OPCION_MENU);
             }
-        }
-
-        // 💬 PROCESAR RESPUESTA DE MENÚ SI ESTÁ ESPERANDO
-        const estadoMenu = estadoUsuariosNuevos.get(From);
-        if (estadoMenu === ESTADO_ESPERANDO_OPCION_MENU && Body && numMedia === 0) {
-            console.log('📝 Usuario respondió al menú de opciones:', Body);
-            await procesarMenuUsuarioNuevo(From, Body);
         }
 
         // 📸 PROCESAR FLUJO DE VALIDACIÓN DE PAGOS SI HAY IMÁGENES
