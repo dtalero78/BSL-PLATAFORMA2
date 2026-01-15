@@ -356,6 +356,13 @@ const twilioClient = twilio(
 // Usado para notificaciones automáticas pre-aprobadas
 async function sendWhatsAppMessage(toNumber, messageBody, variables = {}, templateSid = null) {
     try {
+        // Si NO se proporciona templateSid y SÍ hay messageBody, usar texto libre
+        if (!templateSid && !process.env.TWILIO_CONTENT_TEMPLATE_SID && messageBody) {
+            console.log('📝 Enviando mensaje de texto libre (no template)');
+            return await sendWhatsAppFreeText(toNumber, messageBody);
+        }
+
+        // Si se proporciona templateSid o hay uno por defecto, usar template
         // Formatear número: si empieza con 57, agregar whatsapp:+, si no, agregar whatsapp:+57
         let formattedNumber = toNumber;
         if (!formattedNumber.startsWith('whatsapp:')) {
@@ -370,6 +377,10 @@ async function sendWhatsAppMessage(toNumber, messageBody, variables = {}, templa
         // Determinar qué template usar
         // Si se proporciona templateSid, usarlo; si no, usar el por defecto
         const contentSid = templateSid || process.env.TWILIO_CONTENT_TEMPLATE_SID;
+
+        if (!contentSid) {
+            throw new Error('No se especificó templateSid y no hay TWILIO_CONTENT_TEMPLATE_SID configurado');
+        }
 
         // Usar Content Template para cumplir con políticas de WhatsApp
         const messageParams = {
@@ -9265,8 +9276,13 @@ app.post('/api/nubia/atender/:id', async (req, res) => {
             const mensaje = `👋 Hola ${paciente.primerNombre}. Te escribimos de BSL. 🏥 Tu certificado médico ya está listo. 📄\n\nRevísalo haciendo clic en este link: 👉 www.bsl.com.co/descargar`;
 
             try {
-                await sendWhatsAppMessage(toNumber, mensaje);
-                console.log(`📱 [NUBIA] Mensaje de certificado enviado a ${paciente.primerNombre} (${toNumber})`);
+                // Usar sendWhatsAppFreeText para enviar texto libre (requiere ventana de 24h)
+                const result = await sendWhatsAppFreeText(toNumber, mensaje);
+                if (result.success) {
+                    console.log(`📱 [NUBIA] Mensaje de certificado enviado a ${paciente.primerNombre} (${toNumber})`);
+                } else {
+                    console.error(`❌ [NUBIA] Error enviando mensaje a ${paciente.primerNombre}:`, result.error);
+                }
             } catch (sendError) {
                 console.error(`Error enviando mensaje:`, sendError);
             }
