@@ -895,7 +895,7 @@ async function procesarFlujoPagos(message, from) {
                 const nombre = `${data.primerNombre || ''} ${data.primerApellido || ''}`.trim();
 
                 await sendWhatsAppFreeText(from.replace('whatsapp:', ''),
-                    `🎉 *¡Pago registrado exitosamente!*\n\n👤 ${nombre}\n📄 Documento: ${documento}\n\n✅ Tu pago ha sido validado. En breve podrás descargar tu certificado médico desde el panel de pacientes.\n\nGracias por confiar en BSL.`);
+                    `🎉 *¡Pago registrado exitosamente!*\n\n👤 ${nombre}\n📄 Documento: ${documento}\n\n✅ Tu pago ha sido validado. Puedes descargar tu certificado médico desde:\n\n🔗 https://bsl-plataforma.com/consulta-orden.html\n\nGracias por confiar en BSL.`);
 
                 // Limpiar estado
                 estadoPagos.delete(from);
