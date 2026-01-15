@@ -5156,31 +5156,26 @@ app.post('/api/ordenes/importar-desde-preview', async (req, res) => {
                                 // No existe conversación activa, crear una nueva
                                 await pool.query(`
                                     INSERT INTO conversaciones_whatsapp (
-                                        celular, paciente_id, nombre_paciente, bot_activo, estado, canal
-                                    ) VALUES ($1, $2, $3, $4, $5, $6)
-                                    ON CONFLICT (celular) WHERE estado != 'cerrada'
-                                    DO UPDATE SET
-                                        bot_activo = false,
-                                        fecha_ultima_actividad = NOW()
+                                        celular, paciente_id, nombre_paciente, "stopBot", bot_activo, estado, canal, fecha_inicio, fecha_ultima_actividad, origen
+                                    ) VALUES ($1, $2, $3, true, false, $4, $5, NOW(), NOW(), 'POSTGRES')
                                 `, [
                                     telefonoNormalizado,
                                     ordenId,
                                     `${registro.primerNombre} ${registro.primerApellido}`,
-                                    false, // bot_activo = false (stopBot = true)
                                     'nueva',
                                     'bot'
                                 ]);
 
-                                console.log(`📱 Conversación WhatsApp creada para ${telefonoNormalizado} (bot detenido)`);
+                                console.log(`📱 Conversación WhatsApp creada para ${telefonoNormalizado} con stopBot = true`);
                             } else {
-                                // Ya existe, actualizar para detener el bot
+                                // Ya existe, actualizar stopBot y bot_activo
                                 await pool.query(`
                                     UPDATE conversaciones_whatsapp
-                                    SET bot_activo = false, fecha_ultima_actividad = NOW()
+                                    SET "stopBot" = true, bot_activo = false, fecha_ultima_actividad = NOW()
                                     WHERE celular = $1 AND estado != 'cerrada'
                                 `, [telefonoNormalizado]);
 
-                                console.log(`📱 Conversación WhatsApp actualizada para ${telefonoNormalizado} (bot detenido)`);
+                                console.log(`📱 Conversación WhatsApp actualizada para ${telefonoNormalizado} con stopBot = true`);
                             }
                         }
                     } catch (whatsappError) {
