@@ -7135,6 +7135,7 @@ app.get('/api/historia-clinica/list', async (req, res) => {
                    h."celular", h."cargo", h."ciudad", h."tipoExamen", h."codEmpresa", h."empresa", h."medico",
                    h."atendido", h."examenes", h."_createdDate", h."fechaConsulta", h."fechaAtencion", h."horaAtencion",
                    h."mdConceptoFinal", h."mdRecomendacionesMedicasAdicionales", h."mdObservacionesCertificado", h."mdObsParaMiDocYa",
+                   h."pvEstado",
                    'historia' as origen,
                    COALESCE(f_exact.foto_url, f_fallback.foto_url) as foto_url
             FROM "HistoriaClinica" h

@@ -880,6 +880,52 @@
             background: currentColor;
         }
 
+        /* Payment tag */
+        .payment-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-family: 'Figtree', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .payment-tag.pagado {
+            background: rgba(5, 150, 105, 0.1);
+            color: var(--success-green);
+            border: 1px solid rgba(5, 150, 105, 0.2);
+        }
+
+        .payment-tag.pagado:hover {
+            background: rgba(5, 150, 105, 0.15);
+            border-color: rgba(5, 150, 105, 0.3);
+        }
+
+        .payment-tag.no-pagado {
+            background: rgba(220, 38, 38, 0.1);
+            color: var(--error-red);
+            border: 1px solid rgba(220, 38, 38, 0.2);
+        }
+
+        .payment-tag.no-pagado:hover {
+            background: rgba(220, 38, 38, 0.15);
+            border-color: rgba(220, 38, 38, 0.3);
+        }
+
+        .payment-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
         /* Action buttons */
         .actions-cell {
             display: flex;
@@ -2257,6 +2303,7 @@
                             <th>CodEmpresa</th>
                             <th>Tipo Examen</th>
                             <th>Estado</th>
+                            <th>Pago</th>
                             <th class="sortable" data-sort="_createdDate" onclick="ordenarPorColumna('_createdDate')">
                                 Fecha Creación
                                 <span class="sort-icon">
@@ -2345,7 +2392,6 @@
                 <a href="#" target="_blank" class="btn btn-secondary" id="btnFormularioFromModal">Formulario</a>
                 <a href="#" target="_blank" class="btn btn-secondary" id="btnWhatsappFromModal">WhatsApp</a>
                 <a href="#" target="_blank" class="btn btn-secondary" id="btnDescargarFromModal">PDF</a>
-                <a href="#" target="_blank" class="btn btn-secondary" id="btnLaboratoriosFromModal">Laboratorios</a>
                 <button class="btn btn-secondary" id="btnEditarFromModal">Editar</button>
                 <button class="btn btn-secondary" id="btnPagoFromModal"><span id="btnPagoText">Pago</span></button>
                 <button class="btn btn-danger" id="btnEliminarFromModal">Eliminar</button>
@@ -3313,6 +3359,13 @@
                                 ${getStatusText(orden.atendido)}
                             </span>
                         </td>
+                        <td onclick="event.stopPropagation();">
+                            <span class="payment-tag ${orden.pvEstado === 'Pagado' ? 'pagado' : 'no-pagado'}"
+                                  onclick="togglePagoEnTabla('${orden._id}', this)">
+                                <span class="payment-dot"></span>
+                                ${orden.pvEstado === 'Pagado' ? 'PAGADO' : 'NO PAGADO'}
+                            </span>
+                        </td>
                         <td>${formatearFechaCreacion(orden._createdDate)}</td>
                         <td>${formatearFechaAtencion(orden.fechaAtencion)}</td>
                         <td>${formatearFechaCreacion(orden.fechaConsulta)}</td>
@@ -3717,7 +3770,6 @@
             document.getElementById('btnFormularioFromModal').href = `/?_id=${orden._id}`;
             document.getElementById('btnWhatsappFromModal').href = `https://bsl-utilidades-yp78a.ondigitalocean.app/static/solicitar-certificado.html?id=${orden._id}`;
             document.getElementById('btnDescargarFromModal').href = `https://bsl-utilidades-yp78a.ondigitalocean.app/generar-certificado-desde-wix/${orden._id}`;
-            document.getElementById('btnLaboratoriosFromModal').href = `/panel-laboratorios.html?ordenId=${orden._id}`;
             document.getElementById('btnEditarFromModal').onclick = () => {
                 cerrarModalDetalles();
                 editarOrden(orden._id);
@@ -4274,6 +4326,44 @@
             } catch (error) {
                 console.error('Error al toggle pago:', error);
                 alert('Error al actualizar el pago');
+            }
+        }
+
+        async function togglePagoEnTabla(ordenId, tagElement) {
+            try {
+                // Deshabilitar el tag temporalmente
+                tagElement.style.pointerEvents = 'none';
+                tagElement.style.opacity = '0.6';
+
+                const response = await fetch(`/api/historia-clinica/${ordenId}/pago`, {
+                    method: 'PATCH'
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    // Actualizar el tag visualmente
+                    const isPagado = result.pagado;
+                    tagElement.className = `payment-tag ${isPagado ? 'pagado' : 'no-pagado'}`;
+                    tagElement.innerHTML = `
+                        <span class="payment-dot"></span>
+                        ${isPagado ? 'PAGADO' : 'NO PAGADO'}
+                    `;
+
+                    // Actualizar caché si existe
+                    if (detallesCache[ordenId]) {
+                        detallesCache[ordenId].orden.pagado = result.pagado;
+                        detallesCache[ordenId].orden.pvEstado = isPagado ? 'Pagado' : '';
+                    }
+                } else {
+                    alert('Error al actualizar el pago');
+                }
+            } catch (error) {
+                console.error('Error al toggle pago:', error);
+                alert('Error al actualizar el pago');
+            } finally {
+                // Re-habilitar el tag
+                tagElement.style.pointerEvents = 'auto';
+                tagElement.style.opacity = '1';
             }
         }
 
