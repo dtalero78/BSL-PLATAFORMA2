@@ -1177,9 +1177,14 @@ Llave Breb: @talero585`
                 ? `${conv.nombre_cliente} (${conv.numero_cliente})`
                 : conv.numero_cliente;
 
+            // Avatar: usar foto si existe, sino inicial
+            const avatarHTML = conv.foto_perfil && conv.foto_perfil.startsWith('data:image')
+                ? `<img src="${conv.foto_perfil}" alt="${nombre}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
+                : inicial;
+
             return `
                 <div class="whatsapp-conversacion-item ${activeClass} ${unreadClass}" data-conv-id="${conv.id}" onclick="seleccionarConversacion(${conv.id})">
-                    <div class="whatsapp-conversacion-avatar">${inicial}</div>
+                    <div class="whatsapp-conversacion-avatar">${avatarHTML}</div>
                     <div class="whatsapp-conversacion-info">
                         <div class="whatsapp-conversacion-header">
                             <div class="whatsapp-conversacion-nombre">${displayNombre}</div>

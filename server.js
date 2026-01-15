@@ -3056,7 +3056,17 @@ app.get('/api/admin/whatsapp/conversaciones', authMiddleware, requireAdmin, asyn
                     WHERE m.conversacion_id = c.id
                     ORDER BY m.timestamp DESC
                     LIMIT 1
-                ) as ultimo_mensaje
+                ) as ultimo_mensaje,
+                (
+                    SELECT CASE
+                        WHEN LENGTH(foto) > 100 THEN 'data:image/jpeg;base64,' || LEFT(foto, 100) || '...'
+                        ELSE foto
+                    END
+                    FROM "HistoriaClinica"
+                    WHERE celular = c.celular
+                    ORDER BY "fechaRegistro" DESC
+                    LIMIT 1
+                ) as foto_perfil
             FROM conversaciones_whatsapp c
             ORDER BY c.fecha_ultima_actividad DESC
             LIMIT 100
