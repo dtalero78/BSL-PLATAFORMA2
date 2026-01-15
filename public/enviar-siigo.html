@@ -534,31 +534,40 @@
                 document.getElementById('totalEnviados').textContent = resultados.enviados;
                 document.getElementById('totalErrores').textContent = resultados.errores;
 
-                log(`\n===============================`, 'info');
-                log(`📊 RESUMEN DE ENVÍO`, 'info');
-                log(`===============================`, 'info');
-                log(`Total: ${resultados.total}`, 'info');
-                log(`Enviados: ${resultados.enviados}`, 'success');
-                log(`Errores: ${resultados.errores}`, 'error');
+                // Limpiar consola para el reporte final
+                const consoleElement = document.getElementById('console');
+                consoleElement.textContent = '';
 
-                if (resultados.detalles.length > 0) {
-                    log(`\n--- REGISTROS CON ERROR ---`, 'warning');
-                    resultados.detalles.forEach(detalle => {
-                        log(`${detalle.nombre} - ${detalle.numeroId} - ${detalle.celular} - ${detalle.error}`, 'error');
-                    });
-                }
-
+                // Mostrar agenda programada si existe
                 if (resultados.agendaProgramada.length > 0) {
-                    log(`\n===============================`, 'info');
-                    log(`📅 AGENDA PROGRAMADA`, 'info');
-                    log(`===============================\n`, 'info');
+                    // Obtener la fecha del primer registro
+                    let fechaTitulo = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+                    consoleElement.textContent += '===============\n';
+                    consoleElement.textContent += `AGENDA PROGRAMADA ${fechaTitulo}\n`;
+                    consoleElement.textContent += '===============\n\n';
+
                     resultados.agendaProgramada.forEach((item, i) => {
-                        log(`${i + 1}. ${item.nombre}: ${item.fechaHora} - ${item.ciudad}`, 'info');
+                        consoleElement.textContent += `${i + 1}. ${item.nombre}: ${item.fechaHora} - ${item.ciudad}\n`;
                     });
-                    log(`\n===============================`, 'info');
+
+                    consoleElement.textContent += '\n===============\n\n';
                 }
 
-                log(`\n✅ Envío masivo completado!`, 'success');
+                // Mostrar resumen
+                consoleElement.textContent += `Total enviados: ${resultados.enviados}\n`;
+
+                if (resultados.errores > 0) {
+                    consoleElement.textContent += `\nErrores: ${resultados.errores}\n`;
+                    if (resultados.detalles.length > 0) {
+                        consoleElement.textContent += '\n--- REGISTROS CON ERROR ---\n';
+                        resultados.detalles.forEach(detalle => {
+                            consoleElement.textContent += `- ${detalle.nombre} (${detalle.numeroId}): ${detalle.error}\n`;
+                        });
+                    }
+                }
+
+                consoleElement.scrollTop = consoleElement.scrollHeight;
 
                 // Recargar registros
                 setTimeout(() => {
