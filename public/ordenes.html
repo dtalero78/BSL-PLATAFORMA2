@@ -2210,7 +2210,7 @@
                     <h1>Órdenes</h1>
                 </div>
                 <div style="display: flex; gap: 12px; align-items: center;">
-                    <button class="btn btn-primary" onclick="abrirModalWhatsApp()" style="background: #25D366; border: none; display: flex; align-items: center; gap: 6px;">
+                    <button id="btnEnviarWhatsAppHeader" class="btn btn-primary" onclick="abrirModalWhatsApp()" style="background: #25D366; border: none; display: none; align-items: center; gap: 6px;">
                         <i data-feather="message-circle" style="width: 16px; height: 16px;"></i>
                         Enviar WhatsApp
                     </button>
@@ -4784,6 +4784,14 @@
 
             // Usuario autenticado, continuar con inicialización
             console.log('Usuario autenticado:', usuarioActual.nombreCompleto || usuarioActual.email);
+
+            // Mostrar botón de WhatsApp solo para administrador específico
+            if (usuarioActual.email === 'danieltalero78@gmail.com') {
+                const btnWhatsApp = document.getElementById('btnEnviarWhatsAppHeader');
+                if (btnWhatsApp) {
+                    btnWhatsApp.style.display = 'flex';
+                }
+            }
 
             // Actualizar nombre en topbar (con retry por si aún no está cargado)
             const updateTopbar = () => {
