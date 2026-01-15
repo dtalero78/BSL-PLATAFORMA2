@@ -784,6 +784,16 @@ Llave Breb: @talero585`
                 // Inicializar auto-resize del textarea
                 inicializarAutoResize();
 
+                // Event delegation para abrir imágenes en nueva pestaña
+                document.getElementById('chatMensajes').addEventListener('click', (e) => {
+                    if (e.target.classList.contains('whatsapp-media-image')) {
+                        const fullUrl = e.target.dataset.fullUrl;
+                        if (fullUrl) {
+                            window.open(fullUrl, '_blank');
+                        }
+                    }
+                });
+
                 feather.replace();
             } catch (error) {
                 console.error('Error en inicialización:', error);
@@ -1156,8 +1166,8 @@ Llave Breb: @talero585`
                                     : url;
 
                                 if (type.startsWith('image/')) {
-                                    // Imagen
-                                    contenidoHTML += `<img src="${proxiedUrl}" alt="Imagen" style="max-width: 250px; border-radius: 8px; cursor: pointer;" onclick="window.open('${proxiedUrl}', '_blank')">`;
+                                    // Imagen - usar data attribute y class para event delegation
+                                    contenidoHTML += `<img src="${proxiedUrl}" alt="Imagen" class="whatsapp-media-image" style="max-width: 250px; border-radius: 8px; cursor: pointer;" data-full-url="${proxiedUrl.replace(/"/g, '&quot;')}">`;
                                 } else if (type.startsWith('video/')) {
                                     // Video
                                     contenidoHTML += `<video controls style="max-width: 250px; border-radius: 8px;"><source src="${proxiedUrl}" type="${type}"></video>`;
