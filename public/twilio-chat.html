@@ -704,19 +704,25 @@
         }
 
         @media (max-width: 768px) {
+            .whatsapp-container {
+                position: relative;
+            }
+
             .whatsapp-sidebar {
                 width: 100%;
+                position: relative;
+                z-index: 1;
             }
 
             .whatsapp-chat {
-                display: none;
                 position: absolute;
                 top: 0;
                 left: 0;
                 right: 0;
                 bottom: 0;
                 width: 100%;
-                z-index: 10;
+                z-index: 2;
+                display: none;
             }
 
             .whatsapp-sidebar.mobile-hidden {
@@ -724,7 +730,7 @@
             }
 
             .whatsapp-chat.mobile-active {
-                display: flex;
+                display: flex !important;
             }
 
             .whatsapp-chat-back-btn {
@@ -1305,18 +1311,31 @@ Llave Breb: @talero585`
         }
 
         async function seleccionarConversacion(conversacionId) {
+            console.log('📱 Seleccionando conversación:', conversacionId);
             conversacionActualId = conversacionId;
 
             const conversacion = conversacionesWhatsApp.find(c => c.id === conversacionId);
-            if (!conversacion) return;
+            if (!conversacion) {
+                console.error('❌ Conversación no encontrada:', conversacionId);
+                return;
+            }
+
+            console.log('✅ Conversación encontrada:', conversacion);
 
             // Mostrar el chat container
-            document.getElementById('chatEmpty').style.display = 'none';
-            document.getElementById('chatContainer').style.display = 'flex';
+            const chatEmpty = document.getElementById('chatEmpty');
+            const chatContainer = document.getElementById('chatContainer');
+            const sidebar = document.getElementById('sidebar');
+            const chat = document.getElementById('chat');
+
+            chatEmpty.style.display = 'none';
+            chatContainer.style.display = 'flex';
 
             // En móvil: ocultar sidebar y mostrar chat
-            document.getElementById('sidebar').classList.add('mobile-hidden');
-            document.getElementById('chat').classList.add('mobile-active');
+            sidebar.classList.add('mobile-hidden');
+            chat.classList.add('mobile-active');
+
+            console.log('📱 Clases aplicadas - Sidebar:', sidebar.className, 'Chat:', chat.className);
 
             // Actualizar header del chat
             document.getElementById('chatNombre').textContent =
@@ -1329,6 +1348,9 @@ Llave Breb: @talero585`
 
             // Re-renderizar conversaciones para actualizar la selección
             renderConversaciones();
+
+            // Reemplazar iconos de feather después de cambios
+            feather.replace();
         }
 
         // Función para volver a la lista de conversaciones (móvil)
