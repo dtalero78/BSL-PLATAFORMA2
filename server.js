@@ -3171,6 +3171,7 @@ app.post('/api/admin/whatsapp/conversaciones/:id/mensajes', authMiddleware, requ
         const numeroCliente = convResult.rows[0].celular;
 
         // Enviar mensaje via Twilio (texto libre para conversaciones)
+        // NOTA: sendWhatsAppFreeText() ya guarda el mensaje automáticamente via guardarMensajeSaliente()
         const twilioResult = await sendWhatsAppFreeText(numeroCliente, contenido);
 
         if (!twilioResult.success) {
@@ -3181,29 +3182,11 @@ app.post('/api/admin/whatsapp/conversaciones/:id/mensajes', authMiddleware, requ
             });
         }
 
-        // Guardar mensaje en base de datos
-        const insertQuery = `
-            INSERT INTO mensajes_whatsapp (
-                conversacion_id, contenido, direccion, sid_twilio, tipo_mensaje
-            )
-            VALUES ($1, $2, 'saliente', $3, 'text')
-            RETURNING *
-        `;
-
-        const messageResult = await pool.query(insertQuery, [
-            id,
-            contenido,
-            twilioResult.sid
-        ]);
-
-        // Actualizar fecha de última actividad
-        await pool.query(`
-            UPDATE conversaciones_whatsapp
-            SET fecha_ultima_actividad = NOW()
-            WHERE id = $1
-        `, [id]);
+        // El mensaje ya fue guardado por sendWhatsAppFreeText() -> guardarMensajeSaliente()
+        // No necesitamos guardar aquí para evitar duplicados
 
         // Emitir evento WebSocket para actualización en tiempo real
+        // (ya se emitió en guardarMensajeSaliente(), pero lo hacemos de nuevo por compatibilidad)
         if (global.emitWhatsAppEvent) {
             global.emitWhatsAppEvent('nuevo_mensaje', {
                 conversacion_id: parseInt(id),
@@ -3217,7 +3200,14 @@ app.post('/api/admin/whatsapp/conversaciones/:id/mensajes', authMiddleware, requ
 
         res.json({
             success: true,
-            mensaje: messageResult.rows[0],
+            mensaje: {
+                conversacion_id: parseInt(id),
+                contenido: contenido,
+                direccion: 'saliente',
+                sid_twilio: twilioResult.sid,
+                tipo_mensaje: 'text',
+                timestamp: new Date()
+            },
             twilio: twilioResult
         });
     } catch (error) {
