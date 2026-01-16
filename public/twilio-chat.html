@@ -99,6 +99,41 @@
             color: var(--text-primary);
         }
 
+        .btn-sound {
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: white;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            width: 36px;
+            height: 36px;
+        }
+
+        .btn-sound:hover {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .btn-sound.muted {
+            background: #FFEBEE;
+            color: #D32F2F;
+            border-color: #FFCDD2;
+        }
+
+        .btn-sound.muted:hover {
+            background: #FFCDD2;
+        }
+
+        .btn-sound i {
+            width: 20px;
+            height: 20px;
+        }
+
         /* Container principal */
         .whatsapp-container {
             display: flex;
@@ -793,6 +828,9 @@
         <div class="header-user">
             <div class="user-avatar" id="userAvatar">A</div>
             <span id="userName">Admin</span>
+            <button class="btn-sound" id="btnSound" onclick="toggleSound()" title="Activar/Desactivar sonido">
+                <i data-feather="volume-2" id="soundIcon"></i>
+            </button>
             <button class="btn-logout" onclick="cerrarSesion()">
                 <i data-feather="log-out"></i> Salir
             </button>
@@ -1081,7 +1119,43 @@ Llave Breb: @talero585`
             // Crear elemento de audio para notificación
             notificationSound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi6G0fPTgjMGHm7A7+OZURE=');
             notificationSound.volume = 0.5;
-            audioPermitido = true;
+
+            // Cargar estado de sonido desde localStorage
+            const soundEnabled = localStorage.getItem('whatsapp_sound_enabled');
+            if (soundEnabled === 'false') {
+                audioPermitido = false;
+                document.getElementById('btnSound').classList.add('muted');
+                document.getElementById('soundIcon').setAttribute('data-feather', 'volume-x');
+            } else {
+                audioPermitido = true;
+                localStorage.setItem('whatsapp_sound_enabled', 'true');
+            }
+
+            feather.replace();
+        }
+
+        // Toggle de sonido
+        function toggleSound() {
+            audioPermitido = !audioPermitido;
+            const btnSound = document.getElementById('btnSound');
+            const soundIcon = document.getElementById('soundIcon');
+
+            if (audioPermitido) {
+                btnSound.classList.remove('muted');
+                soundIcon.setAttribute('data-feather', 'volume-2');
+                localStorage.setItem('whatsapp_sound_enabled', 'true');
+
+                // Reproducir sonido de prueba
+                if (notificationSound) {
+                    notificationSound.play().catch(e => console.log('No se pudo reproducir:', e));
+                }
+            } else {
+                btnSound.classList.add('muted');
+                soundIcon.setAttribute('data-feather', 'volume-x');
+                localStorage.setItem('whatsapp_sound_enabled', 'false');
+            }
+
+            feather.replace();
         }
 
         // Auto-resize del textarea
