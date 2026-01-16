@@ -23,6 +23,489 @@ const upload = multer({ storage: multer.memoryStorage() });
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
+const crypto = require('crypto');
+
+// ========== SISTEMA DE BOT CONVERSACIONAL CON IA ==========
+// System prompt para el bot de WhatsApp
+const systemPromptBot = `Eres el asistente virtual de BSL para exámenes médicos ocupacionales en Colombia.
+
+🎯 TU PROPÓSITO:
+Ayudar a usuarios a agendar exámenes médicos ocupacionales de forma clara y eficiente.
+
+🚨 TRANSFERIR A ASESOR:
+Si no entiendes algo, hay problemas técnicos, o el usuario lo solicita, responde EXACTAMENTE:
+"...transfiriendo con asesor"
+
+⛔ TEMAS FUERA DE ALCANCE:
+Si preguntan temas personales, emocionales o NO relacionados con exámenes médicos:
+"Entiendo que es importante, pero solo puedo ayudarte con exámenes médicos ocupacionales. ¿Necesitas agendar un examen?"
+
+📋 SERVICIOS Y PRECIOS:
+
+**Exámenes Ocupacionales (Paquete Completo):**
+• Virtual: $52.000 COP
+  - 100% online, 7am-7pm todos los días
+  - 35 minutos total
+  - Incluye: Médico osteomuscular, audiometría, optometría
+
+• Presencial: $69.000 COP
+  - Calle 134 No. 7-83, Bogotá
+  - Lunes a Viernes 7:30am-4:30pm, Sábados 8am-11:30am
+  - Incluye: Médico, audiometría, optometría
+
+**Link de agendamiento:** https://bsl-plataforma.com/nuevaorden1.html
+
+**Exámenes extras opcionales:**
+• Cardiovascular, Vascular, Espirometría, Dermatológico: $10.000 c/u
+• Psicológico: $15.000
+• Perfil lipídico: $69.500
+• Glicemia: $23.100
+
+**Solicitud especial:**
+• Solo Visiometría y Optometría virtual (sin osteomuscular y audiometría): $23.000
+• NO se hace solo examen médico osteomuscular. SE HACE EL PAQUETE COMPLETO
+
+**Medios de pago:**
+• Bancolombia: Ahorros 44291192456 (cédula 79981585)
+• Daviplata: 3014400818
+• Nequi: 3008021701
+• Transfiya
+
+📌 PROCESO:
+1. Usuario agenda en el link
+2. Realiza pruebas virtuales (25 min)
+3. Consulta médica (10 min)
+4. Médico revisa y aprueba certificado
+5. Usuario paga y envía comprobante por WhatsApp
+6. Descarga certificado sin marca de agua
+
+⚠️ IMPORTANTE SOBRE CERTIFICADOS:
+- NO se envían automáticamente al correo
+- Primero se paga DESPUÉS de que el médico apruebe
+- El certificado se descarga desde link enviado por WhatsApp
+
+🎯 CÓMO RESPONDER:
+
+**Saludos:**
+- Si hay "Estado detallado" del paciente, saluda contextualmente según su estado
+- Si no hay info: "¡Hola! ¿En qué puedo ayudarte hoy?"
+
+**Información general:**
+Muestra opciones: "🩺 Nuestras opciones:\nVirtual – $52.000 COP\nPresencial – $69.000 COP"
+
+**🔍 SOLICITUDES DE CERTIFICADOS ANTIGUOS (CRÍTICO):**
+Si el usuario usa verbos en PASADO indicando que YA HIZO exámenes:
+- "exámenes que me hice", "que me realicé", "del año 2023", "del año pasado"
+- "necesito mis resultados anteriores", "certificados viejos", "del 2024"
+
+→ NO ofrecer agendamiento nuevo
+→ Responder: "Claro, para buscar tus exámenes anteriores necesito tu número de documento (solo números, sin puntos)."
+→ Luego usar el documento para consultar su historial
+
+**Consulta por pago/certificado:**
+⚠️ CRÍTICO: NO respondas sin verificar "Estado detallado" primero.
+- "consulta_realizada": Certificado listo, pide comprobante de pago
+- "cita_programada": Debe realizar examen primero
+- "falta_formulario": Envía link https://www.bsl.com.co/desbloqueo
+- "no_realizo_consulta" o "no_asistio_consulta": Transfiere a asesor
+- Sin información: Pide número de documento
+
+Si usuario insiste que ya hizo algo pero el estado no lo refleja: transfiere a asesor.
+
+**Menú:**
+Si usuario dice "menú" o "volver al menú", responde EXACTAMENTE: "VOLVER_AL_MENU"
+
+**Datos Legales (si preguntan):**
+NIT: 900.844.030-8
+LICENCIA: Resolución No 64 de 10/01/2017
+CÓDIGO PRESTADOR REPS: 1100130342
+DISTINTIVO: DHSS0244914
+Consulta en: https://prestadores.minsalud.gov.co/habilitacion/
+
+📝 REGLAS DE FORMATO:
+- Respuestas cortas y claras
+- NO uses formato markdown para URLs (escribe URLs en texto plano)
+- NO repitas información que ya diste
+- Mantén el contexto de la conversación
+`;
+
+// Modelo de embeddings para RAG
+const EMBEDDING_MODEL = 'text-embedding-3-small';
+
+/**
+ * Genera un embedding para un texto dado (RAG)
+ * @param {string} text - Texto a convertir en embedding
+ * @returns {Promise<number[]>} - Vector de embedding
+ */
+async function generarEmbeddingRAG(text) {
+    try {
+        const response = await openai.embeddings.create({
+            model: EMBEDDING_MODEL,
+            input: text.trim().substring(0, 8000),
+        });
+        return response.data[0].embedding;
+    } catch (error) {
+        console.error('❌ RAG: Error generando embedding:', error.message);
+        throw error;
+    }
+}
+
+/**
+ * Genera hash único para evitar duplicados en RAG
+ */
+function generarHashRAG(userId, pregunta, respuesta) {
+    const contenido = `${userId}|${pregunta}|${respuesta}`;
+    return crypto.createHash('sha256').update(contenido).digest('hex');
+}
+
+/**
+ * Detecta la categoría de una pregunta usando keywords
+ */
+function detectarCategoriaRAG(texto) {
+    const textoLower = texto.toLowerCase();
+
+    const categorias = {
+        precios: ['precio', 'costo', 'cuanto', 'valor', 'pago', '$', 'plata', 'tarifa'],
+        horarios: ['horario', 'hora', 'cuando', 'disponible', 'abierto', 'atienden'],
+        agendamiento: ['agendar', 'cita', 'reservar', 'programar', 'turno', 'agenda'],
+        virtual: ['virtual', 'online', 'casa', 'remoto', 'videollamada'],
+        presencial: ['presencial', 'ir', 'direccion', 'ubicacion', 'donde', 'sede'],
+        certificado: ['certificado', 'descargar', 'pdf', 'listo', 'documento', 'constancia'],
+        pagos: ['pagar', 'nequi', 'daviplata', 'bancolombia', 'transferencia', 'comprobante'],
+        examenes: ['examen', 'audiometria', 'optometria', 'visiometria', 'medico', 'prueba']
+    };
+
+    for (const [categoria, keywords] of Object.entries(categorias)) {
+        if (keywords.some(kw => textoLower.includes(kw))) {
+            return categoria;
+        }
+    }
+    return 'general';
+}
+
+/**
+ * Guarda un par pregunta-respuesta con su embedding en RAG
+ * @param {Object} params - Parámetros del par
+ */
+async function guardarParConEmbeddingRAG(poolRef, {
+    userId,
+    pregunta,
+    respuesta,
+    fuente = 'bot',
+    timestampOriginal = new Date()
+}) {
+    try {
+        // Validar que haya contenido sustancial
+        if (!pregunta || !respuesta || pregunta.length < 3 || respuesta.length < 5) {
+            console.log('📭 RAG: Par omitido (contenido muy corto)');
+            return { omitido: true };
+        }
+
+        // Generar hash para evitar duplicados
+        const hash = generarHashRAG(userId, pregunta, respuesta);
+
+        // Verificar si ya existe
+        const existente = await poolRef.query(
+            'SELECT id FROM conversacion_embeddings WHERE hash_mensaje = $1',
+            [hash]
+        );
+
+        if (existente.rows.length > 0) {
+            console.log(`📦 RAG: Par ya existe (hash: ${hash.substring(0, 8)}...)`);
+            return { duplicado: true, id: existente.rows[0].id };
+        }
+
+        // Generar embedding de la pregunta
+        const embeddingPregunta = await generarEmbeddingRAG(pregunta);
+
+        // Detectar categoría
+        const categoria = detectarCategoriaRAG(pregunta);
+
+        // Peso según fuente (admin tiene más peso)
+        const peso = fuente === 'admin' ? 2.0 : 1.0;
+
+        // Insertar en PostgreSQL
+        const result = await poolRef.query(`
+            INSERT INTO conversacion_embeddings (
+                user_id, pregunta, respuesta, fuente, peso,
+                embedding_pregunta, categoria, timestamp_original, hash_mensaje
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            RETURNING id
+        `, [
+            userId,
+            pregunta,
+            respuesta,
+            fuente,
+            peso,
+            JSON.stringify(embeddingPregunta),
+            categoria,
+            timestampOriginal,
+            hash
+        ]);
+
+        console.log(`✅ RAG: Par guardado (id: ${result.rows[0].id}, fuente: ${fuente}, cat: ${categoria})`);
+        return { duplicado: false, id: result.rows[0].id };
+
+    } catch (error) {
+        console.error('❌ RAG: Error guardando par:', error.message);
+        return { error: error.message };
+    }
+}
+
+/**
+ * Busca respuestas similares a una pregunta en RAG
+ * @param {string} pregunta - Pregunta del usuario
+ * @param {Object} options - Opciones de búsqueda
+ * @returns {Promise<Array>} - Resultados ordenados por relevancia
+ */
+async function buscarRespuestasSimilaresRAG(poolRef, pregunta, options = {}) {
+    const {
+        limite = 3,
+        umbralSimilitud = 0.65,
+        pesoAdmin = 1.5
+    } = options;
+
+    try {
+        // Verificar si hay datos suficientes
+        const countResult = await poolRef.query('SELECT COUNT(*) FROM conversacion_embeddings');
+        const totalRegistros = parseInt(countResult.rows[0].count);
+
+        if (totalRegistros < 1) {
+            console.log('📭 RAG: Sin datos aún para búsqueda');
+            return [];
+        }
+
+        // Generar embedding de la pregunta
+        const embeddingPregunta = await generarEmbeddingRAG(pregunta);
+
+        // Query con similitud coseno
+        const result = await poolRef.query(`
+            SELECT
+                id,
+                pregunta,
+                respuesta,
+                fuente,
+                peso,
+                categoria,
+                veces_usado,
+                1 - (embedding_pregunta <=> $1::vector) as similitud
+            FROM conversacion_embeddings
+            WHERE (1 - (embedding_pregunta <=> $1::vector)) >= $2
+            ORDER BY (
+                (1 - (embedding_pregunta <=> $1::vector)) * peso *
+                CASE WHEN fuente = 'admin' THEN $3 ELSE 1.0 END
+            ) DESC
+            LIMIT $4
+        `, [JSON.stringify(embeddingPregunta), umbralSimilitud, pesoAdmin, limite]);
+
+        // Procesar resultados
+        const resultados = result.rows.map(row => ({
+            id: row.id,
+            pregunta: row.pregunta,
+            respuesta: row.respuesta,
+            fuente: row.fuente,
+            categoria: row.categoria,
+            similitud: parseFloat(row.similitud),
+            score: parseFloat(row.similitud) * row.peso * (row.fuente === 'admin' ? pesoAdmin : 1.0)
+        }));
+
+        // Actualizar contador de uso
+        if (resultados.length > 0) {
+            const ids = resultados.map(r => r.id);
+            await poolRef.query(`
+                UPDATE conversacion_embeddings
+                SET veces_usado = veces_usado + 1
+                WHERE id = ANY($1)
+            `, [ids]);
+        }
+
+        console.log(`🔍 RAG: ${resultados.length} resultados para: "${pregunta.substring(0, 40)}..."`);
+
+        return resultados;
+
+    } catch (error) {
+        console.error('❌ RAG: Error en búsqueda:', error.message);
+        return [];
+    }
+}
+
+/**
+ * Formatea los resultados RAG para incluir en el contexto de OpenAI
+ * @param {Array} resultados - Resultados de búsqueda
+ * @returns {string} - Texto formateado para el contexto
+ */
+function formatearContextoRAG(resultados) {
+    if (!resultados || resultados.length === 0) {
+        return '';
+    }
+
+    let contexto = '\n\n🚨 INSTRUCCIÓN PRIORITARIA - RESPUESTAS APRENDIDAS:\n';
+    contexto += 'Las siguientes respuestas provienen de conversaciones reales con HUMANOS (admin).\n';
+    contexto += 'DEBES usar EXACTAMENTE estas respuestas cuando la pregunta sea similar.\n';
+    contexto += 'NO inventes información diferente si ya existe una respuesta aprendida.\n\n';
+
+    resultados.forEach((r, index) => {
+        const fuenteLabel = r.fuente === 'admin' ? '👨‍💼 RESPUESTA HUMANA VERIFICADA' : '🤖 Bot previo';
+        const scorePercent = (r.similitud * 100).toFixed(0);
+
+        contexto += `EJEMPLO ${index + 1} (${scorePercent}% relevante - ${fuenteLabel}):\n`;
+        contexto += `Usuario preguntó: "${r.pregunta}"\n`;
+        contexto += `Respuesta correcta: "${r.respuesta}"\n\n`;
+    });
+
+    contexto += '🚨 RECUERDA: Si la pregunta actual es similar a alguno de estos ejemplos, usa la respuesta aprendida.\n';
+    contexto += '--- FIN INSTRUCCIONES PRIORITARIAS ---\n';
+
+    return contexto;
+}
+
+/**
+ * Recuperar mensajes del historial de una conversación para el bot
+ * @param {number} conversacionId - ID de la conversación
+ * @param {number} limite - Número máximo de mensajes a recuperar
+ * @returns {Promise<Array>} - Array de mensajes en formato OpenAI
+ */
+async function recuperarMensajesBot(poolRef, conversacionId, limite = 10) {
+    try {
+        const result = await poolRef.query(`
+            SELECT direccion, contenido, timestamp
+            FROM mensajes_whatsapp
+            WHERE conversacion_id = $1
+            ORDER BY timestamp DESC
+            LIMIT $2
+        `, [conversacionId, limite]);
+
+        // Invertir para que queden en orden cronológico y convertir a formato OpenAI
+        const mensajes = result.rows.reverse().map(msg => ({
+            role: msg.direccion === 'entrante' ? 'user' : 'assistant',
+            content: msg.contenido
+        }));
+
+        console.log(`📖 Bot: Recuperados ${mensajes.length} mensajes de conversación ${conversacionId}`);
+        return mensajes;
+    } catch (error) {
+        console.error('❌ Bot: Error recuperando mensajes:', error.message);
+        return [];
+    }
+}
+
+/**
+ * Busca contexto del paciente por número de celular
+ * @param {string} celular - Número de celular
+ * @returns {Promise<string>} - Contexto del paciente para el prompt
+ */
+async function buscarContextoPacienteBot(poolRef, celular) {
+    try {
+        // Limpiar el número: quitar prefijos
+        const celularLimpio = celular.replace(/\D/g, '').replace(/^57/, '').replace(/^whatsapp:/, '');
+
+        // Buscar en HistoriaClinica
+        const result = await poolRef.query(`
+            SELECT "_id", "numeroId", "primerNombre", "primerApellido", "celular",
+                   "fechaAtencion", "fechaConsulta", "empresa", "codEmpresa", "atendido"
+            FROM "HistoriaClinica"
+            WHERE "celular" = $1
+            ORDER BY "fechaAtencion" DESC
+            LIMIT 1
+        `, [celularLimpio]);
+
+        if (result.rows.length === 0) {
+            return '';
+        }
+
+        const paciente = result.rows[0];
+        const nombre = `${paciente.primerNombre || ''} ${paciente.primerApellido || ''}`.trim();
+        const fechaAtencion = paciente.fechaAtencion ? new Date(paciente.fechaAtencion) : null;
+        const fechaConsulta = paciente.fechaConsulta ? new Date(paciente.fechaConsulta) : null;
+        const ahora = new Date();
+
+        // Determinar estado del paciente
+        let estadoDetalle = '';
+        if (fechaConsulta && fechaConsulta < ahora) {
+            estadoDetalle = 'consulta_realizada';
+        } else if (fechaAtencion && fechaAtencion >= ahora) {
+            estadoDetalle = 'cita_programada';
+        } else if (fechaAtencion && fechaAtencion < ahora && !fechaConsulta) {
+            estadoDetalle = 'no_asistio_consulta';
+        }
+
+        const contexto = `\n\n📋 INFORMACIÓN DEL PACIENTE (identificado por su celular):
+- Nombre: ${nombre || 'No registrado'}
+- Cédula: ${paciente.numeroId || 'No registrada'}
+- Empresa: ${paciente.empresa || 'No especificada'}
+- Estado: ${paciente.atendido || 'PENDIENTE'}
+- Estado detallado: ${estadoDetalle || 'indeterminado'}
+- Fecha de atención: ${fechaAtencion ? fechaAtencion.toLocaleDateString('es-CO') : 'No registrada'}
+- Fecha de consulta: ${fechaConsulta ? fechaConsulta.toLocaleDateString('es-CO') : 'No realizada'}
+
+IMPORTANTE: Usa el "Estado detallado" para saber en qué punto está:
+- "consulta_realizada" = Ya hizo el examen, puede pagar
+- "cita_programada" = Tiene cita pendiente, aún no hace examen
+- "no_asistio_consulta" = No asistió a la cita`;
+
+        console.log(`📊 Bot: Contexto del paciente: ${nombre} - ${estadoDetalle}`);
+        return contexto;
+
+    } catch (error) {
+        console.error('❌ Bot: Error buscando contexto paciente:', error.message);
+        return '';
+    }
+}
+
+/**
+ * Genera respuesta del bot usando OpenAI + RAG
+ * @param {string} userMessage - Mensaje del usuario
+ * @param {Array} conversationHistory - Historial de conversación
+ * @param {string} contextoPaciente - Contexto del paciente
+ * @returns {Promise<string>} - Respuesta del bot
+ */
+async function getAIResponseBot(poolRef, userMessage, conversationHistory = [], contextoPaciente = '') {
+    try {
+        // Buscar respuestas similares previas (RAG)
+        let contextoRAG = '';
+        try {
+            const resultadosRAG = await buscarRespuestasSimilaresRAG(poolRef, userMessage, {
+                limite: 5,
+                umbralSimilitud: 0.70,
+                pesoAdmin: 2.0
+            });
+
+            if (resultadosRAG.length > 0) {
+                contextoRAG = formatearContextoRAG(resultadosRAG);
+                console.log(`🧠 RAG: Agregando ${resultadosRAG.length} respuestas VERIFICADAS al contexto`);
+            }
+        } catch (ragError) {
+            console.error('⚠️ RAG: Error (continuando sin RAG):', ragError.message);
+        }
+
+        // Construir system prompt enriquecido
+        let systemPromptEnriquecido = systemPromptBot;
+        if (contextoPaciente) {
+            systemPromptEnriquecido += contextoPaciente;
+        }
+        if (contextoRAG) {
+            systemPromptEnriquecido += contextoRAG;
+        }
+
+        const messages = [
+            { role: 'system', content: systemPromptEnriquecido },
+            ...conversationHistory,
+            { role: 'user', content: userMessage }
+        ];
+
+        const completion = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: messages,
+            temperature: 0.7,
+            max_tokens: 500,
+        });
+
+        return completion.choices[0].message.content;
+    } catch (error) {
+        console.error('❌ Bot: Error con OpenAI:', error);
+        return 'Lo siento, tuve un problema técnico. ¿Podrías repetir tu pregunta?';
+    }
+}
 
 // Map para gestión de estado de flujo de pagos
 const estadoPagos = new Map();
@@ -3395,6 +3878,7 @@ app.get('/api/admin/whatsapp/conversaciones', authMiddleware, requireAdmin, asyn
                     0
                 ) as no_leidos,
                 c.bot_activo,
+                c."stopBot",
                 c.agente_asignado as agente_nombre,
                 (
                     SELECT json_build_object(
@@ -3889,6 +4373,102 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
                 } catch (error) {
                     console.error('❌ Error procesando documento en flujo de pagos:', error);
                 }
+                // Si está en flujo de pagos, no activar el bot
+                res.type('text/xml');
+                res.send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
+                return;
+            }
+        }
+
+        // 🤖 SISTEMA DE BOT CON IA - Respuestas automáticas cuando stopBot = false
+        if (Body && numMedia === 0) {
+            try {
+                // Verificar si el bot debe responder
+                const convData = await pool.query(`
+                    SELECT "stopBot", bot_activo FROM conversaciones_whatsapp
+                    WHERE id = $1
+                `, [conversacionId]);
+
+                const stopBot = convData.rows[0]?.stopBot || false;
+
+                console.log(`🤖 Bot check para ${numeroCliente}: stopBot=${stopBot}`);
+
+                if (!stopBot) {
+                    console.log(`🤖 Bot ACTIVO para ${numeroCliente} - Generando respuesta con IA`);
+
+                    // Recuperar historial de mensajes
+                    const historial = await recuperarMensajesBot(pool, conversacionId, 10);
+
+                    // Buscar contexto del paciente
+                    const contextoPaciente = await buscarContextoPacienteBot(pool, numeroCliente);
+
+                    // Generar respuesta con OpenAI + RAG
+                    const respuestaBot = await getAIResponseBot(pool, Body, historial, contextoPaciente);
+
+                    console.log(`🤖 Respuesta del bot: ${respuestaBot.substring(0, 100)}...`);
+
+                    // Verificar comandos especiales en la respuesta
+                    if (respuestaBot.includes('...transfiriendo con asesor')) {
+                        // Activar stopBot para transferir a humano
+                        await pool.query(`
+                            UPDATE conversaciones_whatsapp
+                            SET "stopBot" = true, bot_activo = false
+                            WHERE id = $1
+                        `, [conversacionId]);
+                        console.log(`🛑 Bot auto-detenido para ${numeroCliente} (transferencia a asesor)`);
+                    }
+
+                    // Enviar respuesta por Twilio (solo si no es comando especial interno)
+                    if (respuestaBot !== 'VOLVER_AL_MENU') {
+                        const respuestaFinal = respuestaBot.replace('...transfiriendo con asesor', '').trim() || 'Un momento por favor, te atenderá un asesor.';
+                        await sendWhatsAppFreeText(numeroCliente, respuestaFinal);
+
+                        // Guardar respuesta en mensajes_whatsapp
+                        await pool.query(`
+                            INSERT INTO mensajes_whatsapp (
+                                conversacion_id,
+                                contenido,
+                                direccion,
+                                tipo_mensaje,
+                                timestamp
+                            )
+                            VALUES ($1, $2, 'saliente', 'text', NOW())
+                        `, [conversacionId, respuestaFinal]);
+
+                        // Emitir evento WebSocket para la respuesta del bot
+                        if (global.emitWhatsAppEvent) {
+                            global.emitWhatsAppEvent('nuevo_mensaje', {
+                                conversacion_id: conversacionId,
+                                numero_cliente: numeroCliente,
+                                contenido: respuestaFinal,
+                                direccion: 'saliente',
+                                fecha_envio: new Date().toISOString(),
+                                tipo_mensaje: 'text',
+                                es_bot: true
+                            });
+                        }
+
+                        console.log(`✅ Bot respondió a ${numeroCliente}`);
+                    } else {
+                        // VOLVER_AL_MENU - Enviar menú de opciones
+                        const menuOpciones = '🩺 Nuestras opciones:\nVirtual – $52.000 COP\nPresencial – $69.000 COP';
+                        await sendWhatsAppFreeText(numeroCliente, menuOpciones);
+                    }
+
+                    // Guardar en RAG para aprendizaje (async, no bloquea)
+                    guardarParConEmbeddingRAG(pool, {
+                        userId: numeroCliente,
+                        pregunta: Body,
+                        respuesta: respuestaBot,
+                        fuente: 'bot',
+                        timestampOriginal: new Date()
+                    }).catch(err => console.error('⚠️ RAG async error:', err.message));
+                } else {
+                    console.log(`⛔ Bot DETENIDO para ${numeroCliente} - No se genera respuesta automática`);
+                }
+            } catch (botError) {
+                console.error('❌ Error en sistema de bot:', botError);
+                // No fallar el webhook si el bot tiene error
             }
         }
 
@@ -4112,6 +4692,36 @@ app.patch('/api/admin/whatsapp/conversaciones/:id/estado', authMiddleware, requi
     } catch (error) {
         console.error('Error al actualizar conversación:', error);
         res.status(500).json({ success: false, message: 'Error al actualizar conversación' });
+    }
+});
+
+// Toggle del estado del bot (stopBot) para una conversación
+app.post('/api/admin/whatsapp/conversaciones/:id/toggle-bot', authMiddleware, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { stopBot } = req.body;
+
+        const result = await pool.query(`
+            UPDATE conversaciones_whatsapp
+            SET "stopBot" = $1, fecha_ultima_actividad = NOW()
+            WHERE id = $2
+            RETURNING id, "stopBot"
+        `, [stopBot, id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Conversación no encontrada' });
+        }
+
+        console.log(`🤖 Bot ${stopBot ? 'DETENIDO' : 'ACTIVADO'} para conversación ${id}`);
+
+        res.json({
+            success: true,
+            stopBot: result.rows[0].stopBot,
+            message: stopBot ? 'Bot detenido' : 'Bot activado'
+        });
+    } catch (error) {
+        console.error('Error al cambiar estado del bot:', error);
+        res.status(500).json({ success: false, message: 'Error al cambiar estado del bot' });
     }
 });
 
