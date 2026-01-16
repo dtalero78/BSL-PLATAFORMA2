@@ -7254,6 +7254,9 @@ app.put('/api/historia-clinica/:id', async (req, res) => {
                 RETURNING *
             `;
 
+            console.log('🔍 Query a ejecutar:', query);
+            console.log('🔍 Valores:', values);
+
             const result = await pool.query(query, values);
             const historiaActualizada = result.rows[0];
 
