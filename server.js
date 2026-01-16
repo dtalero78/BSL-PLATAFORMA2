@@ -362,6 +362,23 @@ const twilioClient = twilio(
     process.env.TWILIO_AUTH_TOKEN
 );
 
+// Mapeo de templates a su contenido real para guardar en BD
+const TEMPLATE_TEXTS = {
+    'HX8c84dc81049e7b055bd30125e9786051': 'Hola!\n\nAcabamos de recibir una llamada de ese celular.\n¿Es para exámenes ocupacionales?',
+    'HX43d06a0a97e11919c1e4b19d3e4b6957': 'Hola {{1}}! Tu cita ha sido confirmada para el {{2}}.',
+    'HX4554efaf53c1bd614d49c951e487d394': '¡Hola! Gracias por comunicarte con BSL.\n\nPara agilizar tu proceso, por favor completa el siguiente formulario: https://www.bsl.com.co/?_id={{1}}',
+    'HXeb45e56eb2e8dc4eaa35433282e12709': 'Hola! Tu cita médica está programada para el {{1}} a las {{2}}.\n\nPara completar el formulario, ingresa aquí: https://www.bsl.com.co/?_id={{3}}'
+};
+
+// Función helper para reemplazar variables en template
+function reemplazarVariablesTemplate(templateText, variables) {
+    let texto = templateText;
+    for (const [key, value] of Object.entries(variables)) {
+        texto = texto.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
+    }
+    return texto;
+}
+
 // Función para enviar mensajes de WhatsApp via Twilio con Content Template
 // Usado para notificaciones automáticas pre-aprobadas
 async function sendWhatsAppMessage(toNumber, messageBody, variables = {}, templateSid = null) {
@@ -412,12 +429,16 @@ async function sendWhatsAppMessage(toNumber, messageBody, variables = {}, templa
         // Guardar mensaje en base de datos automáticamente
         const numeroLimpio = toNumber.replace(/[^\d]/g, '');
 
-        // Construir contenido legible del template con las variables
+        // Construir contenido legible del template
         let contenidoTemplate;
         if (messageBody) {
+            // Si se pasó messageBody directamente, usarlo
             contenidoTemplate = messageBody;
+        } else if (TEMPLATE_TEXTS[contentSid]) {
+            // Usar el texto real del template y reemplazar variables
+            contenidoTemplate = reemplazarVariablesTemplate(TEMPLATE_TEXTS[contentSid], variables);
         } else if (Object.keys(variables).length > 0) {
-            // Generar mensaje con las variables para que sea legible
+            // Fallback si el template no está en el mapeo
             const varsTexto = Object.entries(variables)
                 .map(([key, value]) => `{{${key}}}: ${value}`)
                 .join(', ');
