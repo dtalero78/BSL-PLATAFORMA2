@@ -2549,6 +2549,9 @@ https://bsl-plataforma.com/nuevaorden1.html`
                     examenes: examenesSeleccionados.join(', ')
                 };
 
+                console.log('📤 Datos a enviar:', datos);
+                console.log('📤 Exámenes seleccionados:', examenesSeleccionados);
+
                 const response = await fetch(`/api/historia-clinica/${pacienteActualEdicion._id}`, {
                     method: 'PUT',
                     headers: {
