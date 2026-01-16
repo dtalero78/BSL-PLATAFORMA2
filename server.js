@@ -7644,6 +7644,56 @@ app.get('/api/historia-clinica/buscar', async (req, res) => {
     }
 });
 
+// Endpoint para buscar paciente por celular (para el chat de WhatsApp)
+app.get('/api/historia-clinica/buscar-por-celular', async (req, res) => {
+    try {
+        const { celular } = req.query;
+
+        if (!celular) {
+            return res.status(400).json({ success: false, message: 'Se requiere el parámetro celular' });
+        }
+
+        console.log(`🔍 Buscando paciente por celular: "${celular}"`);
+
+        // Normalizar el celular para búsqueda flexible
+        const celularLimpio = celular.replace(/\D/g, ''); // Solo dígitos
+        const celularSin57 = celularLimpio.startsWith('57') ? celularLimpio.substring(2) : celularLimpio;
+
+        const result = await pool.query(`
+            SELECT h.*
+            FROM "HistoriaClinica" h
+            WHERE h."celular" = $1
+               OR h."celular" = $2
+               OR h."celular" = $3
+               OR REPLACE(h."celular", ' ', '') = $1
+               OR REPLACE(h."celular", ' ', '') = $2
+               OR REPLACE(h."celular", ' ', '') = $3
+            ORDER BY h."_createdDate" DESC
+            LIMIT 1
+        `, [celular, celularLimpio, celularSin57]);
+
+        if (result.rows.length === 0) {
+            console.log(`⚠️ No se encontró paciente con celular: ${celular}`);
+            return res.json({ success: false, message: 'No se encontró paciente con este celular' });
+        }
+
+        console.log(`✅ Paciente encontrado: ${result.rows[0].primerNombre} ${result.rows[0].primerApellido}`);
+
+        res.json({
+            success: true,
+            data: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('❌ Error buscando por celular:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error en la búsqueda',
+            error: error.message
+        });
+    }
+});
+
 // Endpoint para obtener HistoriaClinica o Formulario por _id
 app.get('/api/historia-clinica/:id', async (req, res) => {
     try {
