@@ -1950,19 +1950,26 @@ Llave Breb: @talero585`
                     `;
                 }).join('');
 
-                // Reemplazar iconos de feather
-                feather.replace();
+                // Reemplazar iconos de feather solo en el contenedor de mensajes (optimización)
+                const chatMensajesEl = document.getElementById('chatMensajes');
+                feather.replace({ root: chatMensajesEl });
 
                 // Scroll inteligente: solo si estaba cerca del fondo o si no es silencioso
                 if (!silencioso || estabaCasiAbajo) {
                     chatMensajes.scrollTop = chatMensajes.scrollHeight;
                 }
 
-                // Actualizar contador de no leídos a 0 para esta conversación
+                // Actualizar contador de no leídos a 0 para esta conversación (sin re-render completo)
                 const conversacion = conversacionesWhatsApp.find(c => c.id === conversacionId);
-                if (conversacion) {
+                if (conversacion && conversacion.no_leidos > 0) {
                     conversacion.no_leidos = 0;
-                    renderConversaciones();
+                    // Solo actualizar el badge de esta conversación, no re-renderizar todo
+                    const convItem = document.querySelector(`[data-conv-id="${conversacionId}"]`);
+                    if (convItem) {
+                        const badge = convItem.querySelector('.whatsapp-unread-badge');
+                        if (badge) badge.remove();
+                        convItem.classList.remove('unread');
+                    }
                 }
             } catch (error) {
                 console.error('Error cargando mensajes:', error);
