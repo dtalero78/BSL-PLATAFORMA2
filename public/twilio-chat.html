@@ -1689,10 +1689,43 @@ Llave Breb: @talero585`
                 return;
             }
 
-            // Si hay conversaciones cambiadas, hacer render completo para respetar el orden
-            // (el backend ordena por último mensaje, necesitamos reflejar ese orden)
+            // OPTIMIZACIÓN: Actualizar solo las conversaciones específicas que cambiaron
+            // en lugar de re-renderizar toda la lista
             if (idsConversacionesCambiadas.length > 0) {
-                renderConversaciones();
+                // 1. Actualizar el contenido de cada conversación cambiada
+                idsConversacionesCambiadas.forEach(convId => {
+                    const conv = conversacionesWhatsApp.find(c => c.id === convId);
+                    if (!conv) return;
+
+                    const existingElement = lista.querySelector(`[data-conv-id="${convId}"]`);
+                    if (existingElement) {
+                        // Actualizar el contenido del elemento existente en su lugar
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = generarHTMLConversacion(conv);
+                        const newElement = tempDiv.firstElementChild;
+                        existingElement.innerHTML = newElement.innerHTML;
+                        existingElement.className = newElement.className;
+                    }
+                });
+
+                // 2. Mover las conversaciones cambiadas al principio (una por una)
+                // Para mantener el orden por último mensaje
+                const convsCambiadas = idsConversacionesCambiadas
+                    .map(id => lista.querySelector(`[data-conv-id="${id}"]`))
+                    .filter(el => el !== null);
+
+                // Ordenar por el orden en conversacionesWhatsApp (que ya viene ordenado del backend)
+                convsCambiadas.sort((a, b) => {
+                    const idxA = conversacionesWhatsApp.findIndex(c => c.id === parseInt(a.dataset.convId));
+                    const idxB = conversacionesWhatsApp.findIndex(c => c.id === parseInt(b.dataset.convId));
+                    return idxA - idxB;
+                });
+
+                // Mover al principio en el orden correcto
+                convsCambiadas.forEach(el => {
+                    lista.insertBefore(el, lista.firstElementChild);
+                });
+
                 return;
             }
 
