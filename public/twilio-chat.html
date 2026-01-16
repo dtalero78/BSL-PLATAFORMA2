@@ -456,6 +456,17 @@
             flex-wrap: wrap;
         }
 
+        @media (max-width: 500px) {
+            .modal-footer {
+                flex-direction: column;
+                padding: 12px 16px;
+            }
+            .modal-footer .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
         .form-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -2258,6 +2269,34 @@ Llave Breb: @talero585`
                     document.getElementById('edit-fechaNacimiento').value = '';
                 }
 
+                // Fecha de atención (formato datetime-local: YYYY-MM-DDTHH:MM)
+                if (pacienteActualEdicion.fechaAtencion) {
+                    const fa = new Date(pacienteActualEdicion.fechaAtencion);
+                    const colombiaTime = new Date(fa.toLocaleString('en-US', { timeZone: 'America/Bogota' }));
+                    const year = colombiaTime.getFullYear();
+                    const month = String(colombiaTime.getMonth() + 1).padStart(2, '0');
+                    const day = String(colombiaTime.getDate()).padStart(2, '0');
+                    const hours = String(colombiaTime.getHours()).padStart(2, '0');
+                    const minutes = String(colombiaTime.getMinutes()).padStart(2, '0');
+                    document.getElementById('edit-fechaAtencion').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+                } else {
+                    document.getElementById('edit-fechaAtencion').value = '';
+                }
+
+                // Fecha de consulta (formato datetime-local: YYYY-MM-DDTHH:MM)
+                if (pacienteActualEdicion.fechaConsulta) {
+                    const fc = new Date(pacienteActualEdicion.fechaConsulta);
+                    const colombiaTimeC = new Date(fc.toLocaleString('en-US', { timeZone: 'America/Bogota' }));
+                    const yearC = colombiaTimeC.getFullYear();
+                    const monthC = String(colombiaTimeC.getMonth() + 1).padStart(2, '0');
+                    const dayC = String(colombiaTimeC.getDate()).padStart(2, '0');
+                    const hoursC = String(colombiaTimeC.getHours()).padStart(2, '0');
+                    const minutesC = String(colombiaTimeC.getMinutes()).padStart(2, '0');
+                    document.getElementById('edit-fechaConsulta').value = `${yearC}-${monthC}-${dayC}T${hoursC}:${minutesC}`;
+                } else {
+                    document.getElementById('edit-fechaConsulta').value = '';
+                }
+
                 // Estado de pago
                 const isPagado = pacienteActualEdicion.pvEstado === 'Pagado';
                 actualizarTagPago(isPagado);
@@ -2366,6 +2405,8 @@ Llave Breb: @talero585`
                     codEmpresa: document.getElementById('edit-codEmpresa').value,
                     cargo: document.getElementById('edit-cargo').value,
                     fechaNacimiento: document.getElementById('edit-fechaNacimiento').value || null,
+                    fechaAtencion: document.getElementById('edit-fechaAtencion').value || null,
+                    fechaConsulta: document.getElementById('edit-fechaConsulta').value || null,
                     pvEstado: isPagado ? 'Pagado' : '',
                     examenes: examenesSeleccionados.join(', ')
                 };
@@ -2494,6 +2535,18 @@ Llave Breb: @talero585`
                     <div class="form-group full">
                         <label class="form-label">Cargo</label>
                         <input type="text" class="form-input" id="edit-cargo">
+                    </div>
+                </div>
+
+                <div class="form-section-title" style="margin-top: 24px;">Fechas de Atención</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Fecha de Atención</label>
+                        <input type="datetime-local" class="form-input" id="edit-fechaAtencion">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fecha de Consulta</label>
+                        <input type="datetime-local" class="form-input" id="edit-fechaConsulta">
                     </div>
                 </div>
 
