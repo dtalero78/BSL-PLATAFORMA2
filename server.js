@@ -3406,7 +3406,16 @@ app.get('/api/admin/whatsapp/conversaciones', authMiddleware, requireAdmin, asyn
                     WHERE m.conversacion_id = c.id
                     ORDER BY m.timestamp DESC
                     LIMIT 1
-                ) as ultimo_mensaje
+                ) as ultimo_mensaje,
+                (
+                    SELECT h."codEmpresa"
+                    FROM "HistoriaClinica" h
+                    WHERE h."celular" = c.celular
+                       OR h."celular" = REPLACE(c.celular, '+', '')
+                       OR h."celular" = REPLACE(REPLACE(c.celular, '+57', ''), '+', '')
+                    ORDER BY h."_createdDate" DESC
+                    LIMIT 1
+                ) as cod_empresa
             FROM conversaciones_whatsapp c
             ORDER BY
                 CASE WHEN EXISTS (

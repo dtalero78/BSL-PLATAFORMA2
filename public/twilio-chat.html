@@ -316,6 +316,31 @@
             color: var(--text-secondary);
         }
 
+        .whatsapp-chat-empresa {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: #E8F5E9;
+            color: #2E7D32;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 6px;
+            border: 1px solid #A5D6A7;
+        }
+
+        .whatsapp-chat-empresa i {
+            width: 14px;
+            height: 14px;
+        }
+
+        .whatsapp-chat-empresa.sin-empresa {
+            background: #FFF3E0;
+            color: #E65100;
+            border-color: #FFB74D;
+        }
+
         .whatsapp-chat-messages {
             flex: 1;
             overflow-y: auto;
@@ -811,6 +836,7 @@
                     <div class="whatsapp-chat-header-info">
                         <h4 id="chatNombre">Nombre del Cliente</h4>
                         <span class="whatsapp-chat-numero" id="chatNumero">+57 300 000 0000</span>
+                        <div id="chatEmpresaContainer"></div>
                     </div>
                     <div class="whatsapp-chat-header-actions">
                         <span class="badge activa" id="chatEstado">activa</span>
@@ -1342,6 +1368,24 @@ Llave Breb: @talero585`
                 conversacion.nombre_cliente || conversacion.numero_cliente;
             document.getElementById('chatNumero').textContent = conversacion.numero_cliente;
             document.getElementById('chatEstado').textContent = conversacion.estado || 'activa';
+
+            // Mostrar codEmpresa si existe
+            const empresaContainer = document.getElementById('chatEmpresaContainer');
+            if (conversacion.cod_empresa) {
+                empresaContainer.innerHTML = `
+                    <span class="whatsapp-chat-empresa">
+                        <i data-feather="briefcase"></i>
+                        ${conversacion.cod_empresa}
+                    </span>
+                `;
+            } else {
+                empresaContainer.innerHTML = `
+                    <span class="whatsapp-chat-empresa sin-empresa">
+                        <i data-feather="alert-circle"></i>
+                        Sin empresa
+                    </span>
+                `;
+            }
 
             // Cargar mensajes
             await cargarMensajes(conversacionId);
