@@ -365,11 +365,6 @@
             border: 1px solid #A5D6A7;
         }
 
-        .whatsapp-chat-empresa i {
-            width: 14px;
-            height: 14px;
-        }
-
         .whatsapp-chat-empresa.sin-empresa {
             background: #FFF3E0;
             color: #E65100;
@@ -811,6 +806,11 @@
 
             .whatsapp-mensaje {
                 max-width: 80%;
+            }
+
+            /* En móvil: ocultar badge de estado activa */
+            .whatsapp-chat-header-actions {
+                display: none !important;
             }
         }
     </style>
@@ -1448,14 +1448,12 @@ Llave Breb: @talero585`
             if (conversacion.cod_empresa) {
                 empresaContainer.innerHTML = `
                     <span class="whatsapp-chat-empresa">
-                        <i data-feather="briefcase"></i>
                         ${conversacion.cod_empresa}
                     </span>
                 `;
             } else {
                 empresaContainer.innerHTML = `
                     <span class="whatsapp-chat-empresa sin-empresa">
-                        <i data-feather="alert-circle"></i>
                         Sin empresa
                     </span>
                 `;
