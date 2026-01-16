@@ -2296,12 +2296,17 @@ Llave Breb: @talero585`
         let examenesSeleccionados = [];
 
         // Lista de exámenes disponibles
+        // Exámenes prioritarios (mismos que en ordenes.html) + PERFIL LIPÍDICO y GLICEMIA
         const EXAMENES_DISPONIBLES = [
-            'AUDIOMETRIA', 'VISIOMETRIA', 'ESPIROMETRIA', 'LABORATORIOS',
-            'OPTOMETRIA', 'ELECTROCARDIOGRAMA', 'PSICOLOGIA', 'PSICOSENSOMETRIA',
-            'GLICEMIA', 'PERFIL LIPIDICO', 'CUADRO HEMATICO', 'PARCIAL DE ORINA',
-            'RX COLUMNA DORSOLUMBAR', 'RX TORAX', 'HEMOCLASIFICACION',
-            'EXAMEN MEDICO OCUPACIONAL', 'PRUEBA DE EMBARAZO'
+            'EXAMEN MÉDICO OCUPACIONAL OSTEOMUSCULAR',
+            'AUDIOMETRÍA',
+            'OPTOMETRÍA',
+            'ÉNFASIS CARDIOVASCULAR',
+            'ÉNFASIS VASCULAR',
+            'ESPIROMETRÍA',
+            'Perfil Psicológico ADC',
+            'PERFIL LIPÍDICO',
+            'GLICEMIA'
         ];
 
         async function abrirModalEdicion() {
@@ -2340,6 +2345,7 @@ Llave Breb: @talero585`
                 document.getElementById('edit-segundoApellido').value = pacienteActualEdicion.segundoApellido || '';
                 document.getElementById('edit-numeroId').value = pacienteActualEdicion.numeroId || '';
                 document.getElementById('edit-celular').value = pacienteActualEdicion.celular || '';
+                document.getElementById('edit-eps').value = pacienteActualEdicion.eps || '';
                 document.getElementById('edit-empresa').value = pacienteActualEdicion.empresa || '';
                 document.getElementById('edit-codEmpresa').value = pacienteActualEdicion.codEmpresa || '';
                 document.getElementById('edit-cargo').value = pacienteActualEdicion.cargo || '';
@@ -2384,10 +2390,6 @@ Llave Breb: @talero585`
                 // Estado de pago
                 const isPagado = pacienteActualEdicion.pvEstado === 'Pagado';
                 actualizarTagPago(isPagado);
-
-                // Estado de atención (para mostrar/ocultar botón Atender)
-                const isAtendido = pacienteActualEdicion.atendido === 'ATENDIDO';
-                document.getElementById('btnAtender').style.display = isAtendido ? 'none' : 'inline-block';
 
                 // Cargar exámenes
                 const examenesStr = pacienteActualEdicion.examenes || '';
@@ -2488,6 +2490,7 @@ Llave Breb: @talero585`
                     segundoApellido: document.getElementById('edit-segundoApellido').value,
                     numeroId: document.getElementById('edit-numeroId').value,
                     celular: document.getElementById('edit-celular').value,
+                    eps: document.getElementById('edit-eps').value,
                     empresa: document.getElementById('edit-empresa').value,
                     codEmpresa: document.getElementById('edit-codEmpresa').value,
                     cargo: document.getElementById('edit-cargo').value,
@@ -2546,7 +2549,6 @@ Llave Breb: @talero585`
 
                 if (result.success) {
                     alert('Paciente marcado como ATENDIDO y mensaje enviado');
-                    btnAtender.style.display = 'none';
                     cerrarModalEdicion();
                 } else {
                     alert('Error: ' + (result.message || 'No se pudo procesar'));
@@ -2725,6 +2727,10 @@ Llave Breb: @talero585`
                     <div class="form-group">
                         <label class="form-label">Celular</label>
                         <input type="text" class="form-input" id="edit-celular">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">EPS</label>
+                        <input type="text" class="form-input" id="edit-eps">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Fecha de Nacimiento</label>
