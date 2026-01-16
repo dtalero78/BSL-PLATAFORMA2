@@ -664,6 +664,90 @@
             outline: none;
         }
 
+        /* Estado de Pruebas - Tags */
+        .pruebas-status-section {
+            background: #F8FAFC;
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-top: 16px;
+        }
+
+        .pruebas-status-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #6B7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .pruebas-hint {
+            font-weight: 400;
+            text-transform: none;
+            color: #9CA3AF;
+        }
+
+        .pruebas-tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .prueba-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .prueba-tag::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .prueba-tag:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .prueba-tag:active {
+            transform: scale(0.98);
+        }
+
+        .prueba-completada {
+            background: #ECFDF5;
+            color: #065F46;
+        }
+
+        .prueba-completada::before {
+            background: #10B981;
+        }
+
+        .prueba-pendiente {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+
+        .prueba-pendiente::before {
+            background: #F59E0B;
+        }
+
+        .prueba-enviada {
+            background: #DBEAFE !important;
+            color: #1D4ED8 !important;
+        }
+
+        .prueba-enviada::before {
+            background: #3B82F6 !important;
+        }
+
         .whatsapp-chat-messages {
             flex: 1;
             overflow-y: auto;
@@ -2313,6 +2397,9 @@ Llave Breb: @talero585`
                     .filter(e => e.length > 0);
                 renderExamenesEdicion();
 
+                // Cargar estado de pruebas
+                await cargarEstadoPruebas(pacienteActualEdicion._id);
+
                 // Mostrar modal
                 document.getElementById('modalEdicionPaciente').classList.add('active');
 
@@ -2472,6 +2559,135 @@ Llave Breb: @talero585`
                 btnAtender.textContent = 'Atender';
             }
         }
+
+        // ========== ESTADO DE PRUEBAS ==========
+        async function cargarEstadoPruebas(ordenId) {
+            const section = document.getElementById('pruebasStatusSection');
+            const container = document.getElementById('pruebasTagsContainer');
+
+            try {
+                const token = Auth.getToken();
+                const response = await fetch(`/api/estado-pruebas/${ordenId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const result = await response.json();
+
+                if (!result.success || !result.data || !result.data.pruebas) {
+                    section.style.display = 'none';
+                    return;
+                }
+
+                const p = result.data.pruebas;
+                let tagsCompletados = [];
+                let tagsPendientes = [];
+
+                // Mapeo de nombres a tipos de prueba
+                const tiposPrueba = {
+                    'Formulario': 'formulario',
+                    'Pruebas ADC': 'adc',
+                    'Audiometría': 'audiometria',
+                    'Visual': 'visiometria'
+                };
+
+                // Formulario
+                if (p.formulario && p.formulario.completado) {
+                    tagsCompletados.push('Formulario');
+                } else if (p.formulario && p.formulario.requerido) {
+                    tagsPendientes.push('Formulario');
+                }
+
+                // Pruebas ADC
+                if (p.adc && p.adc.completado) {
+                    tagsCompletados.push('Pruebas ADC');
+                } else if (p.adc && p.adc.requerido) {
+                    tagsPendientes.push('Pruebas ADC');
+                }
+
+                // Audiometría
+                if (p.audiometria && p.audiometria.completado) {
+                    tagsCompletados.push('Audiometría');
+                } else if (p.audiometria && p.audiometria.requerido) {
+                    tagsPendientes.push('Audiometría');
+                }
+
+                // Visual (Visiometría)
+                if (p.visiometria && p.visiometria.completado) {
+                    tagsCompletados.push('Visual');
+                } else if (p.visiometria && p.visiometria.requerido) {
+                    tagsPendientes.push('Visual');
+                }
+
+                if (tagsCompletados.length > 0 || tagsPendientes.length > 0) {
+                    container.innerHTML = `
+                        ${tagsCompletados.map(t => `<span class="prueba-tag prueba-completada" data-tipo="${tiposPrueba[t]}" data-orden="${ordenId}" onclick="enviarLinkPrueba(this)">${t}</span>`).join('')}
+                        ${tagsPendientes.map(t => `<span class="prueba-tag prueba-pendiente" data-tipo="${tiposPrueba[t]}" data-orden="${ordenId}" onclick="enviarLinkPrueba(this)">${t}</span>`).join('')}
+                    `;
+                    section.style.display = 'block';
+                } else {
+                    section.style.display = 'none';
+                }
+
+            } catch (error) {
+                console.error('Error cargando estado de pruebas:', error);
+                section.style.display = 'none';
+            }
+        }
+
+        async function enviarLinkPrueba(tagElement) {
+            const tipoPrueba = tagElement.dataset.tipo;
+            const ordenId = tagElement.dataset.orden;
+            const nombrePrueba = tagElement.textContent;
+
+            // Confirmación
+            if (!confirm(`¿Enviar link de "${nombrePrueba}" por WhatsApp al paciente?`)) {
+                return;
+            }
+
+            // Mostrar estado de carga en el tag
+            const textoOriginal = tagElement.textContent;
+            tagElement.textContent = 'Enviando...';
+            tagElement.style.opacity = '0.6';
+            tagElement.style.pointerEvents = 'none';
+
+            try {
+                const token = Auth.getToken();
+                const response = await fetch('/api/enviar-link-prueba', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ ordenId, tipoPrueba })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Mostrar éxito temporalmente
+                    tagElement.textContent = '✓ Enviado';
+                    tagElement.classList.add('prueba-enviada');
+
+                    setTimeout(() => {
+                        tagElement.textContent = textoOriginal;
+                        tagElement.classList.remove('prueba-enviada');
+                        tagElement.style.opacity = '1';
+                        tagElement.style.pointerEvents = 'auto';
+                    }, 2000);
+                } else {
+                    alert('Error: ' + (result.message || 'No se pudo enviar el mensaje'));
+                    tagElement.textContent = textoOriginal;
+                    tagElement.style.opacity = '1';
+                    tagElement.style.pointerEvents = 'auto';
+                }
+            } catch (error) {
+                console.error('Error enviando link:', error);
+                alert('Error al enviar el mensaje. Intenta de nuevo.');
+                tagElement.textContent = textoOriginal;
+                tagElement.style.opacity = '1';
+                tagElement.style.pointerEvents = 'auto';
+            }
+        }
     </script>
 
     <!-- Modal de Edición de Paciente -->
@@ -2554,6 +2770,14 @@ Llave Breb: @talero585`
                 <div class="form-group full">
                     <label class="form-label">Selecciona los exámenes (clic para agregar/quitar)</label>
                     <div class="examenes-container" id="examenesContainer">
+                        <!-- Se llenará dinámicamente -->
+                    </div>
+                </div>
+
+                <!-- Estado de Pruebas -->
+                <div id="pruebasStatusSection" class="pruebas-status-section" style="display: none;">
+                    <div class="pruebas-status-title">Estado de Pruebas <span class="pruebas-hint">(clic para enviar link por WhatsApp)</span></div>
+                    <div class="pruebas-tags-container" id="pruebasTagsContainer">
                         <!-- Se llenará dinámicamente -->
                     </div>
                 </div>
