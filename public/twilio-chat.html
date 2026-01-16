@@ -1300,7 +1300,7 @@
                     </button>
                     <textarea
                         class="whatsapp-input"
-                        placeholder="Escribe un mensaje o /1, /2, /8, /c..."
+                        placeholder="Escribe un mensaje o /1, /2, /8, /c, /l..."
                         id="inputMensaje"
                         onkeypress="enviarMensajeEnter(event)"
                         oninput="manejarInputComando(event)"
@@ -1334,6 +1334,10 @@
                             <strong>/c</strong> - Datos de pago
                             <p>Bancolombia, Daviplata, Nequi...</p>
                         </div>
+                        <div class="whatsapp-plantilla-item" onclick="usarPlantilla('/l')">
+                            <strong>/l</strong> - Link nuevo examen
+                            <p>La persona que va a hacer el examen debe diligenciar...</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1362,7 +1366,8 @@
             '/1': { titulo: 'Saludo', descripcion: 'Mensaje de saludo simple' },
             '/2': { titulo: 'Instrucciones teleconsulta', descripcion: 'Guía completa para agendar' },
             '/8': { titulo: 'Link consulta orden', descripcion: 'Enlace para consultar estado' },
-            '/c': { titulo: 'Datos de pago', descripcion: 'Información bancaria' }
+            '/c': { titulo: 'Datos de pago', descripcion: 'Información bancaria' },
+            '/l': { titulo: 'Link nuevo examen', descripcion: 'Enlace para diligenciar examen' }
         };
 
         // Plantillas de mensajes rápidos
@@ -1392,7 +1397,10 @@ Cédula: 79 981 585
 Daviplata: 3014400818
 Nequi: 3008021701
 
-Llave Breb: @talero585`
+Llave Breb: @talero585`,
+            '/l': `La persona que va a hacer el examen debe diligenciar el siguiente link:
+
+https://bsl-plataforma.com/nuevaorden1.html`
         };
 
         // Inicializar
