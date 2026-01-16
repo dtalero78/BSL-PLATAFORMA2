@@ -23,7 +23,6 @@ const upload = multer({ storage: multer.memoryStorage() });
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
-const crypto = require('crypto');
 
 // ========== SISTEMA DE BOT CONVERSACIONAL CON IA ==========
 // System prompt para el bot de WhatsApp
@@ -57,7 +56,7 @@ Si preguntan temas personales, emocionales o NO relacionados con exámenes médi
 
 **Exámenes extras opcionales:**
 • Cardiovascular, Vascular, Espirometría, Dermatológico: $10.000 c/u
-• Psicológico: $15.000
+• Psicológico: $23.000
 • Perfil lipídico: $69.500
 • Glicemia: $23.100
 
