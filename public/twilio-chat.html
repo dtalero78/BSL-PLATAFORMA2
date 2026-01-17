@@ -1147,6 +1147,15 @@
             height: 12px;
         }
 
+        /* Contenedor de tags (empresa + bot) */
+        .chat-tags-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 4px;
+            flex-wrap: wrap;
+        }
+
         /* Responsive */
         /* Botón volver en móvil */
         .whatsapp-chat-back-btn {
@@ -1288,14 +1297,16 @@
                     <div class="whatsapp-chat-header-info">
                         <h4 id="chatNombre">Nombre del Cliente</h4>
                         <span class="whatsapp-chat-numero" id="chatNumero">+57 300 000 0000</span>
-                        <div id="chatEmpresaContainer"></div>
+                        <div class="chat-tags-row">
+                            <div id="chatEmpresaContainer"></div>
+                            <span class="bot-status-badge bot-activo" id="botStatusBadge" onclick="toggleBotStatus()" title="Clic para cambiar estado del bot">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                                Bot Activo
+                            </span>
+                        </div>
                     </div>
                     <div class="whatsapp-chat-header-actions">
                         <span class="badge activa" id="chatEstado">activa</span>
-                        <span class="bot-status-badge bot-activo" id="botStatusBadge" onclick="toggleBotStatus()" title="Clic para cambiar estado del bot">
-                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                            Bot Activo
-                        </span>
                     </div>
                 </div>
 
@@ -1408,7 +1419,8 @@
             '/2': { titulo: 'Instrucciones teleconsulta', descripcion: 'Guía completa para agendar' },
             '/8': { titulo: 'Link consulta orden', descripcion: 'Enlace para consultar estado' },
             '/c': { titulo: 'Datos de pago', descripcion: 'Información bancaria' },
-            '/l': { titulo: 'Link nuevo examen', descripcion: 'Enlace para diligenciar examen' }
+            '/l': { titulo: 'Link nuevo examen', descripcion: 'Enlace para diligenciar examen' },
+            '/a': { titulo: 'Transferir asesor', descripcion: 'Transfiriendo a un asesor humano' }
         };
 
         // Plantillas de mensajes rápidos
@@ -1441,7 +1453,8 @@ Nequi: 3008021701
 Llave Breb: @talero585`,
             '/l': `La persona que va a hacer el examen debe diligenciar el siguiente link:
 
-https://bsl-plataforma.com/nuevaorden1.html`
+https://bsl-plataforma.com/nuevaorden1.html`,
+            '/a': '...transfiriendo con asesor'
         };
 
         // Inicializar
