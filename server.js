@@ -4375,6 +4375,32 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
                 console.log(`🤖 Bot check para ${numeroCliente}: stopBot=${stopBot}`);
 
                 if (!stopBot) {
+                    // 🚫 Verificar si el paciente pertenece a una empresa diferente a SANITHELP-JJ
+                    const celularLimpio = numeroCliente.replace(/\D/g, '').replace(/^57/, '');
+                    const celularCon57 = '57' + celularLimpio;
+                    const celularConPlus = '+57' + celularLimpio;
+
+                    const empresaCheck = await pool.query(`
+                        SELECT "codEmpresa" FROM "HistoriaClinica"
+                        WHERE "celular" IN ($1, $2, $3)
+                        ORDER BY "_createdDate" DESC
+                        LIMIT 1
+                    `, [celularLimpio, celularCon57, celularConPlus]);
+
+                    if (empresaCheck.rows.length > 0) {
+                        const codEmpresa = empresaCheck.rows[0].codEmpresa;
+                        if (codEmpresa && codEmpresa !== 'SANITHELP-JJ') {
+                            console.log(`🚫 Bot NO responde a ${numeroCliente} - Empresa: ${codEmpresa} (solo SANITHELP-JJ)`);
+                            // Detener el bot para esta conversación
+                            await pool.query(`
+                                UPDATE conversaciones_whatsapp
+                                SET "stopBot" = true
+                                WHERE id = $1
+                            `, [conversacionId]);
+                            return res.status(200).send('OK');
+                        }
+                    }
+
                     console.log(`🤖 Bot ACTIVO para ${numeroCliente} - Generando respuesta con IA`);
 
                     // Recuperar historial de mensajes
