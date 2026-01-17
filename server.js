@@ -456,6 +456,100 @@ IMPORTANTE: Usa el "Estado detallado" para saber en qué punto está:
 }
 
 /**
+ * Busca paciente por número de documento (cédula)
+ * @param {string} documento - Número de documento
+ * @returns {Promise<string>} - Contexto del paciente o vacío
+ */
+async function buscarPacientePorDocumentoBot(poolRef, documento) {
+    try {
+        const docLimpio = documento.replace(/\D/g, ''); // Solo números
+
+        if (docLimpio.length < 6 || docLimpio.length > 12) {
+            return ''; // No parece un documento válido
+        }
+
+        console.log(`🔍 Bot: Buscando paciente por documento: ${docLimpio}`);
+
+        const result = await poolRef.query(`
+            SELECT "_id", "numeroId", "primerNombre", "primerApellido", "celular",
+                   "fechaAtencion", "fechaConsulta", "empresa", "codEmpresa", "atendido"
+            FROM "HistoriaClinica"
+            WHERE "numeroId" = $1
+            ORDER BY "fechaAtencion" DESC
+            LIMIT 1
+        `, [docLimpio]);
+
+        if (result.rows.length === 0) {
+            console.log(`❌ Bot: No se encontró paciente con documento ${docLimpio}`);
+            return `\n\n❌ BÚSQUEDA POR DOCUMENTO: No se encontró ningún registro con el documento ${docLimpio}.`;
+        }
+
+        const paciente = result.rows[0];
+        const nombre = `${paciente.primerNombre || ''} ${paciente.primerApellido || ''}`.trim();
+        const fechaAtencion = paciente.fechaAtencion ? new Date(paciente.fechaAtencion) : null;
+        const fechaConsulta = paciente.fechaConsulta ? new Date(paciente.fechaConsulta) : null;
+        const ahora = new Date();
+
+        // Determinar estado
+        let estadoDetalle = '';
+        if (fechaConsulta && fechaConsulta < ahora) {
+            estadoDetalle = 'consulta_realizada';
+        } else if (fechaAtencion && fechaAtencion >= ahora) {
+            estadoDetalle = 'cita_programada';
+        } else if (fechaAtencion && fechaAtencion < ahora && !fechaConsulta) {
+            estadoDetalle = 'no_asistio_consulta';
+        }
+
+        // Formatear fecha de cita
+        let fechaCitaTexto = 'No programada';
+        if (fechaAtencion) {
+            fechaCitaTexto = fechaAtencion.toLocaleString('es-CO', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: 'America/Bogota'
+            });
+        }
+
+        const contexto = `\n\n✅ PACIENTE ENCONTRADO POR DOCUMENTO ${docLimpio}:
+- Nombre: ${nombre}
+- Cédula: ${paciente.numeroId}
+- Celular: ${paciente.celular || 'No registrado'}
+- Empresa: ${paciente.empresa || paciente.codEmpresa || 'SANITHELP-JJ'}
+- Fecha de cita: ${fechaCitaTexto}
+- Estado: ${paciente.atendido || 'PENDIENTE'}
+- Estado detallado: ${estadoDetalle || 'cita_programada'}
+
+IMPORTANTE: Usa esta información para responder al paciente. Si tiene cita_programada, confirma su cita con la fecha.`;
+
+        console.log(`✅ Bot: Paciente encontrado - ${nombre} (${estadoDetalle})`);
+        return contexto;
+
+    } catch (error) {
+        console.error('❌ Bot: Error buscando por documento:', error.message);
+        return '';
+    }
+}
+
+/**
+ * Detecta si el mensaje contiene un número de documento
+ * @param {string} mensaje - Mensaje del usuario
+ * @returns {string|null} - Documento encontrado o null
+ */
+function detectarDocumentoEnMensaje(mensaje) {
+    // Buscar secuencias de 6-12 dígitos que podrían ser cédulas
+    const matches = mensaje.match(/\b\d{6,12}\b/g);
+    if (matches && matches.length > 0) {
+        // Retornar el primero que parezca válido (entre 6 y 12 dígitos)
+        return matches[0];
+    }
+    return null;
+}
+
+/**
  * Genera respuesta del bot usando OpenAI + RAG
  * @param {string} userMessage - Mensaje del usuario
  * @param {Array} conversationHistory - Historial de conversación
@@ -464,6 +558,13 @@ IMPORTANTE: Usa el "Estado detallado" para saber en qué punto está:
  */
 async function getAIResponseBot(poolRef, userMessage, conversationHistory = [], contextoPaciente = '') {
     try {
+        // Detectar si el usuario envió un número de documento
+        const documentoDetectado = detectarDocumentoEnMensaje(userMessage);
+        let contextoDocumento = '';
+        if (documentoDetectado) {
+            contextoDocumento = await buscarPacientePorDocumentoBot(poolRef, documentoDetectado);
+        }
+
         // Buscar respuestas similares previas (RAG)
         let contextoRAG = '';
         try {
@@ -485,6 +586,9 @@ async function getAIResponseBot(poolRef, userMessage, conversationHistory = [], 
         let systemPromptEnriquecido = systemPromptBot;
         if (contextoPaciente) {
             systemPromptEnriquecido += contextoPaciente;
+        }
+        if (contextoDocumento) {
+            systemPromptEnriquecido += contextoDocumento;
         }
         if (contextoRAG) {
             systemPromptEnriquecido += contextoRAG;
@@ -4429,18 +4533,7 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
                     if (respuestaBot !== 'VOLVER_AL_MENU') {
                         const respuestaFinal = respuestaBot.replace('...transfiriendo con asesor', '').trim() || 'Un momento por favor, te atenderá un asesor.';
                         await sendWhatsAppFreeText(numeroCliente, respuestaFinal);
-
-                        // Guardar respuesta en mensajes_whatsapp
-                        await pool.query(`
-                            INSERT INTO mensajes_whatsapp (
-                                conversacion_id,
-                                contenido,
-                                direccion,
-                                tipo_mensaje,
-                                timestamp
-                            )
-                            VALUES ($1, $2, 'saliente', 'text', NOW())
-                        `, [conversacionId, respuestaFinal]);
+                        // NOTA: sendWhatsAppFreeText ya guarda el mensaje via guardarMensajeSaliente()
 
                         // Emitir evento WebSocket para la respuesta del bot
                         if (global.emitWhatsAppEvent) {
