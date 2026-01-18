@@ -3971,7 +3971,77 @@ app.get('/api/admin/tablas/:nombre/datos', authMiddleware, requireAdmin, async (
 // GET - Listar todas las conversaciones de WhatsApp con último mensaje
 app.get('/api/admin/whatsapp/conversaciones', authMiddleware, requireAdmin, async (req, res) => {
     try {
+        const busqueda = req.query.busqueda || '';
+        const mostrarTodas = req.query.todas === 'true';
+
+        // Construir WHERE condicional
+        let whereConditions = [];
+        let queryParams = [];
+        let paramIndex = 1;
+
+        // Si NO está buscando y NO quiere ver todas, solo mostrar conversaciones con mensajes no leídos
+        if (!busqueda && !mostrarTodas) {
+            whereConditions.push(`
+                EXISTS (
+                    SELECT 1 FROM mensajes_whatsapp m
+                    WHERE m.conversacion_id = c.id
+                    AND m.direccion = 'entrante'
+                    AND m.leido_por_agente = false
+                )
+            `);
+        }
+
+        // Si está buscando, agregar filtro de búsqueda
+        if (busqueda) {
+            whereConditions.push(`
+                (c.nombre_paciente ILIKE $${paramIndex}
+                 OR c.celular ILIKE $${paramIndex}
+                 OR EXISTS (
+                    SELECT 1 FROM mensajes_whatsapp m2
+                    WHERE m2.conversacion_id = c.id
+                    AND m2.contenido ILIKE $${paramIndex}
+                 ))
+            `);
+            queryParams.push(`%${busqueda}%`);
+            paramIndex++;
+        }
+
+        const whereClause = whereConditions.length > 0
+            ? `WHERE ${whereConditions.join(' AND ')}`
+            : '';
+
         const query = `
+            WITH unread_counts AS (
+                -- Pre-calcular conteo de mensajes no leídos por conversación
+                SELECT
+                    conversacion_id,
+                    COUNT(*)::int as no_leidos
+                FROM mensajes_whatsapp
+                WHERE direccion = 'entrante'
+                  AND leido_por_agente = false
+                GROUP BY conversacion_id
+            ),
+            last_messages AS (
+                -- Pre-calcular último mensaje por conversación
+                SELECT DISTINCT ON (conversacion_id)
+                    conversacion_id,
+                    json_build_object(
+                        'contenido', contenido,
+                        'direccion', direccion,
+                        'fecha_envio', timestamp
+                    ) as ultimo_mensaje
+                FROM mensajes_whatsapp
+                ORDER BY conversacion_id, timestamp DESC
+            ),
+            company_codes AS (
+                -- Pre-calcular códigos de empresa (normalizar números)
+                SELECT DISTINCT ON (celular_normalizado)
+                    REPLACE(REPLACE("celular", '+57', ''), '+', '') as celular_normalizado,
+                    "codEmpresa"
+                FROM "HistoriaClinica"
+                WHERE "celular" IS NOT NULL AND "celular" != ''
+                ORDER BY celular_normalizado, "_createdDate" DESC
+            )
             SELECT
                 c.id,
                 c.celular as numero_cliente,
@@ -3980,50 +4050,24 @@ app.get('/api/admin/whatsapp/conversaciones', authMiddleware, requireAdmin, asyn
                 c.agente_asignado as agente_id,
                 c.fecha_inicio,
                 c.fecha_ultima_actividad,
-                COALESCE(
-                    (SELECT COUNT(*)::int
-                     FROM mensajes_whatsapp m
-                     WHERE m.conversacion_id = c.id
-                       AND m.direccion = 'entrante'
-                       AND m.leido_por_agente = false),
-                    0
-                ) as no_leidos,
+                COALESCE(u.no_leidos, 0) as no_leidos,
                 c.bot_activo,
                 c."stopBot",
                 c.agente_asignado as agente_nombre,
-                (
-                    SELECT json_build_object(
-                        'contenido', m.contenido,
-                        'direccion', m.direccion,
-                        'fecha_envio', m.timestamp
-                    )
-                    FROM mensajes_whatsapp m
-                    WHERE m.conversacion_id = c.id
-                    ORDER BY m.timestamp DESC
-                    LIMIT 1
-                ) as ultimo_mensaje,
-                (
-                    SELECT h."codEmpresa"
-                    FROM "HistoriaClinica" h
-                    WHERE h."celular" = c.celular
-                       OR h."celular" = REPLACE(c.celular, '+', '')
-                       OR h."celular" = REPLACE(REPLACE(c.celular, '+57', ''), '+', '')
-                    ORDER BY h."_createdDate" DESC
-                    LIMIT 1
-                ) as cod_empresa
+                lm.ultimo_mensaje,
+                cc."codEmpresa" as cod_empresa
             FROM conversaciones_whatsapp c
+            LEFT JOIN unread_counts u ON u.conversacion_id = c.id
+            LEFT JOIN last_messages lm ON lm.conversacion_id = c.id
+            LEFT JOIN company_codes cc ON cc.celular_normalizado = REPLACE(REPLACE(c.celular, '+57', ''), '+', '')
+            ${whereClause}
             ORDER BY
-                CASE WHEN EXISTS (
-                    SELECT 1 FROM mensajes_whatsapp m
-                    WHERE m.conversacion_id = c.id
-                    AND m.direccion = 'entrante'
-                    AND m.leido_por_agente = false
-                ) THEN 0 ELSE 1 END,
+                COALESCE(u.no_leidos, 0) > 0 DESC,
                 c.fecha_ultima_actividad DESC
             LIMIT 100
         `;
 
-        const result = await pool.query(query);
+        const result = await pool.query(query, queryParams);
         res.json({ success: true, conversaciones: result.rows });
     } catch (error) {
         console.error('Error al obtener conversaciones WhatsApp:', error);
@@ -4031,10 +4075,12 @@ app.get('/api/admin/whatsapp/conversaciones', authMiddleware, requireAdmin, asyn
     }
 });
 
-// GET - Obtener mensajes de una conversación específica
+// GET - Obtener mensajes de una conversación específica (con paginación)
 app.get('/api/admin/whatsapp/conversaciones/:id/mensajes', authMiddleware, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
+        const limit = parseInt(req.query.limit) || 50; // Por defecto 50 mensajes
+        const offset = parseInt(req.query.offset) || 0;
 
         const query = `
             SELECT
@@ -4048,22 +4094,36 @@ app.get('/api/admin/whatsapp/conversaciones/:id/mensajes', authMiddleware, requi
                 media_type
             FROM mensajes_whatsapp
             WHERE conversacion_id = $1
-            ORDER BY timestamp ASC
+            ORDER BY timestamp DESC
+            LIMIT $2 OFFSET $3
         `;
 
-        const result = await pool.query(query, [id]);
+        const result = await pool.query(query, [id, limit, offset]);
 
-        // Marcar todos los mensajes entrantes de esta conversación como leídos
-        await pool.query(`
+        // Obtener el total de mensajes para saber si hay más
+        const countQuery = 'SELECT COUNT(*)::int as total FROM mensajes_whatsapp WHERE conversacion_id = $1';
+        const countResult = await pool.query(countQuery, [id]);
+        const total = countResult.rows[0].total;
+
+        // Marcar todos los mensajes entrantes de esta conversación como leídos (sin bloquear la respuesta)
+        pool.query(`
             UPDATE mensajes_whatsapp
             SET leido_por_agente = true,
                 fecha_lectura = NOW()
             WHERE conversacion_id = $1
               AND direccion = 'entrante'
               AND leido_por_agente = false
-        `, [id]);
+        `, [id]).catch(err => console.error('Error marking messages as read:', err));
 
-        res.json({ success: true, mensajes: result.rows });
+        // Invertir el orden para mostrar más antiguos primero (el query DESC trae los más recientes)
+        const mensajes = result.rows.reverse();
+
+        res.json({
+            success: true,
+            mensajes: mensajes,
+            total: total,
+            hasMore: (offset + limit) < total
+        });
     } catch (error) {
         console.error('Error al obtener mensajes:', error);
         res.status(500).json({ success: false, message: 'Error al obtener mensajes' });

@@ -153,16 +153,43 @@
         .whatsapp-sidebar-header {
             padding: 16px;
             border-bottom: 1px solid var(--border-color);
+            display: flex;
+            gap: 8px;
+            align-items: center;
         }
 
         .whatsapp-search {
-            width: 100%;
+            flex: 1;
             padding: 10px 14px;
             border: 1px solid var(--border-color);
             border-radius: 8px;
             font-size: 14px;
             background: var(--bg-primary);
             color: var(--text-primary);
+        }
+
+        .whatsapp-btn-toggle {
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 13px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            transition: background 0.2s;
+        }
+
+        .whatsapp-btn-toggle:hover {
+            background: var(--bg-secondary);
+        }
+
+        .whatsapp-btn-toggle i {
+            width: 16px;
+            height: 16px;
         }
 
         .whatsapp-conversaciones {
@@ -1270,8 +1297,17 @@
                     class="whatsapp-search"
                     placeholder="Buscar conversación..."
                     id="searchConversaciones"
-                    oninput="filtrarConversaciones()"
+                    oninput="buscarConversaciones()"
                 >
+                <button
+                    id="btnVerTodas"
+                    class="whatsapp-btn-toggle"
+                    onclick="toggleVerTodas()"
+                    title="Mostrar todas las conversaciones o solo no leídas"
+                >
+                    <i data-feather="eye"></i>
+                    <span id="verTodasText">Ver todas</span>
+                </button>
             </div>
             <div class="whatsapp-conversaciones" id="listaConversaciones">
                 <div class="whatsapp-empty">
@@ -1681,10 +1717,22 @@ https://bsl-plataforma.com/nuevaorden1.html`,
             }
         });
 
+        // Variable global para el estado del toggle
+        let mostrandoTodas = false;
+
         async function cargarConversaciones(forzarRerender = false) {
             try {
                 const token = Auth.getToken();
-                const res = await fetch('/api/admin/whatsapp/conversaciones', {
+                const busqueda = document.getElementById('searchConversaciones').value.trim();
+
+                // Construir URL con parámetros
+                const params = new URLSearchParams();
+                if (busqueda) params.append('busqueda', busqueda);
+                if (mostrandoTodas) params.append('todas', 'true');
+
+                const url = `/api/admin/whatsapp/conversaciones?${params.toString()}`;
+
+                const res = await fetch(url, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -1854,32 +1902,35 @@ https://bsl-plataforma.com/nuevaorden1.html`,
             feather.replace();
         }
 
-        function filtrarConversaciones() {
-            const search = document.getElementById('searchConversaciones').value.toLowerCase();
+        // Búsqueda en el servidor (con debounce para evitar llamadas excesivas)
+        let busquedaTimeout;
+        function buscarConversaciones() {
+            clearTimeout(busquedaTimeout);
+            busquedaTimeout = setTimeout(() => {
+                cargarConversaciones(true); // Recargar con el nuevo filtro de búsqueda
+            }, 500); // Esperar 500ms después de que el usuario deje de escribir
+        }
 
-            const conversacionesFiltradas = conversacionesWhatsApp.filter(conv => {
-                const nombre = (conv.nombre_cliente || '').toLowerCase();
-                const numero = (conv.numero_cliente || '').toLowerCase();
-                return nombre.includes(search) || numero.includes(search);
-            });
+        // Toggle para mostrar todas las conversaciones o solo no leídas
+        function toggleVerTodas() {
+            mostrandoTodas = !mostrandoTodas;
 
-            const lista = document.getElementById('listaConversaciones');
+            // Actualizar texto del botón
+            const btnText = document.getElementById('verTodasText');
+            const btnIcon = document.querySelector('#btnVerTodas i');
 
-            if (conversacionesFiltradas.length === 0) {
-                lista.innerHTML = `
-                    <div class="whatsapp-empty">
-                        <i data-feather="search"></i>
-                        <p>No se encontraron conversaciones</p>
-                    </div>
-                `;
-                feather.replace();
-                return;
+            if (mostrandoTodas) {
+                btnText.textContent = 'Solo no leídas';
+                btnIcon.setAttribute('data-feather', 'eye-off');
+            } else {
+                btnText.textContent = 'Ver todas';
+                btnIcon.setAttribute('data-feather', 'eye');
             }
 
-            // Usar la función generadora para mantener consistencia
-            lista.innerHTML = conversacionesFiltradas.map(conv => generarHTMLConversacion(conv)).join('');
-
             feather.replace();
+
+            // Recargar conversaciones con el nuevo filtro
+            cargarConversaciones(true);
         }
 
         async function seleccionarConversacion(conversacionId) {
@@ -1937,11 +1988,25 @@ https://bsl-plataforma.com/nuevaorden1.html`,
             // Cargar mensajes
             await cargarMensajes(conversacionId);
 
-            // Re-renderizar conversaciones para actualizar la selección
-            renderConversaciones();
+            // Actualizar solo la selección en el DOM (sin recargar toda la lista)
+            actualizarConversacionSeleccionada(conversacionId);
 
             // Reemplazar iconos de feather después de cambios
             feather.replace();
+        }
+
+        // Actualizar visualmente qué conversación está seleccionada (sin recargar desde servidor)
+        function actualizarConversacionSeleccionada(conversacionId) {
+            // Quitar clase 'active' de todas las conversaciones
+            document.querySelectorAll('.whatsapp-conversacion-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            // Agregar clase 'active' solo a la conversación seleccionada
+            const selectedItem = document.querySelector(`[data-conv-id="${conversacionId}"]`);
+            if (selectedItem) {
+                selectedItem.classList.add('active');
+            }
         }
 
         // Función para volver a la lista de conversaciones (móvil)
@@ -1961,7 +2026,8 @@ https://bsl-plataforma.com/nuevaorden1.html`,
         async function cargarMensajes(conversacionId, silencioso = false) {
             try {
                 const token = Auth.getToken();
-                const res = await fetch(`/api/admin/whatsapp/conversaciones/${conversacionId}/mensajes`, {
+                // Cargar solo los últimos 50 mensajes por defecto (paginación)
+                const res = await fetch(`/api/admin/whatsapp/conversaciones/${conversacionId}/mensajes?limit=50&offset=0`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -1971,6 +2037,10 @@ https://bsl-plataforma.com/nuevaorden1.html`,
 
                 const data = await res.json();
                 const mensajes = data.mensajes || [];
+
+                // Guardar info de paginación (para futuro botón "Cargar más")
+                // const total = data.total || 0;
+                // const hasMore = data.hasMore || false;
 
                 const chatMensajes = document.getElementById('chatMensajes');
                 const scrollAnterior = chatMensajes.scrollTop;
