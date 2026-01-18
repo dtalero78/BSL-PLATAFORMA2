@@ -3980,22 +3980,13 @@ app.get('/api/admin/whatsapp/conversaciones', authMiddleware, requireAdmin, asyn
         let paramIndex = 1;
 
         // Si NO está buscando y NO quiere ver todas, solo mostrar conversaciones con mensajes no leídos
-        // O con mensajes salientes automáticos recientes (últimos 5 minutos)
         if (!busqueda && !mostrarTodas) {
             whereConditions.push(`
-                (
-                    EXISTS (
-                        SELECT 1 FROM mensajes_whatsapp m
-                        WHERE m.conversacion_id = c.id
-                        AND m.direccion = 'entrante'
-                        AND m.leido_por_agente = false
-                    )
-                    OR EXISTS (
-                        SELECT 1 FROM mensajes_whatsapp m
-                        WHERE m.conversacion_id = c.id
-                        AND m.direccion = 'saliente'
-                        AND m.timestamp > NOW() - INTERVAL '5 minutes'
-                    )
+                EXISTS (
+                    SELECT 1 FROM mensajes_whatsapp m
+                    WHERE m.conversacion_id = c.id
+                    AND m.direccion = 'entrante'
+                    AND m.leido_por_agente = false
                 )
             `);
         }
