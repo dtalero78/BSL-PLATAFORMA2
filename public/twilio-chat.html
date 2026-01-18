@@ -1537,6 +1537,7 @@
         let usuarioActual = null;
         let conversacionesWhatsApp = [];
         let conversacionActualId = null;
+        let conversacionActual = null; // Guardar referencia completa a la conversación actual
         let pollingInterval = null;
         let socket = null;
         let notificationSound = null;
@@ -2061,6 +2062,9 @@ https://bsl-plataforma.com/nuevaorden1.html`,
                 return;
             }
 
+            // Guardar referencia completa a la conversación actual
+            conversacionActual = { ...conversacion };
+
             console.log('✅ Conversación encontrada:', conversacion);
 
             // Mostrar el chat container
@@ -2144,6 +2148,7 @@ https://bsl-plataforma.com/nuevaorden1.html`,
             document.getElementById('sidebar').classList.remove('mobile-hidden');
             document.getElementById('chat').classList.remove('mobile-active');
             conversacionActualId = null;
+            conversacionActual = null; // Limpiar referencia
 
             // Ocultar botones de WhatsApp y comandos
             document.getElementById('btnWhatsAppRapido').style.display = 'none';
@@ -2491,13 +2496,12 @@ https://bsl-plataforma.com/nuevaorden1.html`,
 
         // Enviar link de certificado por WhatsApp rápido
         async function enviarWhatsAppRapido() {
-            if (!conversacionActualId) {
+            if (!conversacionActualId || !conversacionActual) {
                 alert('No hay conversación seleccionada');
                 return;
             }
 
-            const conversacion = conversacionesWhatsApp.find(c => c.id === conversacionActualId);
-            if (!conversacion || !conversacion.numero_cliente) {
+            if (!conversacionActual.numero_cliente) {
                 alert('No se puede enviar: número de teléfono no disponible');
                 return;
             }
@@ -2506,7 +2510,7 @@ https://bsl-plataforma.com/nuevaorden1.html`,
                 const token = Auth.getToken();
 
                 // Obtener el _id del paciente desde HistoriaClinica por celular
-                const res = await fetch(`/api/historia-clinica/celular/${conversacion.numero_cliente}`, {
+                const res = await fetch(`/api/historia-clinica/celular/${conversacionActual.numero_cliente}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
@@ -2798,19 +2802,13 @@ https://bsl-plataforma.com/nuevaorden1.html`,
 
         // Toggle del estado del bot (activar/desactivar)
         async function toggleBotStatus() {
-            if (!conversacionActualId) {
+            if (!conversacionActualId || !conversacionActual) {
                 console.warn('No hay conversación seleccionada');
                 return;
             }
 
-            const conversacion = conversacionesWhatsApp.find(c => c.id === conversacionActualId);
-            if (!conversacion) {
-                console.error('Conversación no encontrada en el array local');
-                return;
-            }
-
-            console.log('Estado actual del bot:', conversacion.stopBot);
-            const nuevoEstado = !conversacion.stopBot;
+            console.log('Estado actual del bot:', conversacionActual.stopBot);
+            const nuevoEstado = !conversacionActual.stopBot;
             console.log('Nuevo estado a enviar:', nuevoEstado);
 
             try {
@@ -2833,8 +2831,15 @@ https://bsl-plataforma.com/nuevaorden1.html`,
                 const data = await response.json();
                 console.log('Respuesta del servidor:', data);
 
-                // Actualizar localmente
-                conversacion.stopBot = nuevoEstado;
+                // Actualizar localmente en conversacionActual
+                conversacionActual.stopBot = nuevoEstado;
+
+                // También actualizar en el array si existe
+                const convEnArray = conversacionesWhatsApp.find(c => c.id === conversacionActualId);
+                if (convEnArray) {
+                    convEnArray.stopBot = nuevoEstado;
+                }
+
                 actualizarBadgeBot(nuevoEstado);
 
                 console.log(`🤖 Bot ${nuevoEstado ? 'DETENIDO' : 'ACTIVADO'} para conversación ${conversacionActualId}`);
@@ -2848,12 +2853,9 @@ https://bsl-plataforma.com/nuevaorden1.html`,
         // ========== FIN FUNCIONES DEL BOT ==========
 
         async function abrirModalEdicion() {
-            if (!conversacionActualId) return;
+            if (!conversacionActualId || !conversacionActual) return;
 
-            const conversacion = conversacionesWhatsApp.find(c => c.id === conversacionActualId);
-            if (!conversacion) return;
-
-            const celular = conversacion.numero_cliente || conversacion.celular;
+            const celular = conversacionActual.numero_cliente || conversacionActual.celular;
             if (!celular) {
                 alert('No se encontró número de celular');
                 return;
