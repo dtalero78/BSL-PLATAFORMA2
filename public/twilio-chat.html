@@ -1263,6 +1263,85 @@
                 display: none !important;
             }
         }
+
+        /* Botón WhatsApp rápido */
+        .btn-icono-whatsapp {
+            width: 28px;
+            height: 28px;
+            padding: 6px;
+            border: 1px solid #25D366;
+            background: white;
+            color: #25D366;
+            border-radius: 6px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            margin-left: 6px;
+        }
+
+        .btn-icono-whatsapp:hover {
+            background: #25D366;
+            color: white;
+        }
+
+        .btn-icono-whatsapp svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Botones de comandos rápidos */
+        .whatsapp-comandos-rapidos {
+            display: flex;
+            gap: 6px;
+            padding: 8px 16px;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            overflow-x: auto;
+            flex-wrap: nowrap;
+        }
+
+        .cmd-btn {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .cmd-btn:hover {
+            background: #e3f2fd;
+            border-color: #2196F3;
+            color: #2196F3;
+        }
+
+        .cmd-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Para móviles: scroll horizontal */
+        @media (max-width: 768px) {
+            .whatsapp-comandos-rapidos {
+                padding: 6px 12px;
+            }
+
+            .cmd-btn {
+                font-size: 12px;
+                width: 32px;
+                height: 32px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1335,6 +1414,16 @@
                         <span class="whatsapp-chat-numero" id="chatNumero">+57 300 000 0000</span>
                         <div class="chat-tags-row">
                             <div id="chatEmpresaContainer"></div>
+                            <button id="btnWhatsAppRapido"
+                                    class="btn-icono-whatsapp"
+                                    onclick="enviarWhatsAppRapido()"
+                                    title="Enviar link de certificado por WhatsApp"
+                                    style="display: none;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                                    <polyline points="22,6 12,13 2,6"/>
+                                </svg>
+                            </button>
                             <span class="bot-status-badge bot-activo" id="botStatusBadge" onclick="toggleBotStatus()" title="Clic para cambiar estado del bot">
                                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
                                 Bot Activo
@@ -1397,6 +1486,16 @@
                     <button class="whatsapp-send-btn" onclick="enviarMensaje()">
                         <i data-feather="send"></i>
                     </button>
+                </div>
+
+                <!-- Botones de comandos rápidos -->
+                <div class="whatsapp-comandos-rapidos" id="comandosRapidos" style="display: none;">
+                    <button class="cmd-btn" onclick="enviarComandoRapido('/1')" title="Saludo">1</button>
+                    <button class="cmd-btn" onclick="enviarComandoRapido('/2')" title="Instrucciones">2</button>
+                    <button class="cmd-btn" onclick="enviarComandoRapido('/8')" title="Consultar">8</button>
+                    <button class="cmd-btn" onclick="enviarComandoRapido('/c')" title="Datos pago">C</button>
+                    <button class="cmd-btn" onclick="enviarComandoRapido('/l')" title="Nuevo examen">L</button>
+                    <button class="cmd-btn" onclick="enviarComandoRapido('/a')" title="Asesor">A</button>
                 </div>
 
                 <!-- Menú de plantillas -->
@@ -1986,6 +2085,18 @@ https://bsl-plataforma.com/nuevaorden1.html`,
             // Actualizar estado del bot en el badge
             actualizarBadgeBot(conversacion.stopBot);
 
+            // Mostrar/ocultar botón WhatsApp y comandos según número de cliente
+            const btnWhatsApp = document.getElementById('btnWhatsAppRapido');
+            const comandosRapidos = document.getElementById('comandosRapidos');
+
+            if (conversacion.numero_cliente) {
+                btnWhatsApp.style.display = 'inline-flex';
+                comandosRapidos.style.display = 'flex';
+            } else {
+                btnWhatsApp.style.display = 'none';
+                comandosRapidos.style.display = 'none';
+            }
+
             // Cargar mensajes
             await cargarMensajes(conversacionId);
 
@@ -2015,6 +2126,10 @@ https://bsl-plataforma.com/nuevaorden1.html`,
             document.getElementById('sidebar').classList.remove('mobile-hidden');
             document.getElementById('chat').classList.remove('mobile-active');
             conversacionActualId = null;
+
+            // Ocultar botones de WhatsApp y comandos
+            document.getElementById('btnWhatsAppRapido').style.display = 'none';
+            document.getElementById('comandosRapidos').style.display = 'none';
 
             // Ocultar el chat container
             document.getElementById('chatEmpty').style.display = 'flex';
@@ -2353,6 +2468,143 @@ https://bsl-plataforma.com/nuevaorden1.html`,
             }
         }
 
+        // Enviar link de certificado por WhatsApp rápido
+        async function enviarWhatsAppRapido() {
+            if (!conversacionActualId) {
+                alert('No hay conversación seleccionada');
+                return;
+            }
+
+            const conversacion = conversacionesWhatsApp.find(c => c.id === conversacionActualId);
+            if (!conversacion || !conversacion.numero_cliente) {
+                alert('No se puede enviar: número de teléfono no disponible');
+                return;
+            }
+
+            try {
+                const token = Auth.getToken();
+
+                // Obtener el _id del paciente desde HistoriaClinica por celular
+                const res = await fetch(`/api/historia-clinica/celular/${conversacion.numero_cliente}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!res.ok) throw new Error('No se encontró el paciente');
+
+                const data = await res.json();
+                const pacienteId = data._id;
+
+                // Construir link de solicitar certificado
+                const link = `https://bsl-utilidades-yp78a.ondigitalocean.app/static/solicitar-certificado.html?id=${pacienteId}`;
+
+                // Enviar mensaje por WhatsApp
+                const enviarRes = await fetch(`/api/admin/whatsapp/conversaciones/${conversacionActualId}/mensajes`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        contenido: `Hola, puedes solicitar tu certificado médico aquí:\n\n${link}\n\n_BSL - Salud Ocupacional_`
+                    })
+                });
+
+                const resultado = await enviarRes.json();
+
+                if (enviarRes.ok) {
+                    // Feedback visual temporal
+                    const btn = document.getElementById('btnWhatsAppRapido');
+                    const originalHTML = btn.innerHTML;
+                    btn.innerHTML = '✓';
+                    btn.style.background = '#25D366';
+                    btn.style.color = 'white';
+
+                    setTimeout(() => {
+                        btn.innerHTML = originalHTML;
+                        btn.style.background = 'white';
+                        btn.style.color = '#25D366';
+                    }, 2000);
+
+                    // Recargar mensajes
+                    await cargarMensajes(conversacionActualId, false);
+                    await cargarConversaciones(true);
+                } else {
+                    alert('Error al enviar mensaje: ' + (resultado.message || 'Desconocido'));
+                }
+
+            } catch (error) {
+                console.error('Error enviando WhatsApp rápido:', error);
+                alert('Error al enviar mensaje por WhatsApp');
+            }
+        }
+
+        // Enviar comando rápido con un clic
+        async function enviarComandoRapido(comando) {
+            if (!conversacionActualId) {
+                alert('Selecciona una conversación primero');
+                return;
+            }
+
+            const mensajeTexto = plantillasMensajes[comando];
+
+            if (!mensajeTexto) {
+                console.error('Comando no encontrado:', comando);
+                return;
+            }
+
+            try {
+                const token = Auth.getToken();
+
+                // Feedback visual - destacar botón temporalmente
+                const botones = document.querySelectorAll('.cmd-btn');
+                const botonClickeado = Array.from(botones).find(btn =>
+                    btn.textContent.trim() === comando.replace('/', '').toUpperCase()
+                );
+
+                if (botonClickeado) {
+                    botonClickeado.style.background = '#e3f2fd';
+                    botonClickeado.style.borderColor = '#2196F3';
+                }
+
+                // Enviar mensaje
+                const res = await fetch(`/api/admin/whatsapp/conversaciones/${conversacionActualId}/mensajes`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        contenido: mensajeTexto
+                    })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    // Feedback de éxito
+                    if (botonClickeado) {
+                        const textoOriginal = botonClickeado.textContent;
+                        botonClickeado.textContent = '✓';
+                        setTimeout(() => {
+                            botonClickeado.textContent = textoOriginal;
+                            botonClickeado.style.background = '';
+                            botonClickeado.style.borderColor = '';
+                        }, 1500);
+                    }
+
+                    // Recargar mensajes para mostrar el nuevo mensaje
+                    await cargarMensajes(conversacionActualId, false);
+                    await cargarConversaciones(true);
+                } else {
+                    alert('Error al enviar: ' + (data.message || 'Desconocido'));
+                }
+
+            } catch (error) {
+                console.error('Error enviando comando rápido:', error);
+                alert('Error al enviar el mensaje');
+            }
+        }
+
         function formatearHora(fechaISO) {
             if (!fechaISO) return '';
 
@@ -2476,6 +2728,7 @@ https://bsl-plataforma.com/nuevaorden1.html`,
         const EXAMENES_DISPONIBLES = [
             'EXAMEN MÉDICO OCUPACIONAL OSTEOMUSCULAR',
             'AUDIOMETRÍA',
+            'VISIOMETRÍA',
             'OPTOMETRÍA',
             'ÉNFASIS CARDIOVASCULAR',
             'ÉNFASIS VASCULAR',
