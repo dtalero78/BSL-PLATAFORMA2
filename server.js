@@ -4064,7 +4064,7 @@ app.get('/api/admin/whatsapp/conversaciones', authMiddleware, requireAdmin, asyn
             ORDER BY
                 COALESCE(u.no_leidos, 0) > 0 DESC,
                 c.fecha_ultima_actividad DESC
-            LIMIT 100
+            LIMIT ${mostrarTodas ? 15 : 100}
         `;
 
         const result = await pool.query(query, queryParams);
