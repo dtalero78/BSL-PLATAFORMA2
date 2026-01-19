@@ -4045,13 +4045,27 @@ app.get('/api/admin/whatsapp/conversaciones', authMiddleware, requireAdmin, asyn
                 FROM mensajes_whatsapp
                 ORDER BY conversacion_id, timestamp DESC
             ),
+            conversaciones_filtradas AS (
+                -- Primero filtrar conversaciones
+                SELECT *
+                FROM conversaciones_whatsapp c
+                ${whereClause}
+                ORDER BY
+                    c.fecha_ultima_actividad DESC
+                LIMIT ${mostrarTodas ? 15 : 100}
+            ),
             company_codes AS (
-                -- Pre-calcular códigos de empresa (normalizar números)
+                -- Solo buscar códigos de empresa para las conversaciones filtradas
                 SELECT DISTINCT ON (celular_normalizado)
                     REPLACE(REPLACE("celular", '+57', ''), '+', '') as celular_normalizado,
                     "codEmpresa"
                 FROM "HistoriaClinica"
-                WHERE "celular" IS NOT NULL AND "celular" != ''
+                WHERE "celular" IS NOT NULL
+                  AND "celular" != ''
+                  AND REPLACE(REPLACE("celular", '+57', ''), '+', '') IN (
+                      SELECT REPLACE(REPLACE(celular, '+57', ''), '+', '')
+                      FROM conversaciones_filtradas
+                  )
                 ORDER BY celular_normalizado, "_createdDate" DESC
             )
             SELECT
@@ -4068,15 +4082,13 @@ app.get('/api/admin/whatsapp/conversaciones', authMiddleware, requireAdmin, asyn
                 c.agente_asignado as agente_nombre,
                 lm.ultimo_mensaje,
                 cc."codEmpresa" as cod_empresa
-            FROM conversaciones_whatsapp c
+            FROM conversaciones_filtradas c
             LEFT JOIN unread_counts u ON u.conversacion_id = c.id
             LEFT JOIN last_messages lm ON lm.conversacion_id = c.id
             LEFT JOIN company_codes cc ON cc.celular_normalizado = REPLACE(REPLACE(c.celular, '+57', ''), '+', '')
-            ${whereClause}
             ORDER BY
                 COALESCE(u.no_leidos, 0) > 0 DESC,
                 c.fecha_ultima_actividad DESC
-            LIMIT ${mostrarTodas ? 15 : 100}
         `;
 
         const result = await pool.query(query, queryParams);
