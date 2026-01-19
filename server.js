@@ -7989,7 +7989,7 @@ app.put('/api/historia-clinica/:id', async (req, res) => {
             // ========== ACTUALIZAR EN HISTORIA CLINICA ==========
             const camposPermitidos = [
                 'numeroId', 'primerNombre', 'segundoNombre', 'primerApellido', 'segundoApellido',
-                'celular', 'email', 'codEmpresa', 'empresa', 'cargo', 'tipoExamen', 'eps',
+                'celular', 'email', 'codEmpresa', 'empresa', 'subempresa', 'cargo', 'tipoExamen', 'eps',
                 'fechaAtencion', 'atendido', 'fechaConsulta', 'mdConceptoFinal', 'mdRecomendacionesMedicasAdicionales',
                 'mdObservacionesCertificado', 'mdAntecedentes', 'mdObsParaMiDocYa', 'mdDx1', 'mdDx2',
                 'talla', 'peso', 'motivoConsulta', 'diagnostico', 'tratamiento', 'pvEstado', 'medico', 'examenes',
