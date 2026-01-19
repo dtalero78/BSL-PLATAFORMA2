@@ -1492,7 +1492,18 @@ async function procesarFlujoPagos(message, from) {
                     WHERE celular = $1
                 `, [from.replace('whatsapp:', '')]);
 
-                console.log(`✅ Pago procesado exitosamente para ${documento}`);
+                // Marcar todos los mensajes entrantes de esta conversación como leídos
+                await pool.query(`
+                    UPDATE mensajes_whatsapp m
+                    SET leido_por_agente = true
+                    FROM conversaciones_whatsapp c
+                    WHERE m.conversacion_id = c.id
+                    AND c.celular = $1
+                    AND m.direccion = 'entrante'
+                    AND m.leido_por_agente = false
+                `, [from.replace('whatsapp:', '')]);
+
+                console.log(`✅ Pago procesado exitosamente para ${documento} - Conversación marcada como leída`);
                 return 'Pago confirmado';
             } else {
                 // No se encontró el registro
