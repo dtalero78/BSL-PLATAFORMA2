@@ -1676,6 +1676,7 @@ https://bsl-plataforma.com/nuevaorden1.html`,
                 socket.off('disconnect');
                 socket.off('reconnect');
                 socket.off('nuevo_mensaje');
+                socket.off('mensaje_actualizado');
             }
 
             socket = io({
@@ -1703,6 +1704,16 @@ https://bsl-plataforma.com/nuevaorden1.html`,
             socket.on('nuevo_mensaje', (data) => {
                 console.log('📨 Nuevo mensaje recibido:', data);
                 manejarNuevoMensaje(data);
+            });
+
+            // Escuchar eventos de mensajes actualizados (cuando Twilio envía el Body real del template)
+            socket.on('mensaje_actualizado', (data) => {
+                console.log('🔄 Mensaje actualizado con contenido real de Twilio:', data);
+
+                // Si estamos viendo esa conversación, recargar los mensajes para mostrar el contenido actualizado
+                if (conversacionActualId === data.conversacion_id) {
+                    cargarMensajes(conversacionActualId, true);
+                }
             });
         }
 

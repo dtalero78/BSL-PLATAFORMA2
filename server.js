@@ -4704,12 +4704,53 @@ app.post('/api/whatsapp/status', async (req, res) => {
 
             // Verificar si el mensaje ya existe en la base de datos
             const mensajeExistente = await pool.query(`
-                SELECT id FROM mensajes_whatsapp WHERE sid_twilio = $1
+                SELECT id, contenido FROM mensajes_whatsapp WHERE sid_twilio = $1
             `, [MessageSid]);
 
-            // Si el mensaje ya existe, no hacer nada (ya fue registrado por el envío directo)
+            // Si el mensaje ya existe Y Twilio nos envía el Body real, actualizar el contenido
             if (mensajeExistente.rows.length > 0) {
                 console.log('✅ Mensaje ya registrado:', MessageSid);
+
+                // Si Twilio nos envía el Body del mensaje (template renderizado), actualizar
+                if (Body) {
+                    const mensajeActual = mensajeExistente.rows[0].contenido;
+
+                    // Solo actualizar si el contenido es diferente y no es un mensaje simple
+                    // (evitar sobrescribir mensajes de texto libre que ya son correctos)
+                    if (mensajeActual !== Body && mensajeActual.includes('📬')) {
+                        console.log('🔄 Actualizando contenido del template con Body real de Twilio');
+                        console.log('   Antes:', mensajeActual.substring(0, 100));
+                        console.log('   Después:', Body.substring(0, 100));
+
+                        await pool.query(`
+                            UPDATE mensajes_whatsapp
+                            SET contenido = $1
+                            WHERE sid_twilio = $2
+                        `, [Body, MessageSid]);
+
+                        // Emitir evento WebSocket para refrescar el chat en tiempo real
+                        if (global.emitWhatsAppEvent) {
+                            // Obtener conversacion_id del mensaje
+                            const conversacionResult = await pool.query(`
+                                SELECT conversacion_id,
+                                       (SELECT celular FROM conversaciones_whatsapp WHERE id = mensajes_whatsapp.conversacion_id) as celular
+                                FROM mensajes_whatsapp
+                                WHERE sid_twilio = $1
+                            `, [MessageSid]);
+
+                            if (conversacionResult.rows.length > 0) {
+                                const { conversacion_id, celular } = conversacionResult.rows[0];
+                                global.emitWhatsAppEvent('mensaje_actualizado', {
+                                    conversacion_id: conversacion_id,
+                                    numero_cliente: celular,
+                                    sid_twilio: MessageSid,
+                                    contenido_nuevo: Body
+                                });
+                            }
+                        }
+                    }
+                }
+
                 res.sendStatus(200);
                 return;
             }
