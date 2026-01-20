@@ -1536,6 +1536,7 @@
     <script>
         let usuarioActual = null;
         let conversacionesWhatsApp = [];
+        let conversacionesWhatsAppMap = new Map(); // OPTIMIZACIÓN: Índice O(1) para búsquedas por ID
         let conversacionActualId = null;
         let conversacionActual = null; // Guardar referencia completa a la conversación actual
         let pollingInterval = null;
@@ -1676,7 +1677,6 @@ https://bsl-plataforma.com/nuevaorden1.html`,
                 socket.off('disconnect');
                 socket.off('reconnect');
                 socket.off('nuevo_mensaje');
-                socket.off('mensaje_actualizado');
             }
 
             socket = io({
@@ -1704,16 +1704,6 @@ https://bsl-plataforma.com/nuevaorden1.html`,
             socket.on('nuevo_mensaje', (data) => {
                 console.log('📨 Nuevo mensaje recibido:', data);
                 manejarNuevoMensaje(data);
-            });
-
-            // Escuchar eventos de mensajes actualizados (cuando Twilio envía el Body real del template)
-            socket.on('mensaje_actualizado', (data) => {
-                console.log('🔄 Mensaje actualizado con contenido real de Twilio:', data);
-
-                // Si estamos viendo esa conversación, recargar los mensajes para mostrar el contenido actualizado
-                if (conversacionActualId === data.conversacion_id) {
-                    cargarMensajes(conversacionActualId, true);
-                }
             });
         }
 
@@ -1820,8 +1810,8 @@ https://bsl-plataforma.com/nuevaorden1.html`,
 
         // Actualizar conversación después de recibir mensaje
         async function actualizarConversacionDespuesDeMensaje(data) {
-            // Pequeño delay para asegurar que el backend guardó el mensaje
-            await new Promise(resolve => setTimeout(resolve, 200));
+            // OPTIMIZACIÓN: Eliminado delay artificial de 200ms
+            // El debounce ya maneja la sincronización correctamente
 
             // Usar versión debounced para evitar recargas excesivas (performance fix)
             await cargarConversacionesDebounced(false);
@@ -1882,7 +1872,8 @@ https://bsl-plataforma.com/nuevaorden1.html`,
                 const conversacionesCambiadas = [];
 
                 nuevasConversaciones.forEach(nuevaConv => {
-                    const convAnterior = conversacionesWhatsApp.find(c => c.id === nuevaConv.id);
+                    // OPTIMIZACIÓN: Usar Map.get() en lugar de Array.find() - O(1) vs O(n)
+                    const convAnterior = conversacionesWhatsAppMap.get(nuevaConv.id);
                     const ultimoMensajeNuevo = nuevaConv.ultimo_mensaje?.fecha_envio;
                     const ultimoMensajeAnterior = convAnterior?.ultimo_mensaje?.fecha_envio;
 
@@ -1894,6 +1885,9 @@ https://bsl-plataforma.com/nuevaorden1.html`,
 
                 // Actualizar array global
                 conversacionesWhatsApp = nuevasConversaciones;
+
+                // OPTIMIZACIÓN: Actualizar Map indexado para búsquedas O(1)
+                conversacionesWhatsAppMap = new Map(nuevasConversaciones.map(c => [c.id, c]));
 
                 // Si hay cambios o es forzado, actualizar UI
                 if (forzarRerender) {
@@ -1916,6 +1910,7 @@ https://bsl-plataforma.com/nuevaorden1.html`,
 
         // Actualizar solo las conversaciones que cambiaron en el DOM
         function actualizarConversacionesCambiadas(idsConversacionesCambiadas) {
+            console.time('⏱️ actualizarConversacionesCambiadas'); // PERFORMANCE TRACKING
             const lista = document.getElementById('listaConversaciones');
 
             // Si está vacía, hacer render completo
@@ -1943,7 +1938,8 @@ https://bsl-plataforma.com/nuevaorden1.html`,
             if (idsConversacionesCambiadas.length > 0) {
                 // 1. Actualizar o agregar cada conversación cambiada
                 idsConversacionesCambiadas.forEach(convId => {
-                    const conv = conversacionesWhatsApp.find(c => c.id === convId);
+                    // OPTIMIZACIÓN: Usar Map.get() en lugar de Array.find() - O(1) vs O(n)
+                    const conv = conversacionesWhatsAppMap.get(convId);
                     if (!conv) return;
 
                     const existingElement = lista.querySelector(`[data-conv-id="${convId}"]`);
@@ -1984,19 +1980,22 @@ https://bsl-plataforma.com/nuevaorden1.html`,
                 // 3. Remover conversaciones que ya no están en el array del servidor
                 // (por ejemplo, en modo "Solo no leídas" después de responder)
                 const currentItems = lista.querySelectorAll('.whatsapp-conversacion-item');
-                const currentIds = conversacionesWhatsApp.map(c => c.id);
+                // OPTIMIZACIÓN: Usar Set en lugar de Array para búsqueda O(1) vs O(n)
+                const currentIds = new Set(conversacionesWhatsApp.map(c => c.id));
 
                 currentItems.forEach(item => {
                     const itemId = parseInt(item.dataset.convId);
-                    if (!currentIds.includes(itemId)) {
+                    if (!currentIds.has(itemId)) { // Set.has() es O(1) vs Array.includes() O(n)
                         item.remove();
                     }
                 });
 
+                console.timeEnd('⏱️ actualizarConversacionesCambiadas'); // PERFORMANCE TRACKING
                 return;
             }
 
             // Si no hay cambios, no hacer nada (evita parpadeos innecesarios)
+            console.timeEnd('⏱️ actualizarConversacionesCambiadas'); // PERFORMANCE TRACKING
         }
 
         // Generar HTML para una conversación individual
@@ -2094,19 +2093,21 @@ https://bsl-plataforma.com/nuevaorden1.html`,
         }
 
         async function seleccionarConversacion(conversacionId) {
+            console.time('⏱️ seleccionarConversacion'); // PERFORMANCE TRACKING
             console.log('📱 Seleccionando conversación:', conversacionId);
             console.log('📊 Total conversaciones en array:', conversacionesWhatsApp.length);
             console.log('📋 IDs en array:', conversacionesWhatsApp.map(c => c.id));
 
             conversacionActualId = conversacionId;
 
-            let conversacion = conversacionesWhatsApp.find(c => c.id === conversacionId);
+            // OPTIMIZACIÓN: Usar Map.get() en lugar de Array.find() - O(1) vs O(n)
+            let conversacion = conversacionesWhatsAppMap.get(conversacionId);
 
             // Si no está en el array local, recargar desde el servidor
             if (!conversacion) {
                 console.warn('⚠️ Conversación no encontrada en array local, recargando desde servidor...');
                 await cargarConversaciones(true);
-                conversacion = conversacionesWhatsApp.find(c => c.id === conversacionId);
+                conversacion = conversacionesWhatsAppMap.get(conversacionId);
 
                 if (!conversacion) {
                     console.error('❌ Conversación no encontrada incluso después de recargar:', conversacionId);
@@ -2180,6 +2181,8 @@ https://bsl-plataforma.com/nuevaorden1.html`,
 
             // Reemplazar iconos de feather después de cambios
             feather.replace();
+
+            console.timeEnd('⏱️ seleccionarConversacion'); // PERFORMANCE TRACKING
         }
 
         // Actualizar visualmente qué conversación está seleccionada (sin recargar desde servidor)
@@ -2216,6 +2219,7 @@ https://bsl-plataforma.com/nuevaorden1.html`,
         }
 
         async function cargarMensajes(conversacionId, silencioso = false) {
+            console.time('⏱️ cargarMensajes'); // PERFORMANCE TRACKING
             try {
                 const token = Auth.getToken();
                 // Cargar solo los últimos 50 mensajes por defecto (paginación)
@@ -2239,76 +2243,91 @@ https://bsl-plataforma.com/nuevaorden1.html`,
                 const heightAnterior = chatMensajes.scrollHeight;
                 const estabaCasiAbajo = (heightAnterior - scrollAnterior - chatMensajes.clientHeight) < 100;
 
-                chatMensajes.innerHTML = mensajes.map(msg => {
+                // OPTIMIZACIÓN: Usar DocumentFragment en lugar de concatenación de strings
+                const fragment = document.createDocumentFragment();
+                const token = Auth.getToken(); // Obtener token UNA VEZ fuera del loop
+
+                mensajes.forEach(msg => {
                     const esEntrante = msg.direccion === 'entrante';
                     const claseDir = esEntrante ? 'entrante' : 'saliente';
                     const hora = formatearHora(msg.fecha_envio);
 
-                    // Renderizar contenido según tipo
-                    let contenidoHTML = '';
-
+                    // Parsear media UNA SOLA VEZ
+                    let mediaUrls = [];
+                    let mediaTypes = [];
                     if (msg.media_url) {
                         try {
-                            const mediaUrls = JSON.parse(msg.media_url);
-                            const mediaTypes = msg.media_type ? JSON.parse(msg.media_type) : [];
-
-                            mediaUrls.forEach((url, index) => {
-                                const type = mediaTypes[index] || 'unknown';
-
-                                // Usar proxy para URLs de Twilio con token en query param
-                                const token = Auth.getToken();
-                                const proxiedUrl = url.startsWith('https://api.twilio.com/')
-                                    ? `/api/admin/whatsapp/media/proxy?url=${encodeURIComponent(url)}&token=${encodeURIComponent(token)}`
-                                    : url;
-
-                                if (type.startsWith('image/')) {
-                                    // Imagen - usar data attribute y class para event delegation
-                                    contenidoHTML += `<img src="${proxiedUrl}" alt="Imagen" class="whatsapp-media-image" style="max-width: 250px; border-radius: 8px; cursor: pointer;" data-full-url="${proxiedUrl.replace(/"/g, '&quot;')}">`;
-                                } else if (type.startsWith('video/')) {
-                                    // Video
-                                    contenidoHTML += `<video controls style="max-width: 250px; border-radius: 8px;"><source src="${proxiedUrl}" type="${type}"></video>`;
-                                } else if (type.startsWith('audio/')) {
-                                    // Audio
-                                    contenidoHTML += `<audio controls style="width: 250px;"><source src="${proxiedUrl}" type="${type}"></audio>`;
-                                } else if (type === 'application/pdf') {
-                                    // PDF
-                                    contenidoHTML += `<a href="${proxiedUrl}" target="_blank" style="display: flex; align-items: center; gap: 8px; color: inherit; text-decoration: none;">
-                                        <i data-feather="file-text"></i>
-                                        <span>📄 Documento PDF</span>
-                                    </a>`;
-                                } else {
-                                    // Otro archivo
-                                    contenidoHTML += `<a href="${proxiedUrl}" target="_blank" style="display: flex; align-items: center; gap: 8px; color: inherit; text-decoration: none;">
-                                        <i data-feather="paperclip"></i>
-                                        <span>📎 Archivo adjunto</span>
-                                    </a>`;
-                                }
-                            });
-
-                            // Agregar texto si existe
-                            if (msg.contenido && msg.contenido !== '📎 Archivo adjunto') {
-                                contenidoHTML += `<p class="whatsapp-mensaje-contenido" style="margin-top: 8px;">${msg.contenido}</p>`;
-                            }
+                            mediaUrls = JSON.parse(msg.media_url);
+                            mediaTypes = msg.media_type ? JSON.parse(msg.media_type) : [];
                         } catch (e) {
-                            contenidoHTML = `<p class="whatsapp-mensaje-contenido">${msg.contenido}</p>`;
+                            console.error('Error parsing media:', e);
+                        }
+                    }
+
+                    // Construir contenido HTML
+                    let contenidoHTML = '';
+
+                    if (mediaUrls.length > 0) {
+                        mediaUrls.forEach((url, index) => {
+                            const type = mediaTypes[index] || 'unknown';
+
+                            // Usar proxy para URLs de Twilio con token en query param
+                            const proxiedUrl = url.startsWith('https://api.twilio.com/')
+                                ? `/api/admin/whatsapp/media/proxy?url=${encodeURIComponent(url)}&token=${encodeURIComponent(token)}`
+                                : url;
+
+                            if (type.startsWith('image/')) {
+                                // Imagen - usar data attribute y class para event delegation
+                                contenidoHTML += `<img src="${proxiedUrl}" alt="Imagen" class="whatsapp-media-image" style="max-width: 250px; border-radius: 8px; cursor: pointer;" data-full-url="${proxiedUrl.replace(/"/g, '&quot;')}">`;
+                            } else if (type.startsWith('video/')) {
+                                // Video
+                                contenidoHTML += `<video controls style="max-width: 250px; border-radius: 8px;"><source src="${proxiedUrl}" type="${type}"></video>`;
+                            } else if (type.startsWith('audio/')) {
+                                // Audio
+                                contenidoHTML += `<audio controls style="width: 250px;"><source src="${proxiedUrl}" type="${type}"></audio>`;
+                            } else if (type === 'application/pdf') {
+                                // PDF
+                                contenidoHTML += `<a href="${proxiedUrl}" target="_blank" style="display: flex; align-items: center; gap: 8px; color: inherit; text-decoration: none;">
+                                    <i data-feather="file-text"></i>
+                                    <span>📄 Documento PDF</span>
+                                </a>`;
+                            } else {
+                                // Otro archivo
+                                contenidoHTML += `<a href="${proxiedUrl}" target="_blank" style="display: flex; align-items: center; gap: 8px; color: inherit; text-decoration: none;">
+                                    <i data-feather="paperclip"></i>
+                                    <span>📎 Archivo adjunto</span>
+                                </a>`;
+                            }
+                        });
+
+                        // Agregar texto si existe
+                        if (msg.contenido && msg.contenido !== '📎 Archivo adjunto') {
+                            contenidoHTML += `<p class="whatsapp-mensaje-contenido" style="margin-top: 8px;">${msg.contenido}</p>`;
                         }
                     } else {
                         // Solo texto
                         contenidoHTML = `<p class="whatsapp-mensaje-contenido">${msg.contenido}</p>`;
                     }
 
-                    return `
-                        <div class="whatsapp-mensaje ${claseDir}">
-                            <div class="whatsapp-mensaje-bubble">
-                                ${contenidoHTML}
-                                <div class="whatsapp-mensaje-tiempo">
-                                    ${hora}
-                                    ${!esEntrante ? '<span class="whatsapp-mensaje-check">✓✓</span>' : ''}
-                                </div>
+                    // Crear elemento del mensaje
+                    const mensajeDiv = document.createElement('div');
+                    mensajeDiv.className = `whatsapp-mensaje ${claseDir}`;
+                    mensajeDiv.innerHTML = `
+                        <div class="whatsapp-mensaje-bubble">
+                            ${contenidoHTML}
+                            <div class="whatsapp-mensaje-tiempo">
+                                ${hora}
+                                ${!esEntrante ? '<span class="whatsapp-mensaje-check">✓✓</span>' : ''}
                             </div>
                         </div>
                     `;
-                }).join('');
+
+                    fragment.appendChild(mensajeDiv);
+                });
+
+                // Limpiar e insertar todo de una vez
+                chatMensajes.innerHTML = '';
+                chatMensajes.appendChild(fragment);
 
                 // Reemplazar iconos de feather solo en el contenedor de mensajes (optimización)
                 const chatMensajesEl = document.getElementById('chatMensajes');
@@ -2320,7 +2339,8 @@ https://bsl-plataforma.com/nuevaorden1.html`,
                 }
 
                 // Actualizar contador de no leídos a 0 para esta conversación (sin re-render completo)
-                const conversacion = conversacionesWhatsApp.find(c => c.id === conversacionId);
+                // OPTIMIZACIÓN: Usar Map.get() en lugar de Array.find() - O(1) vs O(n)
+                const conversacion = conversacionesWhatsAppMap.get(conversacionId);
                 if (conversacion && conversacion.no_leidos > 0) {
                     conversacion.no_leidos = 0;
                     // Solo actualizar el badge de esta conversación, no re-renderizar todo
@@ -2331,8 +2351,10 @@ https://bsl-plataforma.com/nuevaorden1.html`,
                         convItem.classList.remove('unread');
                     }
                 }
+                console.timeEnd('⏱️ cargarMensajes'); // PERFORMANCE TRACKING
             } catch (error) {
                 console.error('Error cargando mensajes:', error);
+                console.timeEnd('⏱️ cargarMensajes'); // PERFORMANCE TRACKING
             }
         }
 
@@ -2355,17 +2377,52 @@ https://bsl-plataforma.com/nuevaorden1.html`,
 
                 if (!res.ok) throw new Error('Error al enviar mensaje');
 
+                const data = await res.json();
+
                 // Limpiar input
                 input.value = '';
 
-                // Recargar mensajes sin hacer scroll automático
-                await cargarMensajes(conversacionActualId, false);
+                // OPTIMIZACIÓN: Usar datos de la respuesta sin peticiones adicionales
+                if (data.success && data.mensaje) {
+                    // 1. Agregar mensaje directamente al DOM
+                    const chatMensajes = document.getElementById('chatMensajes');
+                    const mensajeDiv = document.createElement('div');
+                    mensajeDiv.className = 'whatsapp-mensaje saliente';
+                    mensajeDiv.innerHTML = `
+                        <div class="whatsapp-mensaje-bubble">
+                            <p class="whatsapp-mensaje-contenido">${data.mensaje.contenido}</p>
+                            <div class="whatsapp-mensaje-tiempo">
+                                ${formatearHora(data.mensaje.fecha_envio)}
+                                <span class="whatsapp-mensaje-check">✓✓</span>
+                            </div>
+                        </div>
+                    `;
+                    chatMensajes.appendChild(mensajeDiv);
+                    chatMensajes.scrollTop = chatMensajes.scrollHeight;
 
-                // Pequeño delay para asegurar que el backend procesó el mensaje
-                await new Promise(resolve => setTimeout(resolve, 300));
+                    // 2. Actualizar conversación en el array local
+                    if (data.conversacion_actualizada) {
+                        const conv = conversacionesWhatsAppMap.get(conversacionActualId);
+                        if (conv) {
+                            conv.fecha_ultima_actividad = data.conversacion_actualizada.fecha_ultima_actividad;
+                            conv.ultimo_mensaje = data.conversacion_actualizada.ultimo_mensaje;
 
-                // Forzar actualización completa de conversaciones para reflejar el nuevo mensaje
-                await cargarConversaciones(true);
+                            // Actualizar visualmente solo el item de la conversación
+                            const convItem = document.querySelector(`[data-conv-id="${conversacionActualId}"]`);
+                            if (convItem) {
+                                const timeEl = convItem.querySelector('.whatsapp-conversacion-tiempo');
+                                if (timeEl) {
+                                    timeEl.textContent = formatearHoraRelativa(data.conversacion_actualizada.fecha_ultima_actividad);
+                                }
+                                const lastMsgEl = convItem.querySelector('.whatsapp-conversacion-ultimo-mensaje');
+                                if (lastMsgEl) {
+                                    lastMsgEl.textContent = `Tú: ${data.mensaje.contenido.substring(0, 50)}${data.mensaje.contenido.length > 50 ? '...' : ''}`;
+                                }
+                            }
+                        }
+                    }
+                }
+                // Socket.IO se encargará de sincronizar con otros agentes conectados
             } catch (error) {
                 console.error('Error enviando mensaje:', error);
                 alert('Error al enviar el mensaje. Por favor intenta de nuevo.');
@@ -2596,7 +2653,7 @@ https://bsl-plataforma.com/nuevaorden1.html`,
 
                     // Recargar mensajes para mostrar el enviado
                     await cargarMensajes(conversacionActualId, false);
-                    await new Promise(resolve => setTimeout(resolve, 300));
+                    // OPTIMIZACIÓN: Eliminado delay artificial de 300ms
                     await cargarConversaciones(true);
                 } else {
                     // Mostrar error

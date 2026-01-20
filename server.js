@@ -753,22 +753,8 @@ const twilioClient = twilio(
     process.env.TWILIO_AUTH_TOKEN
 );
 
-// Mapeo de templates a su contenido real para guardar en BD
-const TEMPLATE_TEXTS = {
-    'HX8c84dc81049e7b055bd30125e9786051': 'Hola!\n\nAcabamos de recibir una llamada de ese celular.\n¿Es para exámenes ocupacionales?',
-    'HX43d06a0a97e11919c1e4b19d3e4b6957': 'Hola {{1}}! Tu cita ha sido confirmada para el {{2}}.',
-    'HX4554efaf53c1bd614d49c951e487d394': '¡Hola! Gracias por comunicarte con BSL.\n\nPara agilizar tu proceso, por favor completa el siguiente formulario: https://www.bsl.com.co/?_id={{1}}',
-    'HXeb45e56eb2e8dc4eaa35433282e12709': 'Hola! Tu cita médica está programada para el {{1}} a las {{2}}.\n\nPara completar el formulario, ingresa aquí: https://www.bsl.com.co/?_id={{3}}'
-};
-
-// Función helper para reemplazar variables en template
-function reemplazarVariablesTemplate(templateText, variables) {
-    let texto = templateText;
-    for (const [key, value] of Object.entries(variables)) {
-        texto = texto.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
-    }
-    return texto;
-}
+// NOTA: Ya no necesitamos un diccionario de templates hardcodeado.
+// El contenido real se obtiene desde la API de Twilio después de enviar el mensaje.
 
 // Función para enviar mensajes de WhatsApp via Twilio con Content Template
 // Usado para notificaciones automáticas pre-aprobadas
@@ -820,22 +806,36 @@ async function sendWhatsAppMessage(toNumber, messageBody, variables = {}, templa
         // Guardar mensaje en base de datos automáticamente
         const numeroLimpio = toNumber.replace(/[^\d]/g, '');
 
-        // Construir contenido legible del template
+        // Obtener el contenido real del mensaje desde Twilio API
         let contenidoTemplate;
-        if (messageBody) {
-            // Si se pasó messageBody directamente, usarlo
-            contenidoTemplate = messageBody;
-        } else if (TEMPLATE_TEXTS[contentSid]) {
-            // Usar el texto real del template y reemplazar variables
-            contenidoTemplate = reemplazarVariablesTemplate(TEMPLATE_TEXTS[contentSid], variables);
-        } else if (Object.keys(variables).length > 0) {
-            // Fallback si el template no está en el mapeo
-            const varsTexto = Object.entries(variables)
-                .map(([key, value]) => `{{${key}}}: ${value}`)
-                .join(', ');
-            contenidoTemplate = `📬 Template enviado (${contentSid})\nVariables: ${varsTexto}`;
-        } else {
-            contenidoTemplate = `📬 Template enviado: ${contentSid}`;
+        try {
+            // Esperar un momento para que Twilio procese el template
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // Consultar el mensaje completo desde la API de Twilio
+            const mensajeCompleto = await twilioClient.messages(message.sid).fetch();
+
+            if (mensajeCompleto.body) {
+                // Twilio ya renderizó el template con las variables
+                contenidoTemplate = mensajeCompleto.body;
+                console.log('✅ Contenido real obtenido desde Twilio API:', contenidoTemplate.substring(0, 100) + '...');
+            } else {
+                throw new Error('Body no disponible en la respuesta de Twilio');
+            }
+        } catch (fetchError) {
+            console.warn('⚠️ No se pudo obtener el body desde Twilio API, usando fallback:', fetchError.message);
+
+            // Fallback: construir contenido legible del template
+            if (messageBody) {
+                contenidoTemplate = messageBody;
+            } else if (Object.keys(variables).length > 0) {
+                const varsTexto = Object.entries(variables)
+                    .map(([key, value]) => `{{${key}}}: ${value}`)
+                    .join(', ');
+                contenidoTemplate = `📬 Template enviado (${contentSid})\nVariables: ${varsTexto}`;
+            } else {
+                contenidoTemplate = `📬 Template enviado: ${contentSid}`;
+            }
         }
 
         await guardarMensajeSaliente(numeroLimpio, contenidoTemplate, message.sid, 'template');
@@ -4606,53 +4606,12 @@ app.post('/api/whatsapp/status', async (req, res) => {
 
             // Verificar si el mensaje ya existe en la base de datos
             const mensajeExistente = await pool.query(`
-                SELECT id, contenido FROM mensajes_whatsapp WHERE sid_twilio = $1
+                SELECT id FROM mensajes_whatsapp WHERE sid_twilio = $1
             `, [MessageSid]);
 
-            // Si el mensaje ya existe Y Twilio nos envía el Body real, actualizar el contenido
+            // Si el mensaje ya existe, no hacer nada (ya fue guardado al enviarlo)
             if (mensajeExistente.rows.length > 0) {
                 console.log('✅ Mensaje ya registrado:', MessageSid);
-
-                // Si Twilio nos envía el Body del mensaje (template renderizado), actualizar
-                if (Body) {
-                    const mensajeActual = mensajeExistente.rows[0].contenido;
-
-                    // Solo actualizar si el contenido es diferente y no es un mensaje simple
-                    // (evitar sobrescribir mensajes de texto libre que ya son correctos)
-                    if (mensajeActual !== Body && mensajeActual.includes('📬')) {
-                        console.log('🔄 Actualizando contenido del template con Body real de Twilio');
-                        console.log('   Antes:', mensajeActual.substring(0, 100));
-                        console.log('   Después:', Body.substring(0, 100));
-
-                        await pool.query(`
-                            UPDATE mensajes_whatsapp
-                            SET contenido = $1
-                            WHERE sid_twilio = $2
-                        `, [Body, MessageSid]);
-
-                        // Emitir evento WebSocket para refrescar el chat en tiempo real
-                        if (global.emitWhatsAppEvent) {
-                            // Obtener conversacion_id del mensaje
-                            const conversacionResult = await pool.query(`
-                                SELECT conversacion_id,
-                                       (SELECT celular FROM conversaciones_whatsapp WHERE id = mensajes_whatsapp.conversacion_id) as celular
-                                FROM mensajes_whatsapp
-                                WHERE sid_twilio = $1
-                            `, [MessageSid]);
-
-                            if (conversacionResult.rows.length > 0) {
-                                const { conversacion_id, celular } = conversacionResult.rows[0];
-                                global.emitWhatsAppEvent('mensaje_actualizado', {
-                                    conversacion_id: conversacion_id,
-                                    numero_cliente: celular,
-                                    sid_twilio: MessageSid,
-                                    contenido_nuevo: Body
-                                });
-                            }
-                        }
-                    }
-                }
-
                 res.sendStatus(200);
                 return;
             }
