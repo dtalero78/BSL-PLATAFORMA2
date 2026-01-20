@@ -102,14 +102,7 @@ Si el usuario pregunta por exámenes que ya hizo en el pasado:
 → Si el usuario confirma, responde: "...transfiriendo con asesor"
 
 **Consulta por pago/certificado:**
-⚠️ CRÍTICO: NO respondas sin verificar "Estado detallado" primero.
-- "consulta_realizada": Certificado listo, pide comprobante de pago
-- "cita_programada": Debe realizar examen primero
-- "falta_formulario": Envía link https://www.bsl.com.co/desbloqueo
-- "no_realizo_consulta" o "no_asistio_consulta": Transfiere a asesor
-- Sin información: Ofrece transferir con asesor para ayudarle
-
-Si usuario insiste que ya hizo algo pero el estado no lo refleja: transfiere a asesor.
+Para consultas sobre pagos, certificados o estado de exámenes, ofrece transferir con un asesor que pueda verificar la información en el sistema.
 
 **Menú:**
 Si usuario dice "menú" o "volver al menú", responde EXACTAMENTE: "VOLVER_AL_MENU"
@@ -388,166 +381,8 @@ async function recuperarMensajesBot(poolRef, conversacionId, limite = 10) {
     }
 }
 
-/**
- * Busca contexto del paciente por número de celular
- * @param {string} celular - Número de celular
- * @returns {Promise<string>} - Contexto del paciente para el prompt
- */
-async function buscarContextoPacienteBot(poolRef, celular) {
-    try {
-        // Limpiar el número: quitar prefijos
-        const celularLimpio = celular.replace(/\D/g, '').replace(/^57/, '');
-        const celularCon57 = '57' + celularLimpio;
-        const celularConPlus = '+57' + celularLimpio;
-
-        console.log(`🔍 Bot: Buscando paciente por celular: ${celular} -> limpio: ${celularLimpio}`);
-
-        // Buscar en HistoriaClinica con múltiples formatos
-        const result = await poolRef.query(`
-            SELECT "_id", "numeroId", "primerNombre", "primerApellido", "celular",
-                   "fechaAtencion", "fechaConsulta", "empresa", "codEmpresa", "atendido"
-            FROM "HistoriaClinica"
-            WHERE "celular" IN ($1, $2, $3)
-            ORDER BY "fechaAtencion" DESC
-            LIMIT 1
-        `, [celularLimpio, celularCon57, celularConPlus]);
-
-        if (result.rows.length === 0) {
-            return '';
-        }
-
-        const paciente = result.rows[0];
-        const nombre = `${paciente.primerNombre || ''} ${paciente.primerApellido || ''}`.trim();
-        const fechaAtencion = paciente.fechaAtencion ? new Date(paciente.fechaAtencion) : null;
-        const fechaConsulta = paciente.fechaConsulta ? new Date(paciente.fechaConsulta) : null;
-        const ahora = new Date();
-
-        // Determinar estado del paciente
-        let estadoDetalle = '';
-        if (fechaConsulta && fechaConsulta < ahora) {
-            estadoDetalle = 'consulta_realizada';
-        } else if (fechaAtencion && fechaAtencion >= ahora) {
-            estadoDetalle = 'cita_programada';
-        } else if (fechaAtencion && fechaAtencion < ahora && !fechaConsulta) {
-            estadoDetalle = 'no_asistio_consulta';
-        }
-
-        const contexto = `\n\n📋 INFORMACIÓN DEL PACIENTE (identificado por su celular):
-- Nombre: ${nombre || 'No registrado'}
-- Cédula: ${paciente.numeroId || 'No registrada'}
-- Empresa: ${paciente.empresa || 'No especificada'}
-- Estado: ${paciente.atendido || 'PENDIENTE'}
-- Estado detallado: ${estadoDetalle || 'indeterminado'}
-- Fecha de atención: ${fechaAtencion ? fechaAtencion.toLocaleDateString('es-CO') : 'No registrada'}
-- Fecha de consulta: ${fechaConsulta ? fechaConsulta.toLocaleDateString('es-CO') : 'No realizada'}
-
-IMPORTANTE: Usa el "Estado detallado" para saber en qué punto está:
-- "consulta_realizada" = Ya hizo el examen, puede pagar
-- "cita_programada" = Tiene cita pendiente, aún no hace examen
-- "no_asistio_consulta" = No asistió a la cita`;
-
-        console.log(`📊 Bot: Contexto del paciente: ${nombre} - ${estadoDetalle}`);
-        return contexto;
-
-    } catch (error) {
-        console.error('❌ Bot: Error buscando contexto paciente:', error.message);
-        return '';
-    }
-}
-
-/**
- * Busca paciente por número de documento (cédula)
- * @param {string} documento - Número de documento
- * @returns {Promise<string>} - Contexto del paciente o vacío
- */
-async function buscarPacientePorDocumentoBot(poolRef, documento) {
-    try {
-        const docLimpio = documento.replace(/\D/g, ''); // Solo números
-
-        if (docLimpio.length < 6 || docLimpio.length > 12) {
-            return ''; // No parece un documento válido
-        }
-
-        console.log(`🔍 Bot: Buscando paciente por documento: ${docLimpio}`);
-
-        const result = await poolRef.query(`
-            SELECT "_id", "numeroId", "primerNombre", "primerApellido", "celular",
-                   "fechaAtencion", "fechaConsulta", "empresa", "codEmpresa", "atendido"
-            FROM "HistoriaClinica"
-            WHERE "numeroId" = $1
-            ORDER BY "fechaAtencion" DESC
-            LIMIT 1
-        `, [docLimpio]);
-
-        if (result.rows.length === 0) {
-            console.log(`❌ Bot: No se encontró paciente con documento ${docLimpio}`);
-            return `\n\n❌ BÚSQUEDA POR DOCUMENTO: No se encontró ningún registro con el documento ${docLimpio}.`;
-        }
-
-        const paciente = result.rows[0];
-        const nombre = `${paciente.primerNombre || ''} ${paciente.primerApellido || ''}`.trim();
-        const fechaAtencion = paciente.fechaAtencion ? new Date(paciente.fechaAtencion) : null;
-        const fechaConsulta = paciente.fechaConsulta ? new Date(paciente.fechaConsulta) : null;
-        const ahora = new Date();
-
-        // Determinar estado
-        let estadoDetalle = '';
-        if (fechaConsulta && fechaConsulta < ahora) {
-            estadoDetalle = 'consulta_realizada';
-        } else if (fechaAtencion && fechaAtencion >= ahora) {
-            estadoDetalle = 'cita_programada';
-        } else if (fechaAtencion && fechaAtencion < ahora && !fechaConsulta) {
-            estadoDetalle = 'no_asistio_consulta';
-        }
-
-        // Formatear fecha de cita
-        let fechaCitaTexto = 'No programada';
-        if (fechaAtencion) {
-            fechaCitaTexto = fechaAtencion.toLocaleString('es-CO', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                timeZone: 'America/Bogota'
-            });
-        }
-
-        const contexto = `\n\n✅ PACIENTE ENCONTRADO POR DOCUMENTO ${docLimpio}:
-- Nombre: ${nombre}
-- Cédula: ${paciente.numeroId}
-- Celular: ${paciente.celular || 'No registrado'}
-- Empresa: ${paciente.empresa || paciente.codEmpresa || 'SANITHELP-JJ'}
-- Fecha de cita: ${fechaCitaTexto}
-- Estado: ${paciente.atendido || 'PENDIENTE'}
-- Estado detallado: ${estadoDetalle || 'cita_programada'}
-
-IMPORTANTE: Usa esta información para responder al paciente. Si tiene cita_programada, confirma su cita con la fecha.`;
-
-        console.log(`✅ Bot: Paciente encontrado - ${nombre} (${estadoDetalle})`);
-        return contexto;
-
-    } catch (error) {
-        console.error('❌ Bot: Error buscando por documento:', error.message);
-        return '';
-    }
-}
-
-/**
- * Detecta si el mensaje contiene un número de documento
- * @param {string} mensaje - Mensaje del usuario
- * @returns {string|null} - Documento encontrado o null
- */
-function detectarDocumentoEnMensaje(mensaje) {
-    // Buscar secuencias de 6-12 dígitos que podrían ser cédulas
-    const matches = mensaje.match(/\b\d{6,12}\b/g);
-    if (matches && matches.length > 0) {
-        // Retornar el primero que parezca válido (entre 6 y 12 dígitos)
-        return matches[0];
-    }
-    return null;
-}
+// FUNCIONES DE BÚSQUEDA DE CITAS ELIMINADAS
+// Ya no se busca información de citas automáticamente por celular o documento
 
 /**
  * Genera respuesta del bot usando OpenAI + RAG
@@ -583,14 +418,8 @@ async function getAIResponseBot(poolRef, userMessage, conversationHistory = [], 
             console.error('⚠️ RAG: Error (continuando sin RAG):', ragError.message);
         }
 
-        // Construir system prompt enriquecido
+        // Construir system prompt enriquecido (solo con RAG, sin contexto de citas)
         let systemPromptEnriquecido = systemPromptBot;
-        if (contextoPaciente) {
-            systemPromptEnriquecido += contextoPaciente;
-        }
-        if (contextoDocumento) {
-            systemPromptEnriquecido += contextoDocumento;
-        }
         if (contextoRAG) {
             systemPromptEnriquecido += contextoRAG;
         }
@@ -617,6 +446,7 @@ async function getAIResponseBot(poolRef, userMessage, conversationHistory = [], 
 
 // Map para gestión de estado de flujo de pagos
 const estadoPagos = new Map();
+const ESTADO_CONFIRMAR_PAGO = 'confirmar_pago';
 const ESTADO_ESPERANDO_DOCUMENTO = 'esperando_documento';
 
 const app = express();
@@ -1287,23 +1117,29 @@ async function guardarMensajeSaliente(numeroCliente, contenido, twilioSid, tipoM
  */
 async function clasificarImagen(base64Image, mimeType) {
     try {
-        const systemPrompt = `Eres un clasificador de imágenes especializado en documentos médicos y financieros.
+        const systemPrompt = `Eres un clasificador de imágenes especializado en identificar comprobantes de pago.
 
-Analiza la imagen y clasifícala en UNA de estas 3 categorías:
+IMPORTANTE: Solo clasifica como "comprobante_pago" si hay evidencia CLARA de una transacción financiera completada.
 
-1. "comprobante_pago" - Capturas de transferencias bancarias, PSE, Nequi, Daviplata, comprobantes de pago
-   Características: fecha, monto, número de referencia, nombre del banco/app
+COMPROBANTE DE PAGO (comprobante_pago):
+- Capturas de transferencias bancarias con monto y fecha
+- Screenshots de PSE, Nequi, Daviplata, Bancolombia mostrando "Transferencia exitosa"
+- Recibos de pago con sello o confirmación
+- Pantallas que muestren "Pago aprobado" o similar
 
-2. "listado_examenes" - Listas de exámenes médicos requeridos por empresas
-   Características: membrete de empresa, lista de exámenes, puede tener logos
+NO CLASIFICAR COMO COMPROBANTE (usar "otra_imagen"):
+- Fotos de cédulas o documentos de identidad
+- Screenshots de conversaciones o chat
+- Capturas de formularios sin confirmación de pago
+- Imágenes de números o códigos sin contexto de pago
+- Fotos borrosas o poco claras
+- Certificados médicos o documentos personales
 
-3. "otra_imagen" - Cualquier otra imagen que no encaje en las anteriores
-   Ejemplos: fotos personales, memes, capturas de WhatsApp, certificados médicos
+LISTADO DE EXÁMENES (listado_examenes):
+- Documentos médicos con lista de procedimientos
+- Órdenes médicas laborales con membrete de empresa
 
-RESPONDE SOLO CON UNA DE ESTAS PALABRAS:
-comprobante_pago
-listado_examenes
-otra_imagen
+Responde SOLO con: comprobante_pago, listado_examenes, u otra_imagen
 
 NO AGREGUES EXPLICACIONES NI PUNTUACIÓN ADICIONAL.`;
 
@@ -1437,15 +1273,15 @@ async function procesarFlujoPagos(message, from) {
 
             // Router de clasificación
             if (clasificacion === 'comprobante_pago') {
-                // Pedir documento
+                // NUEVO: Preguntar primero si desea registrar el pago
                 await sendWhatsAppFreeText(from.replace('whatsapp:', ''),
-                    '✅ Comprobante recibido.\n\n¿Cuál es tu número de documento? (solo números, sin puntos)');
+                    '💳 ¿Deseas registrar un pago con este comprobante?\n\nResponde *SÍ* para continuar o cualquier otra cosa para cancelar.');
 
                 estadoPagos.set(from, {
-                    estado: ESTADO_ESPERANDO_DOCUMENTO,
+                    estado: ESTADO_CONFIRMAR_PAGO,
                     timestamp: Date.now()
                 });
-                return 'Comprobante validado, esperando documento';
+                return 'Solicitando confirmación de pago';
             }
             else {
                 // listado_examenes, otra_imagen o error -> NO responder nada
@@ -1455,7 +1291,30 @@ async function procesarFlujoPagos(message, from) {
             }
         }
 
-        // Caso 2: Usuario envía TEXTO (documento) con flujo activo
+        // Caso 2A: Usuario responde a confirmación de pago (SÍ/NO)
+        if (messageText && estadoPago && estadoPago.estado === ESTADO_CONFIRMAR_PAGO) {
+            const respuesta = messageText.toLowerCase();
+
+            if (respuesta === 'si' || respuesta === 'sí' || respuesta === 'yes') {
+                // Usuario confirma pago
+                estadoPagos.set(from, {
+                    estado: ESTADO_ESPERANDO_DOCUMENTO,
+                    timestamp: Date.now()
+                });
+
+                await sendWhatsAppFreeText(from.replace('whatsapp:', ''),
+                    '📝 Perfecto. Por favor envía tu número de cédula para registrar el pago.');
+                return 'Esperando documento después de confirmación';
+            } else {
+                // Usuario cancela
+                estadoPagos.delete(from);
+                await sendWhatsAppFreeText(from.replace('whatsapp:', ''),
+                    '✅ Entendido. No se registrará ningún pago.');
+                return 'Pago cancelado por usuario';
+            }
+        }
+
+        // Caso 2B: Usuario envía TEXTO (documento) con flujo activo
         const estadoActivo = estadoPago && estadoPago.estado === ESTADO_ESPERANDO_DOCUMENTO;
         if (messageText && estadoActivo) {
             const documento = messageText.trim();
@@ -1467,11 +1326,38 @@ async function procesarFlujoPagos(message, from) {
                 return 'Documento inválido';
             }
 
+            // NUEVO: Validar que el paciente existe
+            const pacienteExiste = await pool.query(
+                `SELECT _id, "primerNombre", "primerApellido", "numeroId", atendido
+                 FROM "HistoriaClinica"
+                 WHERE "numeroId" = $1
+                 LIMIT 1`,
+                [documento]
+            );
+
+            if (pacienteExiste.rows.length === 0) {
+                estadoPagos.delete(from);
+                await sendWhatsAppFreeText(from.replace('whatsapp:', ''),
+                    `❌ No encontramos ningún paciente con cédula ${documento} en nuestro sistema.\n\n¿Deseas agendar un examen? Escribe "agendar" para comenzar.`);
+                return 'Documento no encontrado';
+            }
+
+            const paciente = pacienteExiste.rows[0];
+
+            // NUEVO: Validar que ya fue atendido (no está PENDIENTE)
+            if (paciente.atendido === 'PENDIENTE') {
+                estadoPagos.delete(from);
+                const nombre = `${paciente.primerNombre || ''} ${paciente.primerApellido || ''}`.trim();
+                await sendWhatsAppFreeText(from.replace('whatsapp:', ''),
+                    `⚠️ ${nombre}, tu examen aún no ha sido realizado.\n\nEl pago solo se registra después del examen. Por favor completa tu cita primero.`);
+                return 'Paciente no atendido';
+            }
+
             // Marcar como pagado en base de datos
             console.log(`⏳ Procesando pago para documento: ${documento}`);
 
             await sendWhatsAppFreeText(from.replace('whatsapp:', ''),
-                `⏳ Procesando pago para documento ${documento}...`);
+                `⏳ Procesando pago para ${paciente.primerNombre} ${paciente.primerApellido}...`);
 
             const resultado = await marcarPagadoHistoriaClinica(documento);
 
@@ -4538,9 +4424,9 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
         if (Body && numMedia === 0) {
             const estadoPagoData = estadoPagos.get(From);
 
-            // Verificar si hay estado activo Y no ha expirado (5 minutos)
-            if (estadoPagoData && estadoPagoData.estado === ESTADO_ESPERANDO_DOCUMENTO) {
-                const TIMEOUT_PAGO = 5 * 60 * 1000; // 5 minutos
+            // Verificar si hay estado activo Y no ha expirado (2 minutos)
+            if (estadoPagoData && (estadoPagoData.estado === ESTADO_ESPERANDO_DOCUMENTO || estadoPagoData.estado === ESTADO_CONFIRMAR_PAGO)) {
+                const TIMEOUT_PAGO = 2 * 60 * 1000; // 2 minutos (reducido de 5)
                 const tiempoTranscurrido = Date.now() - estadoPagoData.timestamp;
 
                 if (tiempoTranscurrido > TIMEOUT_PAGO) {
@@ -4609,11 +4495,8 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
                     // Recuperar historial de mensajes
                     const historial = await recuperarMensajesBot(pool, conversacionId, 10);
 
-                    // Buscar contexto del paciente
-                    const contextoPaciente = await buscarContextoPacienteBot(pool, numeroCliente);
-
-                    // Generar respuesta con OpenAI + RAG
-                    const respuestaBot = await getAIResponseBot(pool, Body, historial, contextoPaciente);
+                    // Generar respuesta con OpenAI + RAG (sin contexto de cita)
+                    const respuestaBot = await getAIResponseBot(pool, Body, historial, '');
 
                     console.log(`🤖 Respuesta del bot: ${respuestaBot.substring(0, 100)}...`);
 
