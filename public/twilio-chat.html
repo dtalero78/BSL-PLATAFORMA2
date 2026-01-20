@@ -2256,7 +2256,6 @@ https://bsl-plataforma.com/nuevaorden1.html`,
 
                 // OPTIMIZACIÓN: Usar DocumentFragment en lugar de concatenación de strings
                 const fragment = document.createDocumentFragment();
-                const token = Auth.getToken(); // Obtener token UNA VEZ fuera del loop
 
                 mensajes.forEach(msg => {
                     const esEntrante = msg.direccion === 'entrante';
