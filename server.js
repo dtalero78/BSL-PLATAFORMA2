@@ -410,7 +410,6 @@ async function getAIResponseBot(conversationHistory = []) {
 
 // Map para gestión de estado de flujo de pagos
 const estadoPagos = new Map();
-const ESTADO_CONFIRMAR_PAGO = 'confirmar_pago';
 const ESTADO_ESPERANDO_DOCUMENTO = 'esperando_documento';
 
 // NUEVO: Estado global de modos de conversación
@@ -1322,18 +1321,18 @@ async function procesarFlujoPagos(message, from) {
                 // ACTIVAR MODO_PAGO - el bot conversacional se bloqueará
                 estadoConversacion.set(from, MODO_PAGO);
 
-                // NUEVO: Preguntar primero si desea registrar el pago
-                console.log(`💬 [PASO 4/4] Enviando mensaje de confirmación...`);
+                // Solicitar cédula directamente (sin confirmación previa)
+                console.log(`💬 [PASO 4/4] Solicitando número de cédula...`);
                 await sendWhatsAppFreeText(from.replace('whatsapp:', ''),
-                    '💳 ¿Deseas registrar un pago con este comprobante?\n\nResponde *SÍ* para continuar o cualquier otra cosa para cancelar.');
+                    '💳 Perfecto, recibí tu comprobante de pago.\n\n📝 Por favor envía tu número de cédula para registrar el pago.');
 
                 estadoPagos.set(from, {
-                    estado: ESTADO_CONFIRMAR_PAGO,
+                    estado: ESTADO_ESPERANDO_DOCUMENTO,
                     timestamp: Date.now()
                 });
 
-                console.log(`✅ [PASO 4/4] MODO_PAGO activado para ${from.replace('whatsapp:', '')} - Bot conversacional BLOQUEADO`);
-                return 'Solicitando confirmación de pago';
+                console.log(`✅ [PASO 4/4] MODO_PAGO activado para ${from.replace('whatsapp:', '')} - Esperando documento`);
+                return 'Esperando documento';
             }
             else {
                 // listado_examenes, otra_imagen o error -> NO responder nada
@@ -1343,35 +1342,7 @@ async function procesarFlujoPagos(message, from) {
             }
         }
 
-        // Caso 2A: Usuario responde a confirmación de pago (SÍ/NO)
-        if (messageText && estadoPago && estadoPago.estado === ESTADO_CONFIRMAR_PAGO) {
-            console.log(`💬 [CONFIRMAR_PAGO] Usuario respondió: "${messageText}"`);
-            const respuesta = messageText.toLowerCase();
-
-            if (respuesta === 'si' || respuesta === 'sí' || respuesta === 'yes') {
-                // Usuario confirma pago
-                console.log(`✅ [CONFIRMAR_PAGO] Usuario confirmó - solicitando documento`);
-                estadoPagos.set(from, {
-                    estado: ESTADO_ESPERANDO_DOCUMENTO,
-                    timestamp: Date.now()
-                });
-
-                await sendWhatsAppFreeText(from.replace('whatsapp:', ''),
-                    '📝 Perfecto. Por favor envía tu número de cédula para registrar el pago.');
-                return 'Esperando documento después de confirmación';
-            } else {
-                // Usuario cancela
-                console.log(`❌ [CONFIRMAR_PAGO] Usuario canceló el pago`);
-                estadoPagos.delete(from);
-                estadoConversacion.set(from, MODO_BOT); // Volver a modo bot
-                await sendWhatsAppFreeText(from.replace('whatsapp:', ''),
-                    '✅ Entendido. No se registrará ningún pago.');
-                console.log(`🤖 MODO_BOT restaurado para ${from.replace('whatsapp:', '')} - Pago cancelado`);
-                return 'Pago cancelado por usuario';
-            }
-        }
-
-        // Caso 2B: Usuario envía TEXTO (documento) con flujo activo
+        // Caso 2: Usuario envía TEXTO (documento) con flujo activo
         const estadoActivo = estadoPago && estadoPago.estado === ESTADO_ESPERANDO_DOCUMENTO;
         if (messageText && estadoActivo) {
             console.log(`📝 [ESPERANDO_DOCUMENTO] Usuario envió: "${messageText}"`);
@@ -4513,7 +4484,7 @@ app.post('/api/whatsapp/webhook', async (req, res) => {
             const estadoPagoData = estadoPagos.get(From);
 
             // Verificar si hay estado activo Y no ha expirado (2 minutos)
-            if (estadoPagoData && (estadoPagoData.estado === ESTADO_ESPERANDO_DOCUMENTO || estadoPagoData.estado === ESTADO_CONFIRMAR_PAGO)) {
+            if (estadoPagoData && estadoPagoData.estado === ESTADO_ESPERANDO_DOCUMENTO) {
                 const TIMEOUT_PAGO = 2 * 60 * 1000; // 2 minutos (reducido de 5)
                 const tiempoTranscurrido = Date.now() - estadoPagoData.timestamp;
 
