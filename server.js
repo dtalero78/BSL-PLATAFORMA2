@@ -6233,17 +6233,16 @@ app.post('/api/ordenes', async (req, res) => {
             `, [celularConPrefijo]);
 
             if (conversacionExistente.rows.length > 0) {
-                // Si existe, actualizar stopBot a true, bot_activo a false y datos del paciente
+                // Si existe, actualizar stopBot a true y datos del paciente
                 await pool.query(`
                     UPDATE conversaciones_whatsapp
                     SET "stopBot" = true,
-                        bot_activo = false,
                         paciente_id = $2,
                         nombre_paciente = $3,
                         fecha_ultima_actividad = NOW()
                     WHERE celular = $1
                 `, [celularConPrefijo, numeroId, `${primerNombre} ${primerApellido}`]);
-                console.log('✅ Conversación WhatsApp actualizada: stopBot = true, bot_activo = false para', celularConPrefijo);
+                console.log('✅ Conversación WhatsApp actualizada: stopBot = true para', celularConPrefijo);
             } else {
                 // Si no existe, crear nuevo registro con stopBot = true
                 await pool.query(`
