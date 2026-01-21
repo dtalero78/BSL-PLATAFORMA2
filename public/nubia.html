@@ -1604,6 +1604,16 @@
 
             pacientesFiltrados = data;
 
+            // Recalcular contadores basándose en los datos filtrados
+            const totalFiltrados = data.length;
+            const atendidosFiltrados = data.filter(p => p.atendido === 'ATENDIDO' || p.pagado === true).length;
+            const pagadosFiltrados = data.filter(p => p.pagado === true || p.pvEstado === 'Pagado').length;
+
+            // Actualizar contadores en UI
+            document.getElementById('totalAgendados').textContent = totalFiltrados;
+            document.getElementById('totalAtendidos').textContent = atendidosFiltrados;
+            document.getElementById('totalPagados').textContent = pagadosFiltrados;
+
             // Actualizar UI
             const tableContainer = document.getElementById('tableContainer');
             const emptyState = document.getElementById('emptyState');
