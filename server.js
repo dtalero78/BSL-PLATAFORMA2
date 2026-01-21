@@ -3980,14 +3980,27 @@ app.get('/api/admin/whatsapp/conversaciones', authMiddleware, requireAdmin, asyn
             ),
             company_codes AS (
                 -- Solo buscar códigos de empresa para las conversaciones filtradas
+                -- Normalizar: quitar + y prefijo 57, dejando solo los 10 dígitos del celular
                 SELECT DISTINCT ON (celular_normalizado)
-                    REPLACE(REPLACE("celular", '+57', ''), '+', '') as celular_normalizado,
+                    REGEXP_REPLACE(
+                        REPLACE(REPLACE("celular", '+', ''), ' ', ''),
+                        '^57',
+                        ''
+                    ) as celular_normalizado,
                     "codEmpresa"
                 FROM "HistoriaClinica"
                 WHERE "celular" IS NOT NULL
                   AND "celular" != ''
-                  AND REPLACE(REPLACE("celular", '+57', ''), '+', '') IN (
-                      SELECT REPLACE(REPLACE(celular, '+57', ''), '+', '')
+                  AND REGEXP_REPLACE(
+                      REPLACE(REPLACE("celular", '+', ''), ' ', ''),
+                      '^57',
+                      ''
+                  ) IN (
+                      SELECT REGEXP_REPLACE(
+                          REPLACE(REPLACE(celular, '+', ''), ' ', ''),
+                          '^57',
+                          ''
+                      )
                       FROM conversaciones_filtradas
                   )
                 ORDER BY celular_normalizado, "_createdDate" DESC
@@ -4009,7 +4022,11 @@ app.get('/api/admin/whatsapp/conversaciones', authMiddleware, requireAdmin, asyn
             FROM conversaciones_filtradas c
             LEFT JOIN unread_counts u ON u.conversacion_id = c.id
             LEFT JOIN last_messages lm ON lm.conversacion_id = c.id
-            LEFT JOIN company_codes cc ON cc.celular_normalizado = REPLACE(REPLACE(c.celular, '+57', ''), '+', '')
+            LEFT JOIN company_codes cc ON cc.celular_normalizado = REGEXP_REPLACE(
+                REPLACE(REPLACE(c.celular, '+', ''), ' ', ''),
+                '^57',
+                ''
+            )
             ORDER BY
                 COALESCE(u.no_leidos, 0) > 0 DESC,
                 c.fecha_ultima_actividad DESC
