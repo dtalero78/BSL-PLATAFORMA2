@@ -338,6 +338,9 @@
             <button class="btn btn-success" id="btnEnvioMasivo" onclick="envioMasivo()" disabled>
                 📤 Envío Masivo
             </button>
+            <button class="btn btn-primary" id="btnMarcarEnviados" onclick="marcarComoEnviados()" disabled>
+                ✅ Marcar como Enviados
+            </button>
         </div>
 
         <div class="table-container">
@@ -377,7 +380,9 @@
         // Actualizar contador de seleccionados
         function actualizarContadorSeleccionados() {
             document.getElementById('totalSeleccionados').textContent = registrosSeleccionados.size;
-            document.getElementById('btnEnvioMasivo').disabled = registrosSeleccionados.size === 0;
+            const tieneSeleccionados = registrosSeleccionados.size > 0;
+            document.getElementById('btnEnvioMasivo').disabled = !tieneSeleccionados;
+            document.getElementById('btnMarcarEnviados').disabled = !tieneSeleccionados;
         }
 
         // Toggle selección de un registro
@@ -668,6 +673,63 @@
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '📤 Envío Masivo';
+            }
+        }
+
+        // Marcar registros seleccionados como enviados (sin enviar mensaje)
+        async function marcarComoEnviados() {
+            if (registrosSeleccionados.size === 0) {
+                log('No hay registros seleccionados para marcar', 'warning');
+                alert('Por favor, selecciona al menos un registro para marcar como enviado');
+                return;
+            }
+
+            // Obtener solo los registros seleccionados
+            const registrosParaMarcar = Array.from(registrosSeleccionados).map(index => registrosActuales[index]);
+
+            if (!confirm(`¿Estás seguro de marcar ${registrosParaMarcar.length} registros como ENVIADO sin enviar mensaje?`)) {
+                return;
+            }
+
+            const btn = document.getElementById('btnMarcarEnviados');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> Marcando...';
+
+            log(`🏷️ Marcando ${registrosParaMarcar.length} registros como ENVIADO...`, 'info');
+
+            try {
+                const response = await fetch('/api/envio-siigo/marcar-enviados', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        registros: registrosParaMarcar
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al marcar registros');
+                }
+
+                const data = await response.json();
+                log(`✅ ${data.actualizados} registros marcados como ENVIADO`, 'success');
+
+                // Limpiar selección
+                registrosSeleccionados.clear();
+                actualizarContadorSeleccionados();
+
+                // Recargar registros
+                setTimeout(() => {
+                    cargarRegistros(tipoMensajeActual);
+                }, 1000);
+
+            } catch (error) {
+                log(`❌ Error al marcar registros: ${error.message}`, 'error');
+                console.error(error);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '✅ Marcar como Enviados';
             }
         }
 

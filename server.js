@@ -14445,14 +14445,14 @@ app.post('/api/envio-siigo/enviar-individual', async (req, res) => {
             if (convExistente.rows.length > 0) {
                 await pool.query(
                     `UPDATE conversaciones_whatsapp
-                    SET stop_bot = true, fecha_ultima_actividad = NOW()
+                    SET "stopBot" = true, fecha_ultima_actividad = NOW()
                     WHERE celular = $1`,
                     [telefonoConPrefijo]
                 );
             } else {
                 await pool.query(
                     `INSERT INTO conversaciones_whatsapp
-                    (celular, nombre_cliente, estado, stop_bot, fecha_ultima_actividad)
+                    (celular, nombre_paciente, estado, "stopBot", fecha_ultima_actividad)
                     VALUES ($1, $2, 'cerrada', true, NOW())`,
                     [telefonoConPrefijo, nombreCompleto || 'Paciente SIIGO']
                 );
@@ -14632,14 +14632,14 @@ https://www.bsl.com.co/autoagendamiento/${item.numeroId}
                     if (convExistente.rows.length > 0) {
                         await pool.query(
                             `UPDATE conversaciones_whatsapp
-                            SET stop_bot = true, fecha_ultima_actividad = NOW()
+                            SET "stopBot" = true, fecha_ultima_actividad = NOW()
                             WHERE celular = $1`,
                             [telefonoConPrefijo]
                         );
                     } else {
                         await pool.query(
                             `INSERT INTO conversaciones_whatsapp
-                            (celular, nombre_cliente, estado, stop_bot, fecha_ultima_actividad)
+                            (celular, nombre_paciente, estado, "stopBot", fecha_ultima_actividad)
                             VALUES ($1, $2, 'cerrada', true, NOW())`,
                             [telefonoConPrefijo, nombreCompleto || 'Paciente SIIGO']
                         );
@@ -14702,6 +14702,52 @@ https://www.bsl.com.co/autoagendamiento/${item.numeroId}
         res.status(500).json({
             success: false,
             message: 'Error en envío masivo',
+            error: error.message
+        });
+    }
+});
+
+// POST - Marcar registros como enviados (sin enviar mensaje)
+app.post('/api/envio-siigo/marcar-enviados', async (req, res) => {
+    try {
+        const { registros } = req.body;
+
+        if (!registros || !Array.isArray(registros) || registros.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Se requiere un array de registros con sus _id'
+            });
+        }
+
+        // Extraer los IDs
+        const ids = registros.map(r => r._id).filter(id => id);
+
+        if (ids.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'No se encontraron IDs válidos'
+            });
+        }
+
+        // Actualizar todos los registros
+        const result = await pool.query(`
+            UPDATE "HistoriaClinica"
+            SET "linkEnviado" = 'ENVIADO'
+            WHERE "_id" = ANY($1::text[])
+        `, [ids]);
+
+        console.log(`✅ ${result.rowCount} registros marcados como ENVIADO`);
+
+        res.json({
+            success: true,
+            message: `${result.rowCount} registros marcados como enviados`,
+            actualizados: result.rowCount
+        });
+    } catch (error) {
+        console.error('❌ Error marcando registros como enviados:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al marcar registros',
             error: error.message
         });
     }
