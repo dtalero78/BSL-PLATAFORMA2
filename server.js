@@ -11862,11 +11862,11 @@ app.post('/api/enviar-link-prueba', async (req, res) => {
 
         switch (tipoPrueba) {
             case 'formulario':
-                templateSid = 'HX2e0e080a03a13676a7ee377487dcd'; // link_formulario
+                templateSid = 'HX2e0e080abd0a3a13676a7ee377487dcd'; // link_formulario
                 nombrePrueba = 'Formulario Médico';
                 break;
             case 'adc':
-                templateSid = 'HXf8ef26b43318e958fd0c319932e3b68'; // link_pruebas_adc
+                templateSid = 'HXf82ef26b43318e958fd0c319932e3b68'; // link_pruebas_adc
                 nombrePrueba = 'Pruebas Psicotécnicas ADC';
                 break;
             case 'audiometria':
