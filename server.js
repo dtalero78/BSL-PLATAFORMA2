@@ -4244,6 +4244,64 @@ app.post('/api/admin/whatsapp/conversaciones/:id/mensajes', authMiddleware, requ
     }
 });
 
+// GET - Obtener datos del paciente asociado a una conversación (para comando /i)
+app.get('/api/admin/whatsapp/conversaciones/:id/paciente', authMiddleware, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Obtener número del cliente de la conversación
+        const convResult = await pool.query(`
+            SELECT celular FROM conversaciones_whatsapp WHERE id = $1
+        `, [id]);
+
+        if (convResult.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Conversación no encontrada' });
+        }
+
+        const numeroCliente = convResult.rows[0].celular;
+
+        // Buscar paciente en HistoriaClinica
+        const celularLimpio = numeroCliente.replace(/\D/g, '').replace(/^57/, '');
+        const celularCon57 = '57' + celularLimpio;
+        const celularConPlus = '+57' + celularLimpio;
+
+        const pacienteResult = await pool.query(`
+            SELECT
+                "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
+                "fechaAtencion", "horaAtencion", "numeroId"
+            FROM "HistoriaClinica"
+            WHERE "celular" IN ($1, $2, $3)
+            ORDER BY "_createdDate" DESC
+            LIMIT 1
+        `, [celularLimpio, celularCon57, celularConPlus]);
+
+        if (pacienteResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'No se encontró paciente asociado a este número'
+            });
+        }
+
+        const paciente = pacienteResult.rows[0];
+
+        res.json({
+            success: true,
+            paciente: {
+                primerNombre: paciente.primerNombre,
+                segundoNombre: paciente.segundoNombre,
+                primerApellido: paciente.primerApellido,
+                segundoApellido: paciente.segundoApellido,
+                fechaAtencion: paciente.fechaAtencion,
+                horaAtencion: paciente.horaAtencion,
+                numeroId: paciente.numeroId
+            }
+        });
+    } catch (error) {
+        console.error('Error al obtener datos del paciente:', error);
+        res.status(500).json({ success: false, message: 'Error al obtener datos del paciente' });
+    }
+});
+
 // POST - Enviar archivo multimedia en una conversación
 app.post('/api/admin/whatsapp/conversaciones/:id/media', authMiddleware, requireAdmin, upload.single('file'), async (req, res) => {
     try {

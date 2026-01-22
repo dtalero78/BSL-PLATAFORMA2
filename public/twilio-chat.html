@@ -1495,6 +1495,7 @@
                     <button class="cmd-btn" onclick="enviarComandoRapido('/8')" title="Consultar">8</button>
                     <button class="cmd-btn" onclick="enviarComandoRapido('/c')" title="Datos pago">C</button>
                     <button class="cmd-btn" onclick="enviarComandoRapido('/p')" title="Precios">$</button>
+                    <button class="cmd-btn" onclick="enviarComandoInfoCita('/i')" title="Info de cita">🩺</button>
                     <button class="cmd-btn" onclick="enviarComandoRapido('/l')" title="Nuevo examen">L</button>
                     <button class="cmd-btn" onclick="enviarComandoRapido('/a')" title="Asesor">A</button>
                 </div>
@@ -1578,6 +1579,7 @@
             '/8': { titulo: 'Link consulta orden', descripcion: 'Enlace para consultar estado' },
             '/c': { titulo: 'Datos de pago', descripcion: 'Información bancaria' },
             '/p': { titulo: 'Precios', descripcion: 'Opciones Virtual y Presencial' },
+            '/i': { titulo: 'Info de cita', descripcion: 'Información de la cita programada' },
             '/l': { titulo: 'Link nuevo examen', descripcion: 'Enlace para diligenciar examen' },
             '/a': { titulo: 'Transferir asesor', descripcion: 'Transfiriendo a un asesor humano' }
         };
@@ -2761,6 +2763,137 @@ https://bsl-plataforma.com/nuevaorden1.html`,
             } catch (error) {
                 console.error('Error enviando comando rápido:', error);
                 alert('Error al enviar el mensaje');
+            }
+        }
+
+        // Enviar comando de info de cita (/i) con datos dinámicos del paciente
+        async function enviarComandoInfoCita(comando) {
+            if (!conversacionActualId) {
+                alert('Selecciona una conversación primero');
+                return;
+            }
+
+            try {
+                const token = Auth.getToken();
+
+                // Feedback visual - destacar botón temporalmente
+                const botones = document.querySelectorAll('.cmd-btn');
+                const botonClickeado = Array.from(botones).find(btn =>
+                    btn.title === 'Info de cita'
+                );
+
+                if (botonClickeado) {
+                    botonClickeado.style.background = '#e3f2fd';
+                    botonClickeado.style.borderColor = '#2196F3';
+                    botonClickeado.textContent = '...';
+                }
+
+                // Obtener datos del paciente
+                const resPaciente = await fetch(`/api/admin/whatsapp/conversaciones/${conversacionActualId}/paciente`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!resPaciente.ok) {
+                    const errorData = await resPaciente.json();
+                    alert(errorData.message || 'No se encontró información de cita para este paciente');
+                    if (botonClickeado) {
+                        botonClickeado.textContent = '🩺';
+                        botonClickeado.style.background = '';
+                        botonClickeado.style.borderColor = '';
+                    }
+                    return;
+                }
+
+                const dataPaciente = await resPaciente.json();
+                const paciente = dataPaciente.paciente;
+
+                // Validar que tenga fecha de atención
+                if (!paciente.fechaAtencion) {
+                    alert('Este paciente no tiene una cita programada');
+                    if (botonClickeado) {
+                        botonClickeado.textContent = '🩺';
+                        botonClickeado.style.background = '';
+                        botonClickeado.style.borderColor = '';
+                    }
+                    return;
+                }
+
+                // Formatear fecha y hora al timezone del navegador
+                const fechaAtencion = new Date(paciente.fechaAtencion);
+                const opcionesFecha = {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                };
+                const fechaFormateada = fechaAtencion.toLocaleDateString('es-CO', opcionesFecha);
+
+                // Hora de atención (si está disponible, usar la del campo horaAtencion, si no, extraer de fechaAtencion)
+                let horaFormateada = paciente.horaAtencion || fechaAtencion.toLocaleTimeString('es-CO', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                });
+
+                // Construir mensaje
+                const mensaje = `Tu cita está para el ${fechaFormateada} a las ${horaFormateada}. Por acá te llega el link de conexión y la aprobación del doctor.`;
+
+                // Enviar mensaje
+                const res = await fetch(`/api/admin/whatsapp/conversaciones/${conversacionActualId}/mensajes`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        contenido: mensaje
+                    })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    // Feedback de éxito
+                    if (botonClickeado) {
+                        botonClickeado.textContent = '✓';
+                        setTimeout(() => {
+                            botonClickeado.textContent = '🩺';
+                            botonClickeado.style.background = '';
+                            botonClickeado.style.borderColor = '';
+                        }, 1500);
+                    }
+
+                    // Recargar mensajes para mostrar el nuevo mensaje
+                    await cargarMensajes(conversacionActualId, false);
+
+                    // Pequeño delay para asegurar que el backend procesó el mensaje
+                    await new Promise(resolve => setTimeout(resolve, 300));
+
+                    await cargarConversaciones(true);
+                } else {
+                    alert('Error al enviar: ' + (data.message || 'Desconocido'));
+                    if (botonClickeado) {
+                        botonClickeado.textContent = '🩺';
+                        botonClickeado.style.background = '';
+                        botonClickeado.style.borderColor = '';
+                    }
+                }
+
+            } catch (error) {
+                console.error('Error enviando comando de info de cita:', error);
+                alert('Error al obtener información de la cita');
+                const botones = document.querySelectorAll('.cmd-btn');
+                const botonClickeado = Array.from(botones).find(btn =>
+                    btn.title === 'Info de cita'
+                );
+                if (botonClickeado) {
+                    botonClickeado.textContent = '🩺';
+                    botonClickeado.style.background = '';
+                    botonClickeado.style.borderColor = '';
+                }
             }
         }
 
