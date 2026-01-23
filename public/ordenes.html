@@ -4671,7 +4671,9 @@
                 for (const [key, value] of Object.entries(allData)) {
                     if (key.startsWith('hc_')) {
                         const campo = key.replace('hc_', '');
-                        if (campo !== 'id' && value !== '') {
+                        // Siempre incluir fechas aunque estén vacías (se manejan en el servidor)
+                        const esCampoFecha = ['fechaAtencion', 'fechaConsulta', 'fechaNacimiento'].includes(campo);
+                        if (campo !== 'id' && (value !== '' || esCampoFecha)) {
                             historiaClinicaData[campo] = value;
                         }
                     } else if (key !== 'id' && value !== '') {

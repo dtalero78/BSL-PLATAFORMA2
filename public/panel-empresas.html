@@ -4338,14 +4338,11 @@
                 horaAtencion: document.getElementById('edit-horaAtencion').value
             };
 
-            // Agregar fecha si está presente
+            // Agregar fecha si está presente (formato datetime-local: YYYY-MM-DDTHH:MM)
             const fechaStr = document.getElementById('edit-fechaAtencion').value;
             if (fechaStr) {
                 const horaStr = document.getElementById('edit-horaAtencion').value || '00:00';
-                const [year, month, day] = fechaStr.split('-').map(Number);
-                const [hours, minutes] = horaStr.split(':').map(Number);
-                const fechaHora = new Date(year, month - 1, day, hours, minutes);
-                datos.fechaAtencion = fechaHora.toISOString();
+                datos.fechaAtencion = `${fechaStr}T${horaStr}`;
             }
 
             try {
