@@ -1553,6 +1553,13 @@
         let unreadMessages = 0;
         let titleBlinkInterval = null;
 
+        // OPTIMIZACIÓN: Cache con límite para prevenir memory leaks
+        let mensajesCache = {};
+        const MAX_CACHE_SIZE = 50;
+
+        // OPTIMIZACIÓN: Cache de referencias DOM del modal para evitar getElementById repetidos
+        let editFieldsCache = null;
+
         // Índice de selección para navegación con teclado
         let selectedCommandIndex = 0;
         let comandosFiltrados = [];
@@ -1681,6 +1688,28 @@ https://bsl-plataforma.com/nuevaorden1.html`,
 
             document.getElementById('userName').textContent = nombre;
             document.getElementById('userAvatar').textContent = inicial;
+        }
+
+        // OPTIMIZACIÓN: Inicializar cache de campos del modal una sola vez
+        function inicializarCacheModal() {
+            if (!editFieldsCache) {
+                editFieldsCache = {
+                    id: document.getElementById('edit-hc-id'),
+                    primerNombre: document.getElementById('edit-primerNombre'),
+                    segundoNombre: document.getElementById('edit-segundoNombre'),
+                    primerApellido: document.getElementById('edit-primerApellido'),
+                    segundoApellido: document.getElementById('edit-segundoApellido'),
+                    numeroId: document.getElementById('edit-numeroId'),
+                    celular: document.getElementById('edit-celular'),
+                    eps: document.getElementById('edit-eps'),
+                    empresa: document.getElementById('edit-empresa'),
+                    codEmpresa: document.getElementById('edit-codEmpresa'),
+                    cargo: document.getElementById('edit-cargo'),
+                    fechaNacimiento: document.getElementById('edit-fechaNacimiento'),
+                    fechaAtencion: document.getElementById('edit-fechaAtencion'),
+                    fechaConsulta: document.getElementById('edit-fechaConsulta')
+                };
+            }
         }
 
         // Inicializar Socket.IO
@@ -2750,13 +2779,11 @@ https://bsl-plataforma.com/nuevaorden1.html`,
                         }, 1500);
                     }
 
-                    // Recargar mensajes para mostrar el nuevo mensaje
-                    await cargarMensajes(conversacionActualId, false);
-
-                    // Pequeño delay para asegurar que el backend procesó el mensaje
-                    await new Promise(resolve => setTimeout(resolve, 300));
-
-                    await cargarConversaciones(true);
+                    // OPTIMIZACIÓN: Recargar en paralelo sin delay artificial
+                    await Promise.all([
+                        cargarMensajes(conversacionActualId, false),
+                        cargarConversaciones(true)
+                    ]);
                 } else {
                     alert('Error al enviar: ' + (data.message || 'Desconocido'));
                 }
@@ -3137,26 +3164,29 @@ https://bsl-plataforma.com/nuevaorden1.html`,
 
                 pacienteActualEdicion = result.data;
 
-                // Llenar el formulario
-                document.getElementById('edit-hc-id').value = pacienteActualEdicion._id || '';
-                document.getElementById('edit-primerNombre').value = pacienteActualEdicion.primerNombre || '';
-                document.getElementById('edit-segundoNombre').value = pacienteActualEdicion.segundoNombre || '';
-                document.getElementById('edit-primerApellido').value = pacienteActualEdicion.primerApellido || '';
-                document.getElementById('edit-segundoApellido').value = pacienteActualEdicion.segundoApellido || '';
-                document.getElementById('edit-numeroId').value = pacienteActualEdicion.numeroId || '';
-                document.getElementById('edit-celular').value = pacienteActualEdicion.celular || '';
-                document.getElementById('edit-eps').value = pacienteActualEdicion.eps || '';
-                document.getElementById('edit-empresa').value = pacienteActualEdicion.empresa || '';
-                document.getElementById('edit-codEmpresa').value = pacienteActualEdicion.codEmpresa || '';
-                document.getElementById('edit-cargo').value = pacienteActualEdicion.cargo || '';
+                // OPTIMIZACIÓN: Inicializar cache de campos si no existe
+                inicializarCacheModal();
+
+                // Llenar el formulario usando referencias cacheadas
+                editFieldsCache.id.value = pacienteActualEdicion._id || '';
+                editFieldsCache.primerNombre.value = pacienteActualEdicion.primerNombre || '';
+                editFieldsCache.segundoNombre.value = pacienteActualEdicion.segundoNombre || '';
+                editFieldsCache.primerApellido.value = pacienteActualEdicion.primerApellido || '';
+                editFieldsCache.segundoApellido.value = pacienteActualEdicion.segundoApellido || '';
+                editFieldsCache.numeroId.value = pacienteActualEdicion.numeroId || '';
+                editFieldsCache.celular.value = pacienteActualEdicion.celular || '';
+                editFieldsCache.eps.value = pacienteActualEdicion.eps || '';
+                editFieldsCache.empresa.value = pacienteActualEdicion.empresa || '';
+                editFieldsCache.codEmpresa.value = pacienteActualEdicion.codEmpresa || '';
+                editFieldsCache.cargo.value = pacienteActualEdicion.cargo || '';
 
                 // Fecha de nacimiento
                 if (pacienteActualEdicion.fechaNacimiento) {
                     const fn = new Date(pacienteActualEdicion.fechaNacimiento);
                     const fnFormatted = fn.toISOString().split('T')[0];
-                    document.getElementById('edit-fechaNacimiento').value = fnFormatted;
+                    editFieldsCache.fechaNacimiento.value = fnFormatted;
                 } else {
-                    document.getElementById('edit-fechaNacimiento').value = '';
+                    editFieldsCache.fechaNacimiento.value = '';
                 }
 
                 // Fecha de atención (formato datetime-local: YYYY-MM-DDTHH:MM)
@@ -3168,9 +3198,9 @@ https://bsl-plataforma.com/nuevaorden1.html`,
                     const day = String(colombiaTime.getDate()).padStart(2, '0');
                     const hours = String(colombiaTime.getHours()).padStart(2, '0');
                     const minutes = String(colombiaTime.getMinutes()).padStart(2, '0');
-                    document.getElementById('edit-fechaAtencion').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+                    editFieldsCache.fechaAtencion.value = `${year}-${month}-${day}T${hours}:${minutes}`;
                 } else {
-                    document.getElementById('edit-fechaAtencion').value = '';
+                    editFieldsCache.fechaAtencion.value = '';
                 }
 
                 // Fecha de consulta (formato datetime-local: YYYY-MM-DDTHH:MM)
@@ -3182,9 +3212,9 @@ https://bsl-plataforma.com/nuevaorden1.html`,
                     const dayC = String(colombiaTimeC.getDate()).padStart(2, '0');
                     const hoursC = String(colombiaTimeC.getHours()).padStart(2, '0');
                     const minutesC = String(colombiaTimeC.getMinutes()).padStart(2, '0');
-                    document.getElementById('edit-fechaConsulta').value = `${yearC}-${monthC}-${dayC}T${hoursC}:${minutesC}`;
+                    editFieldsCache.fechaConsulta.value = `${yearC}-${monthC}-${dayC}T${hoursC}:${minutesC}`;
                 } else {
-                    document.getElementById('edit-fechaConsulta').value = '';
+                    editFieldsCache.fechaConsulta.value = '';
                 }
 
                 // Estado de pago
@@ -3250,9 +3280,12 @@ https://bsl-plataforma.com/nuevaorden1.html`,
                 `;
             });
 
+            // OPTIMIZACIÓN: Usar Set para búsqueda O(1) en lugar de Array.includes() O(n)
+            const examenesSeleccionadosSet = new Set(examenesSeleccionados);
+
             // Mostrar exámenes disponibles (no seleccionados)
             EXAMENES_DISPONIBLES.forEach(examen => {
-                if (!examenesSeleccionados.includes(examen)) {
+                if (!examenesSeleccionadosSet.has(examen)) {
                     html += `
                         <span class="examen-chip" onclick="toggleExamen('${examen}')">
                             ${examen}
@@ -3286,20 +3319,21 @@ https://bsl-plataforma.com/nuevaorden1.html`,
                 const tag = document.getElementById('tagPago');
                 const isPagado = tag.classList.contains('pagado');
 
+                // OPTIMIZACIÓN: Usar referencias cacheadas del modal
                 const datos = {
-                    primerNombre: document.getElementById('edit-primerNombre').value,
-                    segundoNombre: document.getElementById('edit-segundoNombre').value,
-                    primerApellido: document.getElementById('edit-primerApellido').value,
-                    segundoApellido: document.getElementById('edit-segundoApellido').value,
-                    numeroId: document.getElementById('edit-numeroId').value,
-                    celular: document.getElementById('edit-celular').value,
-                    eps: document.getElementById('edit-eps').value,
-                    empresa: document.getElementById('edit-empresa').value,
-                    codEmpresa: document.getElementById('edit-codEmpresa').value,
-                    cargo: document.getElementById('edit-cargo').value,
-                    fechaNacimiento: document.getElementById('edit-fechaNacimiento').value || null,
-                    fechaAtencion: document.getElementById('edit-fechaAtencion').value || null,
-                    fechaConsulta: document.getElementById('edit-fechaConsulta').value || null,
+                    primerNombre: editFieldsCache.primerNombre.value,
+                    segundoNombre: editFieldsCache.segundoNombre.value,
+                    primerApellido: editFieldsCache.primerApellido.value,
+                    segundoApellido: editFieldsCache.segundoApellido.value,
+                    numeroId: editFieldsCache.numeroId.value,
+                    celular: editFieldsCache.celular.value,
+                    eps: editFieldsCache.eps.value,
+                    empresa: editFieldsCache.empresa.value,
+                    codEmpresa: editFieldsCache.codEmpresa.value,
+                    cargo: editFieldsCache.cargo.value,
+                    fechaNacimiento: editFieldsCache.fechaNacimiento.value || null,
+                    fechaAtencion: editFieldsCache.fechaAtencion.value || null,
+                    fechaConsulta: editFieldsCache.fechaConsulta.value || null,
                     pvEstado: isPagado ? 'Pagado' : '',
                     examenes: examenesSeleccionados.join(', ')
                 };
