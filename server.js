@@ -11874,7 +11874,7 @@ app.post('/api/enviar-link-prueba', async (req, res) => {
                 nombrePrueba = 'Audiometría Virtual';
                 break;
             case 'visiometria':
-                templateSid = 'HX932c80997c064594a79bfa03a4777e5'; // link_visuales
+                templateSid = 'HX932c80997c064594a79bffa03a4777e5'; // link_visuales
                 nombrePrueba = 'Prueba Visual';
                 break;
             default:
