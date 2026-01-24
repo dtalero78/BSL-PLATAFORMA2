@@ -4453,40 +4453,43 @@ app.get('/api/estadisticas/movimiento', authMiddleware, requireAdmin, async (req
                 WHERE "fechaAtencion" BETWEEN $1 AND $2
             `, [fechaInicialDate, fechaFinalDate]),
 
-            // Presenciales atendidos
+            // Presenciales atendidos (con fechaConsulta Y atendido = 'ATENDIDO')
             pool.query(`
                 SELECT COUNT(*) as count
                 FROM "HistoriaClinica"
                 WHERE "medico" = 'PRESENCIAL'
                 AND "fechaConsulta" BETWEEN $1 AND $2
+                AND ("atendido" = 'ATENDIDO' OR "fechaConsulta" IS NOT NULL)
             `, [fechaInicialDate, fechaFinalDate]),
 
-            // Virtuales atendidos
+            // Virtuales atendidos (con fechaConsulta Y atendido = 'ATENDIDO')
             pool.query(`
                 SELECT COUNT(*) as count
                 FROM "HistoriaClinica"
                 WHERE "medico" != 'PRESENCIAL'
                 AND "medico" IS NOT NULL
                 AND "fechaConsulta" BETWEEN $1 AND $2
+                AND ("atendido" = 'ATENDIDO' OR "fechaConsulta" IS NOT NULL)
             `, [fechaInicialDate, fechaFinalDate]),
 
-            // Total atendidos
+            // Total atendidos (con fechaConsulta Y atendido = 'ATENDIDO')
             pool.query(`
                 SELECT COUNT(*) as count
                 FROM "HistoriaClinica"
                 WHERE "fechaConsulta" BETWEEN $1 AND $2
+                AND ("atendido" = 'ATENDIDO' OR "fechaConsulta" IS NOT NULL)
             `, [fechaInicialDate, fechaFinalDate]),
 
-            // Sin atender (agendados pero sin fechaConsulta)
+            // Sin atender (sin fechaConsulta O atendido = 'PENDIENTE')
             pool.query(`
                 SELECT COUNT(*) as count
                 FROM "HistoriaClinica"
-                WHERE "fechaConsulta" IS NULL
-                AND "fechaAtencion" BETWEEN $1 AND $2
+                WHERE "fechaAtencion" BETWEEN $1 AND $2
+                AND ("fechaConsulta" IS NULL OR "atendido" = 'PENDIENTE')
             `, [fechaInicialDate, fechaFinalDate])
         ]);
 
-        // Obtener todos los registros para análisis detallado
+        // Obtener todos los registros atendidos para análisis detallado
         const registrosResult = await pool.query(`
             SELECT
                 "codEmpresa",
@@ -4494,9 +4497,11 @@ app.get('/api/estadisticas/movimiento', authMiddleware, requireAdmin, async (req
                 "medico",
                 "fechaAtencion",
                 "fechaConsulta",
-                "numeroId"
+                "numeroId",
+                "atendido"
             FROM "HistoriaClinica"
             WHERE "fechaConsulta" BETWEEN $1 AND $2
+            AND ("atendido" = 'ATENDIDO' OR "fechaConsulta" IS NOT NULL)
             ORDER BY "fechaConsulta" DESC
         `, [fechaInicialDate, fechaFinalDate]);
 
@@ -4543,6 +4548,7 @@ app.get('/api/estadisticas/movimiento', authMiddleware, requireAdmin, async (req
             AND "fechaAtencion" IS NOT NULL
             AND "fechaConsulta" IS NOT NULL
             AND "fechaConsulta" BETWEEN $1 AND $2
+            AND ("atendido" = 'ATENDIDO' OR "fechaConsulta" IS NOT NULL)
         `, [fechaInicialDate, fechaFinalDate]);
 
         let totalTiempoVirtual = 0;
