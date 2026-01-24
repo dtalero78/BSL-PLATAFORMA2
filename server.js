@@ -91,6 +91,14 @@ Responder preguntas sobre servicios, precios y proceso de agendamiento usando SO
 • Virtual – $52.000 COP
 • Presencial – $69.000 COP
 
+d) Calle 134 No. 7-83, Bogotá
+Edificios Altos del Bosque
+• Lunes a Viernes 7:30am-4:30pm
+• Sábados 8am-11:30am
+
+Laboratorios
+• 7 am
+
 ¿Cuál te interesa?"
 
 **Preguntas sobre certificado o resultado de examen:**
