@@ -452,21 +452,25 @@
         </div>
     </div>
 
+    <script src="/js/auth.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
     <script>
-        // Obtener token JWT del localStorage
-        const token = localStorage.getItem('token');
+        let usuarioActual = null;
 
-        if (!token) {
-            window.location.href = '/login.html';
-        }
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Proteger página - solo admin
+            usuarioActual = await Auth.protegerPagina(['admin']);
+            if (!usuarioActual) return;
 
-        // Configurar fechas por defecto (último mes)
-        const today = new Date();
-        const lastMonth = new Date();
-        lastMonth.setMonth(lastMonth.getMonth() - 1);
+            // Configurar fechas por defecto (último mes)
+            const today = new Date();
+            const lastMonth = new Date();
+            lastMonth.setMonth(lastMonth.getMonth() - 1);
 
-        document.getElementById('fechaInicial').valueAsDate = lastMonth;
-        document.getElementById('fechaFinal').valueAsDate = today;
+            document.getElementById('fechaInicial').valueAsDate = lastMonth;
+            document.getElementById('fechaFinal').valueAsDate = today;
+        });
 
         // Event listener para el botón de búsqueda
         document.getElementById('btnBuscar').addEventListener('click', buscarEstadisticas);
@@ -505,13 +509,14 @@
             btnBuscar.textContent = 'Buscando...';
 
             try {
-                const response = await fetch(`/api/estadisticas/movimiento?fechaInicial=${fechaInicial}&fechaFinal=${fechaFinal}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    }
+                const response = await Auth.fetchAuth(`/api/estadisticas/movimiento?fechaInicial=${fechaInicial}&fechaFinal=${fechaFinal}`, {
+                    method: 'GET'
                 });
+
+                if (!response) {
+                    // Token expirado, ya redirigido por Auth.fetchAuth
+                    return;
+                }
 
                 const data = await response.json();
 
