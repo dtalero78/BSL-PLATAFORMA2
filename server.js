@@ -4416,6 +4416,190 @@ app.post('/api/admin/whatsapp/conversaciones/:id/media', authMiddleware, require
     }
 });
 
+// ========== ENDPOINT DE ESTADÍSTICAS Y MOVIMIENTO ==========
+
+// GET - Obtener estadísticas de atención médica por rango de fechas
+app.get('/api/estadisticas/movimiento', authMiddleware, requireAdmin, async (req, res) => {
+    try {
+        const { fechaInicial, fechaFinal } = req.query;
+
+        if (!fechaInicial || !fechaFinal) {
+            return res.status(400).json({
+                success: false,
+                message: 'Se requieren las fechas inicial y final'
+            });
+        }
+
+        // Convertir fechas a objetos Date y ajustar horas
+        const fechaInicialDate = new Date(fechaInicial);
+        const fechaFinalDate = new Date(fechaFinal);
+        fechaInicialDate.setHours(0, 0, 0, 0);
+        fechaFinalDate.setHours(23, 59, 59, 999);
+
+        console.log(`📊 Generando estadísticas de movimiento: ${fechaInicialDate.toISOString()} - ${fechaFinalDate.toISOString()}`);
+
+        // Consultas de conteo en paralelo
+        const [
+            agendadosResult,
+            presencialResult,
+            virtualResult,
+            atendidosResult,
+            sinAtenderResult
+        ] = await Promise.all([
+            // Total agendados (fechaAtencion)
+            pool.query(`
+                SELECT COUNT(*) as count
+                FROM "HistoriaClinica"
+                WHERE "fechaAtencion" BETWEEN $1 AND $2
+            `, [fechaInicialDate, fechaFinalDate]),
+
+            // Presenciales atendidos
+            pool.query(`
+                SELECT COUNT(*) as count
+                FROM "HistoriaClinica"
+                WHERE "medico" = 'PRESENCIAL'
+                AND "fechaConsulta" BETWEEN $1 AND $2
+            `, [fechaInicialDate, fechaFinalDate]),
+
+            // Virtuales atendidos
+            pool.query(`
+                SELECT COUNT(*) as count
+                FROM "HistoriaClinica"
+                WHERE "medico" != 'PRESENCIAL'
+                AND "medico" IS NOT NULL
+                AND "fechaConsulta" BETWEEN $1 AND $2
+            `, [fechaInicialDate, fechaFinalDate]),
+
+            // Total atendidos
+            pool.query(`
+                SELECT COUNT(*) as count
+                FROM "HistoriaClinica"
+                WHERE "fechaConsulta" BETWEEN $1 AND $2
+            `, [fechaInicialDate, fechaFinalDate]),
+
+            // Sin atender (agendados pero sin fechaConsulta)
+            pool.query(`
+                SELECT COUNT(*) as count
+                FROM "HistoriaClinica"
+                WHERE "fechaConsulta" IS NULL
+                AND "fechaAtencion" BETWEEN $1 AND $2
+            `, [fechaInicialDate, fechaFinalDate])
+        ]);
+
+        // Obtener todos los registros para análisis detallado
+        const registrosResult = await pool.query(`
+            SELECT
+                "codEmpresa",
+                "ciudad",
+                "medico",
+                "fechaAtencion",
+                "fechaConsulta",
+                "numeroId"
+            FROM "HistoriaClinica"
+            WHERE "fechaConsulta" BETWEEN $1 AND $2
+            ORDER BY "fechaConsulta" DESC
+        `, [fechaInicialDate, fechaFinalDate]);
+
+        // Procesar conteo por empresa
+        const conteoPorEmpresa = {};
+        const conteoPorMedico = {};
+
+        registrosResult.rows.forEach(item => {
+            let codEmpresa = item.codEmpresa || 'No definida';
+            const medico = item.medico || 'No definida';
+            const ciudad = item.ciudad || '';
+
+            // Si la empresa es SIIGO, dividir entre BOGOTA y Otras
+            if (codEmpresa.toUpperCase() === 'SIIGO') {
+                if (ciudad.toUpperCase() === 'BOGOTA') {
+                    codEmpresa = 'Siigo BOGOTA';
+                } else {
+                    codEmpresa = 'Siigo Otras';
+                }
+            }
+
+            conteoPorEmpresa[codEmpresa] = (conteoPorEmpresa[codEmpresa] || 0) + 1;
+            conteoPorMedico[medico] = (conteoPorMedico[medico] || 0) + 1;
+        });
+
+        // Convertir a arrays y ordenar
+        const empresas = Object.keys(conteoPorEmpresa)
+            .map(codEmpresa => ({ codEmpresa, contador: conteoPorEmpresa[codEmpresa] }))
+            .sort((a, b) => b.contador - a.contador);
+
+        const medicos = Object.keys(conteoPorMedico)
+            .map(medico => ({ medico, contador: conteoPorMedico[medico] }))
+            .sort((a, b) => b.contador - a.contador);
+
+        // Calcular promedio de tiempo de atención virtual
+        const registrosVirtualesResult = await pool.query(`
+            SELECT
+                "fechaAtencion",
+                "fechaConsulta",
+                "numeroId"
+            FROM "HistoriaClinica"
+            WHERE "medico" != 'PRESENCIAL'
+            AND "medico" IS NOT NULL
+            AND "fechaAtencion" IS NOT NULL
+            AND "fechaConsulta" IS NOT NULL
+            AND "fechaConsulta" BETWEEN $1 AND $2
+        `, [fechaInicialDate, fechaFinalDate]);
+
+        let totalTiempoVirtual = 0;
+        let contadorVirtual = 0;
+
+        registrosVirtualesResult.rows.forEach(registro => {
+            const fechaAtencion = new Date(registro.fechaAtencion);
+            const fechaConsulta = new Date(registro.fechaConsulta);
+
+            if (!isNaN(fechaAtencion.getTime()) && !isNaN(fechaConsulta.getTime()) && fechaAtencion <= fechaConsulta) {
+                const diferenciaMinutos = (fechaConsulta.getTime() - fechaAtencion.getTime()) / 60000;
+
+                // Solo considerar tiempos razonables (menor a 6 horas)
+                if (!isNaN(diferenciaMinutos) && diferenciaMinutos >= 0 && diferenciaMinutos <= 360) {
+                    totalTiempoVirtual += diferenciaMinutos;
+                    contadorVirtual++;
+                }
+            }
+        });
+
+        const promedioVirtualMinutos = contadorVirtual > 0 ? Math.round(totalTiempoVirtual / contadorVirtual) : 0;
+        const horasVirtual = Math.floor(promedioVirtualMinutos / 60);
+        const minutosVirtual = promedioVirtualMinutos % 60;
+
+        let promedioVirtualTexto = '';
+        if (horasVirtual === 0) {
+            promedioVirtualTexto = `${minutosVirtual} minutos`;
+        } else if (minutosVirtual === 0) {
+            promedioVirtualTexto = `${horasVirtual} horas`;
+        } else {
+            promedioVirtualTexto = `${horasVirtual} horas ${minutosVirtual} minutos`;
+        }
+
+        res.json({
+            success: true,
+            estadisticas: {
+                agendados: parseInt(agendadosResult.rows[0].count),
+                presencial: parseInt(presencialResult.rows[0].count),
+                virtual: parseInt(virtualResult.rows[0].count),
+                atendidos: parseInt(atendidosResult.rows[0].count),
+                sinAtender: parseInt(sinAtenderResult.rows[0].count),
+                promedioAtencionVirtual: promedioVirtualTexto,
+                empresas,
+                medicos
+            }
+        });
+
+    } catch (error) {
+        console.error('Error al generar estadísticas de movimiento:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al generar estadísticas',
+            error: error.message
+        });
+    }
+});
+
 // POST - Webhook para recibir mensajes entrantes de Twilio WhatsApp
 app.post('/api/whatsapp/webhook', async (req, res) => {
     try {

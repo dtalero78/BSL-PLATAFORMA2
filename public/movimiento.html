@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estadísticas de Movimiento - BSL</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #F3F3F3;
+            --bg-secondary: #FFFFFF;
+            --bg-tertiary: #F9FAFB;
+            --bg-input: #FFFFFF;
+            --text-primary: #181818;
+            --text-secondary: #444444;
+            --text-tertiary: #706E6B;
+            --border-color: #DDDBDA;
+            --border-light: #E5E5E5;
+            --accent-color: #0176D3;
+            --accent-hover: #014486;
+            --success-color: #059669;
+            --success-bg: #ECFDF5;
+            --warning-color: #D97706;
+            --warning-bg: #FEF3C7;
+            --error-color: #DC2626;
+            --error-bg: #FEF2F2;
+            --info-color: #0369A1;
+            --info-bg: #F0F9FF;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            padding: 24px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        /* Filtros */
+        .filtros {
+            background: var(--bg-secondary);
+            padding: 24px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .filtros-row {
+            display: flex;
+            gap: 16px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .filtro-grupo {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filtro-grupo label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .filtro-grupo input[type="date"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            background: var(--bg-input);
+            transition: all 0.2s ease;
+        }
+
+        .filtro-grupo input[type="date"]:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(1, 118, 211, 0.1);
+        }
+
+        .btn-buscar {
+            padding: 10px 24px;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            height: 42px;
+        }
+
+        .btn-buscar:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-buscar:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Estadísticas Cards */
+        .estadisticas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .stat-card h3 {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .stat-card .label {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        .stat-card.primary .value {
+            color: var(--accent-color);
+        }
+
+        .stat-card.success .value {
+            color: var(--success-color);
+        }
+
+        .stat-card.warning .value {
+            color: var(--warning-color);
+        }
+
+        .stat-card.error .value {
+            color: var(--error-color);
+        }
+
+        /* Tablas */
+        .tablas-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .tabla-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+
+        .tabla-card h2 {
+            padding: 20px 24px;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .tabla-wrapper {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            background: var(--bg-tertiary);
+            z-index: 10;
+        }
+
+        th {
+            padding: 12px 24px;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--border-light);
+            transition: background 0.15s ease;
+        }
+
+        tbody tr:hover {
+            background: var(--bg-tertiary);
+        }
+
+        tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        td {
+            padding: 16px 24px;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        td.empresa {
+            font-weight: 500;
+        }
+
+        td.contador {
+            font-weight: 700;
+            color: var(--accent-color);
+            text-align: center;
+        }
+
+        /* Loading y Estados */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 24px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Alert */
+        .alert {
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .alert.error {
+            background: var(--error-bg);
+            color: var(--error-color);
+            border-left: 4px solid var(--error-color);
+        }
+
+        .alert.info {
+            background: var(--info-bg);
+            color: var(--info-color);
+            border-left: 4px solid var(--info-color);
+        }
+
+        /* Scrollbar personalizado */
+        .tabla-wrapper::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .tabla-wrapper::-webkit-scrollbar-track {
+            background: var(--bg-tertiary);
+        }
+
+        .tabla-wrapper::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        .tabla-wrapper::-webkit-scrollbar-thumb:hover {
+            background: var(--text-tertiary);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>📊 Estadísticas de Movimiento</h1>
+            <p>Visualiza estadísticas de atención médica por rango de fechas</p>
+        </div>
+
+        <!-- Filtros -->
+        <div class="filtros">
+            <div class="filtros-row">
+                <div class="filtro-grupo">
+                    <label for="fechaInicial">Fecha Inicial</label>
+                    <input type="date" id="fechaInicial" required>
+                </div>
+                <div class="filtro-grupo">
+                    <label for="fechaFinal">Fecha Final</label>
+                    <input type="date" id="fechaFinal" required>
+                </div>
+                <button class="btn-buscar" id="btnBuscar">Buscar</button>
+            </div>
+        </div>
+
+        <!-- Alertas -->
+        <div id="alertContainer"></div>
+
+        <!-- Estadísticas Cards -->
+        <div id="estadisticasContainer" class="hidden">
+            <div class="estadisticas-grid">
+                <div class="stat-card primary">
+                    <h3>Agendados</h3>
+                    <div class="value" id="agendados">0</div>
+                    <div class="label">Total de pacientes agendados</div>
+                </div>
+                <div class="stat-card success">
+                    <h3>Atendidos</h3>
+                    <div class="value" id="atendidos">0</div>
+                    <div class="label">Total de pacientes atendidos</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Presencial</h3>
+                    <div class="value" id="presencial">0</div>
+                    <div class="label">Atenciones presenciales</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Virtual</h3>
+                    <div class="value" id="virtual">0</div>
+                    <div class="label">Atenciones virtuales</div>
+                </div>
+                <div class="stat-card warning">
+                    <h3>Sin Atender</h3>
+                    <div class="value" id="sinAtender">0</div>
+                    <div class="label">Pacientes sin atender</div>
+                </div>
+                <div class="stat-card info">
+                    <h3>Tiempo Promedio Virtual</h3>
+                    <div class="value" style="font-size: 20px;" id="promedioVirtual">0 min</div>
+                    <div class="label">Tiempo de atención virtual</div>
+                </div>
+            </div>
+
+            <!-- Tablas -->
+            <div class="tablas-container">
+                <!-- Tabla de Empresas -->
+                <div class="tabla-card">
+                    <h2>Atenciones por Empresa</h2>
+                    <div class="tabla-wrapper">
+                        <table id="tablaEmpresas">
+                            <thead>
+                                <tr>
+                                    <th>Empresa</th>
+                                    <th style="text-align: center;">Cantidad</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaEmpresasBody">
+                                <tr>
+                                    <td colspan="2" class="loading">Cargando datos...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tabla de Médicos -->
+                <div class="tabla-card">
+                    <h2>Atenciones por Médico</h2>
+                    <div class="tabla-wrapper">
+                        <table id="tablaMedicos">
+                            <thead>
+                                <tr>
+                                    <th>Médico</th>
+                                    <th style="text-align: center;">Cantidad</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaMedicosBody">
+                                <tr>
+                                    <td colspan="2" class="loading">Cargando datos...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Obtener token JWT del localStorage
+        const token = localStorage.getItem('token');
+
+        if (!token) {
+            window.location.href = '/login.html';
+        }
+
+        // Configurar fechas por defecto (último mes)
+        const today = new Date();
+        const lastMonth = new Date();
+        lastMonth.setMonth(lastMonth.getMonth() - 1);
+
+        document.getElementById('fechaInicial').valueAsDate = lastMonth;
+        document.getElementById('fechaFinal').valueAsDate = today;
+
+        // Event listener para el botón de búsqueda
+        document.getElementById('btnBuscar').addEventListener('click', buscarEstadisticas);
+
+        // Permitir buscar con Enter
+        document.getElementById('fechaInicial').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') buscarEstadisticas();
+        });
+        document.getElementById('fechaFinal').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') buscarEstadisticas();
+        });
+
+        async function buscarEstadisticas() {
+            const fechaInicial = document.getElementById('fechaInicial').value;
+            const fechaFinal = document.getElementById('fechaFinal').value;
+            const btnBuscar = document.getElementById('btnBuscar');
+            const alertContainer = document.getElementById('alertContainer');
+            const estadisticasContainer = document.getElementById('estadisticasContainer');
+
+            // Limpiar alertas previas
+            alertContainer.innerHTML = '';
+
+            // Validar fechas
+            if (!fechaInicial || !fechaFinal) {
+                mostrarAlerta('Por favor selecciona ambas fechas', 'error');
+                return;
+            }
+
+            if (new Date(fechaInicial) > new Date(fechaFinal)) {
+                mostrarAlerta('La fecha inicial no puede ser mayor a la fecha final', 'error');
+                return;
+            }
+
+            // Deshabilitar botón
+            btnBuscar.disabled = true;
+            btnBuscar.textContent = 'Buscando...';
+
+            try {
+                const response = await fetch(`/api/estadisticas/movimiento?fechaInicial=${fechaInicial}&fechaFinal=${fechaFinal}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Error al obtener estadísticas');
+                }
+
+                if (data.success) {
+                    renderizarEstadisticas(data.estadisticas);
+                    estadisticasContainer.classList.remove('hidden');
+                } else {
+                    throw new Error(data.message || 'Error desconocido');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarAlerta(error.message, 'error');
+                estadisticasContainer.classList.add('hidden');
+            } finally {
+                btnBuscar.disabled = false;
+                btnBuscar.textContent = 'Buscar';
+            }
+        }
+
+        function renderizarEstadisticas(stats) {
+            // Actualizar cards
+            document.getElementById('agendados').textContent = stats.agendados.toLocaleString();
+            document.getElementById('atendidos').textContent = stats.atendidos.toLocaleString();
+            document.getElementById('presencial').textContent = stats.presencial.toLocaleString();
+            document.getElementById('virtual').textContent = stats.virtual.toLocaleString();
+            document.getElementById('sinAtender').textContent = stats.sinAtender.toLocaleString();
+            document.getElementById('promedioVirtual').textContent = stats.promedioAtencionVirtual;
+
+            // Renderizar tabla de empresas
+            const tablaEmpresasBody = document.getElementById('tablaEmpresasBody');
+            if (stats.empresas && stats.empresas.length > 0) {
+                tablaEmpresasBody.innerHTML = stats.empresas.map(item => `
+                    <tr>
+                        <td class="empresa">${item.codEmpresa}</td>
+                        <td class="contador">${item.contador}</td>
+                    </tr>
+                `).join('');
+            } else {
+                tablaEmpresasBody.innerHTML = `
+                    <tr>
+                        <td colspan="2" class="empty-state">
+                            <div>No hay datos de empresas</div>
+                        </td>
+                    </tr>
+                `;
+            }
+
+            // Renderizar tabla de médicos
+            const tablaMedicosBody = document.getElementById('tablaMedicosBody');
+            if (stats.medicos && stats.medicos.length > 0) {
+                tablaMedicosBody.innerHTML = stats.medicos.map(item => `
+                    <tr>
+                        <td class="empresa">${item.medico}</td>
+                        <td class="contador">${item.contador}</td>
+                    </tr>
+                `).join('');
+            } else {
+                tablaMedicosBody.innerHTML = `
+                    <tr>
+                        <td colspan="2" class="empty-state">
+                            <div>No hay datos de médicos</div>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        function mostrarAlerta(mensaje, tipo = 'info') {
+            const alertContainer = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert ${tipo}`;
+            alert.innerHTML = `
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>${mensaje}</span>
+            `;
+            alertContainer.appendChild(alert);
+
+            // Auto-remover después de 5 segundos
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
