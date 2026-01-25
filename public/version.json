@@ -1,0 +1,11 @@
+{
+  "version": "2.0.0",
+  "fecha": "2026-01-25T15:30:00Z",
+  "commit": "47c82c8",
+  "cambios": [
+    "Tag de estado atendido/pendiente en chat WhatsApp",
+    "Tags reorganizados en modal de edición",
+    "Pago permitido antes del examen",
+    "Fix de conversaciones no leídas"
+  ]
+}
