@@ -1395,30 +1395,33 @@ async function procesarFlujoPagos(message, from) {
                 const data = resultado.data;
                 const nombre = `${data.primerNombre || ''} ${data.primerApellido || ''}`.trim();
 
-                await sendWhatsAppFreeText(from.replace('whatsapp:', ''),
-                    `🎉 *¡Pago registrado exitosamente!*\n\n👤 ${nombre}\n📄 Documento: ${documento}\n\n✅ Tu pago ha sido validado. Puedes descargar tu certificado médico desde:\n\n🔗 https://bsl-utilidades-yp78a.ondigitalocean.app/static/solicitar-certificado.html?id=${paciente._id}\n\nGracias por confiar en BSL.`);
-
-                // Limpiar estado
+                // Limpiar estado ANTES de enviar mensaje
                 estadoPagos.delete(from);
                 estadoConversacion.set(from, MODO_HUMANO); // Cambiar a modo humano (bot desactivado)
 
-                // Detener bot
+                // Detener bot ANTES de enviar mensaje
                 await pool.query(`
                     UPDATE conversaciones_whatsapp
                     SET bot_activo = false
                     WHERE celular = $1
                 `, [from.replace('whatsapp:', '')]);
 
-                // Marcar todos los mensajes entrantes de esta conversación como leídos
+                // Marcar todos los mensajes entrantes como leídos ANTES de enviar mensaje de confirmación
+                // Esto evita que la conversación aparezca como "no leída" después del mensaje de pago
                 await pool.query(`
                     UPDATE mensajes_whatsapp m
-                    SET leido_por_agente = true
+                    SET leido_por_agente = true,
+                        fecha_lectura = NOW()
                     FROM conversaciones_whatsapp c
                     WHERE m.conversacion_id = c.id
                     AND c.celular = $1
                     AND m.direccion = 'entrante'
                     AND m.leido_por_agente = false
                 `, [from.replace('whatsapp:', '')]);
+
+                // Enviar mensaje de confirmación DESPUÉS de marcar todo como leído
+                await sendWhatsAppFreeText(from.replace('whatsapp:', ''),
+                    `🎉 *¡Pago registrado exitosamente!*\n\n👤 ${nombre}\n📄 Documento: ${documento}\n\n✅ Tu pago ha sido validado. Puedes descargar tu certificado médico desde:\n\n🔗 https://bsl-utilidades-yp78a.ondigitalocean.app/static/solicitar-certificado.html?id=${paciente._id}\n\nGracias por confiar en BSL.`);
 
                 console.log(`✅ Pago procesado exitosamente para ${documento} - MODO_HUMANO activado (bot desactivado)`);
                 return 'Pago confirmado';
