@@ -1534,6 +1534,12 @@
                     <button class="cmd-btn" onclick="enviarComandoRapido('/l')" title="Nuevo examen">L</button>
                     <button class="cmd-btn" onclick="enviarComandoInfoCita('/i')" title="Info de cita">🩺</button>
                     <button class="cmd-btn" onclick="enviarComandoRapido('/c')" title="Datos pago">C</button>
+
+                    <!-- Separador -->
+                    <span style="color: #cbd5e0; margin: 0 4px; font-size: 20px; user-select: none;">|</span>
+
+                    <!-- Consultas -->
+                    <button class="cmd-btn" onclick="enviarComandoRapido('/d')" title="Consultar orden">D</button>
                 </div>
 
                 <!-- Menú de plantillas -->
@@ -1622,7 +1628,8 @@
             '/p': { titulo: 'Precios', descripcion: 'Opciones Virtual y Presencial' },
             '/l': { titulo: 'Link nuevo examen', descripcion: 'Enlace para diligenciar examen' },
             '/i': { titulo: 'Info de cita', descripcion: 'Información de la cita programada' },
-            '/c': { titulo: 'Datos de pago', descripcion: 'Información bancaria' }
+            '/c': { titulo: 'Datos de pago', descripcion: 'Información bancaria' },
+            '/d': { titulo: 'Consultar orden', descripcion: 'Enlace para consultar estado' }
         };
 
         // Plantillas de mensajes rápidos
@@ -1655,7 +1662,10 @@ Cédula: 79 981 585
 Daviplata: 3014400818
 Nequi: 3008021701
 
-Llave Breb: @talero585`
+Llave Breb: @talero585`,
+            '/d': `Revisa acá:
+
+https://bsl-plataforma.com/consulta-orden.html`
         };
 
         // Inicializar
