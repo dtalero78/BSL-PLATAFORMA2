@@ -8213,6 +8213,8 @@ app.put('/api/historia-clinica/:id', async (req, res) => {
         console.log('═══════════════════════════════════════════════════════════');
         console.log('📝 Recibida solicitud de edición');
         console.log('   _id:', id);
+        console.log('   📦 Datos recibidos:', JSON.stringify(datos, null, 2));
+        console.log('   📊 Campo EPS:', datos.eps);
         console.log('═══════════════════════════════════════════════════════════');
 
         // Primero verificar si existe en HistoriaClinica
@@ -8269,6 +8271,11 @@ app.put('/api/historia-clinica/:id', async (req, res) => {
                 WHERE "_id" = $${paramIndex}
                 RETURNING *
             `;
+
+            console.log('🔍 Query SQL a ejecutar:');
+            console.log('   Query:', query);
+            console.log('   Valores:', values);
+            console.log('   Set Clauses:', setClauses);
 
             const result = await pool.query(query, values);
             const historiaActualizada = result.rows[0];
