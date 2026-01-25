@@ -482,6 +482,84 @@
             cursor: not-allowed;
         }
 
+        /* Confirmación de datos críticos */
+        .datos-criticos-box {
+            background: #FEF3C7;
+            border: 2px solid #F59E0B;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .datos-criticos-title {
+            display: flex;
+            align-items: center;
+            font-size: 16px;
+            font-weight: 600;
+            color: #92400E;
+            margin-bottom: 16px;
+        }
+
+        .datos-criticos-title svg {
+            width: 24px;
+            height: 24px;
+            margin-right: 8px;
+            stroke: #F59E0B;
+        }
+
+        .datos-criticos-values {
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .dato-critico-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        .dato-critico-item:last-child {
+            border-bottom: none;
+        }
+
+        .dato-critico-label {
+            color: #6B7280;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .dato-critico-value {
+            color: #1F2937;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .checkbox-confirmacion {
+            display: flex;
+            align-items: flex-start;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .checkbox-confirmacion input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            margin-top: 2px;
+            cursor: pointer;
+            accent-color: #F59E0B;
+        }
+
+        .checkbox-confirmacion label {
+            font-size: 14px;
+            color: #374151;
+            cursor: pointer;
+            line-height: 1.5;
+        }
+
         /* Responsive */
         @media (max-width: 600px) {
             .question-label {
@@ -755,6 +833,36 @@
                 <div class="question-content">
                     <label class="question-label">Confirma los datos de tu cita</label>
 
+                    <!-- Advertencia de datos críticos -->
+                    <div class="datos-criticos-box">
+                        <div class="datos-criticos-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                <line x1="12" y1="9" x2="12" y2="13"></line>
+                                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                            </svg>
+                            Verifica estos datos cuidadosamente
+                        </div>
+
+                        <div class="datos-criticos-values">
+                            <div class="dato-critico-item">
+                                <span class="dato-critico-label">Cédula:</span>
+                                <span class="dato-critico-value" id="confirmarCedula"></span>
+                            </div>
+                            <div class="dato-critico-item">
+                                <span class="dato-critico-label">Celular:</span>
+                                <span class="dato-critico-value" id="confirmarCelular"></span>
+                            </div>
+                        </div>
+
+                        <div class="checkbox-confirmacion">
+                            <input type="checkbox" id="checkboxConfirmacion" onchange="toggleBotonConfirmar()">
+                            <label for="checkboxConfirmacion">
+                                He verificado que mi número de cédula y celular son correctos. Entiendo que estos datos son esenciales para mi atención médica.
+                            </label>
+                        </div>
+                    </div>
+
                     <div class="resumen-container" id="resumenCita">
                         <!-- Se llena dinámicamente -->
                     </div>
@@ -762,7 +870,7 @@
 
                 <div class="navigation">
                     <button type="button" class="nav-btn prev-btn" onclick="pasoAnterior()">Atrás</button>
-                    <button type="button" class="nav-btn submit-btn" id="btnConfirmar" onclick="confirmarCita()">Confirmar Cita</button>
+                    <button type="button" class="nav-btn submit-btn" id="btnConfirmar" onclick="confirmarCita()" disabled>Confirmar Cita</button>
                 </div>
             </div>
 
@@ -1176,18 +1284,18 @@
             const aNombreDe = document.getElementById('aNombreDe').value;
             const empresaNombre = aNombreDe === 'EMPRESA' ? document.getElementById('empresa').value : 'Particular';
 
+            // Llenar datos críticos
+            document.getElementById('confirmarCedula').textContent = document.getElementById('numeroId').value;
+            document.getElementById('confirmarCelular').textContent = document.getElementById('celular').value;
+
+            // Resetear checkbox y deshabilitar botón
+            document.getElementById('checkboxConfirmacion').checked = false;
+            document.getElementById('btnConfirmar').disabled = true;
+
             const resumen = `
                 <div class="resumen-item">
                     <span class="resumen-label">Paciente</span>
                     <span class="resumen-value">${document.getElementById('primerNombre').value} ${document.getElementById('primerApellido').value}</span>
-                </div>
-                <div class="resumen-item">
-                    <span class="resumen-label">Cédula</span>
-                    <span class="resumen-value">${document.getElementById('numeroId').value}</span>
-                </div>
-                <div class="resumen-item">
-                    <span class="resumen-label">Celular</span>
-                    <span class="resumen-value">${document.getElementById('celular').value}</span>
                 </div>
                 <div class="resumen-item">
                     <span class="resumen-label">Tipo</span>
@@ -1212,6 +1320,12 @@
             `;
 
             document.getElementById('resumenCita').innerHTML = resumen;
+        }
+
+        function toggleBotonConfirmar() {
+            const checkbox = document.getElementById('checkboxConfirmacion');
+            const boton = document.getElementById('btnConfirmar');
+            boton.disabled = !checkbox.checked;
         }
 
         async function confirmarCita() {
