@@ -1370,18 +1370,7 @@ async function procesarFlujoPagos(message, from) {
 
             const paciente = pacienteExiste.rows[0];
 
-            // NUEVO: Validar que ya fue atendido (no está PENDIENTE)
-            if (paciente.atendido === 'PENDIENTE') {
-                estadoPagos.delete(from);
-                estadoConversacion.set(from, MODO_BOT); // Volver a modo bot
-                const nombre = `${paciente.primerNombre || ''} ${paciente.primerApellido || ''}`.trim();
-                await sendWhatsAppFreeText(from.replace('whatsapp:', ''),
-                    `⚠️ ${nombre}, tu examen aún no ha sido realizado.\n\nEl pago solo se registra después del examen. Por favor completa tu cita primero.`);
-                console.log(`🤖 MODO_BOT restaurado para ${from.replace('whatsapp:', '')} - Paciente no atendido`);
-                return 'Paciente no atendido';
-            }
-
-            // Marcar como pagado en base de datos
+            // Marcar como pagado en base de datos (sin importar si está PENDIENTE o ATENDIDO)
             console.log(`⏳ [ESPERANDO_DOCUMENTO] Procesando pago para documento: ${documento}`);
 
             await sendWhatsAppFreeText(from.replace('whatsapp:', ''),
@@ -1419,11 +1408,20 @@ async function procesarFlujoPagos(message, from) {
                     AND m.leido_por_agente = false
                 `, [from.replace('whatsapp:', '')]);
 
-                // Enviar mensaje de confirmación DESPUÉS de marcar todo como leído
-                await sendWhatsAppFreeText(from.replace('whatsapp:', ''),
-                    `🎉 *¡Pago registrado exitosamente!*\n\n👤 ${nombre}\n📄 Documento: ${documento}\n\n✅ Tu pago ha sido validado. Puedes descargar tu certificado médico desde:\n\n🔗 https://bsl-utilidades-yp78a.ondigitalocean.app/static/solicitar-certificado.html?id=${paciente._id}\n\nGracias por confiar en BSL.`);
+                // Mensaje diferenciado según estado de atención
+                let mensajeConfirmacion;
+                if (paciente.atendido === 'PENDIENTE') {
+                    // Paciente aún no atendido - pago registrado pero debe completar examen
+                    mensajeConfirmacion = `✅ *¡Pago registrado exitosamente!*\n\n👤 ${nombre}\n📄 Documento: ${documento}\n\n💰 Tu pago ha sido validado y guardado.\n\n⚠️ *Importante:* Debes completar tu examen médico. Una vez finalizado, podrás descargar tu certificado.\n\n📋 Un asesor te contactará para coordinar tu cita.\n\nGracias por confiar en BSL.`;
+                } else {
+                    // Paciente ya atendido - puede descargar certificado
+                    mensajeConfirmacion = `🎉 *¡Pago registrado exitosamente!*\n\n👤 ${nombre}\n📄 Documento: ${documento}\n\n✅ Tu pago ha sido validado. Puedes descargar tu certificado médico desde:\n\n🔗 https://bsl-utilidades-yp78a.ondigitalocean.app/static/solicitar-certificado.html?id=${paciente._id}\n\nGracias por confiar en BSL.`;
+                }
 
-                console.log(`✅ Pago procesado exitosamente para ${documento} - MODO_HUMANO activado (bot desactivado)`);
+                // Enviar mensaje de confirmación DESPUÉS de marcar todo como leído
+                await sendWhatsAppFreeText(from.replace('whatsapp:', ''), mensajeConfirmacion);
+
+                console.log(`✅ Pago procesado exitosamente para ${documento} (${paciente.atendido}) - MODO_HUMANO activado (bot desactivado)`);
                 return 'Pago confirmado';
             } else {
                 // No se encontró el registro
