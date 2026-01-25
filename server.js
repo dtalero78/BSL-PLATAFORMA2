@@ -1421,6 +1421,19 @@ async function procesarFlujoPagos(message, from) {
                 // Enviar mensaje de confirmación DESPUÉS de marcar todo como leído
                 await sendWhatsAppFreeText(from.replace('whatsapp:', ''), mensajeConfirmacion);
 
+                // SEGUNDO MARCADO: Asegurar que todos los mensajes estén marcados como leídos
+                // Esto es necesario porque el mensaje del documento puede guardarse después del primer UPDATE
+                await pool.query(`
+                    UPDATE mensajes_whatsapp m
+                    SET leido_por_agente = true,
+                        fecha_lectura = NOW()
+                    FROM conversaciones_whatsapp c
+                    WHERE m.conversacion_id = c.id
+                    AND c.celular = $1
+                    AND m.direccion = 'entrante'
+                    AND m.leido_por_agente = false
+                `, [from.replace('whatsapp:', '')]);
+
                 console.log(`✅ Pago procesado exitosamente para ${documento} (${paciente.atendido}) - MODO_HUMANO activado (bot desactivado)`);
                 return 'Pago confirmado';
             } else {
