@@ -214,6 +214,67 @@ class FormulariosRepository extends BaseRepository {
         const result = await this.query(query, [numeroId]);
         return result.rows[0] || null;
     }
+
+    /**
+     * Obtiene estadísticas de salud por empresa para IA
+     * @param {string} codEmpresa
+     * @returns {Promise<Object>}
+     */
+    async getEstadisticasSalud(codEmpresa) {
+        const query = `
+            SELECT
+                COUNT(*) as total_empleados,
+                COUNT(*) FILTER (WHERE UPPER(fuma) = 'SI') as fumadores,
+                COUNT(*) FILTER (WHERE UPPER(presion_alta) = 'SI') as presion_alta,
+                COUNT(*) FILTER (WHERE UPPER(problemas_cardiacos) = 'SI') as problemas_cardiacos,
+                COUNT(*) FILTER (WHERE UPPER(problemas_azucar) = 'SI') as diabetes,
+                COUNT(*) FILTER (WHERE UPPER(hormigueos) = 'SI') as hormigueos,
+                COUNT(*) FILTER (WHERE UPPER(dolor_espalda) = 'SI') as dolor_espalda,
+                COUNT(*) FILTER (WHERE UPPER(dolor_cabeza) = 'SI') as dolor_cabeza,
+                COUNT(*) FILTER (WHERE UPPER(problemas_sueno) = 'SI') as problemas_sueno,
+                COUNT(*) FILTER (WHERE UPPER(embarazo) = 'SI') as embarazos,
+                COUNT(*) FILTER (WHERE UPPER(hernias) = 'SI') as hernias,
+                COUNT(*) FILTER (WHERE UPPER(varices) = 'SI') as varices,
+                COUNT(*) FILTER (WHERE UPPER(hepatitis) = 'SI') as hepatitis,
+                COUNT(*) FILTER (WHERE UPPER(enfermedad_higado) = 'SI') as enfermedad_higado,
+                COUNT(*) FILTER (WHERE UPPER(enfermedad_pulmonar) = 'SI') as enfermedad_pulmonar,
+                COUNT(*) FILTER (WHERE UPPER(cirugia_ocular) = 'SI') as cirugia_ocular,
+                COUNT(*) FILTER (WHERE UPPER(usa_anteojos) = 'SI') as usa_anteojos,
+                COUNT(*) FILTER (WHERE UPPER(usa_lentes_contacto) = 'SI') as usa_lentes_contacto,
+                COUNT(*) FILTER (WHERE UPPER(condicion_medica) = 'SI') as condicion_medica_tratamiento,
+                COUNT(*) FILTER (WHERE UPPER(trastorno_psicologico) = 'SI') as trastorno_psicologico,
+                COUNT(*) FILTER (WHERE UPPER(sintomas_psicologicos) = 'SI') as sintomas_psicologicos,
+                COUNT(*) FILTER (WHERE UPPER(diagnostico_cancer) = 'SI') as diagnostico_cancer,
+                COUNT(*) FILTER (WHERE UPPER(enfermedades_laborales) = 'SI') as enfermedades_laborales,
+                COUNT(*) FILTER (WHERE UPPER(enfermedad_osteomuscular) = 'SI') as enfermedad_osteomuscular,
+                COUNT(*) FILTER (WHERE UPPER(enfermedad_autoinmune) = 'SI') as enfermedad_autoinmune,
+                COUNT(*) FILTER (WHERE UPPER(genero) = 'MASCULINO') as hombres,
+                COUNT(*) FILTER (WHERE UPPER(genero) = 'FEMENINO') as mujeres,
+                ROUND(AVG(edad)::numeric, 1) as edad_promedio,
+                MIN(edad) as edad_minima,
+                MAX(edad) as edad_maxima,
+                COUNT(*) FILTER (WHERE UPPER(familia_diabetes) = 'SI') as familia_diabetes,
+                COUNT(*) FILTER (WHERE UPPER(familia_hipertension) = 'SI') as familia_hipertension,
+                COUNT(*) FILTER (WHERE UPPER(familia_cancer) = 'SI') as familia_cancer,
+                COUNT(*) FILTER (WHERE UPPER(familia_infartos) = 'SI') as familia_infartos,
+                COUNT(*) FILTER (WHERE UPPER(familia_trastornos) = 'SI') as familia_trastornos_mentales,
+                COUNT(*) FILTER (WHERE UPPER(familia_hereditarias) = 'SI') as familia_enfermedades_hereditarias,
+                COUNT(*) FILTER (WHERE UPPER(familia_geneticas) = 'SI') as familia_enfermedades_geneticas,
+                COUNT(*) FILTER (WHERE UPPER(consumo_licor) = 'NUNCA') as licor_nunca,
+                COUNT(*) FILTER (WHERE UPPER(consumo_licor) = 'OCASIONALMENTE') as licor_ocasional,
+                COUNT(*) FILTER (WHERE UPPER(consumo_licor) = '1 DIA SEMANAL' OR UPPER(consumo_licor) = '1 DIA SEMANAL') as licor_1_dia,
+                COUNT(*) FILTER (WHERE UPPER(consumo_licor) = '2 DIAS SEMANALES' OR UPPER(consumo_licor) = '2 DIAS SEMANALES') as licor_2_dias,
+                COUNT(*) FILTER (WHERE UPPER(consumo_licor) LIKE '%+ DE 2%' OR UPPER(consumo_licor) LIKE '%MAS DE 2%') as licor_mas_2_dias,
+                COUNT(*) FILTER (WHERE UPPER(ejercicio) = 'OCASIONALMENTE') as ejercicio_ocasional,
+                COUNT(*) FILTER (WHERE UPPER(ejercicio) = '1 DIA SEMANAL' OR UPPER(ejercicio) = '1 DIA SEMANAL') as ejercicio_1_dia,
+                COUNT(*) FILTER (WHERE UPPER(ejercicio) = '2 DIAS SEMANALES' OR UPPER(ejercicio) = '2 DIAS SEMANALES') as ejercicio_2_dias,
+                COUNT(*) FILTER (WHERE UPPER(ejercicio) LIKE '%+ DE 2%' OR UPPER(ejercicio) LIKE '%MAS DE 2%') as ejercicio_mas_2_dias
+            FROM ${this.tableName}
+            WHERE UPPER(cod_empresa) = UPPER($1)
+        `;
+        const result = await this.query(query, [codEmpresa]);
+        return result.rows[0];
+    }
 }
 
 module.exports = new FormulariosRepository();

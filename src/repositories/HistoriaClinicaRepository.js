@@ -266,6 +266,24 @@ class HistoriaClinicaRepository extends BaseRepository {
         const result = await this.query(query, [new Date(fechaAtencion), id]);
         return result.rows[0] || null;
     }
+
+    /**
+     * Obtiene estadísticas de órdenes por empresa
+     * @param {string} codEmpresa
+     * @returns {Promise<Object>}
+     */
+    async getEstadisticasOrdenes(codEmpresa) {
+        const query = `
+            SELECT
+                COUNT(*) as total_ordenes,
+                COUNT(*) FILTER (WHERE "atendido" = 'ATENDIDO') as atendidos,
+                COUNT(*) FILTER (WHERE "atendido" = 'PENDIENTE') as pendientes
+            FROM ${this.tableName}
+            WHERE UPPER("codEmpresa") = UPPER($1)
+        `;
+        const result = await this.query(query, [codEmpresa]);
+        return result.rows[0];
+    }
 }
 
 module.exports = new HistoriaClinicaRepository();
