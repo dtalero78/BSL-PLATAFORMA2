@@ -216,6 +216,22 @@ class FormulariosRepository extends BaseRepository {
     }
 
     /**
+     * Busca formulario por wix_id o numero_id (existencia)
+     * @param {string} wixId
+     * @param {string} numeroId
+     * @returns {Promise<Object|null>}
+     */
+    async findByWixIdOrNumeroId(wixId, numeroId) {
+        const query = `
+            SELECT id FROM ${this.tableName}
+            WHERE wix_id = $1 OR numero_id = $2
+            LIMIT 1
+        `;
+        const result = await this.query(query, [wixId, numeroId]);
+        return result.rows[0] || null;
+    }
+
+    /**
      * Obtiene estadísticas de salud por empresa para IA
      * @param {string} codEmpresa
      * @returns {Promise<Object>}

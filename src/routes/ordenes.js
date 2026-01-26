@@ -9,6 +9,7 @@ const { dispararWebhookMake, limpiarString, limpiarTelefono, mapearCiudad } = re
 const { notificarNuevaOrden } = require('../helpers/sse');
 const { sendWhatsAppMessage } = require('../services/whatsapp');
 const { notificarCoordinadorNuevaOrden } = require('../services/payment');
+const { HistoriaClinicaRepository, FormulariosRepository } = require('../repositories');
 
 // Configuración de multer para uploads en memoria
 const upload = multer({ storage: multer.memoryStorage() });
@@ -23,37 +24,14 @@ router.get('/verificar-duplicado/:numeroId', async (req, res) => {
             return res.json({ success: true, hayDuplicado: false, tipo: null });
         }
 
-        // Primero buscar órdenes PENDIENTES (solo de la misma empresa si se especifica)
-        let queryPendiente = `
-            SELECT "_id", "numeroId", "primerNombre", "primerApellido",
-                   "codEmpresa", "empresa", "tipoExamen", "atendido",
-                   "_createdDate", "fechaAtencion"
-            FROM "HistoriaClinica"
-            WHERE "numeroId" = $1
-              AND "atendido" = 'PENDIENTE'
-        `;
-        const paramsPendiente = [numeroId];
+        // Use repository - buscar duplicados pendientes
+        const ordenExistente = await HistoriaClinicaRepository.findDuplicadoPendiente(numeroId, codEmpresa);
 
-        if (codEmpresa) {
-            queryPendiente += ` AND "codEmpresa" = $2`;
-            paramsPendiente.push(codEmpresa);
-        }
+        if (ordenExistente) {
 
-        queryPendiente += ` ORDER BY "_createdDate" DESC LIMIT 1`;
-
-        const resultPendiente = await pool.query(queryPendiente, paramsPendiente);
-
-        if (resultPendiente.rows.length > 0) {
-            const ordenExistente = resultPendiente.rows[0];
-
-            // Verificar si tiene formulario asociado
-            const formResult = await pool.query(`
-                SELECT id FROM formularios
-                WHERE wix_id = $1 OR numero_id = $2
-                LIMIT 1
-            `, [ordenExistente._id, numeroId]);
-
-            const tieneFormulario = formResult.rows.length > 0;
+            // Verificar si tiene formulario asociado - use repository
+            const formExistente = await FormulariosRepository.findByWixIdOrNumeroId(ordenExistente._id, numeroId);
+            const tieneFormulario = !!formExistente;
 
             // Verificar si la fecha de atención ya pasó
             let fechaExpirada = false;
@@ -83,28 +61,10 @@ router.get('/verificar-duplicado/:numeroId', async (req, res) => {
             });
         }
 
-        // Si no hay PENDIENTE, buscar ATENDIDO (solo de la misma empresa si se especifica)
-        let queryAtendido = `
-            SELECT "_id", "numeroId", "primerNombre", "primerApellido",
-                   "codEmpresa", "empresa", "tipoExamen", "atendido",
-                   "_createdDate", "fechaAtencion"
-            FROM "HistoriaClinica"
-            WHERE "numeroId" = $1
-              AND "atendido" = 'ATENDIDO'
-        `;
-        const paramsAtendido = [numeroId];
+        // Si no hay PENDIENTE, buscar ATENDIDO - use repository
+        const ordenAtendida = await HistoriaClinicaRepository.findDuplicadoAtendido(numeroId, codEmpresa);
 
-        if (codEmpresa) {
-            queryAtendido += ` AND "codEmpresa" = $2`;
-            paramsAtendido.push(codEmpresa);
-        }
-
-        queryAtendido += ` ORDER BY "_createdDate" DESC LIMIT 1`;
-
-        const resultAtendido = await pool.query(queryAtendido, paramsAtendido);
-
-        if (resultAtendido.rows.length > 0) {
-            const ordenAtendida = resultAtendido.rows[0];
+        if (ordenAtendida) {
 
             return res.json({
                 success: true,
@@ -147,25 +107,16 @@ router.patch('/:id/fecha-atencion', async (req, res) => {
             });
         }
 
-        // Actualizar en PostgreSQL - construir fecha correcta con zona horaria Colombia
+        // Actualizar en PostgreSQL - use repository
         const fechaCorrecta = construirFechaAtencionColombia(fechaAtencion, horaAtencion);
-        const result = await pool.query(`
-            UPDATE "HistoriaClinica"
-            SET "fechaAtencion" = $1,
-                "horaAtencion" = NULL,
-                "medico" = COALESCE($3, "medico")
-            WHERE "_id" = $2
-            RETURNING "_id", "numeroId", "primerNombre", "primerApellido", "fechaAtencion", "medico"
-        `, [fechaCorrecta, id, medico || null]);
+        const ordenActualizada = await HistoriaClinicaRepository.actualizarFechaAtencionConMedico(id, fechaCorrecta, medico || null);
 
-        if (result.rows.length === 0) {
+        if (!ordenActualizada) {
             return res.status(404).json({
                 success: false,
                 message: 'Orden no encontrada'
             });
         }
-
-        const ordenActualizada = result.rows[0];
 
         // Intentar actualizar en Wix también
         try {
@@ -1479,25 +1430,10 @@ router.get('/', authMiddleware, async (req, res) => {
         const countResult = await pool.query(countQuery, countParams);
         const total = parseInt(countResult.rows[0].count);
 
-        // Si se filtra por empresa, calcular estadísticas (programados hoy, atendidos hoy)
+        // Si se filtra por empresa, calcular estadísticas - use repository
         let stats = null;
         if (codEmpresa) {
-            const hoy = new Date();
-            const inicioHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 0, 0, 0);
-            const finHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59);
-
-            const statsResult = await pool.query(`
-                SELECT
-                    COUNT(*) FILTER (WHERE "fechaAtencion" >= $2 AND "fechaAtencion" <= $3) as programados_hoy,
-                    COUNT(*) FILTER (WHERE "fechaConsulta" >= $2 AND "fechaConsulta" <= $3) as atendidos_hoy
-                FROM "HistoriaClinica"
-                WHERE "codEmpresa" = $1
-            `, [codEmpresa, inicioHoy.toISOString(), finHoy.toISOString()]);
-
-            stats = {
-                programadosHoy: parseInt(statsResult.rows[0].programados_hoy) || 0,
-                atendidosHoy: parseInt(statsResult.rows[0].atendidos_hoy) || 0
-            };
+            stats = await HistoriaClinicaRepository.getStatsHoy(codEmpresa);
         }
 
         res.json({
@@ -1525,14 +1461,10 @@ router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
-        const query = `
-            SELECT * FROM "HistoriaClinica"
-            WHERE "_id" = $1
-        `;
+        // Use repository
+        const orden = await HistoriaClinicaRepository.findById(id);
 
-        const result = await pool.query(query, [id]);
-
-        if (result.rows.length === 0) {
+        if (!orden) {
             return res.status(404).json({
                 success: false,
                 message: 'Orden no encontrada'
@@ -1541,7 +1473,7 @@ router.get('/:id', async (req, res) => {
 
         res.json({
             success: true,
-            data: result.rows[0]
+            data: orden
         });
     } catch (error) {
         console.error('Error al obtener orden:', error);

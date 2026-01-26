@@ -268,6 +268,78 @@ class HistoriaClinicaRepository extends BaseRepository {
     }
 
     /**
+     * Busca duplicados atendidos por número de documento
+     * @param {string} numeroId
+     * @param {string} codEmpresa - Opcional
+     * @returns {Promise<Object|null>}
+     */
+    async findDuplicadoAtendido(numeroId, codEmpresa = null) {
+        let query = `
+            SELECT "_id", "numeroId", "primerNombre", "primerApellido",
+                   "codEmpresa", "empresa", "tipoExamen", "atendido",
+                   "_createdDate", "fechaAtencion"
+            FROM ${this.tableName}
+            WHERE "numeroId" = $1
+            AND "atendido" = 'ATENDIDO'
+        `;
+        const params = [numeroId];
+
+        if (codEmpresa) {
+            query += ` AND "codEmpresa" = $2`;
+            params.push(codEmpresa);
+        }
+
+        query += ` ORDER BY "_createdDate" DESC LIMIT 1`;
+
+        const result = await this.query(query, params);
+        return result.rows[0] || null;
+    }
+
+    /**
+     * Actualiza fecha de atención con médico (para PATCH)
+     * @param {string} id
+     * @param {Date} fechaCorrecta
+     * @param {string|null} medico
+     * @returns {Promise<Object|null>}
+     */
+    async actualizarFechaAtencionConMedico(id, fechaCorrecta, medico = null) {
+        const query = `
+            UPDATE ${this.tableName}
+            SET "fechaAtencion" = $1,
+                "horaAtencion" = NULL,
+                "medico" = COALESCE($3, "medico")
+            WHERE "_id" = $2
+            RETURNING "_id", "numeroId", "primerNombre", "primerApellido", "fechaAtencion", "medico"
+        `;
+        const result = await this.query(query, [fechaCorrecta, id, medico]);
+        return result.rows[0] || null;
+    }
+
+    /**
+     * Obtiene estadísticas de programados/atendidos hoy por empresa
+     * @param {string} codEmpresa
+     * @returns {Promise<{programadosHoy: number, atendidosHoy: number}>}
+     */
+    async getStatsHoy(codEmpresa) {
+        const hoy = new Date();
+        const inicioHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 0, 0, 0);
+        const finHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59);
+
+        const result = await this.query(`
+            SELECT
+                COUNT(*) FILTER (WHERE "fechaAtencion" >= $2 AND "fechaAtencion" <= $3) as programados_hoy,
+                COUNT(*) FILTER (WHERE "fechaConsulta" >= $2 AND "fechaConsulta" <= $3) as atendidos_hoy
+            FROM ${this.tableName}
+            WHERE "codEmpresa" = $1
+        `, [codEmpresa, inicioHoy.toISOString(), finHoy.toISOString()]);
+
+        return {
+            programadosHoy: parseInt(result.rows[0].programados_hoy) || 0,
+            atendidosHoy: parseInt(result.rows[0].atendidos_hoy) || 0
+        };
+    }
+
+    /**
      * Busca paciente por celular con normalización flexible
      * @param {string} celular
      * @returns {Promise<Object|null>}

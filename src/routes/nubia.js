@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 const { sendWhatsAppMessage, sendWhatsAppFreeText } = require('../services/whatsapp');
+const { HistoriaClinicaRepository } = require('../repositories');
 
 // ==========================================
 // BARRIDO NUBIA - Enviar link médico virtual (a la hora exacta de la cita)
@@ -484,18 +485,12 @@ router.post('/nubia/cobrar/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Obtener datos del paciente (sin modificar pvEstado)
-        const result = await pool.query(`
-            SELECT *
-            FROM "HistoriaClinica"
-            WHERE "_id" = $1
-        `, [id]);
+        // Obtener datos del paciente - use repository
+        const paciente = await HistoriaClinicaRepository.findById(id);
 
-        if (result.rows.length === 0) {
+        if (!paciente) {
             return res.status(404).json({ success: false, message: 'Registro no encontrado' });
         }
-
-        const paciente = result.rows[0];
 
         // Enviar mensaje de confirmación de continuidad del proceso
         if (paciente.celular) {
@@ -544,20 +539,14 @@ router.post('/nubia/enviar-masivo', async (req, res) => {
             const id = ids[i];
 
             try {
-                // Obtener datos del paciente
-                const result = await pool.query(`
-                    SELECT *
-                    FROM "HistoriaClinica"
-                    WHERE "_id" = $1
-                `, [id]);
+                // Obtener datos del paciente - use repository
+                const paciente = await HistoriaClinicaRepository.findById(id);
 
-                if (result.rows.length === 0) {
+                if (!paciente) {
                     console.error(`❌ [NUBIA] Paciente ${id} no encontrado`);
                     errores++;
                     continue;
                 }
-
-                const paciente = result.rows[0];
 
                 // Enviar mensaje
                 if (paciente.celular) {
@@ -616,22 +605,15 @@ router.delete('/nubia/eliminar/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Verificar que el registro existe
-        const checkResult = await pool.query(`
-            SELECT "_id", "primerNombre", "primerApellido", "numeroId"
-            FROM "HistoriaClinica" WHERE "_id" = $1
-        `, [id]);
+        // Verificar que el registro existe - use repository
+        const paciente = await HistoriaClinicaRepository.findById(id);
 
-        if (checkResult.rows.length === 0) {
+        if (!paciente) {
             return res.status(404).json({ success: false, message: 'Registro no encontrado' });
         }
 
-        const paciente = checkResult.rows[0];
-
-        // Eliminar el registro
-        await pool.query(`
-            DELETE FROM "HistoriaClinica" WHERE "_id" = $1
-        `, [id]);
+        // Eliminar el registro - use repository
+        await HistoriaClinicaRepository.delete(id);
 
         console.log(`🗑️ [NUBIA] Registro eliminado: ${paciente.primerNombre} ${paciente.primerApellido} (${paciente.numeroId})`);
 
@@ -650,16 +632,12 @@ router.post('/nubia/enviar-mensaje/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Obtener datos del paciente
-        const result = await pool.query(`
-            SELECT * FROM "HistoriaClinica" WHERE "_id" = $1
-        `, [id]);
+        // Obtener datos del paciente - use repository
+        const paciente = await HistoriaClinicaRepository.findById(id);
 
-        if (result.rows.length === 0) {
+        if (!paciente) {
             return res.status(404).json({ success: false, message: 'Registro no encontrado' });
         }
-
-        const paciente = result.rows[0];
 
         if (!paciente.celular) {
             return res.status(400).json({ success: false, message: 'El paciente no tiene celular registrado' });
