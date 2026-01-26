@@ -9,12 +9,28 @@ BSL Plataforma - Medical occupational health system built with Node.js/Express b
 ## Development Commands
 
 ```bash
-npm install        # Install dependencies
+npm install        # Install dependencies (generates package-lock.json if missing)
 npm start          # Start production server (node server.js)
 npm run dev        # Start development server with auto-reload (nodemon)
 ```
 
 Server runs on port 8080 by default (configurable via PORT env var).
+
+## Deployment
+
+The application is deployed to **DigitalOcean App Platform** using Docker.
+
+### Docker Build
+- Uses `Dockerfile` with Node.js 20 slim base image
+- Installs Chromium and dependencies for Puppeteer (PDF generation)
+- Uses `npm ci --omit=dev` for production dependencies
+- **CRITICAL**: `package-lock.json` MUST be committed to repository
+  - Docker build will fail without it (npm ci requirement)
+  - Never add package-lock.json to .gitignore
+  - Regenerate with `npm install` if missing
+
+### Environment Variables in DigitalOcean
+All required environment variables must be configured in App Platform settings before deployment. Build will fail if critical variables (DB_HOST, DB_PASSWORD, JWT_SECRET) are missing.
 
 ## Architecture Overview
 
@@ -40,7 +56,7 @@ Key synchronization scripts:
 - `sincronizar-datos-medicos.js` - Daily sync of medical fields (mdConceptoFinal, mdDx1, etc.) for records with fechaConsulta = today
 - `migracion-formulario.js` - Migration of FORMULARIO collection from Wix
 
-### Backend (server.js - ~9000 lines)
+### Backend (server.js - ~15,000 lines, 145+ endpoints)
 
 Single Express server handling:
 - **Authentication & Authorization**: JWT-based auth with role-based permissions (ADMIN, APROBADOR, MEDICO, etc.)
@@ -60,30 +76,71 @@ Key endpoint patterns:
 
 Multiple HTML pages with vanilla JavaScript (no framework):
 - `ordenes.html` - Main dashboard for viewing/managing patient orders
+- `nueva-orden.html`, `nuevaorden1.html`, `nuevaorden2.html`, `nuevaorden3.html` - Multi-step order creation wizards
 - `panel-admin.html` - Admin panel for user management
-- `panel-empresas.html` - Company portal for viewing employee exams
+- `panel-empresas.html` / `empresas.html` - Company portal for viewing employee exams
 - `index.html` - Patient intake form (multi-step wizard)
-- `audiometria.html`, `visiometria.html` - Exam interfaces
-- `certificado-template.html` - Medical certificate template
+- `audiometria.html`, `audiometria-virtual.html` - Audiometry exam interfaces
+- `visiometria.html` - Vision exam interface
+- `medicos.html` - Medical staff management
+- `calendario.html` - Appointment scheduling interface
+- `consulta-orden.html` - Public order lookup
+- `examenes.html` - Exam type management
+- `estadisticas.html` - Statistics dashboard
+- `certificado-template.html` - Medical certificate PDF template
+- `enviar-siigo.html` - Integration with Siigo accounting system
+- `actualizar-foto.html` - Photo upload interface
 
 Frontend architecture:
 - Direct DOM manipulation (no virtual DOM)
 - Fetch API for backend communication
 - Inline event handlers and global functions
 - Modal-based workflows for patient details
+- Socket.io for real-time updates (appointments, notifications)
 
 ### Wix Integration (WIX/)
 
 Backend functions that run on Wix platform (deployed separately):
-- `http-functions.js` - Main HTTP endpoints exposed by Wix
+- `http-functions.js` - Main HTTP endpoints exposed by Wix (~118KB, primary integration point)
   - `get_historiaClinicaPorFecha` - Get records by consultation date
   - `get_exportarHistoriaClinica` - Paginated export for migration
   - `post_updateHistoriaClinica` - Update medical records
-- `exposeDataBase.js` - Database query functions
-- `agendarAlonso.js` - Appointment scheduling logic
-- `automaticWhp.js` - WhatsApp automation
+- `exposeDataBase.js` - Database query functions (~35KB)
+- `agendarAlonso.js` - Appointment scheduling logic with Alonso system integration
+- `automaticWhp.js` - WhatsApp automation workflows (~18KB)
+- `audiometriaVirtual.js` - Virtual audiometry exam logic
+- `ansiedadWix.js`, `depresionWix.js`, `congruenciaWix.js` - Psychological test handlers
+- `adcVirtual.js` - Virtual ADC (Atención Domiciliaria Continuada) handling
 
 These files use Wix SDK (`wix-data`, `wix-fetch`) and must be deployed to Wix separately from the main platform.
+
+### Chatbot & Scheduling Features
+- **CHATBOT Collection** (Wix): Stores chatbot conversations and automated scheduling requests
+- **Appointment Scheduling**: Integrated with external "Alonso" appointment system
+- **AI-Powered Assistance**: OpenAI integration for intelligent form filling and patient queries
+- **Virtual Exams**: Support for remote audiometry and psychological testing
+
+### WhatsApp Chat Platform (Multi-Agent System)
+The platform includes a full WhatsApp-based customer service system:
+
+**Architecture**:
+- Real-time Socket.io communication between agents and server
+- Multi-agent routing with automatic assignment rules
+- Agent status management (online, offline, busy)
+- Conversation transfer between agents
+- Message persistence in PostgreSQL
+
+**Key Components**:
+- `conversaciones_whatsapp`: Conversation threads with status tracking
+- `mensajes_whatsapp`: Message history (customer + agent messages)
+- `agentes_estado`: Real-time agent availability
+- `reglas_enrutamiento`: Smart routing rules (priority-based, condition-driven)
+- `transferencias_conversacion`: Transfer audit trail
+
+**Integration Points**:
+- Twilio WhatsApp API for message sending
+- WHAPI for alternative WhatsApp channel
+- Automated message templates for common scenarios
 
 ## Data Flow Patterns
 
@@ -100,7 +157,9 @@ The patient details modal loads data from **PostgreSQL HistoriaClinica table** v
 
 ## Database Schema
 
-### Key Tables
+All tables are created automatically on server startup with `CREATE TABLE IF NOT EXISTS`.
+
+### Core Tables
 
 **formularios** (PostgreSQL)
 - Patient intake form submissions
@@ -118,12 +177,48 @@ The patient details modal loads data from **PostgreSQL HistoriaClinica table** v
 - Roles: ADMIN, MEDICO, APROBADOR, EMPRESA
 - Permissions stored as JSON array
 
+### Exam & Medical Data Tables
+
+- **audiometrias**: Audiometry test results
+- **visiometrias**: Vision test results
+- **visiometrias_virtual**: Virtual vision test results
+- **pruebasADC**: ADC (Atención Domiciliaria Continuada) test data
+- **laboratorios**: Laboratory test results
+- **medicos_disponibilidad**: Doctor availability/scheduling
+
+### WhatsApp Chat System Tables
+
+- **conversaciones_whatsapp**: Chat conversation threads
+- **mensajes_whatsapp**: Individual messages in conversations
+- **agentes_estado**: Agent status (online, offline, busy)
+- **transferencias_conversacion**: Conversation transfer history
+- **reglas_enrutamiento**: Routing rules for incoming chats
+
+### Authentication & Sessions
+
+- **sesiones**: Active user sessions (JWT tracking)
+- **permisos_usuario**: User-specific permission overrides
+
 ### Field Naming Conventions
 - **Frontend**: camelCase (primerNombre, numeroId)
 - **PostgreSQL**: snake_case for formularios, camelCase with quotes for HistoriaClinica ("primerNombre")
 - **Wix**: camelCase (primerNombre, numeroId)
 
 Careful mapping required when transforming data between systems.
+
+## External Integrations
+
+### Third-Party Services
+- **AWS S3**: File storage for patient photos and documents
+- **Twilio**: WhatsApp messaging for notifications and appointment reminders
+- **OpenAI**: AI-powered features (chatbot, form assistance)
+- **Siigo**: Accounting system integration for billing
+- **Alegra**: Alternative accounting system integration
+- **Wix**: Primary CMS for medical records (source of truth)
+
+### Communication Channels
+- **WhatsApp** (via Twilio & WHAPI): Automated messages for appointments, reminders, order confirmations
+- **Socket.io**: Real-time web notifications and updates
 
 ## Environment Variables
 
@@ -138,6 +233,7 @@ DB_NAME=defaultdb
 
 # Server
 PORT=8080
+BASE_URL=https://your-domain.com
 
 # JWT
 JWT_SECRET=
@@ -147,6 +243,36 @@ AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
 AWS_REGION=
 AWS_BUCKET_NAME=
+
+# Twilio (WhatsApp)
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_WHATSAPP_FROM=
+TWILIO_WHATSAPP_NUMBER=
+TWILIO_MESSAGING_SERVICE_SID=
+TWILIO_TEMPLATE_*=  # Various message templates
+
+# WHAPI
+WHAPI_TOKEN=
+WHAPI_CHANNEL_ID=
+
+# OpenAI
+OPENAI_API_KEY=
+
+# Alegra (Accounting)
+ALEGRA_TOKEN=
+ALEGRA_EMAIL=
+ALEGRA_API_URL=
+
+# DigitalOcean Spaces
+SPACES_KEY=
+SPACES_SECRET=
+SPACES_ENDPOINT=
+SPACES_BUCKET=
+SPACES_CDN=
+
+# Other
+COORDINADOR_CELULAR=  # Coordinator phone for notifications
 ```
 
 ## Migration & Sync Scripts
@@ -165,6 +291,20 @@ node migracion-formulario.js
 ```
 
 Use `--dry-run` to preview changes without modifying database.
+
+**Note**: These scripts are excluded from git (in .gitignore) as they may contain credentials or sensitive configuration.
+
+## Automated Tasks (Cron Jobs)
+
+The server runs automated background tasks via `node-cron`:
+
+### NUBIA System Sweep (Every 5 minutes)
+Manages virtual medical appointments for NUBIA telemedicine platform:
+1. **Send Virtual Link**: Sends medical appointment link at exact scheduled time
+2. **Mark as Attended**: Automatically marks past appointments as ATENDIDO
+3. **Payment Reminders**: Sends payment reminder to SANITHELP-JJ 1 hour after consultation
+
+Location: [server.js:13369-13383](server.js#L13369-L13383)
 
 ## Important Patterns & Gotchas
 
@@ -222,3 +362,20 @@ When modifying code, use these patterns for file references:
 - Ensure Wix functions are deployed (WIX/http-functions.js)
 - Check URL format: `https://www.bsl.com.co/_functions/endpointName`
 - Verify CORS headers in Wix function responses
+
+**Docker build fails with "npm ci requires package-lock.json":**
+- Ensure package-lock.json is committed to repository
+- Never add package-lock.json to .gitignore
+- Regenerate with `npm install` if missing
+- Commit and push the file before deploying
+
+**PDF generation fails in production:**
+- Verify Chromium is installed in Docker container (line 68 of Dockerfile)
+- Check PUPPETEER_EXECUTABLE_PATH is set to `/usr/bin/chromium`
+- Ensure all required system libraries are installed (lines 8-49 of Dockerfile)
+
+**WhatsApp messages not sending:**
+- Verify Twilio credentials (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+- Check WHAPI_TOKEN is valid and active
+- Review message template IDs (TWILIO_TEMPLATE_*)
+- Check server logs for API errors from Twilio/WHAPI

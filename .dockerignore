@@ -6,3 +6,6 @@ npm-debug.log
 *.md
 .DS_Store
 .vscode
+.cache
+scripts/
+WIX/
