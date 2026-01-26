@@ -56,21 +56,72 @@ Key synchronization scripts:
 - `sincronizar-datos-medicos.js` - Daily sync of medical fields (mdConceptoFinal, mdDx1, etc.) for records with fechaConsulta = today
 - `migracion-formulario.js` - Migration of FORMULARIO collection from Wix
 
-### Backend (server.js - ~15,000 lines, 145+ endpoints)
+### Backend Architecture (Modular Structure)
 
-Single Express server handling:
-- **Authentication & Authorization**: JWT-based auth with role-based permissions (ADMIN, APROBADOR, MEDICO, etc.)
-- **Patient Management**: CRUD operations for patient records across both databases
-- **Medical Exams**: Audiometry, visiometry, psychological tests
-- **Certificate Generation**: PDF generation using Puppeteer
-- **Wix Integration**: HTTP endpoints to fetch/sync data with Wix CMS
+**Entry Point**: `server.js` (~237 lines) - Express server with modular routing
 
-Key endpoint patterns:
-- `/api/historia-clinica/*` - Patient medical history (synced from Wix)
-- `/api/formularios/*` - Patient intake forms
-- `/api/ordenes/*` - Medical exam orders
-- `/api/auth/*` - Authentication endpoints
-- `/api/admin/*` - Admin operations (user management, permissions)
+**Directory Structure**:
+```
+src/
+  config/
+    database.js         - PostgreSQL pool singleton
+    init-db.js          - Database schema initialization
+  middleware/
+    auth.js             - JWT authentication & authorization
+  helpers/
+    date.js             - Date/time utilities (Colombia timezone)
+    phone.js            - Phone number normalization
+    webhook.js          - Make.com webhook utilities
+    sse.js              - Server-Sent Events for real-time notifications
+    certificate.js      - PDF certificate generation
+  services/
+    spaces-upload.js    - DigitalOcean Spaces file uploads
+    whatsapp.js         - Twilio WhatsApp messaging
+    bot.js              - AI chatbot (OpenAI RAG)
+    payment.js          - Payment classification (OpenAI Vision)
+    wix-sync.js         - Wix CMS synchronization
+  repositories/
+    BaseRepository.js           - Base CRUD operations
+    HistoriaClinicaRepository.js - Medical records
+    FormulariosRepository.js     - Patient intake forms
+    UsuariosRepository.js        - User management
+    AudiometriasRepository.js    - Hearing tests
+    VisiometriasRepository.js    - Vision tests
+    EmpresasRepository.js        - Company records
+    MedicosRepository.js         - Doctor records
+  routes/
+    auth.js             - /api/auth/* - Authentication
+    admin.js            - /api/admin/* - Admin operations
+    whatsapp.js         - /api/whatsapp/* - WhatsApp chat
+    formularios.js      - /api/formularios/* - Patient forms
+    ordenes.js          - /api/ordenes/* - Medical orders
+    ordenes-legacy.js   - Legacy /api/ level routes
+    historia-clinica.js - /api/historia-clinica/* - Medical history
+    medicos.js          - /api/medicos/* - Doctor management
+    empresas.js         - /api/empresas/* - Company management
+    calendario.js       - /api/calendario/*, /api/examenes/* - Scheduling
+    nubia.js            - /api/nubia/* - Virtual appointments
+    audiometria.js      - /api/audiometrias/* - Hearing tests
+    pruebas-adc.js      - /api/pruebas-adc/* - ADC tests
+    estado-pruebas.js   - /api/estado-pruebas/* - Test status
+    consulta-publica.js - /api/consulta-ordenes - Public lookups
+    visiometria.js      - /api/visiometrias/* - Vision tests
+    laboratorios.js     - /api/laboratorios/* - Lab results
+    certificados.js     - /preview-certificado/*, /api/certificado-pdf/*
+    rips.js             - /api/rips/* - Colombian health reports
+    comunidad.js        - /api/comunidad/* - Community features
+    siigo.js            - /api/envio-siigo/* - Siigo accounting
+    facturacion.js      - /api/facturacion/* - Alegra invoicing
+    basic.js            - /, /health, /api/events (SSE), /api/wix/*
+  cron/
+    (cron scheduling configured in server.js)
+```
+
+**Key Features**:
+- **Repository Pattern**: Data access abstraction with BaseRepository + specialized repos
+- **Modular Routing**: 20+ route modules organized by domain
+- **Service Layer**: Specialized services for external integrations
+- **Automated Tasks**: Cron jobs for NUBIA virtual appointments (every 5 min)
 
 ### Frontend (public/)
 
@@ -159,32 +210,38 @@ The patient details modal loads data from **PostgreSQL HistoriaClinica table** v
 
 All tables are created automatically on server startup with `CREATE TABLE IF NOT EXISTS`.
 
+**Database Access Pattern**: Use the Repository layer (`src/repositories/`) instead of direct `pool.query()` calls for cleaner, testable code.
+
 ### Core Tables
 
 **formularios** (PostgreSQL)
 - Patient intake form submissions
 - Auto-migrates new columns on server startup
 - Links to HistoriaClinica via `wix_id` foreign key
+- **Access via**: `FormulariosRepository`
 
 **HistoriaClinica** (PostgreSQL)
 - Medical history records synced from Wix
 - Primary key: `_id` (Wix-generated UUID)
 - Critical fields: `numeroId` (patient ID), `atendido` (status), `mdConceptoFinal` (medical concept), `mdDx1/mdDx2` (diagnoses)
 - Index on: `numeroId`, `celular`, `codEmpresa`, `fechaAtencion`
+- **Access via**: `HistoriaClinicaRepository`
 
 **usuarios** (PostgreSQL)
 - Platform user accounts
 - Roles: ADMIN, MEDICO, APROBADOR, EMPRESA
 - Permissions stored as JSON array
+- **Access via**: `UsuariosRepository`
 
 ### Exam & Medical Data Tables
 
-- **audiometrias**: Audiometry test results
-- **visiometrias**: Vision test results
+- **audiometrias**: Audiometry test results → `AudiometriasRepository`
+- **visiometrias**: Vision test results → `VisiometriasRepository`
 - **visiometrias_virtual**: Virtual vision test results
 - **pruebasADC**: ADC (Atención Domiciliaria Continuada) test data
 - **laboratorios**: Laboratory test results
-- **medicos_disponibilidad**: Doctor availability/scheduling
+- **medicos_disponibilidad**: Doctor availability/scheduling → `MedicosRepository`
+- **empresas**: Company records → `EmpresasRepository`
 
 ### WhatsApp Chat System Tables
 
@@ -379,3 +436,107 @@ When modifying code, use these patterns for file references:
 - Check WHAPI_TOKEN is valid and active
 - Review message template IDs (TWILIO_TEMPLATE_*)
 - Check server logs for API errors from Twilio/WHAPI
+
+## Repository Pattern Guide
+
+The codebase uses the **Repository Pattern** for database access abstraction. Always prefer repositories over direct `pool.query()` calls.
+
+### Using Repositories
+
+```javascript
+// Import repositories
+const { HistoriaClinicaRepository, FormulariosRepository } = require('../repositories');
+
+// Basic CRUD operations (inherited from BaseRepository)
+const paciente = await HistoriaClinicaRepository.findById(id);
+const pacientes = await HistoriaClinicaRepository.findAll({ codEmpresa: 'ABC' });
+const created = await FormulariosRepository.create({ numero_id: '123', ... });
+const updated = await HistoriaClinicaRepository.update(id, { atendido: 'ATENDIDO' });
+const deleted = await HistoriaClinicaRepository.delete(id);
+
+// Specialized methods (defined in each repository)
+const ultimoPaciente = await HistoriaClinicaRepository.findUltimoPorNumeroId('123456');
+const stats = await FormulariosRepository.getEstadisticasSalud('COD_EMP');
+const duplicado = await HistoriaClinicaRepository.findDuplicadoPendiente('123456', 'COD_EMP');
+```
+
+### Available Repositories
+
+1. **BaseRepository** (`src/repositories/BaseRepository.js`)
+   - `findById(id, key = '_id')` - Find single record by ID
+   - `findOne(filters)` - Find first matching record
+   - `findAll(filters, options)` - Find all matching records
+   - `create(data)` - Insert new record
+   - `update(id, data, key = '_id')` - Update record
+   - `delete(id, key = '_id')` - Delete record
+   - `query(sql, params)` - Execute raw SQL
+   - `transaction(callback)` - Execute within transaction
+
+2. **HistoriaClinicaRepository** (`src/repositories/HistoriaClinicaRepository.js`)
+   - Specialized methods for medical records
+   - `findByNumeroId(numeroId)`, `findByCelular(celular)`
+   - `findDuplicadoPendiente()`, `findDuplicadoAtendido()`
+   - `actualizarFechaAtencion()`, `togglePago()`
+   - `getStatsHoy()`, `getEstadisticasOrdenes()`
+   - `marcarAtendido()` - Upsert from Wix sync
+
+3. **FormulariosRepository** (`src/repositories/FormulariosRepository.js`)
+   - Patient intake form operations
+   - `findByNumeroId()`, `findByCelular()`, `findByWixId()`
+   - `findByCodEmpresa()` - With pagination and search
+   - `getEstadisticasSalud()` - Health statistics for AI queries
+
+4. **UsuariosRepository** (`src/repositories/UsuariosRepository.js`)
+   - User account management
+   - `findByEmail()`, `findByUsername()`, `findWithFilters()`
+   - `aprobarUsuario()`, `rechazarUsuario()`, `desactivarUsuario()`
+
+5. **AudiometriasRepository**, **VisiometriasRepository**, **EmpresasRepository**, **MedicosRepository**
+   - Domain-specific CRUD operations
+   - Follow same BaseRepository patterns
+
+### When to Use Repositories
+
+**DO use repositories for:**
+- Simple CRUD operations (findById, create, update, delete)
+- Domain-specific queries defined in repository methods
+- Reusable queries used in multiple endpoints
+
+**DON'T extract to repository when:**
+- Complex queries with JOINs across multiple unrelated tables
+- One-off queries specific to a single endpoint
+- Dynamic filter builders with many optional parameters
+- Queries for tables without repositories (e.g., `conversaciones_whatsapp`)
+
+### Adding New Repository Methods
+
+When you find a repeated query pattern, add it to the appropriate repository:
+
+```javascript
+// In HistoriaClinicaRepository.js
+async findDuplicadoAtendido(numeroId, codEmpresa = null) {
+    let query = `
+        SELECT "_id", "numeroId", "primerNombre", "primerApellido"
+        FROM ${this.tableName}
+        WHERE "numeroId" = $1 AND "atendido" = 'ATENDIDO'
+    `;
+    const params = [numeroId];
+
+    if (codEmpresa) {
+        query += ` AND "codEmpresa" = $2`;
+        params.push(codEmpresa);
+    }
+
+    query += ` ORDER BY "_createdDate" DESC LIMIT 1`;
+    const result = await this.query(query, params);
+    return result.rows[0] || null;
+}
+```
+
+### Refactoring Legacy Code
+
+When refactoring routes with direct `pool.query()` calls:
+1. Check if a repository method already exists for the query
+2. If not, consider adding it to the repository if it's reusable
+3. Replace `pool.query()` with repository call
+4. Keep complex/one-off queries as `pool.query()` with a comment explaining why
