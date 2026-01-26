@@ -132,8 +132,8 @@ app.use('/api/medicos', require('./src/routes/medicos'));
 // Empresas
 app.use('/api/empresas', require('./src/routes/empresas'));
 
-// Facturación (pre-existente)
-app.use('/api/facturacion', require('./routes/facturacion'));
+// Facturación
+app.use('/api/facturacion', require('./src/routes/facturacion'));
 
 // NUBIA
 app.use('/api', require('./src/routes/nubia'));
