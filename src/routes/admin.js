@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
 const { authMiddleware, requireAdmin, JWT_SECRET, hashPassword } = require('../middleware/auth');
 const { sendWhatsAppFreeText, sendWhatsAppMedia } = require('../services/whatsapp');
+const { UsuariosRepository } = require('../repositories');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -15,64 +16,14 @@ router.get('/usuarios', authMiddleware, requireAdmin, async (req, res) => {
     try {
         const { estado, rol, buscar, limit = 50, offset = 0 } = req.query;
 
-        let query = `
-            SELECT id, email, nombre_completo, numero_documento, celular_whatsapp, rol, cod_empresa,
-                   estado, fecha_registro, fecha_aprobacion, ultimo_login, activo
-            FROM usuarios
-            WHERE 1=1
-        `;
-        const params = [];
-        let paramIndex = 1;
-
-        if (estado) {
-            query += ` AND estado = $${paramIndex}`;
-            params.push(estado);
-            paramIndex++;
-        }
-
-        if (rol) {
-            query += ` AND rol = $${paramIndex}`;
-            params.push(rol);
-            paramIndex++;
-        }
-
-        if (buscar) {
-            query += ` AND (email ILIKE $${paramIndex} OR nombre_completo ILIKE $${paramIndex} OR numero_documento ILIKE $${paramIndex})`;
-            params.push(`%${buscar}%`);
-            paramIndex++;
-        }
-
-        query += ` ORDER BY fecha_registro DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-        params.push(parseInt(limit), parseInt(offset));
-
-        const result = await pool.query(query, params);
-
-        // Contar total
-        let countQuery = 'SELECT COUNT(*) FROM usuarios WHERE 1=1';
-        const countParams = [];
-        let countParamIndex = 1;
-
-        if (estado) {
-            countQuery += ` AND estado = $${countParamIndex}`;
-            countParams.push(estado);
-            countParamIndex++;
-        }
-        if (rol) {
-            countQuery += ` AND rol = $${countParamIndex}`;
-            countParams.push(rol);
-            countParamIndex++;
-        }
-        if (buscar) {
-            countQuery += ` AND (email ILIKE $${countParamIndex} OR nombre_completo ILIKE $${countParamIndex} OR numero_documento ILIKE $${countParamIndex})`;
-            countParams.push(`%${buscar}%`);
-        }
-
-        const countResult = await pool.query(countQuery, countParams);
+        // Use repository - 2 lines instead of 70
+        const data = await UsuariosRepository.findWithFilters({ estado, rol, buscar }, { limit, offset });
+        const total = await UsuariosRepository.countWithFilters({ estado, rol, buscar });
 
         res.json({
             success: true,
-            data: result.rows,
-            total: parseInt(countResult.rows[0].count),
+            data,
+            total,
             limit: parseInt(limit),
             offset: parseInt(offset)
         });

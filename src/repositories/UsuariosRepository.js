@@ -236,6 +236,176 @@ class UsuariosRepository extends BaseRepository {
         // Crear usuario
         return await this.create(userData);
     }
+
+    /**
+     * Lista usuarios con filtros múltiples (para admin)
+     * @param {Object} filters - {estado, rol, buscar}
+     * @param {Object} options - {limit, offset}
+     * @returns {Promise<Array>}
+     */
+    async findWithFilters(filters = {}, options = {}) {
+        const { estado, rol, buscar } = filters;
+        const { limit = 50, offset = 0 } = options;
+
+        let query = `
+            SELECT id, email, nombre_completo, numero_documento, celular_whatsapp, rol, cod_empresa,
+                   estado, fecha_registro, fecha_aprobacion, ultimo_login, activo
+            FROM ${this.tableName}
+            WHERE 1=1
+        `;
+        const params = [];
+        let paramIndex = 1;
+
+        if (estado) {
+            query += ` AND estado = $${paramIndex}`;
+            params.push(estado);
+            paramIndex++;
+        }
+
+        if (rol) {
+            query += ` AND rol = $${paramIndex}`;
+            params.push(rol);
+            paramIndex++;
+        }
+
+        if (buscar) {
+            query += ` AND (email ILIKE $${paramIndex} OR nombre_completo ILIKE $${paramIndex} OR numero_documento ILIKE $${paramIndex})`;
+            params.push(`%${buscar}%`);
+            paramIndex++;
+        }
+
+        query += ` ORDER BY fecha_registro DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+        params.push(parseInt(limit), parseInt(offset));
+
+        const result = await this.query(query, params);
+        return result.rows;
+    }
+
+    /**
+     * Cuenta usuarios con filtros
+     * @param {Object} filters - {estado, rol, buscar}
+     * @returns {Promise<number>}
+     */
+    async countWithFilters(filters = {}) {
+        const { estado, rol, buscar } = filters;
+
+        let query = 'SELECT COUNT(*) FROM usuarios WHERE 1=1';
+        const params = [];
+        let paramIndex = 1;
+
+        if (estado) {
+            query += ` AND estado = $${paramIndex}`;
+            params.push(estado);
+            paramIndex++;
+        }
+        if (rol) {
+            query += ` AND rol = $${paramIndex}`;
+            params.push(rol);
+            paramIndex++;
+        }
+        if (buscar) {
+            query += ` AND (email ILIKE $${paramIndex} OR nombre_completo ILIKE $${paramIndex} OR numero_documento ILIKE $${paramIndex})`;
+            params.push(`%${buscar}%`);
+        }
+
+        const result = await this.query(query, params);
+        return parseInt(result.rows[0].count);
+    }
+
+    /**
+     * Lista usuarios pendientes de aprobación
+     * @returns {Promise<Array>}
+     */
+    async findPendientes() {
+        const query = `
+            SELECT id, email, nombre_completo, numero_documento, celular_whatsapp, cod_empresa, fecha_registro
+            FROM ${this.tableName}
+            WHERE estado = 'pendiente' AND activo = true
+            ORDER BY fecha_registro ASC
+        `;
+        const result = await this.query(query);
+        return result.rows;
+    }
+
+    /**
+     * Aprueba un usuario
+     * @param {number} id
+     * @param {number} aprobadoPor - ID del admin que aprueba
+     * @returns {Promise<Object|null>}
+     */
+    async aprobarUsuario(id, aprobadoPor) {
+        const query = `
+            UPDATE ${this.tableName}
+            SET estado = 'aprobado',
+                fecha_aprobacion = NOW(),
+                aprobado_por = $1
+            WHERE id = $2
+            RETURNING *
+        `;
+        const result = await this.query(query, [aprobadoPor, id]);
+        return result.rows[0] || null;
+    }
+
+    /**
+     * Rechaza un usuario
+     * @param {number} id
+     * @returns {Promise<Object|null>}
+     */
+    async rechazarUsuario(id) {
+        const query = `
+            UPDATE ${this.tableName}
+            SET estado = 'rechazado',
+                activo = false
+            WHERE id = $1
+            RETURNING *
+        `;
+        const result = await this.query(query, [id]);
+        return result.rows[0] || null;
+    }
+
+    /**
+     * Desactiva un usuario y cierra sus sesiones
+     * @param {number} id
+     * @returns {Promise<Object|null>}
+     */
+    async desactivarUsuario(id) {
+        return await this.transaction(async (client) => {
+            // Cerrar sesiones
+            await client.query('UPDATE sesiones SET activa = false WHERE usuario_id = $1', [id]);
+
+            // Desactivar usuario
+            const result = await client.query(
+                'UPDATE usuarios SET activo = false WHERE id = $1 RETURNING *',
+                [id]
+            );
+            return result.rows[0] || null;
+        });
+    }
+
+    /**
+     * Actualiza el código de empresa de un usuario
+     * @param {number} id
+     * @param {string} codEmpresa
+     * @returns {Promise<Object|null>}
+     */
+    async actualizarCodEmpresa(id, codEmpresa) {
+        return await this.update(id, { cod_empresa: codEmpresa }, 'id');
+    }
+
+    /**
+     * Verifica si existe usuario por email o documento
+     * @param {string} email
+     * @param {string} numeroDocumento
+     * @returns {Promise<Object|null>}
+     */
+    async findByEmailOrDocumento(email, numeroDocumento) {
+        const query = `
+            SELECT id FROM ${this.tableName}
+            WHERE email = $1 OR numero_documento = $2
+        `;
+        const result = await this.query(query, [email, numeroDocumento]);
+        return result.rows[0] || null;
+    }
 }
 
 module.exports = new UsuariosRepository();
