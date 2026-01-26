@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require('../config/database');
 const { subirFotoASpaces } = require('../services/spaces-upload');
 const { enviarAlertasPreguntasCriticas } = require('../services/payment');
+const { FormulariosRepository, HistoriaClinicaRepository } = require('../repositories');
 
 // Ruta para recibir el formulario
 router.post('/formulario', async (req, res) => {
@@ -319,10 +320,12 @@ router.get('/formularios', async (req, res) => {
 router.get('/formulario/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const result = await pool.query('SELECT * FROM formularios WHERE id = $1', [id]);
 
-        if (result.rows.length > 0) {
-            res.json({ success: true, data: result.rows[0] });
+        // Use repository
+        const formulario = await FormulariosRepository.findById(id, 'id');
+
+        if (formulario) {
+            res.json({ success: true, data: formulario });
         } else {
             res.status(404).json({
                 success: false,
@@ -402,39 +405,23 @@ router.get('/formularios/buscar/:identificador', async (req, res) => {
 
         console.log(`🔍 Buscando formulario por identificador: ${identificador}`);
 
-        // Primero buscar por wix_id (orden_id) - relacion principal
-        let result = await pool.query(
-            'SELECT * FROM formularios WHERE wix_id = $1 LIMIT 1',
-            [identificador]
-        );
+        // Use repositories - buscar por wix_id, luego numero_id, luego via HistoriaClinica
+        let formulario = await FormulariosRepository.findByWixId(identificador);
 
-        // Si no encuentra por wix_id, buscar por numero_id (cedula) - fallback para datos antiguos
-        if (result.rows.length === 0) {
+        if (!formulario) {
             console.log(`🔍 No encontrado por wix_id, buscando por numero_id...`);
-            result = await pool.query(
-                'SELECT * FROM formularios WHERE numero_id = $1 ORDER BY fecha_registro DESC LIMIT 1',
-                [identificador]
-            );
+            formulario = await FormulariosRepository.findUltimoPorNumeroId(identificador);
         }
 
-        // Si aun no encuentra, intentar obtener el _id de HistoriaClinica por cedula
-        if (result.rows.length === 0) {
-            const hcResult = await pool.query(
-                'SELECT "_id" FROM "HistoriaClinica" WHERE "numeroId" = $1 LIMIT 1',
-                [identificador]
-            );
-
-            if (hcResult.rows.length > 0) {
-                const hcId = hcResult.rows[0]._id;
-                console.log(`🔍 Buscando formulario por wix_id desde HC: ${hcId}`);
-                result = await pool.query(
-                    'SELECT * FROM formularios WHERE wix_id = $1 LIMIT 1',
-                    [hcId]
-                );
+        if (!formulario) {
+            const hc = await HistoriaClinicaRepository.findByNumeroId(identificador);
+            if (hc) {
+                console.log(`🔍 Buscando formulario por wix_id desde HC: ${hc._id}`);
+                formulario = await FormulariosRepository.findByWixId(hc._id);
             }
         }
 
-        if (result.rows.length === 0) {
+        if (!formulario) {
             return res.json({
                 success: false,
                 message: 'No se encontró formulario para este paciente'
@@ -443,7 +430,7 @@ router.get('/formularios/buscar/:identificador', async (req, res) => {
 
         res.json({
             success: true,
-            data: result.rows[0]
+            data: formulario
         });
 
     } catch (error) {
@@ -461,37 +448,26 @@ router.get('/formularios/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Obtener datos del formulario
-        const formularioResult = await pool.query('SELECT * FROM formularios WHERE id = $1', [id]);
+        // Use repository
+        const formulario = await FormulariosRepository.findById(id, 'id');
 
-        if (formularioResult.rows.length === 0) {
+        if (!formulario) {
             return res.status(404).json({
                 success: false,
                 message: 'Formulario no encontrado'
             });
         }
 
-        const formulario = formularioResult.rows[0];
-
-        // Intentar obtener datos de HistoriaClinica usando numero_id (cedula)
+        // Use repository para HistoriaClinica
         let historiaClinica = null;
         if (formulario.numero_id) {
             try {
-                const historiaResult = await pool.query(
-                    'SELECT * FROM "HistoriaClinica" WHERE "numeroId" = $1',
-                    [formulario.numero_id]
-                );
-
-                if (historiaResult.rows.length > 0) {
-                    historiaClinica = historiaResult.rows[0];
-                }
+                historiaClinica = await HistoriaClinicaRepository.findByNumeroId(formulario.numero_id);
             } catch (historiaError) {
                 console.error('⚠️ No se pudo obtener HistoriaClinica:', historiaError.message);
-                // Continuar sin historia clinica
             }
         }
 
-        // Combinar los datos
         const datosCompletos = {
             ...formulario,
             historiaClinica: historiaClinica
@@ -518,13 +494,10 @@ router.post('/formularios/enlazar-orden', async (req, res) => {
             return res.status(400).json({ success: false, error: 'nuevoWixId es requerido' });
         }
 
-        // Verificar que la orden existe en HistoriaClinica
-        const ordenExiste = await pool.query(
-            'SELECT "_id" FROM "HistoriaClinica" WHERE "_id" = $1',
-            [nuevoWixId]
-        );
+        // Use repository - verificar que la orden existe
+        const ordenExiste = await HistoriaClinicaRepository.findById(nuevoWixId);
 
-        if (ordenExiste.rows.length === 0) {
+        if (!ordenExiste) {
             return res.status(404).json({
                 success: false,
                 error: 'La orden especificada no existe en HistoriaClinica'
@@ -579,16 +552,14 @@ router.put('/formularios/:id', async (req, res) => {
         const { id } = req.params;
         const datos = req.body;
 
-        // Verificar que el formulario existe y obtener todos sus datos
-        const checkResult = await pool.query('SELECT * FROM formularios WHERE id = $1', [id]);
-        if (checkResult.rows.length === 0) {
+        // Use repository - verificar que el formulario existe
+        const formularioActual = await FormulariosRepository.findById(id, 'id');
+        if (!formularioActual) {
             return res.status(404).json({
                 success: false,
                 message: 'Formulario no encontrado'
             });
         }
-
-        const formularioActual = checkResult.rows[0];
 
         // Convertir cadenas vacias a null para campos numericos
         const parseNumeric = (value) => value === "" ? null : value;
@@ -798,9 +769,9 @@ router.delete('/formularios/:id', async (req, res) => {
         console.log('   Numero ID (Cedula):', numeroId);
         console.log('═══════════════════════════════════════════════════════════');
 
-        // Verificar que el formulario existe
-        const checkResult = await pool.query('SELECT * FROM formularios WHERE id = $1', [id]);
-        if (checkResult.rows.length === 0) {
+        // Use repository - verificar existencia
+        const formulario = await FormulariosRepository.findById(id, 'id');
+        if (!formulario) {
             return res.status(404).json({
                 success: false,
                 message: 'Formulario no encontrado'
@@ -812,29 +783,23 @@ router.delete('/formularios/:id', async (req, res) => {
         // Intentar eliminar la historia clinica asociada (si existe)
         if (numeroId) {
             try {
-                const hcResult = await pool.query(
-                    'DELETE FROM "HistoriaClinica" WHERE "numeroId" = $1 RETURNING *',
-                    [numeroId]
-                );
-                if (hcResult.rowCount > 0) {
+                const hc = await HistoriaClinicaRepository.findByNumeroId(numeroId);
+                if (hc) {
+                    await HistoriaClinicaRepository.delete(hc._id);
                     historiaClinicaEliminada = true;
-                    console.log('   ✅ Historia Clinica eliminada:', hcResult.rowCount, 'registro(s)');
+                    console.log('   ✅ Historia Clinica eliminada');
                 } else {
                     console.log('   ℹ️  No se encontro Historia Clinica asociada');
                 }
             } catch (hcError) {
                 console.error('   ⚠️ Error al eliminar Historia Clinica:', hcError.message);
-                // Continuamos con la eliminacion del formulario aunque falle la HC
             }
         }
 
-        // Eliminar el formulario
-        const deleteResult = await pool.query(
-            'DELETE FROM formularios WHERE id = $1 RETURNING *',
-            [id]
-        );
+        // Use repository - eliminar formulario
+        const eliminado = await FormulariosRepository.delete(id, 'id');
 
-        if (deleteResult.rowCount === 0) {
+        if (!eliminado) {
             return res.status(500).json({
                 success: false,
                 message: 'No se pudo eliminar el formulario'
@@ -854,7 +819,7 @@ router.delete('/formularios/:id', async (req, res) => {
             success: true,
             message: mensaje,
             data: {
-                formularioEliminado: deleteResult.rows[0],
+                formularioEliminado: formulario,
                 historiaClinicaEliminada: historiaClinicaEliminada
             }
         });

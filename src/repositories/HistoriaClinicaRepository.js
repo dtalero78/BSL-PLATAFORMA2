@@ -268,6 +268,168 @@ class HistoriaClinicaRepository extends BaseRepository {
     }
 
     /**
+     * Busca paciente por celular con normalización flexible
+     * @param {string} celular
+     * @returns {Promise<Object|null>}
+     */
+    async findByCelularFlexible(celular) {
+        const celularLimpio = celular.replace(/\D/g, '');
+        const celularSin57 = celularLimpio.startsWith('57') ? celularLimpio.substring(2) : celularLimpio;
+
+        const query = `
+            SELECT h.*
+            FROM ${this.tableName} h
+            WHERE h."celular" = $1
+               OR h."celular" = $2
+               OR h."celular" = $3
+               OR REPLACE(h."celular", ' ', '') = $1
+               OR REPLACE(h."celular", ' ', '') = $2
+               OR REPLACE(h."celular", ' ', '') = $3
+            ORDER BY h."_createdDate" DESC
+            LIMIT 1
+        `;
+        const result = await this.query(query, [celular, celularLimpio, celularSin57]);
+        return result.rows[0] || null;
+    }
+
+    /**
+     * Lista con paginación, búsqueda y foto del formulario vinculado
+     * @param {Object} options - {page, limit, buscar}
+     * @returns {Promise<{rows: Array, total: number, totalPaginas: number}>}
+     */
+    async listWithFoto(options = {}) {
+        const { page = 1, limit = 20, buscar } = options;
+        const offset = (page - 1) * limit;
+
+        let whereClause = '';
+        const params = [];
+
+        if (buscar && buscar.length >= 2) {
+            whereClause = `WHERE (
+                COALESCE(h."numeroId", '') || ' ' ||
+                COALESCE(h."primerNombre", '') || ' ' ||
+                COALESCE(h."primerApellido", '') || ' ' ||
+                COALESCE(h."codEmpresa", '') || ' ' ||
+                COALESCE(h."celular", '') || ' ' ||
+                COALESCE(h."empresa", '')
+            ) ILIKE $1`;
+            params.push(`%${buscar}%`);
+        }
+
+        // Count
+        let totalRegistros;
+        if (buscar && buscar.length >= 2) {
+            const countResult = await this.query(
+                `SELECT COUNT(*) FROM ${this.tableName} h ${whereClause}`, params
+            );
+            totalRegistros = parseInt(countResult.rows[0].count);
+        } else {
+            const countResult = await this.query(
+                `SELECT reltuples::bigint as estimate FROM pg_class WHERE relname = 'HistoriaClinica'`
+            );
+            totalRegistros = parseInt(countResult.rows[0].estimate) || 0;
+        }
+
+        const totalPaginas = Math.ceil(totalRegistros / limit);
+
+        // Data
+        const queryParams = buscar ? [...params, limit, offset] : [limit, offset];
+        const limitParam = buscar ? '$2' : '$1';
+        const offsetParam = buscar ? '$3' : '$2';
+
+        const result = await this.query(`
+            SELECT h."_id", h."numeroId", h."primerNombre", h."segundoNombre", h."primerApellido", h."segundoApellido",
+                   h."celular", h."cargo", h."ciudad", h."tipoExamen", h."codEmpresa", h."empresa", h."medico",
+                   h."atendido", h."examenes", h."_createdDate", h."fechaConsulta", h."fechaAtencion", h."horaAtencion",
+                   h."mdConceptoFinal", h."mdRecomendacionesMedicasAdicionales", h."mdObservacionesCertificado", h."mdObsParaMiDocYa",
+                   h."pvEstado",
+                   'historia' as origen,
+                   COALESCE(f_exact.foto_url, f_fallback.foto_url) as foto_url
+            FROM ${this.tableName} h
+            LEFT JOIN formularios f_exact ON f_exact.wix_id = h."_id"
+            LEFT JOIN LATERAL (
+                SELECT foto_url FROM formularios
+                WHERE numero_id = h."numeroId" AND foto_url IS NOT NULL
+                ORDER BY fecha_registro DESC LIMIT 1
+            ) f_fallback ON f_exact.id IS NULL
+            ${whereClause}
+            ORDER BY h."_createdDate" DESC
+            LIMIT ${limitParam} OFFSET ${offsetParam}
+        `, queryParams);
+
+        return {
+            rows: result.rows,
+            total: totalRegistros,
+            totalPaginas
+        };
+    }
+
+    /**
+     * Búsqueda con foto (para endpoint /buscar)
+     * @param {string} termino
+     * @param {number} limit
+     * @returns {Promise<Array>}
+     */
+    async buscarConFoto(termino, limit = 100) {
+        const result = await this.query(`
+            SELECT h."_id", h."numeroId", h."primerNombre", h."segundoNombre",
+                   h."primerApellido", h."segundoApellido", h."celular", h."cargo",
+                   h."ciudad", h."tipoExamen", h."codEmpresa", h."empresa", h."medico",
+                   h."atendido", h."examenes", h."_createdDate", h."fechaConsulta",
+                   h."fechaAtencion", h."horaAtencion",
+                   h."mdConceptoFinal", h."mdRecomendacionesMedicasAdicionales", h."mdObservacionesCertificado", h."mdObsParaMiDocYa",
+                   'historia' as origen,
+                   COALESCE(f_exact.foto_url, f_fallback.foto_url) as foto_url
+            FROM ${this.tableName} h
+            LEFT JOIN formularios f_exact ON f_exact.wix_id = h."_id"
+            LEFT JOIN LATERAL (
+                SELECT foto_url FROM formularios
+                WHERE numero_id = h."numeroId" AND foto_url IS NOT NULL
+                ORDER BY fecha_registro DESC LIMIT 1
+            ) f_fallback ON f_exact.id IS NULL
+            WHERE (
+                COALESCE(h."numeroId", '') || ' ' ||
+                COALESCE(h."primerNombre", '') || ' ' ||
+                COALESCE(h."primerApellido", '') || ' ' ||
+                COALESCE(h."codEmpresa", '') || ' ' ||
+                COALESCE(h."celular", '') || ' ' ||
+                COALESCE(h."empresa", '')
+            ) ILIKE $1
+            ORDER BY h."_createdDate" DESC
+            LIMIT $2
+        `, [`%${termino}%`, limit]);
+
+        return result.rows;
+    }
+
+    /**
+     * Toggle estado de pago
+     * @param {string} id
+     * @returns {Promise<{pagado: boolean, pvEstado: string, numeroId: string}>}
+     */
+    async togglePago(id) {
+        const current = await this.query(
+            `SELECT "pagado", "numeroId" FROM ${this.tableName} WHERE "_id" = $1`, [id]
+        );
+        if (current.rows.length === 0) return null;
+
+        const estadoActual = current.rows[0].pagado || false;
+        const nuevoEstado = !estadoActual;
+        const pvEstado = nuevoEstado ? 'Pagado' : '';
+
+        await this.query(
+            `UPDATE ${this.tableName} SET "pagado" = $1, "pvEstado" = $2 WHERE "_id" = $3`,
+            [nuevoEstado, pvEstado, id]
+        );
+
+        return {
+            pagado: nuevoEstado,
+            pvEstado,
+            numeroId: current.rows[0].numeroId
+        };
+    }
+
+    /**
      * Obtiene estadísticas de órdenes por empresa
      * @param {string} codEmpresa
      * @returns {Promise<Object>}

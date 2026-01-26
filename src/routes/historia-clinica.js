@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 const { construirFechaAtencionColombia } = require('../helpers/date');
+const { HistoriaClinicaRepository } = require('../repositories');
 
 // ==================== HISTORIA CLINICA ENDPOINTS ====================
 // Mounted at /api/historia-clinica
@@ -11,76 +12,22 @@ router.get('/list', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
-        const offset = (page - 1) * limit;
         const buscar = req.query.buscar?.trim();
 
         console.log(`📋 Listando órdenes de HistoriaClinica (página ${page}, limit ${limit}${buscar ? `, búsqueda: "${buscar}"` : ''})...`);
 
-        let totalRegistros;
-        let whereClause = '';
-        const params = [];
+        // Use repository - 1 call instead of 70+ lines
+        const { rows, total, totalPaginas } = await HistoriaClinicaRepository.listWithFoto({ page, limit, buscar });
 
-        if (buscar && buscar.length >= 2) {
-            // Búsqueda con índice GIN pg_trgm
-            whereClause = `WHERE (
-                COALESCE(h."numeroId", '') || ' ' ||
-                COALESCE(h."primerNombre", '') || ' ' ||
-                COALESCE(h."primerApellido", '') || ' ' ||
-                COALESCE(h."codEmpresa", '') || ' ' ||
-                COALESCE(h."celular", '') || ' ' ||
-                COALESCE(h."empresa", '')
-            ) ILIKE $1`;
-            params.push(`%${buscar}%`);
-
-            // COUNT exacto cuando hay búsqueda
-            const countResult = await pool.query(`
-                SELECT COUNT(*) FROM "HistoriaClinica" h ${whereClause}
-            `, params);
-            totalRegistros = parseInt(countResult.rows[0].count);
-        } else {
-            // Sin búsqueda: usar estimación rápida de PostgreSQL (<1ms vs 522ms)
-            const countResult = await pool.query(`
-                SELECT reltuples::bigint as estimate FROM pg_class WHERE relname = 'HistoriaClinica'
-            `);
-            totalRegistros = parseInt(countResult.rows[0].estimate) || 0;
-        }
-
-        const totalPaginas = Math.ceil(totalRegistros / limit);
-
-        // Obtener registros de HistoriaClinica con foto_url del formulario vinculado
-        const queryParams = buscar ? [...params, limit, offset] : [limit, offset];
-        const limitParam = buscar ? '$2' : '$1';
-        const offsetParam = buscar ? '$3' : '$2';
-
-        const historiaResult = await pool.query(`
-            SELECT h."_id", h."numeroId", h."primerNombre", h."segundoNombre", h."primerApellido", h."segundoApellido",
-                   h."celular", h."cargo", h."ciudad", h."tipoExamen", h."codEmpresa", h."empresa", h."medico",
-                   h."atendido", h."examenes", h."_createdDate", h."fechaConsulta", h."fechaAtencion", h."horaAtencion",
-                   h."mdConceptoFinal", h."mdRecomendacionesMedicasAdicionales", h."mdObservacionesCertificado", h."mdObsParaMiDocYa",
-                   h."pvEstado",
-                   'historia' as origen,
-                   COALESCE(f_exact.foto_url, f_fallback.foto_url) as foto_url
-            FROM "HistoriaClinica" h
-            LEFT JOIN formularios f_exact ON f_exact.wix_id = h."_id"
-            LEFT JOIN LATERAL (
-                SELECT foto_url FROM formularios
-                WHERE numero_id = h."numeroId" AND foto_url IS NOT NULL
-                ORDER BY fecha_registro DESC LIMIT 1
-            ) f_fallback ON f_exact.id IS NULL
-            ${whereClause}
-            ORDER BY h."_createdDate" DESC
-            LIMIT ${limitParam} OFFSET ${offsetParam}
-        `, queryParams);
-
-        console.log(`✅ HistoriaClinica: ${historiaResult.rows.length} registros (página ${page}/${totalPaginas})`);
+        console.log(`✅ HistoriaClinica: ${rows.length} registros (página ${page}/${totalPaginas})`);
 
         res.json({
             success: true,
-            total: totalRegistros,
+            total,
             page,
             limit,
             totalPaginas,
-            data: historiaResult.rows
+            data: rows
         });
 
     } catch (error) {
@@ -98,48 +45,21 @@ router.get('/buscar', async (req, res) => {
     try {
         const { q } = req.query;
 
-        // Requiere al menos 2 caracteres para buscar
         if (!q || q.length < 2) {
             return res.json({ success: true, data: [] });
         }
 
         console.log(`🔍 Buscando en HistoriaClinica: "${q}"`);
 
-        const searchTerm = `%${q}%`;
-        const result = await pool.query(`
-            SELECT h."_id", h."numeroId", h."primerNombre", h."segundoNombre",
-                   h."primerApellido", h."segundoApellido", h."celular", h."cargo",
-                   h."ciudad", h."tipoExamen", h."codEmpresa", h."empresa", h."medico",
-                   h."atendido", h."examenes", h."_createdDate", h."fechaConsulta",
-                   h."fechaAtencion", h."horaAtencion",
-                   h."mdConceptoFinal", h."mdRecomendacionesMedicasAdicionales", h."mdObservacionesCertificado", h."mdObsParaMiDocYa",
-                   'historia' as origen,
-                   COALESCE(f_exact.foto_url, f_fallback.foto_url) as foto_url
-            FROM "HistoriaClinica" h
-            LEFT JOIN formularios f_exact ON f_exact.wix_id = h."_id"
-            LEFT JOIN LATERAL (
-                SELECT foto_url FROM formularios
-                WHERE numero_id = h."numeroId" AND foto_url IS NOT NULL
-                ORDER BY fecha_registro DESC LIMIT 1
-            ) f_fallback ON f_exact.id IS NULL
-            WHERE (
-                COALESCE(h."numeroId", '') || ' ' ||
-                COALESCE(h."primerNombre", '') || ' ' ||
-                COALESCE(h."primerApellido", '') || ' ' ||
-                COALESCE(h."codEmpresa", '') || ' ' ||
-                COALESCE(h."celular", '') || ' ' ||
-                COALESCE(h."empresa", '')
-            ) ILIKE $1
-            ORDER BY h."_createdDate" DESC
-            LIMIT 100
-        `, [searchTerm]);
+        // Use repository - 1 line instead of 30+
+        const data = await HistoriaClinicaRepository.buscarConFoto(q);
 
-        console.log(`✅ Encontrados ${result.rows.length} registros para "${q}"`);
+        console.log(`✅ Encontrados ${data.length} registros para "${q}"`);
 
         res.json({
             success: true,
-            total: result.rows.length,
-            data: result.rows
+            total: data.length,
+            data
         });
 
     } catch (error) {
@@ -163,33 +83,19 @@ router.get('/buscar-por-celular', async (req, res) => {
 
         console.log(`🔍 Buscando paciente por celular: "${celular}"`);
 
-        // Normalizar el celular para búsqueda flexible
-        const celularLimpio = celular.replace(/\D/g, ''); // Solo dígitos
-        const celularSin57 = celularLimpio.startsWith('57') ? celularLimpio.substring(2) : celularLimpio;
+        // Use repository - 1 line instead of 15
+        const paciente = await HistoriaClinicaRepository.findByCelularFlexible(celular);
 
-        const result = await pool.query(`
-            SELECT h.*
-            FROM "HistoriaClinica" h
-            WHERE h."celular" = $1
-               OR h."celular" = $2
-               OR h."celular" = $3
-               OR REPLACE(h."celular", ' ', '') = $1
-               OR REPLACE(h."celular", ' ', '') = $2
-               OR REPLACE(h."celular", ' ', '') = $3
-            ORDER BY h."_createdDate" DESC
-            LIMIT 1
-        `, [celular, celularLimpio, celularSin57]);
-
-        if (result.rows.length === 0) {
+        if (!paciente) {
             console.log(`⚠️ No se encontró paciente con celular: ${celular}`);
             return res.json({ success: false, message: 'No se encontró paciente con este celular' });
         }
 
-        console.log(`✅ Paciente encontrado: ${result.rows[0].primerNombre} ${result.rows[0].primerApellido}`);
+        console.log(`✅ Paciente encontrado: ${paciente.primerNombre} ${paciente.primerApellido}`);
 
         res.json({
             success: true,
-            data: result.rows[0]
+            data: paciente
         });
 
     } catch (error) {
@@ -207,13 +113,13 @@ router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Primero buscar en HistoriaClinica
-        const historiaResult = await pool.query('SELECT *, \'historia\' as origen FROM "HistoriaClinica" WHERE "_id" = $1', [id]);
+        // Use repository - 1 line instead of raw query
+        const historia = await HistoriaClinicaRepository.findById(id);
 
-        if (historiaResult.rows.length > 0) {
+        if (historia) {
             return res.json({
                 success: true,
-                data: historiaResult.rows[0]
+                data: { ...historia, origen: 'historia' }
             });
         }
 
@@ -595,23 +501,14 @@ router.patch('/:id/pago', async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Obtener estado actual y numeroId
-        const currentResult = await pool.query('SELECT "pagado", "numeroId" FROM "HistoriaClinica" WHERE "_id" = $1', [id]);
+        // Use repository - 1 line instead of 10
+        const resultado = await HistoriaClinicaRepository.togglePago(id);
 
-        if (currentResult.rows.length === 0) {
+        if (!resultado) {
             return res.status(404).json({ success: false, message: 'Orden no encontrada' });
         }
 
-        const estadoActual = currentResult.rows[0].pagado || false;
-        const numeroId = currentResult.rows[0].numeroId;
-        const nuevoEstado = !estadoActual;
-        const pvEstado = nuevoEstado ? 'Pagado' : '';
-
-        // Actualizar estado en PostgreSQL (pagado y pvEstado)
-        await pool.query(
-            'UPDATE "HistoriaClinica" SET "pagado" = $1, "pvEstado" = $2 WHERE "_id" = $3',
-            [nuevoEstado, pvEstado, id]
-        );
+        const { pagado: nuevoEstado, pvEstado, numeroId } = resultado;
 
         console.log(`💰 Pago ${nuevoEstado ? 'marcado' : 'desmarcado'} para orden ${id}`);
 
@@ -662,10 +559,10 @@ router.delete('/:id', async (req, res) => {
         console.log('🗑️ ========== ELIMINANDO ORDEN ==========');
         console.log(`📋 ID: ${id}`);
 
-        // Eliminar de PostgreSQL
-        const result = await pool.query('DELETE FROM "HistoriaClinica" WHERE "_id" = $1 RETURNING *', [id]);
+        // Use repository
+        const eliminado = await HistoriaClinicaRepository.delete(id);
 
-        if (result.rows.length === 0) {
+        if (!eliminado) {
             return res.status(404).json({
                 success: false,
                 message: 'Registro no encontrado en HistoriaClinica'
@@ -676,8 +573,7 @@ router.delete('/:id', async (req, res) => {
 
         res.json({
             success: true,
-            message: 'Orden eliminada correctamente',
-            data: result.rows[0]
+            message: 'Orden eliminada correctamente'
         });
 
     } catch (error) {
