@@ -5,7 +5,7 @@ services:
     github:
       branch: main
       deploy_on_push: true
-      repo: dtalero78/BSL-PLATAFORMA2
+      repo: dtalero78/BSL-PLATAFORMA
     http_port: 8080
     instance_count: 1
     instance_size_slug: basic-xxs
