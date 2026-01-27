@@ -391,11 +391,16 @@ router.post('/nubia/atender/:id', async (req, res) => {
             const telefonoLimpio = paciente.celular.replace(/\s+/g, '').replace(/[^\d]/g, '');
             const toNumber = telefonoLimpio.startsWith('57') ? telefonoLimpio : `57${telefonoLimpio}`;
 
-            const mensaje = `👋 Hola ${paciente.primerNombre}. Te escribimos de BSL. 🏥 Tu certificado médico ya está listo. 📄\n\nRevísalo haciendo clic en este link: 👉 https://bsl-utilidades-yp78a.ondigitalocean.app/static/solicitar-certificado.html?id=${id}`;
+            const mensaje = `Hola ${paciente.primerNombre}. Te escribimos de BSL. Tu certificado médico ya está listo.`;
 
             try {
-                // Usar sendWhatsAppFreeText para enviar texto libre (requiere ventana de 24h)
-                const twilioResult = await sendWhatsAppFreeText(toNumber, mensaje);
+                // Usar template aprobado para enviar mensaje de certificado listo
+                const twilioResult = await sendWhatsAppMessage(
+                    toNumber,
+                    mensaje,
+                    { '1': paciente.primerNombre, '2': id },
+                    'HX87de46b685187c21e29fe09e2eaa1845'
+                );
                 if (twilioResult.success) {
                     console.log(`📱 [NUBIA] Mensaje de certificado enviado a ${paciente.primerNombre} (${toNumber})`);
 
