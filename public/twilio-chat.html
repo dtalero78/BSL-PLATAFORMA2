@@ -307,6 +307,25 @@
             margin-left: auto;
         }
 
+        .whatsapp-conversacion-empresa-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            background: #E8F5E9;
+            color: #2E7D32;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 600;
+            border: 1px solid #A5D6A7;
+            margin-left: 6px;
+        }
+
+        .whatsapp-conversacion-empresa-tag.sin-empresa {
+            background: #FFF3E0;
+            color: #E65100;
+            border-color: #FFB74D;
+        }
+
         .whatsapp-empty {
             display: flex;
             flex-direction: column;
@@ -1532,7 +1551,7 @@
                     <!-- Acciones -->
                     <button class="cmd-btn" onclick="enviarComandoRapido('/l')" title="La persona que va a hacer el examen debe diligenciar el siguiente link: https://bsl-plataforma.com/nuevaorden1.html">L</button>
                     <button class="cmd-btn" onclick="enviarComandoInfoCita('/i')" title="Info de cita">🩺</button>
-                    <button class="cmd-btn" onclick="enviarComandoRapido('/c')" title="Bancolombia Ahorros: 442 9119 2456 | Cédula: 79 981 585 | Daviplata: 3014400818 | Nequi: 3008021701">C</button>
+                    <button class="cmd-btn" onclick="enviarComandoCosto()" title="Información de costo y datos de pago">C</button>
 
                     <!-- Separador -->
                     <span style="color: #cbd5e0; margin: 0 4px; font-size: 20px; user-select: none;">|</span>
@@ -2102,12 +2121,17 @@ https://bsl-plataforma.com/consulta-orden.html`
                 ? `<img src="${conv.foto_perfil}" alt="${nombre}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
                 : inicial;
 
+            // Tag de empresa (pequeño)
+            const empresaTag = conv.cod_empresa
+                ? `<span class="whatsapp-conversacion-empresa-tag">${conv.cod_empresa}</span>`
+                : '';
+
             return `
                 <div class="whatsapp-conversacion-item ${activeClass} ${unreadClass}" data-conv-id="${conv.id}" onclick="seleccionarConversacion(${conv.id})">
                     <div class="whatsapp-conversacion-avatar">${avatarHTML}</div>
                     <div class="whatsapp-conversacion-info">
                         <div class="whatsapp-conversacion-header">
-                            <div class="whatsapp-conversacion-nombre">${displayNombre}</div>
+                            <div class="whatsapp-conversacion-nombre">${displayNombre}${empresaTag}</div>
                             <div class="whatsapp-conversacion-hora">${hora}</div>
                         </div>
                         <div class="whatsapp-conversacion-preview">${preview}</div>
@@ -2433,6 +2457,170 @@ https://bsl-plataforma.com/consulta-orden.html`
             } catch (error) {
                 console.error('Error cargando mensajes:', error);
                 console.timeEnd('⏱️ cargarMensajes'); // PERFORMANCE TRACKING
+            }
+        }
+
+        // Enviar comando de costo (/c) con lógica dinámica basada en fechaConsulta
+        async function enviarComandoCosto() {
+            if (!conversacionActualId) {
+                alert('Selecciona una conversación primero');
+                return;
+            }
+
+            try {
+                const token = Auth.getToken();
+
+                // Feedback visual - destacar botón temporalmente
+                const botones = document.querySelectorAll('.cmd-btn');
+                const botonClickeado = Array.from(botones).find(btn =>
+                    btn.title === 'Información de costo y datos de pago'
+                );
+
+                if (botonClickeado) {
+                    botonClickeado.style.background = '#e3f2fd';
+                    botonClickeado.style.borderColor = '#2196F3';
+                    botonClickeado.textContent = '...';
+                }
+
+                // Obtener datos del paciente
+                const resPaciente = await fetch(`/api/admin/whatsapp/conversaciones/${conversacionActualId}/paciente`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                let mensajeTexto = plantillasMensajes['/c']; // Mensaje por defecto
+
+                if (resPaciente.ok) {
+                    const dataPaciente = await resPaciente.json();
+                    const paciente = dataPaciente.paciente;
+
+                    // Verificar si tiene fechaConsulta y si es posterior a hace un mes
+                    if (paciente.fechaConsulta) {
+                        const fechaConsulta = new Date(paciente.fechaConsulta);
+                        const haceUnMes = new Date();
+                        haceUnMes.setMonth(haceUnMes.getMonth() - 1);
+
+                        // Si la fechaConsulta es posterior a hace un mes
+                        if (fechaConsulta > haceUnMes) {
+                            // Calcular precio basado en los exámenes
+                            let precioTotal = 0;
+                            const examenes = paciente.examenes || [];
+
+                            // Mapeo de precios según el prompt del bot
+                            const preciosExamenes = {
+                                'Examen Médico Ocupacional': 52000, // Virtual por defecto
+                                'Médico Osteomuscular': 52000,
+                                'Audiometría': 0, // Incluido en el paquete
+                                'Visiometría': 0, // Incluido en el paquete
+                                'Optometría': 0, // Incluido en el paquete
+                                'Cardiovascular': 10000,
+                                'Vascular': 10000,
+                                'Espirometría': 10000,
+                                'Dermatológico': 10000,
+                                'Psicológico': 23000,
+                                'Perfil lipídico': 69500,
+                                'Perfil Lipídico': 69500,
+                                'Glicemia': 23100,
+                                'Visiometría y Optometría Virtual': 23000
+                            };
+
+                            // Si tiene array de exámenes, calcular precio
+                            if (Array.isArray(examenes) && examenes.length > 0) {
+                                // Verificar si es paquete completo o exámenes individuales
+                                const tieneOsteomuscular = examenes.some(e =>
+                                    e.toLowerCase().includes('osteomuscular') ||
+                                    e.toLowerCase().includes('médico')
+                                );
+
+                                if (tieneOsteomuscular) {
+                                    // Paquete completo: precio base
+                                    precioTotal = 52000;
+
+                                    // Agregar exámenes adicionales
+                                    examenes.forEach(examen => {
+                                        const examenNormalizado = examen.trim();
+                                        if (preciosExamenes[examenNormalizado] &&
+                                            preciosExamenes[examenNormalizado] > 0 &&
+                                            !examenNormalizado.toLowerCase().includes('osteomuscular') &&
+                                            !examenNormalizado.toLowerCase().includes('audiometría') &&
+                                            !examenNormalizado.toLowerCase().includes('visiometría') &&
+                                            !examenNormalizado.toLowerCase().includes('optometría')) {
+                                            precioTotal += preciosExamenes[examenNormalizado];
+                                        }
+                                    });
+                                } else {
+                                    // Exámenes individuales
+                                    examenes.forEach(examen => {
+                                        const examenNormalizado = examen.trim();
+                                        if (preciosExamenes[examenNormalizado]) {
+                                            precioTotal += preciosExamenes[examenNormalizado];
+                                        }
+                                    });
+                                }
+
+                                // Si calculamos un precio, generar mensaje personalizado
+                                if (precioTotal > 0) {
+                                    const precioFormateado = precioTotal.toLocaleString('es-CO');
+                                    mensajeTexto = `El valor de tus exámenes es: $${precioFormateado} COP\n\nPuedes pagar por:\n\nBancolombia Ahorros: 442 9119 2456\nCédula: 79 981 585\n\nDaviplata: 3014400818\nNequi: 3008021701\n\nLlave Breb: @talero585\n\nEnvía el comprobante de pago por aquí para procesar tu certificado.`;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Enviar mensaje
+                const res = await fetch(`/api/admin/whatsapp/conversaciones/${conversacionActualId}/mensajes`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        contenido: mensajeTexto
+                    })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    // Feedback de éxito
+                    if (botonClickeado) {
+                        botonClickeado.textContent = '✓';
+                        setTimeout(() => {
+                            botonClickeado.textContent = 'C';
+                            botonClickeado.style.background = '';
+                            botonClickeado.style.borderColor = '';
+                        }, 1500);
+                    }
+
+                    // Recargar mensajes y conversaciones
+                    await Promise.all([
+                        cargarMensajes(conversacionActualId, false),
+                        cargarConversaciones(true)
+                    ]);
+                } else {
+                    alert('Error al enviar: ' + (data.message || 'Desconocido'));
+                    if (botonClickeado) {
+                        botonClickeado.textContent = 'C';
+                        botonClickeado.style.background = '';
+                        botonClickeado.style.borderColor = '';
+                    }
+                }
+
+            } catch (error) {
+                console.error('Error enviando comando de costo:', error);
+                alert('Error al enviar información de costo');
+                const botones = document.querySelectorAll('.cmd-btn');
+                const botonClickeado = Array.from(botones).find(btn =>
+                    btn.title === 'Información de costo y datos de pago'
+                );
+                if (botonClickeado) {
+                    botonClickeado.textContent = 'C';
+                    botonClickeado.style.background = '';
+                    botonClickeado.style.borderColor = '';
+                }
             }
         }
 
