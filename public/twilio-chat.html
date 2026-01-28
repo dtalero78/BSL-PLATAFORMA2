@@ -240,17 +240,7 @@
         }
 
         .whatsapp-conversacion-avatar {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 600;
-            font-size: 18px;
-            flex-shrink: 0;
+            display: none;
         }
 
         .whatsapp-conversacion-info {
@@ -284,6 +274,13 @@
             text-overflow: ellipsis;
             white-space: nowrap;
             flex-shrink: 1;
+        }
+
+        .whatsapp-conversacion-numero {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            font-weight: 400;
+            margin-top: 2px;
         }
 
         .whatsapp-conversacion-hora {
@@ -2124,15 +2121,8 @@ https://bsl-plataforma.com/consulta-orden.html`
             const activeClass = conv.id === conversacionActualId ? 'active' : '';
             const unreadClass = conv.no_leidos > 0 ? 'unread' : '';
 
-            // Mostrar nombre + número (si tiene nombre), o solo número
-            const displayNombre = conv.nombre_cliente
-                ? `${conv.nombre_cliente} (${conv.numero_cliente})`
-                : conv.numero_cliente;
-
-            // Avatar: usar foto si existe, sino inicial
-            const avatarHTML = conv.foto_perfil && conv.foto_perfil.startsWith('data:image')
-                ? `<img src="${conv.foto_perfil}" alt="${nombre}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`
-                : inicial;
+            // Mostrar solo el nombre (sin número entre paréntesis)
+            const displayNombre = conv.nombre_cliente || 'Sin nombre';
 
             // Tag de empresa (pequeño)
             const empresaTag = conv.cod_empresa
@@ -2141,7 +2131,6 @@ https://bsl-plataforma.com/consulta-orden.html`
 
             return `
                 <div class="whatsapp-conversacion-item ${activeClass} ${unreadClass}" data-conv-id="${conv.id}" onclick="seleccionarConversacion(${conv.id})">
-                    <div class="whatsapp-conversacion-avatar">${avatarHTML}</div>
                     <div class="whatsapp-conversacion-info">
                         <div class="whatsapp-conversacion-header">
                             <div class="whatsapp-conversacion-nombre">
@@ -2150,6 +2139,7 @@ https://bsl-plataforma.com/consulta-orden.html`
                             </div>
                             <div class="whatsapp-conversacion-hora">${hora}</div>
                         </div>
+                        <div class="whatsapp-conversacion-numero">${conv.numero_cliente}</div>
                         <div class="whatsapp-conversacion-preview">${preview}</div>
                     </div>
                     ${conv.no_leidos > 0 ? `<div class="whatsapp-conversacion-badge">${conv.no_leidos}</div>` : ''}
