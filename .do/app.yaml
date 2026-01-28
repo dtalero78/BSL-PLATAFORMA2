@@ -1,6 +1,7 @@
-name: bsl-plataforma
+name: bsl-plataforma-2
+region: atl
 services:
-  - name: web
+  - name: bsl-plataforma2
     dockerfile_path: Dockerfile
     github:
       branch: main
@@ -8,6 +9,5 @@ services:
       repo: dtalero78/BSL-PLATAFORMA2
     http_port: 8080
     instance_count: 1
-    instance_size_slug: basic-xxs
-    routes:
-      - path: /
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    source_dir: /
