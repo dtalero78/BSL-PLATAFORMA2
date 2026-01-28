@@ -2501,18 +2501,22 @@ https://bsl-plataforma.com/consulta-orden.html`
                 if (resPaciente.ok) {
                     const dataPaciente = await resPaciente.json();
                     const paciente = dataPaciente.paciente;
+                    console.log('💰 Datos del paciente:', paciente);
 
                     // Verificar si tiene fechaConsulta y si es posterior a hace un mes
                     if (paciente.fechaConsulta) {
                         const fechaConsulta = new Date(paciente.fechaConsulta);
                         const haceUnMes = new Date();
                         haceUnMes.setMonth(haceUnMes.getMonth() - 1);
+                        console.log('📅 fechaConsulta:', fechaConsulta, 'haceUnMes:', haceUnMes, 'es posterior?:', fechaConsulta > haceUnMes);
 
                         // Si la fechaConsulta es posterior a hace un mes
                         if (fechaConsulta > haceUnMes) {
+                            console.log('✅ Fecha es reciente, calculando precio...');
                             // Calcular precio basado en los exámenes
                             let precioTotal = 0;
                             const examenes = paciente.examenes || [];
+                            console.log('🏥 Exámenes del paciente:', examenes);
 
                             // Mapeo de precios según el prompt del bot
                             const preciosExamenes = {
@@ -2568,12 +2572,23 @@ https://bsl-plataforma.com/consulta-orden.html`
 
                                 // Si calculamos un precio, generar mensaje personalizado
                                 if (precioTotal > 0) {
+                                    console.log('💵 Precio calculado:', precioTotal);
                                     const precioFormateado = precioTotal.toLocaleString('es-CO');
                                     mensajeTexto = `El valor de tus exámenes es: $${precioFormateado} COP\n\nPuedes pagar por:\n\nBancolombia Ahorros: 442 9119 2456\nCédula: 79 981 585\n\nDaviplata: 3014400818\nNequi: 3008021701\n\nLlave Breb: @talero585\n\nEnvía el comprobante de pago por aquí para procesar tu certificado.`;
+                                } else {
+                                    console.log('⚠️ Precio es 0, no se generó mensaje personalizado');
                                 }
+                            } else {
+                                console.log('⚠️ No hay exámenes o no es array');
                             }
+                        } else {
+                            console.log('⚠️ Fecha NO es reciente');
                         }
+                    } else {
+                        console.log('⚠️ No hay fechaConsulta');
                     }
+                } else {
+                    console.log('❌ Error al obtener paciente:', resPaciente.status);
                 }
 
                 // Enviar mensaje
