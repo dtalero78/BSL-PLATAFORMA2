@@ -2554,11 +2554,22 @@ https://bsl-plataforma.com/consulta-orden.html`
 
                             // Si tiene array de exámenes, calcular precio
                             if (Array.isArray(examenes) && examenes.length > 0) {
-                                // Verificar si es paquete completo o exámenes individuales
-                                const tieneOsteomuscular = examenes.some(e =>
-                                    e.toLowerCase().includes('osteomuscular') ||
-                                    e.toLowerCase().includes('médico')
-                                );
+                                // Caso especial: Solo Visiometría y/o Optometría (sin paquete completo)
+                                const soloVisionExamenes = examenes.every(e => {
+                                    const eLower = e.toLowerCase();
+                                    return eLower.includes('visiometría') || eLower.includes('optometría');
+                                });
+
+                                if (soloVisionExamenes) {
+                                    // Solo exámenes de visión: $23,000
+                                    precioTotal = 23000;
+                                    console.log('👁️ Solo exámenes de visión: $23,000');
+                                } else {
+                                    // Verificar si es paquete completo o exámenes individuales
+                                    const tieneOsteomuscular = examenes.some(e =>
+                                        e.toLowerCase().includes('osteomuscular') ||
+                                        e.toLowerCase().includes('médico')
+                                    );
 
                                 if (tieneOsteomuscular) {
                                     // Paquete completo: precio base
@@ -2623,6 +2634,7 @@ https://bsl-plataforma.com/consulta-orden.html`
                                             precioTotal += precioEncontrado;
                                         }
                                     });
+                                }
                                 }
 
                                 // Si calculamos un precio, generar mensaje personalizado
