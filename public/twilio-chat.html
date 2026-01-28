@@ -2515,8 +2515,20 @@ https://bsl-plataforma.com/consulta-orden.html`
                             console.log('✅ Fecha es reciente, calculando precio...');
                             // Calcular precio basado en los exámenes
                             let precioTotal = 0;
-                            const examenes = paciente.examenes || [];
-                            console.log('🏥 Exámenes del paciente:', examenes);
+                            let examenes = paciente.examenes || [];
+
+                            // Si examenes es un string, parsearlo
+                            if (typeof examenes === 'string') {
+                                try {
+                                    // Intentar parsear como JSON
+                                    examenes = JSON.parse(examenes);
+                                } catch (e) {
+                                    // Si no es JSON válido, dividir por comas
+                                    examenes = examenes.split(',').map(e => e.trim()).filter(e => e);
+                                }
+                            }
+
+                            console.log('🏥 Exámenes del paciente:', examenes, 'tipo:', typeof examenes, 'es array?:', Array.isArray(examenes));
 
                             // Mapeo de precios según el prompt del bot
                             const preciosExamenes = {
@@ -2530,6 +2542,7 @@ https://bsl-plataforma.com/consulta-orden.html`
                                 'Espirometría': 10000,
                                 'Dermatológico': 10000,
                                 'Psicológico': 23000,
+                                'Perfil Psicológico ADC': 23000,
                                 'Perfil lipídico': 69500,
                                 'Perfil Lipídico': 69500,
                                 'Glicemia': 23100,
