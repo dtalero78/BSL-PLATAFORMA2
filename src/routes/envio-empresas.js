@@ -351,15 +351,20 @@ router.post('/enviar-masivo', async (req, res) => {
                 // Agregar a agenda programada
                 let fechaHoraTexto = "Sin fecha asignada";
                 if (item.fechaAtencion) {
-                    const fecha = new Date(item.fechaAtencion);
+                    // Convertir a hora de Colombia (UTC-5)
+                    const fechaUTC = new Date(item.fechaAtencion);
+                    const offsetColombia = -5 * 60; // Colombia UTC-5 en minutos
+                    const offsetLocal = fechaUTC.getTimezoneOffset(); // Offset del servidor
+                    const fechaColombia = new Date(fechaUTC.getTime() + (offsetLocal + offsetColombia) * 60000);
+
                     const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
                     const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
-                    const diaSemana = diasSemana[fecha.getDay()];
-                    const dia = fecha.getDate();
-                    const mes = meses[fecha.getMonth()];
-                    const horas = fecha.getHours().toString().padStart(2, '0');
-                    const minutos = fecha.getMinutes().toString().padStart(2, '0');
+                    const diaSemana = diasSemana[fechaColombia.getDay()];
+                    const dia = fechaColombia.getDate();
+                    const mes = meses[fechaColombia.getMonth()];
+                    const horas = fechaColombia.getHours().toString().padStart(2, '0');
+                    const minutos = fechaColombia.getMinutes().toString().padStart(2, '0');
 
                     fechaHoraTexto = `${diaSemana} ${dia} de ${mes} - ${horas}:${minutos}`;
                 }
