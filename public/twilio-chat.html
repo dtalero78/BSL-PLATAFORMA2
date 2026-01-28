@@ -1718,6 +1718,9 @@ https://bsl-plataforma.com/consulta-orden.html`
                 // Actualizar UI con info del usuario
                 actualizarInfoUsuario();
 
+                // Cargar exámenes disponibles desde la base de datos
+                await cargarExamenesDisponibles();
+
                 // Cargar conversaciones (primera vez)
                 await cargarConversaciones(true);
 
@@ -2563,22 +2566,61 @@ https://bsl-plataforma.com/consulta-orden.html`
 
                                     // Agregar exámenes adicionales
                                     examenes.forEach(examen => {
-                                        const examenNormalizado = examen.trim();
-                                        if (preciosExamenes[examenNormalizado] &&
-                                            preciosExamenes[examenNormalizado] > 0 &&
-                                            !examenNormalizado.toLowerCase().includes('osteomuscular') &&
-                                            !examenNormalizado.toLowerCase().includes('audiometría') &&
-                                            !examenNormalizado.toLowerCase().includes('visiometría') &&
-                                            !examenNormalizado.toLowerCase().includes('optometría')) {
-                                            precioTotal += preciosExamenes[examenNormalizado];
+                                        const examenLower = examen.trim().toLowerCase();
+
+                                        // Saltar exámenes incluidos en el paquete base
+                                        if (examenLower.includes('osteomuscular') ||
+                                            examenLower.includes('audiometría') ||
+                                            examenLower.includes('visiometría') ||
+                                            examenLower.includes('optometría')) {
+                                            return;
+                                        }
+
+                                        // Buscar precio por coincidencia exacta o parcial
+                                        let precioEncontrado = 0;
+
+                                        // Buscar coincidencia exacta primero
+                                        if (preciosExamenes[examen.trim()]) {
+                                            precioEncontrado = preciosExamenes[examen.trim()];
+                                        } else {
+                                            // Buscar coincidencia parcial (case-insensitive)
+                                            for (const [nombreExamen, precio] of Object.entries(preciosExamenes)) {
+                                                if (examenLower.includes(nombreExamen.toLowerCase()) ||
+                                                    nombreExamen.toLowerCase().includes(examenLower)) {
+                                                    precioEncontrado = precio;
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                        if (precioEncontrado > 0) {
+                                            console.log(`  + ${examen}: $${precioEncontrado.toLocaleString('es-CO')}`);
+                                            precioTotal += precioEncontrado;
                                         }
                                     });
                                 } else {
                                     // Exámenes individuales
                                     examenes.forEach(examen => {
-                                        const examenNormalizado = examen.trim();
-                                        if (preciosExamenes[examenNormalizado]) {
-                                            precioTotal += preciosExamenes[examenNormalizado];
+                                        const examenLower = examen.trim().toLowerCase();
+                                        let precioEncontrado = 0;
+
+                                        // Buscar coincidencia exacta primero
+                                        if (preciosExamenes[examen.trim()]) {
+                                            precioEncontrado = preciosExamenes[examen.trim()];
+                                        } else {
+                                            // Buscar coincidencia parcial (case-insensitive)
+                                            for (const [nombreExamen, precio] of Object.entries(preciosExamenes)) {
+                                                if (examenLower.includes(nombreExamen.toLowerCase()) ||
+                                                    nombreExamen.toLowerCase().includes(examenLower)) {
+                                                    precioEncontrado = precio;
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                        if (precioEncontrado > 0) {
+                                            console.log(`  + ${examen}: $${precioEncontrado.toLocaleString('es-CO')}`);
+                                            precioTotal += precioEncontrado;
                                         }
                                     });
                                 }
@@ -3300,21 +3342,41 @@ https://bsl-plataforma.com/consulta-orden.html`
         // ========== MODAL DE EDICIÓN DE PACIENTE ==========
         let pacienteActualEdicion = null;
         let examenesSeleccionados = [];
+        let EXAMENES_DISPONIBLES = []; // Se cargará dinámicamente desde la base de datos
 
-        // Lista de exámenes disponibles
-        // Exámenes prioritarios (mismos que en ordenes.html) + PERFIL LIPÍDICO y GLICEMIA
-        const EXAMENES_DISPONIBLES = [
-            'EXAMEN MÉDICO OCUPACIONAL OSTEOMUSCULAR',
-            'AUDIOMETRÍA',
-            'VISIOMETRÍA',
-            'OPTOMETRÍA',
-            'ÉNFASIS CARDIOVASCULAR',
-            'ÉNFASIS VASCULAR',
-            'ESPIROMETRÍA',
-            'Perfil Psicológico ADC',
-            'PERFIL LIPÍDICO',
-            'GLICEMIA'
-        ];
+        // Cargar exámenes disponibles desde la base de datos
+        async function cargarExamenesDisponibles() {
+            try {
+                const token = Auth.getToken();
+                const response = await fetch('/api/rips/examenes', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success && result.data) {
+                        EXAMENES_DISPONIBLES = result.data.map(examen => examen.nombre);
+                        console.log('📋 Exámenes cargados desde BD:', EXAMENES_DISPONIBLES.length);
+                    }
+                }
+            } catch (error) {
+                console.error('Error cargando exámenes:', error);
+                // Fallback a lista básica si falla
+                EXAMENES_DISPONIBLES = [
+                    'Examen Médico Ocupacional',
+                    'Audiometría',
+                    'Visiometría',
+                    'Optometría',
+                    'Cardiovascular',
+                    'Vascular',
+                    'Espirometría',
+                    'Psicológico',
+                    'Perfil Psicológico ADC',
+                    'Perfil Lipídico',
+                    'Glicemia'
+                ];
+            }
+        }
 
         // ========== FUNCIONES DEL BOT ==========
 
