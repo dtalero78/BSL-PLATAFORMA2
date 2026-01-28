@@ -1059,7 +1059,7 @@ router.get('/whatsapp/conversaciones/:id/paciente', authMiddleware, requireAdmin
         const pacienteResult = await pool.query(`
             SELECT
                 "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
-                "fechaAtencion", "horaAtencion", "numeroId"
+                "fechaAtencion", "horaAtencion", "numeroId", "fechaConsulta", "examenes"
             FROM "HistoriaClinica"
             WHERE "celular" IN ($1, $2, $3)
             ORDER BY "_createdDate" DESC
@@ -1084,7 +1084,9 @@ router.get('/whatsapp/conversaciones/:id/paciente', authMiddleware, requireAdmin
                 segundoApellido: paciente.segundoApellido,
                 fechaAtencion: paciente.fechaAtencion,
                 horaAtencion: paciente.horaAtencion,
-                numeroId: paciente.numeroId
+                numeroId: paciente.numeroId,
+                fechaConsulta: paciente.fechaConsulta,
+                examenes: paciente.examenes
             }
         });
     } catch (error) {
