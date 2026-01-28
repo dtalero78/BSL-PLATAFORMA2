@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Envío Empresas - BSL</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --medical-primary: #0C4A6E;
+            --medical-secondary: #0EA5E9;
+            --success-green: #059669;
+            --warning-amber: #F59E0B;
+            --error-red: #DC2626;
+            --info-blue: #3B82F6;
+            --bg-primary: #F8FAFC;
+            --bg-secondary: #FFFFFF;
+            --bg-tertiary: #F1F5F9;
+            --text-primary: #0F172A;
+            --text-secondary: #475569;
+            --text-muted: #94A3B8;
+            --border-color: #E2E8F0;
+            --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
+            --shadow-md: 0 4px 6px rgba(15, 23, 42, 0.1), 0 2px 4px rgba(15, 23, 42, 0.06);
+            --shadow-lg: 0 10px 15px rgba(15, 23, 42, 0.1), 0 4px 6px rgba(15, 23, 42, 0.05);
+            --radius-md: 12px;
+            --radius-lg: 16px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: var(--bg-secondary);
+            padding: 24px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--medical-primary);
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .selector-container {
+            background: var(--bg-secondary);
+            padding: 20px 24px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            margin-bottom: 24px;
+        }
+
+        .selector-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .empresa-selector {
+            width: 100%;
+            max-width: 400px;
+            padding: 12px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .empresa-selector:hover {
+            border-color: var(--medical-secondary);
+        }
+
+        .empresa-selector:focus {
+            outline: none;
+            border-color: var(--medical-primary);
+            box-shadow: 0 0 0 3px rgba(12, 74, 110, 0.1);
+        }
+
+        .actions-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: var(--medical-primary);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #0A3A54;
+        }
+
+        .btn-success {
+            background: var(--success-green);
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #047857;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            padding: 20px;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .stat-card h3 {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--medical-primary);
+        }
+
+        .table-container {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .table-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .table-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--medical-primary);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: var(--bg-tertiary);
+        }
+
+        th {
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 14px;
+        }
+
+        tbody tr:hover {
+            background: var(--bg-tertiary);
+        }
+
+        tbody tr.selected {
+            background: rgba(14, 165, 233, 0.08);
+        }
+
+        .checkbox-cell {
+            width: 40px;
+            text-align: center;
+        }
+
+        .row-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--medical-primary);
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .console-container {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+        }
+
+        .console-header {
+            padding: 16px 24px;
+            background: var(--medical-primary);
+            color: white;
+            font-weight: 600;
+        }
+
+        .console {
+            padding: 16px;
+            background: #1E293B;
+            color: #E2E8F0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            min-height: 300px;
+            max-height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        .badge-pending {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 24px;
+            color: var(--text-muted);
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 Panel de Envío Empresas</h1>
+            <p>Gestión de envío de agendamientos por WhatsApp para empresas</p>
+        </div>
+
+        <div class="selector-container">
+            <label class="selector-label">Selecciona la Empresa</label>
+            <select class="empresa-selector" id="empresaSelector" onchange="cambiarEmpresa()">
+                <option value="">Cargando empresas...</option>
+            </select>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Registros Cargados</h3>
+                <div class="value" id="totalRegistros">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Registros Seleccionados</h3>
+                <div class="value" id="totalSeleccionados">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Mensajes Enviados</h3>
+                <div class="value" id="totalEnviados">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Errores</h3>
+                <div class="value" id="totalErrores">0</div>
+            </div>
+        </div>
+
+        <div class="actions-bar">
+            <button class="btn btn-success" id="btnEnvioMasivo" onclick="envioMasivo()" disabled>
+                📤 Envío Masivo
+            </button>
+            <button class="btn btn-primary" id="btnMarcarEnviados" onclick="marcarComoEnviados()" disabled>
+                ✅ Marcar como Enviados
+            </button>
+        </div>
+
+        <div class="table-container">
+            <div class="table-header">
+                <h2 id="tableTitle">Registros Pendientes</h2>
+            </div>
+            <div id="tableContent">
+                <div class="empty-state">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                    </svg>
+                    <p>Selecciona una empresa para cargar registros</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="console-container">
+            <div class="console-header">📊 Consola de Eventos</div>
+            <div class="console" id="console">Esperando eventos...</div>
+        </div>
+    </div>
+
+    <script>
+        let registrosActuales = [];
+        let empresaSeleccionada = null;
+        let registrosSeleccionados = new Set();
+
+        // Función para agregar log a la consola
+        function log(mensaje, tipo = 'info') {
+            const console = document.getElementById('console');
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = tipo === 'error' ? '❌' : tipo === 'success' ? '✅' : tipo === 'warning' ? '⚠️' : 'ℹ️';
+            console.textContent += `[${timestamp}] ${prefix} ${mensaje}\n`;
+            console.scrollTop = console.scrollHeight;
+        }
+
+        // Actualizar contador de seleccionados
+        function actualizarContadorSeleccionados() {
+            document.getElementById('totalSeleccionados').textContent = registrosSeleccionados.size;
+            const tieneSeleccionados = registrosSeleccionados.size > 0;
+            document.getElementById('btnEnvioMasivo').disabled = !tieneSeleccionados;
+            document.getElementById('btnMarcarEnviados').disabled = !tieneSeleccionados;
+        }
+
+        // Toggle selección de un registro
+        function toggleSeleccion(index) {
+            const row = document.querySelector(`tr[data-index="${index}"]`);
+
+            if (registrosSeleccionados.has(index)) {
+                registrosSeleccionados.delete(index);
+                row.classList.remove('selected');
+            } else {
+                registrosSeleccionados.add(index);
+                row.classList.add('selected');
+            }
+
+            actualizarContadorSeleccionados();
+            actualizarCheckboxSelectAll();
+        }
+
+        // Seleccionar/deseleccionar todos
+        function toggleSelectAll(checkbox) {
+            if (checkbox.checked) {
+                registrosActuales.forEach((_, index) => {
+                    registrosSeleccionados.add(index);
+                    const row = document.querySelector(`tr[data-index="${index}"]`);
+                    if (row) row.classList.add('selected');
+                    const rowCheckbox = document.getElementById(`checkbox-${index}`);
+                    if (rowCheckbox) rowCheckbox.checked = true;
+                });
+            } else {
+                registrosSeleccionados.clear();
+                document.querySelectorAll('tbody tr').forEach(row => {
+                    row.classList.remove('selected');
+                });
+                document.querySelectorAll('.row-checkbox').forEach(cb => {
+                    cb.checked = false;
+                });
+            }
+
+            actualizarContadorSeleccionados();
+        }
+
+        // Actualizar checkbox de seleccionar todos
+        function actualizarCheckboxSelectAll() {
+            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = registrosSeleccionados.size === registrosActuales.length && registrosActuales.length > 0;
+            }
+        }
+
+        // Cargar empresas al inicio
+        async function cargarEmpresas() {
+            try {
+                log('Cargando lista de empresas...', 'info');
+                const response = await fetch('/api/envio-empresas/empresas');
+
+                if (!response.ok) {
+                    throw new Error('Error al cargar empresas');
+                }
+
+                const data = await response.json();
+                const selector = document.getElementById('empresaSelector');
+
+                selector.innerHTML = '<option value="">Selecciona una empresa...</option>';
+
+                data.data.forEach(empresa => {
+                    const option = document.createElement('option');
+                    option.value = empresa.cod_empresa;
+                    option.textContent = `${empresa.empresa} (${empresa.cod_empresa})`;
+                    selector.appendChild(option);
+                });
+
+                log(`✅ ${data.count} empresas cargadas`, 'success');
+            } catch (error) {
+                log(`Error al cargar empresas: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        // Cambiar empresa seleccionada
+        async function cambiarEmpresa() {
+            const selector = document.getElementById('empresaSelector');
+            empresaSeleccionada = selector.value;
+
+            if (!empresaSeleccionada) {
+                return;
+            }
+
+            const empresaNombre = selector.options[selector.selectedIndex].textContent;
+            document.getElementById('tableTitle').textContent = `Registros Pendientes - ${empresaNombre}`;
+
+            await cargarRegistros();
+        }
+
+        // Cargar registros desde el backend
+        async function cargarRegistros() {
+            if (!empresaSeleccionada) {
+                log('No hay empresa seleccionada', 'warning');
+                return;
+            }
+
+            try {
+                log(`Cargando registros pendientes de ${empresaSeleccionada}...`, 'info');
+
+                const response = await fetch(`/api/envio-empresas/registros?codEmpresa=${empresaSeleccionada}`);
+
+                if (!response.ok) {
+                    throw new Error('Error al cargar registros');
+                }
+
+                const data = await response.json();
+                registrosActuales = data.data;
+
+                // Resetear selecciones
+                registrosSeleccionados.clear();
+
+                document.getElementById('totalRegistros').textContent = registrosActuales.length;
+                document.getElementById('totalSeleccionados').textContent = '0';
+                document.getElementById('btnEnvioMasivo').disabled = true;
+                document.getElementById('btnMarcarEnviados').disabled = true;
+
+                renderTable(registrosActuales);
+                log(`✅ ${registrosActuales.length} registros cargados`, 'success');
+            } catch (error) {
+                log(`Error al cargar registros: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        // Renderizar tabla
+        function renderTable(registros) {
+            const tableContent = document.getElementById('tableContent');
+
+            if (registros.length === 0) {
+                tableContent.innerHTML = `
+                    <div class="empty-state">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <p>No se encontraron registros pendientes</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="checkbox-cell">
+                                <input type="checkbox" class="row-checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" title="Seleccionar todos">
+                            </th>
+                            <th>Datos</th>
+                            <th>Ciudad</th>
+                            <th>Fecha Creación</th>
+                            <th>Fecha Atención</th>
+                            <th>Estado</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${registros.map((reg, index) => {
+                            const fechaCreacion = new Date(reg._createdDate);
+                            const diaCreacion = String(fechaCreacion.getDate()).padStart(2, '0');
+                            const mesCreacion = String(fechaCreacion.getMonth() + 1).padStart(2, '0');
+
+                            let fechaAtencionStr = '';
+                            if (reg.fechaAtencion) {
+                                const fechaAtencion = new Date(reg.fechaAtencion);
+                                const diaAtencion = String(fechaAtencion.getDate()).padStart(2, '0');
+                                const mesAtencion = String(fechaAtencion.getMonth() + 1).padStart(2, '0');
+                                fechaAtencionStr = `${diaAtencion}/${mesAtencion}`;
+                            }
+
+                            const celularLimpio = reg.celular.replace(/\+57/g, '').replace(/\s/g, '').replace(/-/g, '');
+                            const datos = `${reg.primerNombre} ${reg.primerApellido} - ${reg.numeroId} - ${celularLimpio}`;
+
+                            return `
+                                <tr data-index="${index}">
+                                    <td class="checkbox-cell">
+                                        <input type="checkbox" class="row-checkbox" id="checkbox-${index}" onchange="toggleSeleccion(${index})">
+                                    </td>
+                                    <td>${datos}</td>
+                                    <td>${reg.ciudad || '-'}</td>
+                                    <td>${diaCreacion}/${mesCreacion}</td>
+                                    <td>${fechaAtencionStr || '-'}</td>
+                                    <td>
+                                        <span class="badge ${reg.linkEnviado ? 'badge-success' : 'badge-pending'}">
+                                            ${reg.linkEnviado || 'Pendiente'}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary" onclick="enviarIndividual(${index})" id="btn-${index}">
+                                            Enviar
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            tableContent.innerHTML = html;
+        }
+
+        // Enviar mensaje individual
+        async function enviarIndividual(index) {
+            const registro = registrosActuales[index];
+            const btn = document.getElementById(`btn-${index}`);
+
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="loading"></span> Enviando...';
+                log(`Enviando mensaje a ${registro.primerNombre} ${registro.primerApellido}...`, 'info');
+
+                const response = await fetch('/api/envio-empresas/enviar-individual', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(registro)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al enviar mensaje');
+                }
+
+                const data = await response.json();
+                btn.textContent = '✓ Enviado';
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-success');
+
+                log(`✅ Mensaje enviado a ${registro.primerNombre} ${registro.primerApellido}`, 'success');
+
+                // Actualizar estadísticas
+                const enviados = parseInt(document.getElementById('totalEnviados').textContent);
+                document.getElementById('totalEnviados').textContent = enviados + 1;
+
+            } catch (error) {
+                log(`❌ Error enviando a ${registro.primerNombre}: ${error.message}`, 'error');
+                btn.textContent = 'Error';
+                btn.classList.add('btn-danger');
+                btn.disabled = false;
+                console.error(error);
+            }
+        }
+
+        // Envío masivo
+        async function envioMasivo() {
+            if (registrosSeleccionados.size === 0) {
+                log('No hay registros seleccionados para enviar', 'warning');
+                alert('Por favor, selecciona al menos un registro para enviar');
+                return;
+            }
+
+            const registrosParaEnviar = Array.from(registrosSeleccionados).map(index => registrosActuales[index]);
+
+            if (!confirm(`¿Estás seguro de enviar ${registrosParaEnviar.length} mensajes a los registros seleccionados?`)) {
+                return;
+            }
+
+            const btn = document.getElementById('btnEnvioMasivo');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> Enviando...';
+
+            document.getElementById('totalEnviados').textContent = '0';
+            document.getElementById('totalErrores').textContent = '0';
+
+            log(`🚀 Iniciando envío masivo de ${registrosParaEnviar.length} mensajes seleccionados...`, 'info');
+
+            try {
+                const response = await fetch('/api/envio-empresas/enviar-masivo', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        registros: registrosParaEnviar
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error en envío masivo');
+                }
+
+                const data = await response.json();
+                const resultados = data.resultados;
+
+                document.getElementById('totalEnviados').textContent = resultados.enviados;
+                document.getElementById('totalErrores').textContent = resultados.errores;
+
+                // Limpiar consola para el reporte final
+                const consoleElement = document.getElementById('console');
+                consoleElement.textContent = '';
+
+                // Mostrar agenda programada si existe
+                if (resultados.agendaProgramada.length > 0) {
+                    let fechaTitulo = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+                    consoleElement.textContent += '===============\n';
+                    consoleElement.textContent += `AGENDA PROGRAMADA ${fechaTitulo}\n`;
+                    consoleElement.textContent += '===============\n\n';
+
+                    resultados.agendaProgramada.forEach((item, i) => {
+                        consoleElement.textContent += `${i + 1}. ${item.nombre} (${item.empresa}): ${item.fechaHora} - ${item.ciudad}\n`;
+                    });
+
+                    consoleElement.textContent += '\n===============\n\n';
+                }
+
+                // Mostrar resumen
+                consoleElement.textContent += `Total enviados: ${resultados.enviados}\n`;
+
+                if (resultados.errores > 0) {
+                    consoleElement.textContent += `\nErrores: ${resultados.errores}\n`;
+                    if (resultados.detalles.length > 0) {
+                        consoleElement.textContent += '\n--- REGISTROS CON ERROR ---\n';
+                        resultados.detalles.forEach(detalle => {
+                            consoleElement.textContent += `- ${detalle.nombre} (${detalle.numeroId}): ${detalle.error}\n`;
+                        });
+                    }
+                }
+
+                consoleElement.scrollTop = consoleElement.scrollHeight;
+
+                // Recargar registros
+                setTimeout(() => {
+                    cargarRegistros();
+                }, 2000);
+
+            } catch (error) {
+                log(`❌ Error en envío masivo: ${error.message}`, 'error');
+                console.error(error);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '📤 Envío Masivo';
+            }
+        }
+
+        // Marcar registros seleccionados como enviados (sin enviar mensaje)
+        async function marcarComoEnviados() {
+            if (registrosSeleccionados.size === 0) {
+                log('No hay registros seleccionados para marcar', 'warning');
+                alert('Por favor, selecciona al menos un registro para marcar como enviado');
+                return;
+            }
+
+            const registrosParaMarcar = Array.from(registrosSeleccionados).map(index => registrosActuales[index]);
+
+            if (!confirm(`¿Estás seguro de marcar ${registrosParaMarcar.length} registros como ENVIADO sin enviar mensaje?`)) {
+                return;
+            }
+
+            const btn = document.getElementById('btnMarcarEnviados');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> Marcando...';
+
+            log(`🏷️ Marcando ${registrosParaMarcar.length} registros como ENVIADO...`, 'info');
+
+            try {
+                const response = await fetch('/api/envio-empresas/marcar-enviados', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        registros: registrosParaMarcar
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al marcar registros');
+                }
+
+                const data = await response.json();
+                log(`✅ ${data.actualizados} registros marcados como ENVIADO`, 'success');
+
+                // Limpiar selección
+                registrosSeleccionados.clear();
+                actualizarContadorSeleccionados();
+
+                // Recargar registros
+                setTimeout(() => {
+                    cargarRegistros();
+                }, 1000);
+
+            } catch (error) {
+                log(`❌ Error al marcar registros: ${error.message}`, 'error');
+                console.error(error);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '✅ Marcar como Enviados';
+            }
+        }
+
+        // Cargar empresas al abrir la página
+        window.addEventListener('load', () => {
+            log('Panel de Envío Empresas iniciado', 'success');
+            cargarEmpresas();
+        });
+    </script>
+</body>
+</html>
