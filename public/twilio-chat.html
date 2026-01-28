@@ -1718,9 +1718,6 @@ https://bsl-plataforma.com/consulta-orden.html`
                 // Actualizar UI con info del usuario
                 actualizarInfoUsuario();
 
-                // Cargar exámenes disponibles desde la base de datos
-                await cargarExamenesDisponibles();
-
                 // Cargar conversaciones (primera vez)
                 await cargarConversaciones(true);
 
@@ -3354,41 +3351,20 @@ https://bsl-plataforma.com/consulta-orden.html`
         // ========== MODAL DE EDICIÓN DE PACIENTE ==========
         let pacienteActualEdicion = null;
         let examenesSeleccionados = [];
-        let EXAMENES_DISPONIBLES = []; // Se cargará dinámicamente desde la base de datos
 
-        // Cargar exámenes disponibles desde la base de datos
-        async function cargarExamenesDisponibles() {
-            try {
-                const token = Auth.getToken();
-                const response = await fetch('/api/rips/examenes', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (response.ok) {
-                    const result = await response.json();
-                    if (result.success && result.data) {
-                        EXAMENES_DISPONIBLES = result.data.map(examen => examen.nombre);
-                        console.log('📋 Exámenes cargados desde BD:', EXAMENES_DISPONIBLES.length);
-                    }
-                }
-            } catch (error) {
-                console.error('Error cargando exámenes:', error);
-                // Fallback a lista básica si falla
-                EXAMENES_DISPONIBLES = [
-                    'Examen Médico Ocupacional',
-                    'Audiometría',
-                    'Visiometría',
-                    'Optometría',
-                    'Cardiovascular',
-                    'Vascular',
-                    'Espirometría',
-                    'Psicológico',
-                    'Perfil Psicológico ADC',
-                    'Perfil Lipídico',
-                    'Glicemia'
-                ];
-            }
-        }
+        // Lista de exámenes prioritarios (hardcoded)
+        const EXAMENES_DISPONIBLES = [
+            'EXAMEN MÉDICO OCUPACIONAL OSTEOMUSCULAR',
+            'AUDIOMETRÍA',
+            'VISIOMETRÍA',
+            'OPTOMETRÍA',
+            'ÉNFASIS CARDIOVASCULAR',
+            'ÉNFASIS VASCULAR',
+            'ESPIROMETRÍA',
+            'Perfil Psicológico ADC',
+            'PERFIL LIPÍDICO',
+            'GLICEMIA'
+        ];
 
         // ========== FUNCIONES DEL BOT ==========
 
