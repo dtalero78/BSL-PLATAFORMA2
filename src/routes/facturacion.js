@@ -4,7 +4,7 @@
 
 const express = require('express');
 const router = express.Router();
-const AlegraClient = require('../lib/alegra-client');
+const AlegraClient = require('../../lib/alegra-client');
 
 // Middleware de autenticación (importar del server.js principal)
 // Asumimos que req.usuario está disponible después de authMiddleware
