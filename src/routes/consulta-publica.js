@@ -310,6 +310,7 @@ router.post('/enviar-certificado-whatsapp', authMiddleware, requireAdmin, async 
             `SELECT "_id", "primerNombre" FROM "HistoriaClinica"
              WHERE REPLACE(REPLACE("celular", ' ', ''), '+57', '') = $1
              OR REPLACE(REPLACE("celular", ' ', ''), '+', '') = $2
+             ORDER BY "_createdDate" DESC
              LIMIT 1`,
             [numeroSin57, numeroLimpio]
         );
