@@ -59,6 +59,7 @@ router.get('/registros', async (req, res) => {
                 h."linkEnviado",
                 h."codEmpresa",
                 h."_createdDate",
+                h."medicoAsignado",
                 e.empresa
             FROM "HistoriaClinica" h
             LEFT JOIN empresas e ON h."codEmpresa" = e.cod_empresa

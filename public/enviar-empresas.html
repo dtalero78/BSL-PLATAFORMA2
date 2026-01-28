@@ -557,7 +557,8 @@
                             <th>Datos</th>
                             <th>Ciudad</th>
                             <th>Fecha Creación</th>
-                            <th>Fecha Atención</th>
+                            <th>Fecha/Hora Atención</th>
+                            <th>Médico Asignado</th>
                             <th>Estado</th>
                             <th>Acción</th>
                         </tr>
@@ -568,12 +569,14 @@
                             const diaCreacion = String(fechaCreacion.getDate()).padStart(2, '0');
                             const mesCreacion = String(fechaCreacion.getMonth() + 1).padStart(2, '0');
 
-                            let fechaAtencionStr = '';
+                            let fechaAtencionStr = '-';
                             if (reg.fechaAtencion) {
                                 const fechaAtencion = new Date(reg.fechaAtencion);
                                 const diaAtencion = String(fechaAtencion.getDate()).padStart(2, '0');
                                 const mesAtencion = String(fechaAtencion.getMonth() + 1).padStart(2, '0');
-                                fechaAtencionStr = `${diaAtencion}/${mesAtencion}`;
+                                const horaAtencion = String(fechaAtencion.getHours()).padStart(2, '0');
+                                const minutoAtencion = String(fechaAtencion.getMinutes()).padStart(2, '0');
+                                fechaAtencionStr = `${diaAtencion}/${mesAtencion} ${horaAtencion}:${minutoAtencion}`;
                             }
 
                             const celularLimpio = reg.celular.replace(/\+57/g, '').replace(/\s/g, '').replace(/-/g, '');
@@ -587,7 +590,8 @@
                                     <td>${datos}</td>
                                     <td>${reg.ciudad || '-'}</td>
                                     <td>${diaCreacion}/${mesCreacion}</td>
-                                    <td>${fechaAtencionStr || '-'}</td>
+                                    <td>${fechaAtencionStr}</td>
+                                    <td>${reg.medicoAsignado || '-'}</td>
                                     <td>
                                         <span class="badge ${reg.linkEnviado ? 'badge-success' : 'badge-pending'}">
                                             ${reg.linkEnviado || 'Pendiente'}
