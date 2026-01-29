@@ -219,10 +219,12 @@ router.post('/', async (req, res) => {
         if (asignarMedicoAuto && fechaAtencion && horaAtencion) {
             console.log('Asignacion automatica de medico solicitada...');
             console.log('   Fecha:', fechaAtencion, '| Hora:', horaAtencion, '| Modalidad:', modalidad || 'presencial');
+            console.log('   codEmpresa:', codEmpresa);
 
             const fechaObj = new Date(fechaAtencion + 'T12:00:00');
             const diaSemana = fechaObj.getDay();
             const modalidadBuscar = modalidad || 'presencial';
+            console.log('   Dia de semana:', diaSemana, '| Modalidad a buscar:', modalidadBuscar);
 
             // Buscar médicos disponibles para esa hora, fecha y modalidad (excepto NUBIA)
             // Ahora puede devolver múltiples filas por médico (múltiples rangos horarios)
@@ -261,6 +263,9 @@ router.post('/', async (req, res) => {
             const medicosDisponibles = [];
             const [horaSelH, horaSelM] = horaAtencion.split(':').map(Number);
             const horaSelMinutos = horaSelH * 60 + horaSelM;
+
+            console.log('   Total medicos encontrados:', Object.keys(medicosPorId).length);
+            console.log('   Hora seleccionada:', horaAtencion, '| Minutos:', horaSelMinutos);
 
             for (const med of Object.values(medicosPorId)) {
                 // Verificar si la hora está dentro de ALGUNO de los rangos del médico
@@ -303,7 +308,10 @@ router.post('/', async (req, res) => {
                 }
             }
 
+            console.log('   Médicos disponibles encontrados:', medicosDisponibles);
+
             if (medicosDisponibles.length === 0) {
+                console.log('   ❌ ERROR: No se encontraron médicos disponibles');
                 return res.status(400).json({
                     success: false,
                     message: 'No hay médicos disponibles para el horario seleccionado'
