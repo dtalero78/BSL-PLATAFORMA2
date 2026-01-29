@@ -979,6 +979,15 @@
                     empresaInput.style.backgroundColor = '#f5f5f5';
                     empresaContainer.style.display = 'block';
                 }
+
+                // Pre-seleccionar los 3 exámenes obligatorios
+                examenesSeleccionados = ['EXAMEN MÉDICO OSTEOMUSCULAR', 'AUDIOMETRÍA', 'OPTOMETRÍA'];
+
+                // Ocultar la sección de exámenes ya que están pre-seleccionados
+                const examenesSlide = document.querySelector('.question-slide[data-step="4"]');
+                if (examenesSlide) {
+                    examenesSlide.style.display = 'none';
+                }
             }
         }
 
@@ -1039,12 +1048,61 @@
             document.getElementById('horaSelect').innerHTML = '<option value="">Primero selecciona un día</option>';
         }
 
-        function actualizarHoras() {
+        async function actualizarHoras() {
             const fecha = document.getElementById('dia').value;
             if (!fecha) return;
 
+            // Si es empresa especial, consultar disponibilidad real de médicos
+            if (refEmpresa) {
+                const empresasEspeciales = ['rippling', 'ripplingperiodico', 'ripplingegreso', 'DeStori', 'EVERTEC', 'ATR'];
+                if (empresasEspeciales.includes(refEmpresa)) {
+                    await cargarHorariosDisponibles(fecha);
+                    return;
+                }
+            }
+
             // NUBIA no tiene restricción de cupo - genera horas directamente sin verificar ocupación
             generarHorasDisponibles(fecha);
+        }
+
+        async function cargarHorariosDisponibles(fecha) {
+            const select = document.getElementById('horaSelect');
+            select.innerHTML = '<option value="">Cargando horarios disponibles...</option>';
+
+            try {
+                const response = await fetch(`/api/calendario/turnos-disponibles?fecha=${fecha}&modalidad=virtual`);
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.message || 'Error al cargar horarios');
+                }
+
+                const turnos = data.turnos || [];
+
+                // Filtrar solo los turnos disponibles (al menos un médico disponible)
+                const turnosDisponibles = turnos.filter(t => t.disponible);
+
+                if (turnosDisponibles.length === 0) {
+                    select.innerHTML = '<option value="">No hay horarios disponibles para esta fecha</option>';
+                    return;
+                }
+
+                select.innerHTML = '<option value="">Seleccionar hora...</option>';
+
+                turnosDisponibles.forEach(turno => {
+                    // Convertir hora de 24h a formato 12h con AM/PM
+                    const [horaNum, minuto] = turno.hora.split(':').map(Number);
+                    const hora12 = horaNum > 12 ? horaNum - 12 : (horaNum === 0 ? 12 : horaNum);
+                    const ampm = horaNum >= 12 ? 'PM' : 'AM';
+                    const minutoStr = String(minuto).padStart(2, '0');
+
+                    select.innerHTML += `<option value="${turno.hora}">${hora12}:${minutoStr} ${ampm}</option>`;
+                });
+
+            } catch (error) {
+                console.error('Error al cargar horarios:', error);
+                select.innerHTML = '<option value="">Error al cargar horarios. Intenta de nuevo.</option>';
+            }
         }
 
         function generarHorasDisponibles(fecha) {
@@ -1198,6 +1256,12 @@
                 pasoActual++;
             }
 
+            // Si es empresa especial y estamos en paso 3, saltar al paso 5 (omitir paso 4 de exámenes)
+            const examenesSlide = document.querySelector('.question-slide[data-step="4"]');
+            if (pasoActual === 4 && examenesSlide && examenesSlide.style.display === 'none') {
+                pasoActual = 5;
+            }
+
             if (pasoActual === 5) {
                 generarResumen();
             }
@@ -1212,6 +1276,13 @@
             slides.forEach(s => s.classList.remove('active'));
 
             pasoActual--;
+
+            // Si es empresa especial y estamos en paso 5, volver al paso 3 (omitir paso 4 de exámenes)
+            const examenesSlide = document.querySelector('.question-slide[data-step="4"]');
+            if (pasoActual === 4 && examenesSlide && examenesSlide.style.display === 'none') {
+                pasoActual = 3;
+            }
+
             document.querySelector(`.question-slide[data-step="${pasoActual}"]`).classList.add('active');
             actualizarProgreso();
             ocultarAlerta();
