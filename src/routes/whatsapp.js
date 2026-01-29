@@ -364,6 +364,7 @@ router.post('/status', async (req, res) => {
 
             // El mensaje NO existe, fue enviado desde otra plataforma
             console.log('📝 Registrando mensaje enviado desde plataforma externa');
+            console.log(`📱 [DEBUG-STATUS] To original: "${To}", numeroCliente normalizado: "${numeroCliente}"`);
 
             // Buscar conversación - primero con formato normalizado (+), luego sin + (conversaciones viejas)
             let conversacion = await pool.query(`
