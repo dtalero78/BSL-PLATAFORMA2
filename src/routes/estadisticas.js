@@ -65,7 +65,7 @@ router.get('/movimiento', authMiddleware, async (req, res) => {
                 "codEmpresa",
                 COUNT(*) as contador
             FROM "HistoriaClinica"
-            WHERE "fechaAtencion"::date BETWEEN $1::date AND $2::date
+            WHERE "fechaAtencion" >= $1 AND "fechaAtencion" <= $2
                 AND "codEmpresa" IS NOT NULL
                 AND "codEmpresa" != ''
             GROUP BY "codEmpresa"
@@ -73,7 +73,7 @@ router.get('/movimiento', authMiddleware, async (req, res) => {
             LIMIT 20
         `;
 
-        const empresasResult = await pool.query(empresasQuery, [fechaInicial, fechaFinal]);
+        const empresasResult = await pool.query(empresasQuery, [fechaInicial + ' 00:00:00', fechaFinal + ' 23:59:59']);
 
         // Consulta para obtener conteo por médico
         const medicosQuery = `
@@ -81,14 +81,14 @@ router.get('/movimiento', authMiddleware, async (req, res) => {
                 COALESCE("mdNombre", 'Sin asignar') as medico,
                 COUNT(*) as contador
             FROM "HistoriaClinica"
-            WHERE "fechaAtencion"::date BETWEEN $1::date AND $2::date
+            WHERE "fechaAtencion" >= $1 AND "fechaAtencion" <= $2
                 AND "atendido" = 'ATENDIDO'
             GROUP BY "mdNombre"
             ORDER BY contador DESC
             LIMIT 20
         `;
 
-        const medicosResult = await pool.query(medicosQuery, [fechaInicial, fechaFinal]);
+        const medicosResult = await pool.query(medicosQuery, [fechaInicial + ' 00:00:00', fechaFinal + ' 23:59:59']);
 
         // Construir respuesta
         const estadisticas = {
