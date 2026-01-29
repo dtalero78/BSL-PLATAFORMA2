@@ -1070,7 +1070,7 @@
             select.innerHTML = '<option value="">Cargando horarios disponibles...</option>';
 
             try {
-                const response = await fetch(`/api/calendario/turnos-disponibles?fecha=${fecha}&modalidad=virtual`);
+                const response = await fetch(`/api/turnos-disponibles?fecha=${fecha}&modalidad=virtual`);
                 const data = await response.json();
 
                 if (!response.ok || !data.success) {
