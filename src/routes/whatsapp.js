@@ -488,7 +488,6 @@ router.post('/status', async (req, res) => {
 // POST /enviar-manual - Enviar mensaje manual de WhatsApp (usado desde ordenes.html)
 // ============================================================
 const { sendWhatsAppMessage } = require('../services/whatsapp');
-const { normalizarTelefonoConPrefijo57 } = require('../helpers/phone');
 
 router.post('/enviar-manual', async (req, res) => {
     try {
