@@ -48,7 +48,7 @@ router.get('/movimiento', authMiddleware, async (req, res) => {
                     AND "tipoExamen" ~* 'virtual|teleconferencia' THEN 1 END) as virtual,
                 COUNT(CASE WHEN "atendido" NOT IN ('AGENDADO', 'ATENDIDO') OR "atendido" IS NULL THEN 1 END) as sin_atender
             FROM "HistoriaClinica"
-            WHERE DATE("fechaAtencion") BETWEEN $1::date AND $2::date
+            WHERE "fechaAtencion"::date BETWEEN $1::date AND $2::date
         `;
 
         const statsResult = await pool.query(statsQuery, [fechaInicial, fechaFinal]);
