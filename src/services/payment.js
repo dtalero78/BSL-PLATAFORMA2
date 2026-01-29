@@ -291,6 +291,7 @@ async function procesarFlujoPagos(message, from) {
                 `SELECT _id, "primerNombre", "primerApellido", "numeroId", atendido
                  FROM "HistoriaClinica"
                  WHERE "numeroId" = $1
+                 ORDER BY "_createdDate" DESC
                  LIMIT 1`,
                 [documento]
             );
