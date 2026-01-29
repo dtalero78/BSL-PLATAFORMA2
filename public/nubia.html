@@ -2118,7 +2118,10 @@
 
         function toggleSelectAll() {
             const selectAll = document.getElementById('selectAll');
-            const checkboxes = document.querySelectorAll('.checkbox-paciente');
+            // Solo seleccionar checkboxes en el contenedor visible
+            const isMobile = window.innerWidth <= 768;
+            const containerSelector = isMobile ? '#mobileCards .checkbox-paciente' : '#tableBody .checkbox-paciente';
+            const checkboxes = document.querySelectorAll(containerSelector);
             checkboxes.forEach(cb => {
                 cb.checked = selectAll.checked;
             });
@@ -2126,7 +2129,11 @@
         }
 
         function actualizarSeleccion() {
-            const checkboxes = document.querySelectorAll('.checkbox-paciente:checked');
+            // Solo contar checkboxes en el contenedor visible (desktop o mobile)
+            const isMobile = window.innerWidth <= 768;
+            const containerSelector = isMobile ? '#mobileCards .checkbox-paciente' : '#tableBody .checkbox-paciente';
+
+            const checkboxes = document.querySelectorAll(containerSelector + ':checked');
             const count = checkboxes.length;
 
             const contadorEl = document.getElementById('contadorSeleccionados');
@@ -2143,7 +2150,7 @@
             }
 
             // Actualizar checkbox "select all"
-            const totalCheckboxes = document.querySelectorAll('.checkbox-paciente').length;
+            const totalCheckboxes = document.querySelectorAll(containerSelector).length;
             const selectAllEl = document.getElementById('selectAll');
             if (selectAllEl) {
                 selectAllEl.checked = count > 0 && count === totalCheckboxes;
@@ -2152,7 +2159,10 @@
         }
 
         async function enviarMensajeMasivo() {
-            const checkboxes = document.querySelectorAll('.checkbox-paciente:checked');
+            // Solo enviar a pacientes seleccionados en el contenedor visible
+            const isMobile = window.innerWidth <= 768;
+            const containerSelector = isMobile ? '#mobileCards .checkbox-paciente:checked' : '#tableBody .checkbox-paciente:checked';
+            const checkboxes = document.querySelectorAll(containerSelector);
             const ids = Array.from(checkboxes).map(cb => cb.dataset.id);
 
             if (ids.length === 0) {
