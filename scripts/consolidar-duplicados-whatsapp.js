@@ -122,18 +122,17 @@ async function consolidarDuplicados() {
                     }
                 }
 
-                // 2.2. Cerrar conversaciones secundarias
-                await pool.query(`
-                    UPDATE conversaciones_whatsapp
-                    SET estado = 'cerrada',
-                        fecha_cierre = NOW(),
-                        notas = COALESCE(notas, '') || ' [Consolidada con ID ' || $1 || ' el ' || NOW()::date || ']'
-                    WHERE id = ANY($2::int[])
-                `, [idPrimario, idsSecundarios]);
+                // 2.2. Primero, cambiar celular de secundarias a uno temporal para evitar constraint violation
+                // Esto libera el número normalizado para la primaria
+                for (let i = 0; i < idsSecundarios.length; i++) {
+                    await pool.query(`
+                        UPDATE conversaciones_whatsapp
+                        SET celular = $1
+                        WHERE id = $2
+                    `, [`_duplicado_${idsSecundarios[i]}`, idsSecundarios[i]]);
+                }
 
-                console.log(`   ✓ Cerradas ${idsSecundarios.length} conversaciones secundarias`);
-
-                // 2.3. Actualizar celular normalizado en conversación primaria
+                // 2.3. Ahora actualizar celular normalizado en conversación primaria
                 await pool.query(`
                     UPDATE conversaciones_whatsapp
                     SET celular = $1,
@@ -142,6 +141,16 @@ async function consolidarDuplicados() {
                 `, [celularNormalizado, idPrimario]);
 
                 console.log(`   ✓ Actualizado celular en conversación primaria: ${celularNormalizado}`);
+
+                // 2.4. Finalmente cerrar conversaciones secundarias
+                await pool.query(`
+                    UPDATE conversaciones_whatsapp
+                    SET estado = 'cerrada',
+                        fecha_ultima_actividad = NOW()
+                    WHERE id = ANY($1::int[])
+                `, [idsSecundarios]);
+
+                console.log(`   ✓ Cerradas ${idsSecundarios.length} conversaciones secundarias`);
 
                 // Commit transacción
                 await pool.query('COMMIT');

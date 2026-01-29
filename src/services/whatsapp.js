@@ -188,13 +188,21 @@ async function sendWhatsAppMedia(toNumber, mediaBuffer, mediaType, fileName, cap
 // Helper: Guardar mensaje saliente en base de datos y emitir evento WebSocket
 async function guardarMensajeSaliente(numeroCliente, contenido, twilioSid, tipoMensaje = 'text', mediaUrl = null, mediaType = null, nombrePaciente = null) {
     try {
-        // Normalizar número usando helper centralizado (formato: 57XXXXXXXXXX sin +)
+        // Normalizar número usando helper centralizado (formato: +57XXXXXXXXXX con +)
         const numeroNormalizado = normalizarTelefonoConPrefijo57(numeroCliente);
 
-        // Buscar o crear conversacion
+        // Buscar conversación - primero con formato normalizado (+), luego sin + (conversaciones viejas)
         let conversacion = await pool.query(`
             SELECT id FROM conversaciones_whatsapp WHERE celular = $1
         `, [numeroNormalizado]);
+
+        // Si no se encuentra con +, buscar sin + (conversaciones antiguas)
+        if (conversacion.rows.length === 0 && numeroNormalizado.startsWith('+')) {
+            const numeroSinMas = numeroNormalizado.substring(1);
+            conversacion = await pool.query(`
+                SELECT id FROM conversaciones_whatsapp WHERE celular = $1
+            `, [numeroSinMas]);
+        }
 
         let conversacionId;
 

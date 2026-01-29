@@ -181,10 +181,20 @@ router.post('/enviar-individual', async (req, res) => {
         const telefonoConPrefijo = normalizarTelefonoConPrefijo57(telefonoCompleto);
 
         try {
-            const convExistente = await pool.query(
+            // Buscar conversación - primero con +, luego sin + (conversaciones viejas)
+            let convExistente = await pool.query(
                 'SELECT id FROM conversaciones_whatsapp WHERE celular = $1',
                 [telefonoConPrefijo]
             );
+
+            // Si no se encuentra con +, buscar sin + (conversaciones antiguas)
+            if (convExistente.rows.length === 0 && telefonoConPrefijo.startsWith('+')) {
+                const numeroSinMas = telefonoConPrefijo.substring(1);
+                convExistente = await pool.query(
+                    'SELECT id FROM conversaciones_whatsapp WHERE celular = $1',
+                    [numeroSinMas]
+                );
+            }
 
             if (convExistente.rows.length > 0) {
                 await pool.query(

@@ -901,11 +901,20 @@ router.post('/importar-desde-preview', async (req, res) => {
                         const telefonoNormalizado = normalizarTelefonoConPrefijo57(registro.celular);
 
                         if (telefonoNormalizado) {
-                            // Verificar si ya existe una conversación para este teléfono
-                            const conversacionExistente = await pool.query(
+                            // Buscar conversación - primero con +, luego sin + (conversaciones viejas)
+                            let conversacionExistente = await pool.query(
                                 'SELECT id FROM conversaciones_whatsapp WHERE celular = $1 AND estado != $2',
                                 [telefonoNormalizado, 'cerrada']
                             );
+
+                            // Si no se encuentra con +, buscar sin + (conversaciones antiguas)
+                            if (conversacionExistente.rows.length === 0 && telefonoNormalizado.startsWith('+')) {
+                                const numeroSinMas = telefonoNormalizado.substring(1);
+                                conversacionExistente = await pool.query(
+                                    'SELECT id FROM conversaciones_whatsapp WHERE celular = $1 AND estado != $2',
+                                    [numeroSinMas, 'cerrada']
+                                );
+                            }
 
                             if (conversacionExistente.rows.length === 0) {
                                 // No existe conversación activa, crear una nueva
@@ -1233,11 +1242,20 @@ router.post('/importar-csv', upload.single('archivo'), async (req, res) => {
                         const telefonoNormalizado = normalizarTelefonoConPrefijo57(row.celular);
 
                         if (telefonoNormalizado) {
-                            // Verificar si ya existe una conversación para este teléfono
-                            const conversacionExistente = await pool.query(
+                            // Buscar conversación - primero con +, luego sin + (conversaciones viejas)
+                            let conversacionExistente = await pool.query(
                                 'SELECT id FROM conversaciones_whatsapp WHERE celular = $1 AND estado != $2',
                                 [telefonoNormalizado, 'cerrada']
                             );
+
+                            // Si no se encuentra con +, buscar sin + (conversaciones antiguas)
+                            if (conversacionExistente.rows.length === 0 && telefonoNormalizado.startsWith('+')) {
+                                const numeroSinMas = telefonoNormalizado.substring(1);
+                                conversacionExistente = await pool.query(
+                                    'SELECT id FROM conversaciones_whatsapp WHERE celular = $1 AND estado != $2',
+                                    [numeroSinMas, 'cerrada']
+                                );
+                            }
 
                             if (conversacionExistente.rows.length === 0) {
                                 // No existe conversación activa, crear una nueva

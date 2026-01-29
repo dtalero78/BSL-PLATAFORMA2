@@ -409,10 +409,18 @@ router.post('/nubia/atender/:id', async (req, res) => {
                     // NORMALIZACIÓN: Usar helper para formato consistente (57XXXXXXXXXX sin +)
                     const numeroCliente = normalizarTelefonoConPrefijo57(toNumber);
 
-                    // Buscar o crear conversación
+                    // Buscar conversación - primero con formato normalizado (+), luego sin + (conversaciones viejas)
                     let conversacion = await pool.query(`
                         SELECT id FROM conversaciones_whatsapp WHERE celular = $1
                     `, [numeroCliente]);
+
+                    // Si no se encuentra con +, buscar sin + (conversaciones antiguas)
+                    if (conversacion.rows.length === 0 && numeroCliente.startsWith('+')) {
+                        const numeroSinMas = numeroCliente.substring(1);
+                        conversacion = await pool.query(`
+                            SELECT id FROM conversaciones_whatsapp WHERE celular = $1
+                        `, [numeroSinMas]);
+                    }
 
                     let conversacionId;
 
