@@ -44,14 +44,15 @@ router.get('/movimiento', authMiddleware, async (req, res) => {
                 COUNT(*) FILTER (WHERE COALESCE("atendido", '') = 'AGENDADO') as agendados,
                 COUNT(*) FILTER (WHERE COALESCE("atendido", '') = 'ATENDIDO') as atendidos,
                 COUNT(*) FILTER (WHERE COALESCE("atendido", '') = 'ATENDIDO'
-                    AND (LOWER(COALESCE("tipoExamen", '')) LIKE '%presencial%'
-                         OR COALESCE("tipoExamen", '') !~* 'virtual|teleconferencia')) as presencial,
+                    AND COALESCE("tipoExamen", '') !~* 'virtual|teleconferencia') as presencial,
                 COUNT(*) FILTER (WHERE COALESCE("atendido", '') = 'ATENDIDO'
-                    AND (LOWER(COALESCE("tipoExamen", '')) LIKE '%virtual%'
-                         OR LOWER(COALESCE("tipoExamen", '')) LIKE '%teleconferencia%')) as virtual,
-                COUNT(*) FILTER (WHERE COALESCE("atendido", 'PENDIENTE') = 'PENDIENTE') as sin_atender
+                    AND COALESCE("tipoExamen", '') ~* 'virtual|teleconferencia') as virtual,
+                COUNT(*) FILTER (WHERE COALESCE("atendido", '') NOT IN ('AGENDADO', 'ATENDIDO')) as sin_atender
             FROM "HistoriaClinica"
-            WHERE "fechaAtencion"::date BETWEEN $1::date AND $2::date
+            WHERE "fechaAtencion" IS NOT NULL
+                AND "fechaAtencion"::text != ''
+                AND "fechaAtencion"::date >= $1::date
+                AND "fechaAtencion"::date <= $2::date
         `;
 
         const statsResult = await pool.query(statsQuery, [fechaInicial, fechaFinal]);
