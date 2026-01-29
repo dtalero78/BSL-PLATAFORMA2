@@ -269,21 +269,36 @@ router.post('/', async (req, res) => {
 
             for (const med of Object.values(medicosPorId)) {
                 // Verificar si la hora está dentro de ALGUNO de los rangos del médico
-                let dentroDeRango = false;
+                // Y verificar que sea un slot válido según tiempo_consulta
+                let esSlotValido = false;
+
+                // Obtener tiempo de consulta del médico
+                const tiempoConsultaResult = await pool.query(`
+                    SELECT COALESCE(tiempo_consulta, 10) as tiempo_consulta
+                    FROM medicos
+                    WHERE id = $1
+                `, [med.id]);
+                const tiempoConsulta = tiempoConsultaResult.rows[0]?.tiempo_consulta || 10;
+
                 for (const rango of med.rangos) {
                     const [horaInicioH, horaInicioM] = rango.horaInicio.split(':').map(Number);
                     const [horaFinH, horaFinM] = rango.horaFin.split(':').map(Number);
                     const horaInicioMinutos = horaInicioH * 60 + horaInicioM;
                     const horaFinMinutos = horaFinH * 60 + horaFinM;
 
+                    // Verificar si está dentro del rango
                     if (horaSelMinutos >= horaInicioMinutos && horaSelMinutos < horaFinMinutos) {
-                        dentroDeRango = true;
-                        break;
+                        // Verificar si es un slot válido según tiempo_consulta
+                        const minutosDesdeInicio = horaSelMinutos - horaInicioMinutos;
+                        if (minutosDesdeInicio % tiempoConsulta === 0) {
+                            esSlotValido = true;
+                            break;
+                        }
                     }
                 }
 
-                if (!dentroDeRango) {
-                    continue; // Fuera de todos los horarios del médico
+                if (!esSlotValido) {
+                    continue; // No es un slot válido para este médico
                 }
 
                 // Verificar que no tenga cita a esa hora
