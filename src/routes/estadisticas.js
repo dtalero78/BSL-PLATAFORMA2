@@ -37,6 +37,10 @@ router.get('/movimiento', authMiddleware, async (req, res) => {
             });
         }
 
+        // Crear objetos Date para comparación (como en HistoriaClinicaRepository.getStatsHoy)
+        const fechaInicioObj = new Date(fechaInicial + 'T00:00:00');
+        const fechaFinObj = new Date(fechaFinal + 'T23:59:59');
+
         // Consulta para obtener estadísticas generales
         const statsQuery = `
             SELECT
@@ -51,7 +55,7 @@ router.get('/movimiento', authMiddleware, async (req, res) => {
             WHERE "fechaAtencion" >= $1 AND "fechaAtencion" <= $2
         `;
 
-        const statsResult = await pool.query(statsQuery, [fechaInicial + ' 00:00:00', fechaFinal + ' 23:59:59']);
+        const statsResult = await pool.query(statsQuery, [fechaInicioObj.toISOString(), fechaFinObj.toISOString()]);
         const stats = statsResult.rows[0];
 
         // Calcular promedio de atención virtual
@@ -73,7 +77,7 @@ router.get('/movimiento', authMiddleware, async (req, res) => {
             LIMIT 20
         `;
 
-        const empresasResult = await pool.query(empresasQuery, [fechaInicial + ' 00:00:00', fechaFinal + ' 23:59:59']);
+        const empresasResult = await pool.query(empresasQuery, [fechaInicioObj.toISOString(), fechaFinObj.toISOString()]);
 
         // Consulta para obtener conteo por médico
         const medicosQuery = `
@@ -88,7 +92,7 @@ router.get('/movimiento', authMiddleware, async (req, res) => {
             LIMIT 20
         `;
 
-        const medicosResult = await pool.query(medicosQuery, [fechaInicial + ' 00:00:00', fechaFinal + ' 23:59:59']);
+        const medicosResult = await pool.query(medicosQuery, [fechaInicioObj.toISOString(), fechaFinObj.toISOString()]);
 
         // Construir respuesta
         const estadisticas = {
