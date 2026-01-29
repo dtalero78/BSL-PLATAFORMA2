@@ -121,4 +121,80 @@ router.get('/api/certificado-pdf/:id', async (req, res) => {
     }
 });
 
+// GET /api/validar-certificado/:numeroId - Valida la existencia de un certificado médico
+router.get('/api/validar-certificado/:numeroId', async (req, res) => {
+    try {
+        const { numeroId } = req.params;
+        console.log(`🔍 Validando certificado para documento: ${numeroId}`);
+
+        // Buscar el último registro ATENDIDO para este número de documento
+        const query = `
+            SELECT "_id", "numeroId", "primerNombre", "segundoNombre",
+                   "primerApellido", "segundoApellido", "fechaConsulta",
+                   "examenes", "mdConceptoFinal"
+            FROM "HistoriaClinica"
+            WHERE "numeroId" = $1
+              AND "atendido" = 'ATENDIDO'
+              AND "mdConceptoFinal" IS NOT NULL
+              AND "mdConceptoFinal" != ''
+            ORDER BY "fechaConsulta" DESC NULLS LAST, "_createdDate" DESC
+            LIMIT 1
+        `;
+
+        const result = await pool.query(query, [numeroId]);
+
+        if (result.rows.length === 0) {
+            return res.json({
+                success: true,
+                existe: false,
+                message: 'No se encontró certificado médico para este documento'
+            });
+        }
+
+        const paciente = result.rows[0];
+
+        // Formatear fecha de consulta
+        let fechaConsultaFormateada = 'No disponible';
+        if (paciente.fechaConsulta) {
+            const fecha = new Date(paciente.fechaConsulta);
+            fechaConsultaFormateada = fecha.toLocaleDateString('es-CO', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+
+        // Construir nombre completo
+        const nombreCompleto = [
+            paciente.primerNombre,
+            paciente.segundoNombre,
+            paciente.primerApellido,
+            paciente.segundoApellido
+        ].filter(Boolean).join(' ');
+
+        // Formatear exámenes
+        const examenesFormateados = paciente.examenes || 'No especificado';
+
+        res.json({
+            success: true,
+            existe: true,
+            datos: {
+                nombre: nombreCompleto,
+                fechaConsulta: fechaConsultaFormateada,
+                examenes: examenesFormateados
+            }
+        });
+
+        console.log(`✅ Certificado validado para: ${nombreCompleto}`);
+
+    } catch (error) {
+        console.error('❌ Error validando certificado:', error);
+        res.status(500).json({
+            success: false,
+            existe: false,
+            message: 'Error al validar el certificado. Por favor intente nuevamente.'
+        });
+    }
+});
+
 module.exports = router;
