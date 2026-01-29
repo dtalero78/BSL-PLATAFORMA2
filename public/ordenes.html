@@ -4175,12 +4175,15 @@
 
         // ========== ENVIAR LINK PRUEBA POR WHATSAPP ==========
         async function enviarLinkPrueba(tagElement) {
+            console.log('🔘 [LINK-PRUEBA] Click en tag:', tagElement);
             const tipoPrueba = tagElement.dataset.tipo;
             const ordenId = tagElement.dataset.orden;
             const nombrePrueba = tagElement.textContent;
+            console.log('📋 [LINK-PRUEBA] Datos:', { tipoPrueba, ordenId, nombrePrueba });
 
             // Confirmación
             if (!confirm(`¿Enviar link de "${nombrePrueba}" por WhatsApp al paciente?`)) {
+                console.log('❌ [LINK-PRUEBA] Usuario canceló');
                 return;
             }
 
@@ -4189,6 +4192,7 @@
             tagElement.textContent = 'Enviando...';
             tagElement.style.opacity = '0.6';
             tagElement.style.pointerEvents = 'none';
+            console.log('📤 [LINK-PRUEBA] Enviando request...');
 
             try {
                 const response = await fetch('/api/enviar-link-prueba', {
@@ -4199,7 +4203,9 @@
                     body: JSON.stringify({ ordenId, tipoPrueba })
                 });
 
+                console.log('📥 [LINK-PRUEBA] Response status:', response.status);
                 const result = await response.json();
+                console.log('📄 [LINK-PRUEBA] Response data:', result);
 
                 if (result.success) {
                     // Mostrar éxito temporalmente

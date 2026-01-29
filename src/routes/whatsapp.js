@@ -382,20 +382,40 @@ router.post('/status', async (req, res) => {
 
             if (conversacion.rows.length === 0) {
                 // Crear nueva conversacion
-                const nuevaConv = await pool.query(`
-                    INSERT INTO conversaciones_whatsapp (
-                        celular,
-                        nombre_paciente,
-                        estado_actual,
-                        fecha_inicio,
-                        fecha_ultima_actividad,
-                        bot_activo
-                    )
-                    VALUES ($1, $2, 'activa', NOW(), NOW(), true)
-                    RETURNING id
-                `, [numeroCliente, 'Usuario WhatsApp']);
+                try {
+                    const nuevaConv = await pool.query(`
+                        INSERT INTO conversaciones_whatsapp (
+                            celular,
+                            nombre_paciente,
+                            estado_actual,
+                            fecha_inicio,
+                            fecha_ultima_actividad,
+                            bot_activo
+                        )
+                        VALUES ($1, $2, 'activa', NOW(), NOW(), true)
+                        RETURNING id
+                    `, [numeroCliente, 'Usuario WhatsApp']);
 
-                conversacionId = nuevaConv.rows[0].id;
+                    conversacionId = nuevaConv.rows[0].id;
+                } catch (insertError) {
+                    // Si falla por constraint único (race condition), buscar la conversación que se creó
+                    if (insertError.code === '23505') {
+                        console.log('⚠️ Conversación ya existe (race condition), buscando nuevamente...');
+                        // Buscar con ambos formatos
+                        const recuperacion = await pool.query(`
+                            SELECT id FROM conversaciones_whatsapp WHERE celular = $1 OR celular = $2
+                        `, [numeroCliente, numeroCliente.replace(/^\+/, '')]);
+
+                        if (recuperacion.rows.length > 0) {
+                            conversacionId = recuperacion.rows[0].id;
+                            console.log(`✅ Conversación recuperada: ${conversacionId}`);
+                        } else {
+                            throw insertError; // Si aún no existe, re-lanzar el error original
+                        }
+                    } else {
+                        throw insertError; // Otro tipo de error, re-lanzar
+                    }
+                }
             } else {
                 conversacionId = conversacion.rows[0].id;
 
