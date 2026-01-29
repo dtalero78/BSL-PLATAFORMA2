@@ -1,17 +1,15 @@
 // ========== HELPER: Normalizar teléfono con prefijo 57 ==========
 // Agrega el prefijo 57 (Colombia) si el teléfono no tiene prefijo internacional
 // Detecta si ya tiene un prefijo internacional diferente (ej: +1, +34, etc.)
+// Formato de salida: 57XXXXXXXXXX (sin +, sin whatsapp:)
 function normalizarTelefonoConPrefijo57(celular) {
     if (!celular) return null;
 
-    // Limpiar espacios, guiones y paréntesis
-    let telefono = celular.toString().replace(/[\s\-\(\)]/g, '');
-
-    // Si ya tiene el símbolo +, verificar si es Colombia o internacional
-    if (telefono.startsWith('+')) {
-        // Ya tiene prefijo internacional, dejarlo tal cual
-        return telefono;
-    }
+    // Limpiar prefijo whatsapp: y espacios, guiones, paréntesis
+    let telefono = celular.toString()
+        .replace(/^whatsapp:/i, '')  // Quitar prefijo whatsapp:
+        .replace(/[\s\-\(\)]/g, '')   // Quitar espacios, guiones, paréntesis
+        .replace(/^\+/, '');          // Quitar el + del inicio
 
     // Si empieza con 57 y tiene longitud correcta (57 + 10 dígitos = 12)
     if (telefono.startsWith('57') && telefono.length === 12) {
