@@ -936,69 +936,68 @@
         }
 
         function configurarPorReferencia(ref) {
-            // Detectar empresa y tipo de examen del parámetro
-            let config = null;
+            // Si viene cualquier parámetro, extraer empresa y tipo de examen
+            if (!ref) return;
+
             const refUpper = ref.toUpperCase();
 
-            // Mapeo de empresas
-            if (ref === 'DeStori' || ref === 'DESTORI' || refUpper.includes('STORI')) {
-                config = { codEmpresa: 'STORI', empresa: 'Stori Card', tipoExamen: 'Ingreso' };
-            } else if (refUpper.includes('EVERTEC')) {
-                config = { codEmpresa: 'EVERTEC', empresa: 'EVERTEC', tipoExamen: 'Ingreso' };
-                if (refUpper.includes('PERIODICO')) config.tipoExamen = 'Periódico';
-                else if (refUpper.includes('EGRESO')) config.tipoExamen = 'Egreso';
-            } else if (refUpper.includes('RIPPLING')) {
-                config = { codEmpresa: 'RIPPLING', empresa: 'Rippling', tipoExamen: 'Ingreso' };
-                if (refUpper.includes('PERIODICO')) config.tipoExamen = 'Periódico';
-                else if (refUpper.includes('EGRESO')) config.tipoExamen = 'Egreso';
-            } else if (refUpper.includes('ATR')) {
-                config = { codEmpresa: 'ATR', empresa: 'ATR', tipoExamen: 'Ingreso' };
-                if (refUpper.includes('PERIODICO')) config.tipoExamen = 'Periódico';
-                else if (refUpper.includes('EGRESO')) config.tipoExamen = 'Egreso';
+            // Extraer tipo de examen del parámetro
+            let tipoExamen = 'Ingreso'; // Por defecto
+            if (refUpper.includes('PERIODICO')) {
+                tipoExamen = 'Periódico';
+            } else if (refUpper.includes('EGRESO')) {
+                tipoExamen = 'Egreso';
             }
 
-            if (config) {
+            // Extraer el nombre de la empresa (sin el tipo de examen)
+            let empresaNombre = ref
+                .replace(/PERIODICO/gi, '')
+                .replace(/EGRESO/gi, '')
+                .replace(/INGRESO/gi, '')
+                .trim();
 
-                // Pre-seleccionar Telemedicina automáticamente
-                document.getElementById('tipoConsulta').value = 'Telemedicina';
+            // Capitalizar el nombre de la empresa
+            empresaNombre = empresaNombre.charAt(0).toUpperCase() + empresaNombre.slice(1).toLowerCase();
 
-                // Ocultar opción Presencial
-                const presencialCard = document.querySelector('.option-card[onclick*="Presencial"]');
-                if (presencialCard) {
-                    presencialCard.style.display = 'none';
-                }
+            // Pre-seleccionar Telemedicina automáticamente
+            document.getElementById('tipoConsulta').value = 'Telemedicina';
 
-                // Marcar Telemedicina como seleccionada visualmente
-                const telemediciniaCard = document.querySelector('.option-card[onclick*="Telemedicina"]');
-                if (telemediciniaCard) {
-                    telemediciniaCard.classList.add('selected');
-                }
+            // Ocultar opción Presencial
+            const presencialCard = document.querySelector('.option-card[onclick*="Presencial"]');
+            if (presencialCard) {
+                presencialCard.style.display = 'none';
+            }
 
-                // Pre-seleccionar "EMPRESA" y ocultar el dropdown
-                document.getElementById('aNombreDe').value = 'EMPRESA';
-                const aNombreDeGroup = document.querySelector('#aNombreDe').closest('.form-group');
-                if (aNombreDeGroup) {
-                    aNombreDeGroup.style.display = 'none';
-                }
+            // Marcar Telemedicina como seleccionada visualmente
+            const telemediciniaCard = document.querySelector('.option-card[onclick*="Telemedicina"]');
+            if (telemediciniaCard) {
+                telemediciniaCard.classList.add('selected');
+            }
 
-                // Pre-llenar y bloquear el campo empresa
-                const empresaInput = document.getElementById('empresa');
-                const empresaContainer = document.getElementById('empresaContainer');
-                if (empresaInput && empresaContainer) {
-                    empresaInput.value = config.empresa;
-                    empresaInput.readOnly = true;
-                    empresaInput.style.backgroundColor = '#f5f5f5';
-                    empresaContainer.style.display = 'block';
-                }
+            // Pre-seleccionar "EMPRESA" y ocultar el dropdown
+            document.getElementById('aNombreDe').value = 'EMPRESA';
+            const aNombreDeGroup = document.querySelector('#aNombreDe').closest('.form-group');
+            if (aNombreDeGroup) {
+                aNombreDeGroup.style.display = 'none';
+            }
 
-                // Pre-seleccionar los 3 exámenes obligatorios
-                examenesSeleccionados = ['EXAMEN MÉDICO OSTEOMUSCULAR', 'AUDIOMETRÍA', 'OPTOMETRÍA'];
+            // Pre-llenar y bloquear el campo empresa
+            const empresaInput = document.getElementById('empresa');
+            const empresaContainer = document.getElementById('empresaContainer');
+            if (empresaInput && empresaContainer) {
+                empresaInput.value = empresaNombre;
+                empresaInput.readOnly = true;
+                empresaInput.style.backgroundColor = '#f5f5f5';
+                empresaContainer.style.display = 'block';
+            }
 
-                // Ocultar la sección de exámenes ya que están pre-seleccionados
-                const examenesSlide = document.querySelector('.question-slide[data-step="4"]');
-                if (examenesSlide) {
-                    examenesSlide.style.display = 'none';
-                }
+            // Pre-seleccionar los 3 exámenes obligatorios
+            examenesSeleccionados = ['EXAMEN MÉDICO OSTEOMUSCULAR', 'AUDIOMETRÍA', 'OPTOMETRÍA'];
+
+            // Ocultar la sección de exámenes ya que están pre-seleccionados
+            const examenesSlide = document.querySelector('.question-slide[data-step="4"]');
+            if (examenesSlide) {
+                examenesSlide.style.display = 'none';
             }
         }
 
@@ -1063,17 +1062,10 @@
             const fecha = document.getElementById('dia').value;
             if (!fecha) return;
 
-            // Si es empresa especial, consultar disponibilidad real de médicos
+            // Si viene con parámetro de empresa, consultar disponibilidad real de médicos
             if (refEmpresa) {
-                const refUpper = refEmpresa.toUpperCase();
-                const esEmpresaEspecial = refUpper.includes('RIPPLING') ||
-                                         refUpper.includes('STORI') ||
-                                         refUpper.includes('EVERTEC') ||
-                                         refUpper.includes('ATR');
-                if (esEmpresaEspecial) {
-                    await cargarHorariosDisponibles(fecha);
-                    return;
-                }
+                await cargarHorariosDisponibles(fecha);
+                return;
             }
 
             // NUBIA no tiene restricción de cupo - genera horas directamente sin verificar ocupación
@@ -1426,33 +1418,28 @@
                 empresaNombre = document.getElementById('empresa').value.trim() || '';
             }
 
-            // Solo empresas especiales tienen su propio codEmpresa
+            // Si viene con parámetro de empresa, extraer codEmpresa y tipo de examen
             let tipoExamenFinal = 'Ingreso'; // valor por defecto
             if (refEmpresa) {
                 const refUpper = refEmpresa.toUpperCase();
-                let configEmpresa = null;
 
-                if (refEmpresa === 'DeStori' || refEmpresa === 'DESTORI' || refUpper.includes('STORI')) {
-                    configEmpresa = { codEmpresa: 'STORI', empresa: 'Stori Card', tipoExamen: 'Ingreso' };
-                } else if (refUpper.includes('EVERTEC')) {
-                    configEmpresa = { codEmpresa: 'EVERTEC', empresa: 'EVERTEC', tipoExamen: 'Ingreso' };
-                    if (refUpper.includes('PERIODICO')) configEmpresa.tipoExamen = 'Periódico';
-                    else if (refUpper.includes('EGRESO')) configEmpresa.tipoExamen = 'Egreso';
-                } else if (refUpper.includes('RIPPLING')) {
-                    configEmpresa = { codEmpresa: 'RIPPLING', empresa: 'Rippling', tipoExamen: 'Ingreso' };
-                    if (refUpper.includes('PERIODICO')) configEmpresa.tipoExamen = 'Periódico';
-                    else if (refUpper.includes('EGRESO')) configEmpresa.tipoExamen = 'Egreso';
-                } else if (refUpper.includes('ATR')) {
-                    configEmpresa = { codEmpresa: 'ATR', empresa: 'ATR', tipoExamen: 'Ingreso' };
-                    if (refUpper.includes('PERIODICO')) configEmpresa.tipoExamen = 'Periódico';
-                    else if (refUpper.includes('EGRESO')) configEmpresa.tipoExamen = 'Egreso';
+                // Extraer tipo de examen
+                if (refUpper.includes('PERIODICO')) {
+                    tipoExamenFinal = 'Periódico';
+                } else if (refUpper.includes('EGRESO')) {
+                    tipoExamenFinal = 'Egreso';
                 }
 
-                if (configEmpresa) {
-                    codEmpresa = configEmpresa.codEmpresa;
-                    empresaNombre = configEmpresa.empresa;
-                    tipoExamenFinal = configEmpresa.tipoExamen;
-                }
+                // Extraer el nombre de la empresa (sin el tipo de examen) para usarlo como codEmpresa
+                codEmpresa = refEmpresa
+                    .replace(/PERIODICO/gi, '')
+                    .replace(/EGRESO/gi, '')
+                    .replace(/INGRESO/gi, '')
+                    .trim()
+                    .toUpperCase();
+
+                // El nombre de la empresa ya está en el campo empresa (configurado en configurarPorReferencia)
+                empresaNombre = document.getElementById('empresa').value.trim() || codEmpresa;
             }
 
             const datos = {
@@ -1474,20 +1461,11 @@
                 ciudad: document.getElementById('ciudad').value
             };
 
-            // Para empresas especiales, asignar médico automáticamente según disponibilidad
+            // Si viene con parámetro de empresa, asignar médico automáticamente según disponibilidad
             // Para otros casos (PARTICULAR), usar NUBIA
             if (refEmpresa) {
-                const refUpper = refEmpresa.toUpperCase();
-                const esEmpresaEspecial = refUpper.includes('RIPPLING') ||
-                                         refUpper.includes('STORI') ||
-                                         refUpper.includes('EVERTEC') ||
-                                         refUpper.includes('ATR');
-                if (esEmpresaEspecial) {
-                    datos.modalidad = 'virtual';
-                    datos.asignarMedicoAuto = true;
-                } else {
-                    datos.medico = 'NUBIA';
-                }
+                datos.modalidad = 'virtual';
+                datos.asignarMedicoAuto = true;
             } else {
                 datos.medico = 'NUBIA';
             }
