@@ -936,17 +936,28 @@
         }
 
         function configurarPorReferencia(ref) {
-            const empresasEspeciales = {
-                'DeStori': { codEmpresa: 'STORI', empresa: 'Stori Card', tipoExamen: 'Ingreso' },
-                'EVERTEC': { codEmpresa: 'EVERTEC', empresa: 'EVERTEC', tipoExamen: 'Ingreso' },
-                'rippling': { codEmpresa: 'RIPPLING', empresa: 'Rippling', tipoExamen: 'Ingreso' },
-                'ripplingperiodico': { codEmpresa: 'RIPPLING', empresa: 'Rippling', tipoExamen: 'Periódico' },
-                'ripplingegreso': { codEmpresa: 'RIPPLING', empresa: 'Rippling', tipoExamen: 'Egreso' },
-                'ATR': { codEmpresa: 'ATR', empresa: 'ATR', tipoExamen: 'Ingreso' }
-            };
+            // Detectar empresa y tipo de examen del parámetro
+            let config = null;
+            const refUpper = ref.toUpperCase();
 
-            if (empresasEspeciales[ref]) {
-                const config = empresasEspeciales[ref];
+            // Mapeo de empresas
+            if (ref === 'DeStori' || ref === 'DESTORI' || refUpper.includes('STORI')) {
+                config = { codEmpresa: 'STORI', empresa: 'Stori Card', tipoExamen: 'Ingreso' };
+            } else if (refUpper.includes('EVERTEC')) {
+                config = { codEmpresa: 'EVERTEC', empresa: 'EVERTEC', tipoExamen: 'Ingreso' };
+                if (refUpper.includes('PERIODICO')) config.tipoExamen = 'Periódico';
+                else if (refUpper.includes('EGRESO')) config.tipoExamen = 'Egreso';
+            } else if (refUpper.includes('RIPPLING')) {
+                config = { codEmpresa: 'RIPPLING', empresa: 'Rippling', tipoExamen: 'Ingreso' };
+                if (refUpper.includes('PERIODICO')) config.tipoExamen = 'Periódico';
+                else if (refUpper.includes('EGRESO')) config.tipoExamen = 'Egreso';
+            } else if (refUpper.includes('ATR')) {
+                config = { codEmpresa: 'ATR', empresa: 'ATR', tipoExamen: 'Ingreso' };
+                if (refUpper.includes('PERIODICO')) config.tipoExamen = 'Periódico';
+                else if (refUpper.includes('EGRESO')) config.tipoExamen = 'Egreso';
+            }
+
+            if (config) {
 
                 // Pre-seleccionar Telemedicina automáticamente
                 document.getElementById('tipoConsulta').value = 'Telemedicina';
@@ -1054,8 +1065,12 @@
 
             // Si es empresa especial, consultar disponibilidad real de médicos
             if (refEmpresa) {
-                const empresasEspeciales = ['rippling', 'ripplingperiodico', 'ripplingegreso', 'DeStori', 'EVERTEC', 'ATR'];
-                if (empresasEspeciales.includes(refEmpresa)) {
+                const refUpper = refEmpresa.toUpperCase();
+                const esEmpresaEspecial = refUpper.includes('RIPPLING') ||
+                                         refUpper.includes('STORI') ||
+                                         refUpper.includes('EVERTEC') ||
+                                         refUpper.includes('ATR');
+                if (esEmpresaEspecial) {
                     await cargarHorariosDisponibles(fecha);
                     return;
                 }
@@ -1414,18 +1429,29 @@
             // Solo empresas especiales tienen su propio codEmpresa
             let tipoExamenFinal = 'Ingreso'; // valor por defecto
             if (refEmpresa) {
-                const empresasEspeciales = {
-                    'DeStori': { codEmpresa: 'STORI', empresa: 'Stori Card', tipoExamen: 'Ingreso' },
-                    'EVERTEC': { codEmpresa: 'EVERTEC', empresa: 'EVERTEC', tipoExamen: 'Ingreso' },
-                    'rippling': { codEmpresa: 'RIPPLING', empresa: 'Rippling', tipoExamen: 'Ingreso' },
-                    'ripplingperiodico': { codEmpresa: 'RIPPLING', empresa: 'Rippling', tipoExamen: 'Periódico' },
-                    'ripplingegreso': { codEmpresa: 'RIPPLING', empresa: 'Rippling', tipoExamen: 'Egreso' },
-                    'ATR': { codEmpresa: 'ATR', empresa: 'ATR', tipoExamen: 'Ingreso' }
-                };
-                if (empresasEspeciales[refEmpresa]) {
-                    codEmpresa = empresasEspeciales[refEmpresa].codEmpresa;
-                    empresaNombre = empresasEspeciales[refEmpresa].empresa;
-                    tipoExamenFinal = empresasEspeciales[refEmpresa].tipoExamen;
+                const refUpper = refEmpresa.toUpperCase();
+                let configEmpresa = null;
+
+                if (refEmpresa === 'DeStori' || refEmpresa === 'DESTORI' || refUpper.includes('STORI')) {
+                    configEmpresa = { codEmpresa: 'STORI', empresa: 'Stori Card', tipoExamen: 'Ingreso' };
+                } else if (refUpper.includes('EVERTEC')) {
+                    configEmpresa = { codEmpresa: 'EVERTEC', empresa: 'EVERTEC', tipoExamen: 'Ingreso' };
+                    if (refUpper.includes('PERIODICO')) configEmpresa.tipoExamen = 'Periódico';
+                    else if (refUpper.includes('EGRESO')) configEmpresa.tipoExamen = 'Egreso';
+                } else if (refUpper.includes('RIPPLING')) {
+                    configEmpresa = { codEmpresa: 'RIPPLING', empresa: 'Rippling', tipoExamen: 'Ingreso' };
+                    if (refUpper.includes('PERIODICO')) configEmpresa.tipoExamen = 'Periódico';
+                    else if (refUpper.includes('EGRESO')) configEmpresa.tipoExamen = 'Egreso';
+                } else if (refUpper.includes('ATR')) {
+                    configEmpresa = { codEmpresa: 'ATR', empresa: 'ATR', tipoExamen: 'Ingreso' };
+                    if (refUpper.includes('PERIODICO')) configEmpresa.tipoExamen = 'Periódico';
+                    else if (refUpper.includes('EGRESO')) configEmpresa.tipoExamen = 'Egreso';
+                }
+
+                if (configEmpresa) {
+                    codEmpresa = configEmpresa.codEmpresa;
+                    empresaNombre = configEmpresa.empresa;
+                    tipoExamenFinal = configEmpresa.tipoExamen;
                 }
             }
 
@@ -1450,9 +1476,18 @@
 
             // Para empresas especiales, asignar médico automáticamente según disponibilidad
             // Para otros casos (PARTICULAR), usar NUBIA
-            if (refEmpresa && ['rippling', 'ripplingperiodico', 'ripplingegreso', 'DeStori', 'EVERTEC', 'ATR'].includes(refEmpresa)) {
-                datos.modalidad = 'virtual';
-                datos.asignarMedicoAuto = true;
+            if (refEmpresa) {
+                const refUpper = refEmpresa.toUpperCase();
+                const esEmpresaEspecial = refUpper.includes('RIPPLING') ||
+                                         refUpper.includes('STORI') ||
+                                         refUpper.includes('EVERTEC') ||
+                                         refUpper.includes('ATR');
+                if (esEmpresaEspecial) {
+                    datos.modalidad = 'virtual';
+                    datos.asignarMedicoAuto = true;
+                } else {
+                    datos.medico = 'NUBIA';
+                }
             } else {
                 datos.medico = 'NUBIA';
             }
