@@ -8,10 +8,8 @@
         <div>Sistema Médico</div>
     </div>
     <nav class="sidebar-nav">
-        <a href="/" class="nav-item" data-tooltip="Formulario Médico" data-page="index">
-            <i data-feather="file-text"></i>
-            <span>Formulario Médico</span>
-        </a>
+        <!-- Sección 1: Ordenes -->
+        <div class="nav-section-title">Ordenes</div>
         <a href="/ordenes.html" class="nav-item" data-tooltip="Ordenes" data-page="ordenes">
             <i data-feather="clipboard"></i>
             <span>Ordenes</span>
@@ -24,47 +22,46 @@
             <i data-feather="upload"></i>
             <span>Subir Lote</span>
         </a>
-        <a href="/calendario.html" class="nav-item" data-tooltip="Calendario" data-page="calendario">
+
+        <!-- Sección 2: Consultas -->
+        <div class="nav-section-title">Consultas</div>
+        <a href="/calendario.html" class="nav-item" data-tooltip="Calendario Atención" data-page="calendario">
             <i data-feather="calendar"></i>
-            <span>Calendario</span>
+            <span>Calendario Atención</span>
         </a>
-        <div class="nav-group">
-            <div class="nav-item has-submenu" data-tooltip="Médicos" onclick="toggleNavGroup(this)">
-                <i data-feather="users"></i>
-                <span>Médicos</span>
-            </div>
-            <div class="nav-submenu">
-                <a href="/medicos.html" class="nav-item" data-tooltip="Ver Médicos" data-page="medicos">
-                    <i data-feather="eye"></i>
-                    <span>Ver Médicos</span>
-                </a>
-                <a href="#" class="nav-item" data-tooltip="Fijar Tiempo" id="btnFijarTiempoConsulta">
-                    <i data-feather="clock"></i>
-                    <span>Fijar Tiempo</span>
-                </a>
-            </div>
-        </div>
-        <a href="/examenes.html" class="nav-item" data-tooltip="Exámenes" data-page="examenes">
+        <a href="/medicos.html" class="nav-item" data-tooltip="Turnos de Médicos" data-page="medicos">
+            <i data-feather="users"></i>
+            <span>Turnos de Médicos</span>
+        </a>
+
+        <!-- Sección 3: Acciones -->
+        <div class="nav-section-title">Acciones</div>
+        <a href="/examenes.html" class="nav-item" data-tooltip="Crear Examen" data-page="examenes">
             <i data-feather="activity"></i>
-            <span>Exámenes</span>
+            <span>Crear Examen</span>
         </a>
-        <a href="/empresas.html" class="nav-item" data-tooltip="Empresas" data-page="empresas">
+        <a href="/empresas.html" class="nav-item" data-tooltip="Crear Empresa" data-page="empresas">
             <i data-feather="briefcase"></i>
-            <span>Empresas</span>
+            <span>Crear Empresa</span>
         </a>
-        <a href="https://bsl-plataforma.com/panel-empresas.html" class="nav-item" target="_blank" data-tooltip="Panel Empresas">
+
+        <!-- Sección 4: Recursos -->
+        <div class="nav-section-title">Recursos</div>
+        <a href="https://bsl-utilidades-yp78a.ondigitalocean.app/informes.html" class="nav-item" target="_blank" data-tooltip="Informe Condiciones">
+            <i data-feather="bar-chart-2"></i>
+            <span>Informe Condiciones</span>
+        </a>
+        <a href="https://bsl-plataforma.com/panel-empresas.html" class="nav-item" target="_blank" data-tooltip="Ir a panel de empresa">
             <i data-feather="grid"></i>
-            <span>Panel Empresas</span>
+            <span>Ir a panel de empresa</span>
         </a>
-        <a href="https://bsl-utilidades-yp78a.ondigitalocean.app/informes.html" class="nav-item" target="_blank" data-tooltip="Informe Condiciones de Salud">
-            <i data-feather="file-text"></i>
-            <span>Informe Condiciones de Salud</span>
-        </a>
-        <div class="nav-item" onclick="abrirModalFacturacion()" data-tooltip="Generar Factura" style="cursor: pointer; background: #10B981; color: white;">
+        <div class="nav-item" onclick="abrirModalFacturacion()" data-tooltip="Generar factura" style="cursor: pointer;">
             <i data-feather="dollar-sign"></i>
-            <span>Generar Factura</span>
+            <span>Generar factura</span>
         </div>
-        <!-- Botones solo para ADMIN -->
+
+        <!-- Sección 5: Admin -->
+        <div class="nav-section-title admin-only" style="display: none;">Admin</div>
         <div class="nav-group admin-only" style="display: none;">
             <div class="nav-item has-submenu" data-tooltip="Envío Agendamiento" onclick="toggleNavGroup(this)">
                 <i data-feather="send"></i>

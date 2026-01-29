@@ -323,6 +323,31 @@
             opacity: 1;
         }
 
+        /* Section titles */
+        .nav-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            opacity: 0.6;
+            padding: 16px 12px 8px;
+            margin-top: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .nav-section-title:first-child {
+            margin-top: 0;
+        }
+
+        .sidebar.collapsed .nav-section-title {
+            opacity: 0;
+            height: 0;
+            padding: 0;
+            margin: 0;
+        }
+
         /* Top Bar Fijo */
         .top-bar {
             position: fixed;
