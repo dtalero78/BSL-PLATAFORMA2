@@ -1563,6 +1563,12 @@
         }
 
         function actualizarVista() {
+            // Limpiar PRIMERO antes de cualquier cosa
+            const tbody = document.getElementById('tableBody');
+            const mobileCards = document.getElementById('mobileCards');
+            if (tbody) tbody.innerHTML = '';
+            if (mobileCards) mobileCards.innerHTML = '';
+
             let data = [...pacientes];
 
             // Filtrar por búsqueda
@@ -1625,12 +1631,6 @@
                 tableContainer.style.display = 'block';
                 emptyState.style.display = 'none';
             }
-
-            // Limpiar tablas antes de renderizar para evitar duplicación
-            const tbody = document.getElementById('tableBody');
-            const mobileCards = document.getElementById('mobileCards');
-            if (tbody) tbody.innerHTML = '';
-            if (mobileCards) mobileCards.innerHTML = '';
 
             renderTable(data);
             renderMobileCards(data);
