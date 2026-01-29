@@ -946,7 +946,39 @@
             };
 
             if (empresasEspeciales[ref]) {
+                const config = empresasEspeciales[ref];
+
+                // Pre-seleccionar Telemedicina automáticamente
+                document.getElementById('tipoConsulta').value = 'Telemedicina';
+
+                // Ocultar opción Presencial
+                const presencialCard = document.querySelector('.option-card[onclick*="Presencial"]');
+                if (presencialCard) {
+                    presencialCard.style.display = 'none';
+                }
+
+                // Marcar Telemedicina como seleccionada visualmente
+                const telemediciniaCard = document.querySelector('.option-card[onclick*="Telemedicina"]');
+                if (telemediciniaCard) {
+                    telemediciniaCard.classList.add('selected');
+                }
+
+                // Pre-seleccionar "EMPRESA" y ocultar el dropdown
                 document.getElementById('aNombreDe').value = 'EMPRESA';
+                const aNombreDeGroup = document.querySelector('#aNombreDe').closest('.form-group');
+                if (aNombreDeGroup) {
+                    aNombreDeGroup.style.display = 'none';
+                }
+
+                // Pre-llenar y bloquear el campo empresa
+                const empresaInput = document.getElementById('empresa');
+                const empresaContainer = document.getElementById('empresaContainer');
+                if (empresaInput && empresaContainer) {
+                    empresaInput.value = config.empresa;
+                    empresaInput.readOnly = true;
+                    empresaInput.style.backgroundColor = '#f5f5f5';
+                    empresaContainer.style.display = 'block';
+                }
             }
         }
 
