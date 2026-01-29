@@ -1626,6 +1626,12 @@
                 emptyState.style.display = 'none';
             }
 
+            // Limpiar tablas antes de renderizar para evitar duplicación
+            const tbody = document.getElementById('tableBody');
+            const mobileCards = document.getElementById('mobileCards');
+            if (tbody) tbody.innerHTML = '';
+            if (mobileCards) mobileCards.innerHTML = '';
+
             renderTable(data);
             renderMobileCards(data);
         }
@@ -2102,7 +2108,12 @@
 
         // ========== SELECCIÓN MASIVA ==========
         function aplicarFiltros() {
+            // Limpiar selecciones previas antes de actualizar la vista
+            const selectAll = document.getElementById('selectAll');
+            if (selectAll) selectAll.checked = false;
             actualizarVista();
+            // Actualizar el contador después de renderizar
+            actualizarSeleccion();
         }
 
         function toggleSelectAll() {
