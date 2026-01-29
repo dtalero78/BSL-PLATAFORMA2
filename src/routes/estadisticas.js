@@ -38,21 +38,17 @@ router.get('/movimiento', authMiddleware, async (req, res) => {
         }
 
         // Consulta para obtener estadísticas generales
-        // Nota: Usamos COALESCE para manejar valores NULL
         const statsQuery = `
             SELECT
-                COUNT(*) FILTER (WHERE COALESCE("atendido", '') = 'AGENDADO') as agendados,
-                COUNT(*) FILTER (WHERE COALESCE("atendido", '') = 'ATENDIDO') as atendidos,
-                COUNT(*) FILTER (WHERE COALESCE("atendido", '') = 'ATENDIDO'
-                    AND COALESCE("tipoExamen", '') !~* 'virtual|teleconferencia') as presencial,
-                COUNT(*) FILTER (WHERE COALESCE("atendido", '') = 'ATENDIDO'
-                    AND COALESCE("tipoExamen", '') ~* 'virtual|teleconferencia') as virtual,
-                COUNT(*) FILTER (WHERE COALESCE("atendido", '') NOT IN ('AGENDADO', 'ATENDIDO')) as sin_atender
+                COUNT(CASE WHEN "atendido" = 'AGENDADO' THEN 1 END) as agendados,
+                COUNT(CASE WHEN "atendido" = 'ATENDIDO' THEN 1 END) as atendidos,
+                COUNT(CASE WHEN "atendido" = 'ATENDIDO'
+                    AND ("tipoExamen" IS NULL OR "tipoExamen" !~* 'virtual|teleconferencia') THEN 1 END) as presencial,
+                COUNT(CASE WHEN "atendido" = 'ATENDIDO'
+                    AND "tipoExamen" ~* 'virtual|teleconferencia' THEN 1 END) as virtual,
+                COUNT(CASE WHEN "atendido" NOT IN ('AGENDADO', 'ATENDIDO') OR "atendido" IS NULL THEN 1 END) as sin_atender
             FROM "HistoriaClinica"
-            WHERE "fechaAtencion" IS NOT NULL
-                AND "fechaAtencion"::text != ''
-                AND "fechaAtencion"::date >= $1::date
-                AND "fechaAtencion"::date <= $2::date
+            WHERE DATE("fechaAtencion") BETWEEN $1::date AND $2::date
         `;
 
         const statsResult = await pool.query(statsQuery, [fechaInicial, fechaFinal]);
