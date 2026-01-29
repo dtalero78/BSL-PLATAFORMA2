@@ -1308,8 +1308,23 @@
                 empresaNombre = document.getElementById('empresa').value.trim() || '';
             }
 
-            // Tipo de examen por defecto
-            let tipoExamenFinal = 'Ingreso';
+            // Solo empresas especiales tienen su propio codEmpresa
+            let tipoExamenFinal = 'Ingreso'; // valor por defecto
+            if (refEmpresa) {
+                const empresasEspeciales = {
+                    'DeStori': { codEmpresa: 'STORI', empresa: 'Stori Card', tipoExamen: 'Ingreso' },
+                    'EVERTEC': { codEmpresa: 'EVERTEC', empresa: 'EVERTEC', tipoExamen: 'Ingreso' },
+                    'rippling': { codEmpresa: 'RIPPLING', empresa: 'Rippling', tipoExamen: 'Ingreso' },
+                    'ripplingperiodico': { codEmpresa: 'RIPPLING', empresa: 'Rippling', tipoExamen: 'Periódico' },
+                    'ripplingegreso': { codEmpresa: 'RIPPLING', empresa: 'Rippling', tipoExamen: 'Egreso' },
+                    'ATR': { codEmpresa: 'ATR', empresa: 'ATR', tipoExamen: 'Ingreso' }
+                };
+                if (empresasEspeciales[refEmpresa]) {
+                    codEmpresa = empresasEspeciales[refEmpresa].codEmpresa;
+                    empresaNombre = empresasEspeciales[refEmpresa].empresa;
+                    tipoExamenFinal = empresasEspeciales[refEmpresa].tipoExamen;
+                }
+            }
 
             const datos = {
                 primerNombre: capitalize(document.getElementById('primerNombre').value),
@@ -1327,9 +1342,17 @@
                 examenes: examenesSeleccionados.join(', '),
                 tipoExamen: tipoExamenFinal,
                 atendido: 'PENDIENTE',
-                ciudad: document.getElementById('ciudad').value,
-                medico: 'NUBIA'
+                ciudad: document.getElementById('ciudad').value
             };
+
+            // Para empresas especiales, asignar médico automáticamente según disponibilidad
+            // Para otros casos (PARTICULAR), usar NUBIA
+            if (refEmpresa && ['rippling', 'ripplingperiodico', 'ripplingegreso', 'DeStori', 'EVERTEC', 'ATR'].includes(refEmpresa)) {
+                datos.modalidad = 'virtual';
+                datos.asignarMedicoAuto = true;
+            } else {
+                datos.medico = 'NUBIA';
+            }
 
             try {
                 const response = await fetch('/api/ordenes', {
