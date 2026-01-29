@@ -41,6 +41,11 @@ router.get('/movimiento', authMiddleware, async (req, res) => {
         const fechaInicioObj = new Date(fechaInicial + 'T00:00:00');
         const fechaFinObj = new Date(fechaFinal + 'T23:59:59');
 
+        console.log('🔍 Buscando estadísticas:', {
+            fechaInicial: fechaInicioObj.toISOString(),
+            fechaFinal: fechaFinObj.toISOString()
+        });
+
         // Consulta para obtener estadísticas generales
         const statsQuery = `
             SELECT
@@ -55,7 +60,9 @@ router.get('/movimiento', authMiddleware, async (req, res) => {
             WHERE "fechaAtencion" >= $1 AND "fechaAtencion" <= $2
         `;
 
+        console.log('📊 Ejecutando consulta de estadísticas...');
         const statsResult = await pool.query(statsQuery, [fechaInicioObj.toISOString(), fechaFinObj.toISOString()]);
+        console.log('✅ Estadísticas obtenidas:', statsResult.rows[0]);
         const stats = statsResult.rows[0];
 
         // Calcular promedio de atención virtual
@@ -119,10 +126,12 @@ router.get('/movimiento', authMiddleware, async (req, res) => {
 
     } catch (error) {
         console.error('❌ Error al obtener estadísticas de movimiento:', error);
+        console.error('Stack trace:', error.stack);
         res.status(500).json({
             success: false,
             message: 'Error al obtener estadísticas',
-            error: error.message
+            error: error.message,
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 });
