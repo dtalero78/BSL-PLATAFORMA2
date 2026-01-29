@@ -1457,6 +1457,8 @@
                 datos.medico = 'NUBIA';
             }
 
+            console.log('Datos a enviar:', JSON.stringify(datos, null, 2));
+
             try {
                 const response = await fetch('/api/ordenes', {
                     method: 'POST',
