@@ -250,6 +250,7 @@ router.post('/', async (req, res) => {
                     medicosPorId[row.id] = {
                         id: row.id,
                         nombre: row.alias || `${row.primer_nombre} ${row.primer_apellido}`,
+                        tiempoConsulta: row.tiempo_consulta,
                         rangos: []
                     };
                 }
@@ -271,14 +272,7 @@ router.post('/', async (req, res) => {
                 // Verificar si la hora está dentro de ALGUNO de los rangos del médico
                 // Y verificar que sea un slot válido según tiempo_consulta
                 let esSlotValido = false;
-
-                // Obtener tiempo de consulta del médico
-                const tiempoConsultaResult = await pool.query(`
-                    SELECT COALESCE(tiempo_consulta, 10) as tiempo_consulta
-                    FROM medicos
-                    WHERE id = $1
-                `, [med.id]);
-                const tiempoConsulta = tiempoConsultaResult.rows[0]?.tiempo_consulta || 10;
+                const tiempoConsulta = med.tiempoConsulta;
 
                 for (const rango of med.rangos) {
                     const [horaInicioH, horaInicioM] = rango.horaInicio.split(':').map(Number);
