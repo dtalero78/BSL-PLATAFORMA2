@@ -155,8 +155,10 @@ router.post('/consulta-ordenes', async (req, res) => {
 router.post('/enviar-link-prueba', async (req, res) => {
     try {
         const { ordenId, tipoPrueba } = req.body;
+        console.log(`📤 [ENVIAR-LINK] Solicitud recibida - ordenId: ${ordenId}, tipoPrueba: ${tipoPrueba}`);
 
         if (!ordenId || !tipoPrueba) {
+            console.log(`❌ [ENVIAR-LINK] Parámetros faltantes`);
             return res.status(400).json({ success: false, message: 'ordenId y tipoPrueba son requeridos' });
         }
 
@@ -167,6 +169,7 @@ router.post('/enviar-link-prueba', async (req, res) => {
         );
 
         if (ordenResult.rows.length === 0) {
+            console.log(`❌ [ENVIAR-LINK] Orden no encontrada: ${ordenId}`);
             return res.status(404).json({ success: false, message: 'Orden no encontrada' });
         }
 
@@ -174,13 +177,16 @@ router.post('/enviar-link-prueba', async (req, res) => {
         const nombreCompleto = `${paciente.primerNombre || 'Paciente'} ${paciente.primerApellido || ''}`.trim();
         const celular = paciente.celular;
         const nombreEmpresa = paciente.empresa || paciente.codEmpresa || 'BSL';
+        console.log(`👤 [ENVIAR-LINK] Paciente: ${nombreCompleto}, Celular original: ${celular}`);
 
         if (!celular) {
+            console.log(`❌ [ENVIAR-LINK] Paciente sin celular`);
             return res.status(400).json({ success: false, message: 'El paciente no tiene número de celular registrado' });
         }
 
-        // Normalizar teléfono a formato 57XXXXXXXXXX
+        // Normalizar teléfono a formato +57XXXXXXXXXX
         const telefonoCompleto = normalizarTelefonoConPrefijo57(celular);
+        console.log(`📱 [ENVIAR-LINK] Teléfono normalizado: ${telefonoCompleto}`);
 
         if (!telefonoCompleto) {
             return res.status(400).json({ success: false, message: 'Número de teléfono inválido' });
@@ -222,6 +228,7 @@ router.post('/enviar-link-prueba', async (req, res) => {
         };
 
         // Enviar mensaje por WhatsApp usando template de Twilio
+        console.log(`📨 [ENVIAR-LINK] Enviando template ${nombrePrueba} (${templateSid}) a ${telefonoCompleto}`);
         const resultWhatsApp = await sendWhatsAppMessage(
             telefonoCompleto,
             null, // No hay mensaje de texto libre
@@ -230,12 +237,14 @@ router.post('/enviar-link-prueba', async (req, res) => {
         );
 
         if (!resultWhatsApp.success) {
-            console.error(`Error al enviar link de ${tipoPrueba}:`, resultWhatsApp.error);
+            console.error(`❌ [ENVIAR-LINK] Error al enviar link de ${tipoPrueba}:`, resultWhatsApp.error);
             return res.status(500).json({
                 success: false,
                 message: `No se pudo enviar el mensaje: ${resultWhatsApp.error}`
             });
         }
+
+        console.log(`✅ [ENVIAR-LINK] Link de ${nombrePrueba} enviado exitosamente a ${nombreCompleto}`);
 
         console.log(`Link de ${tipoPrueba} enviado a ${telefonoCompleto} para orden ${ordenId}`);
 
