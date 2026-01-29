@@ -40,18 +40,18 @@ router.get('/movimiento', authMiddleware, async (req, res) => {
         // Consulta para obtener estadísticas generales
         const statsQuery = `
             SELECT
-                COUNT(CASE WHEN "atendido" = 'AGENDADO' THEN 1 END) as agendados,
-                COUNT(CASE WHEN "atendido" = 'ATENDIDO' THEN 1 END) as atendidos,
-                COUNT(CASE WHEN "atendido" = 'ATENDIDO'
-                    AND ("tipoExamen" IS NULL OR "tipoExamen" !~* 'virtual|teleconferencia') THEN 1 END) as presencial,
-                COUNT(CASE WHEN "atendido" = 'ATENDIDO'
-                    AND "tipoExamen" ~* 'virtual|teleconferencia' THEN 1 END) as virtual,
-                COUNT(CASE WHEN "atendido" NOT IN ('AGENDADO', 'ATENDIDO') OR "atendido" IS NULL THEN 1 END) as sin_atender
+                COUNT(*) FILTER (WHERE "atendido" = 'AGENDADO') as agendados,
+                COUNT(*) FILTER (WHERE "atendido" = 'ATENDIDO') as atendidos,
+                COUNT(*) FILTER (WHERE "atendido" = 'ATENDIDO'
+                    AND ("tipoExamen" IS NULL OR "tipoExamen" !~* 'virtual|teleconferencia')) as presencial,
+                COUNT(*) FILTER (WHERE "atendido" = 'ATENDIDO'
+                    AND "tipoExamen" ~* 'virtual|teleconferencia') as virtual,
+                COUNT(*) FILTER (WHERE "atendido" NOT IN ('AGENDADO', 'ATENDIDO') OR "atendido" IS NULL) as sin_atender
             FROM "HistoriaClinica"
-            WHERE "fechaAtencion"::date BETWEEN $1::date AND $2::date
+            WHERE "fechaAtencion" >= $1 AND "fechaAtencion" <= $2
         `;
 
-        const statsResult = await pool.query(statsQuery, [fechaInicial, fechaFinal]);
+        const statsResult = await pool.query(statsQuery, [fechaInicial + ' 00:00:00', fechaFinal + ' 23:59:59']);
         const stats = statsResult.rows[0];
 
         // Calcular promedio de atención virtual
