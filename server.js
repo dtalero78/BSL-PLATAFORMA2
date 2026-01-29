@@ -171,6 +171,9 @@ app.use('/api/envio-siigo', require('./src/routes/siigo'));
 // Envío Agendamiento Empresas
 app.use('/api/envio-empresas', require('./src/routes/envio-empresas'));
 
+// Estadísticas
+app.use('/api/estadisticas', require('./src/routes/estadisticas'));
+
 // ========== CRON JOBS ==========
 
 // Barrido NUBIA cada 5 minutos

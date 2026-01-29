@@ -1,0 +1,124 @@
+const express = require('express');
+const router = express.Router();
+const { authMiddleware } = require('../middleware/auth');
+const pool = require('../config/database');
+
+/**
+ * GET /api/estadisticas/movimiento
+ * Obtiene estadísticas de movimiento de pacientes por rango de fechas
+ * Query params: fechaInicial, fechaFinal (formato YYYY-MM-DD)
+ */
+router.get('/movimiento', authMiddleware, async (req, res) => {
+    try {
+        const { fechaInicial, fechaFinal } = req.query;
+
+        // Validar parámetros
+        if (!fechaInicial || !fechaFinal) {
+            return res.status(400).json({
+                success: false,
+                message: 'Se requieren fechaInicial y fechaFinal'
+            });
+        }
+
+        // Validar formato de fechas
+        const regexFecha = /^\d{4}-\d{2}-\d{2}$/;
+        if (!regexFecha.test(fechaInicial) || !regexFecha.test(fechaFinal)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Formato de fecha inválido. Use YYYY-MM-DD'
+            });
+        }
+
+        // Validar que fechaInicial <= fechaFinal
+        if (new Date(fechaInicial) > new Date(fechaFinal)) {
+            return res.status(400).json({
+                success: false,
+                message: 'La fecha inicial no puede ser mayor a la fecha final'
+            });
+        }
+
+        // Consulta para obtener estadísticas generales
+        const statsQuery = `
+            SELECT
+                COUNT(*) FILTER (WHERE "atendido" = 'AGENDADO') as agendados,
+                COUNT(*) FILTER (WHERE "atendido" = 'ATENDIDO') as atendidos,
+                COUNT(*) FILTER (WHERE "atendido" = 'ATENDIDO' AND LOWER("tipoConsulta") = 'presencial') as presencial,
+                COUNT(*) FILTER (WHERE "atendido" = 'ATENDIDO' AND LOWER("tipoConsulta") = 'virtual') as virtual,
+                COUNT(*) FILTER (WHERE "atendido" = 'PENDIENTE' OR "atendido" IS NULL) as sin_atender
+            FROM "HistoriaClinica"
+            WHERE "fechaAtencion"::date BETWEEN $1::date AND $2::date
+        `;
+
+        const statsResult = await pool.query(statsQuery, [fechaInicial, fechaFinal]);
+        const stats = statsResult.rows[0];
+
+        // Calcular promedio de atención virtual
+        const promedioVirtual = stats.atendidos > 0
+            ? ((parseInt(stats.virtual) / parseInt(stats.atendidos)) * 100).toFixed(1) + '%'
+            : '0%';
+
+        // Consulta para obtener conteo por empresa
+        const empresasQuery = `
+            SELECT
+                "codEmpresa",
+                COUNT(*) as contador
+            FROM "HistoriaClinica"
+            WHERE "fechaAtencion"::date BETWEEN $1::date AND $2::date
+                AND "codEmpresa" IS NOT NULL
+                AND "codEmpresa" != ''
+            GROUP BY "codEmpresa"
+            ORDER BY contador DESC
+            LIMIT 20
+        `;
+
+        const empresasResult = await pool.query(empresasQuery, [fechaInicial, fechaFinal]);
+
+        // Consulta para obtener conteo por médico
+        const medicosQuery = `
+            SELECT
+                COALESCE("mdNombre", 'Sin asignar') as medico,
+                COUNT(*) as contador
+            FROM "HistoriaClinica"
+            WHERE "fechaAtencion"::date BETWEEN $1::date AND $2::date
+                AND "atendido" = 'ATENDIDO'
+            GROUP BY "mdNombre"
+            ORDER BY contador DESC
+            LIMIT 20
+        `;
+
+        const medicosResult = await pool.query(medicosQuery, [fechaInicial, fechaFinal]);
+
+        // Construir respuesta
+        const estadisticas = {
+            agendados: parseInt(stats.agendados) || 0,
+            atendidos: parseInt(stats.atendidos) || 0,
+            presencial: parseInt(stats.presencial) || 0,
+            virtual: parseInt(stats.virtual) || 0,
+            sinAtender: parseInt(stats.sin_atender) || 0,
+            promedioAtencionVirtual: promedioVirtual,
+            empresas: empresasResult.rows.map(row => ({
+                codEmpresa: row.codEmpresa,
+                contador: parseInt(row.contador)
+            })),
+            medicos: medicosResult.rows.map(row => ({
+                medico: row.medico,
+                contador: parseInt(row.contador)
+            }))
+        };
+
+        res.json({
+            success: true,
+            estadisticas
+        });
+
+    } catch (error) {
+        console.error('❌ Error al obtener estadísticas de movimiento:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener estadísticas',
+            error: error.message
+        });
+    }
+});
+
+module.exports = router;
