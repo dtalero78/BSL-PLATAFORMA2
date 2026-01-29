@@ -65,33 +65,38 @@
 </div>
 
 <style>
-    /* Modal overlay que aparece desde la derecha */
+    /* Modal overlay que aparece desde la derecha - Mayor especificidad para sobrescribir estilos genéricos */
     #modalTiempoConsulta.modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.3);
-        z-index: 2000;
-        display: none;
-        justify-content: flex-end;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        background: rgba(0, 0, 0, 0.3) !important;
+        z-index: 2000 !important;
+        display: none !important;
+        justify-content: flex-end !important;
+        align-items: stretch !important;
     }
 
     #modalTiempoConsulta.modal-overlay.active {
-        display: flex;
+        display: flex !important;
     }
 
     #modalTiempoConsulta .modal {
-        background: #F5F5F5;
-        width: 100%;
-        max-width: 550px;
-        height: 100vh;
-        box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
-        animation: slideInRight 0.3s ease-out;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
+        background: #F5F5F5 !important;
+        width: 100% !important;
+        max-width: 550px !important;
+        height: 100vh !important;
+        box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15) !important;
+        animation: slideInRight 0.3s ease-out !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
     }
 
     @keyframes slideInRight {
@@ -101,6 +106,82 @@
         to {
             transform: translateX(0);
         }
+    }
+
+    /* Asegurar que el contenido del modal sea scrollable y los botones visibles */
+    #modalTiempoConsulta .modal-header {
+        flex-shrink: 0;
+        background: white;
+        padding: 20px 24px;
+        border-bottom: 1px solid #E2E8F0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    #modalTiempoConsulta .modal-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 24px;
+        background: #F5F5F5;
+    }
+
+    #modalTiempoConsulta .modal-footer {
+        flex-shrink: 0;
+        background: white;
+        padding: 16px 24px;
+        border-top: 1px solid #E2E8F0;
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+    }
+
+    #modalTiempoConsulta .modal-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1E293B;
+        margin: 0;
+    }
+
+    #modalTiempoConsulta .modal-close {
+        background: none;
+        border: none;
+        font-size: 24px;
+        color: #64748B;
+        cursor: pointer;
+        padding: 4px;
+        line-height: 1;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+    }
+
+    #modalTiempoConsulta .modal-close:hover {
+        color: #1E293B;
+        background: #F1F5F9;
+    }
+
+    #modalTiempoConsulta .btn-modal {
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: none;
+    }
+
+    #modalTiempoConsulta .btn-modal.secondary {
+        background: #F1F5F9;
+        color: #475569;
+    }
+
+    #modalTiempoConsulta .btn-modal.secondary:hover {
+        background: #E2E8F0;
     }
 
     /* Estilos para disponibilidad de médicos */
