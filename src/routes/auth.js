@@ -326,4 +326,24 @@ router.get('/perfil', authMiddleware, async (req, res) => {
     }
 });
 
+// GET /mis-permisos - Obtener permisos del usuario autenticado
+router.get('/mis-permisos', authMiddleware, async (req, res) => {
+    try {
+        const permisos = await obtenerPermisosUsuario(req.usuario.id);
+
+        res.json({
+            success: true,
+            permisos: permisos
+        });
+
+    } catch (error) {
+        console.error('Error obteniendo permisos:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener permisos',
+            permisos: []
+        });
+    }
+});
+
 module.exports = router;
