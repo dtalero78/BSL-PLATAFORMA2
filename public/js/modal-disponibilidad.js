@@ -24,6 +24,11 @@ window.abrirModalTiempoConsultaGlobal = function() {
 
     // Agregar clase active para mostrar el modal
     modal.classList.add('active');
+    // Forzar estilos inline para sobrescribir cualquier CSS conflictivo
+    modal.style.display = 'flex';
+    modal.style.justifyContent = 'flex-end';
+    modal.style.alignItems = 'stretch';
+
     document.getElementById('disponibilidadGuardada').classList.remove('show');
     poblarSelectMedicosDisponibilidad();
     window.modalidadActual = 'presencial';
@@ -43,7 +48,10 @@ window.abrirModalTiempoConsulta = function() {
 window.cerrarModalTiempoConsulta = function() {
     const modal = document.getElementById('modalTiempoConsulta');
 
-    if (modal) modal.classList.remove('active');
+    if (modal) {
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+    }
 
     const selectMedico = document.getElementById('selectMedicoDisponibilidad');
     const contenidoDisp = document.getElementById('contenidoDisponibilidad');
