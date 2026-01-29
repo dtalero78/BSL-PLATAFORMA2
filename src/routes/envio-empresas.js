@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 const { sendWhatsAppMessage } = require('../services/whatsapp');
+const { normalizarTelefonoConPrefijo57 } = require('../helpers/phone');
 
 // ========== ENDPOINTS ENVÍO AGENDAMIENTO EMPRESAS ==========
 
@@ -177,7 +178,7 @@ router.post('/enviar-individual', async (req, res) => {
         `, [_id]);
 
         // Crear registro en conversaciones_whatsapp con stopBot
-        const telefonoConPrefijo = '57' + telefonoCompleto.replace(/^57/, '');
+        const telefonoConPrefijo = normalizarTelefonoConPrefijo57(telefonoCompleto);
 
         try {
             const convExistente = await pool.query(
@@ -321,7 +322,7 @@ router.post('/enviar-masivo', async (req, res) => {
                 `, [item._id]);
 
                 // Crear/actualizar conversación WhatsApp
-                const telefonoConPrefijo = '57' + telefonoCompleto.replace(/^57/, '');
+                const telefonoConPrefijo = normalizarTelefonoConPrefijo57(telefonoCompleto);
 
                 try {
                     const convExistente = await pool.query(

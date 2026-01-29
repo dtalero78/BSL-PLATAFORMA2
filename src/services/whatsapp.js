@@ -1,6 +1,7 @@
 const twilio = require('twilio');
 const pool = require('../config/database');
 const { subirMediaWhatsAppASpaces } = require('./spaces-upload');
+const { normalizarTelefonoConPrefijo57 } = require('../helpers/phone');
 
 // Inicializar cliente de Twilio
 const twilioClient = twilio(
@@ -187,23 +188,8 @@ async function sendWhatsAppMedia(toNumber, mediaBuffer, mediaType, fileName, cap
 // Helper: Guardar mensaje saliente en base de datos y emitir evento WebSocket
 async function guardarMensajeSaliente(numeroCliente, contenido, twilioSid, tipoMensaje = 'text', mediaUrl = null, mediaType = null, nombrePaciente = null) {
     try {
-        // Normalizar numero: usar formato 57XXXXXXXXXX (SIN +) para consistencia
-        let numeroNormalizado = numeroCliente.trim().replace(/[^\d+]/g, '');
-
-        // Quitar + si existe
-        numeroNormalizado = numeroNormalizado.replace(/^\+/, '');
-
-        // Si empieza con 5757, remover el 57 duplicado
-        if (numeroNormalizado.startsWith('5757')) {
-            numeroNormalizado = numeroNormalizado.substring(2);
-        }
-
-        // Solo agregar 57 si es un numero colombiano de 10 digitos sin codigo de pais
-        if (numeroNormalizado.length === 10 && numeroNormalizado.match(/^3\d{9}$/)) {
-            numeroNormalizado = '57' + numeroNormalizado;
-        }
-        // Si ya tiene codigo de pais (57XXXXXXXXXX), esta correcto
-        // Formato final: 57XXXXXXXXXX (sin +)
+        // Normalizar número usando helper centralizado (formato: 57XXXXXXXXXX sin +)
+        const numeroNormalizado = normalizarTelefonoConPrefijo57(numeroCliente);
 
         // Buscar o crear conversacion
         let conversacion = await pool.query(`

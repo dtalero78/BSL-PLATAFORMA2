@@ -201,7 +201,7 @@ router.post('/enviar-individual', async (req, res) => {
         `, [_id]);
 
         // Crear registro en conversaciones_whatsapp con stopBot
-        const telefonoConPrefijo = '57' + telefonoCompleto.replace(/^57/, '');
+        const telefonoConPrefijo = normalizarTelefonoConPrefijo57(telefonoCompleto);
 
         try {
             const convExistente = await pool.query(
@@ -388,7 +388,7 @@ https://www.bsl.com.co/autoagendamiento/${item.numeroId}
                 }
 
                 // Crear/actualizar conversación WhatsApp
-                const telefonoConPrefijo = '57' + telefonoCompleto.replace(/^57/, '');
+                const telefonoConPrefijo = normalizarTelefonoConPrefijo57(telefonoCompleto);
 
                 try {
                     const convExistente = await pool.query(

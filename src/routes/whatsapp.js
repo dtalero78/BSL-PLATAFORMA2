@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
+const { normalizarTelefonoConPrefijo57 } = require('../helpers/phone');
 
 // Bot service: shared state maps and AI functions
 const {
@@ -28,8 +29,8 @@ router.post('/webhook', async (req, res) => {
     try {
         const { From, Body, MessageSid, ProfileName, NumMedia } = req.body;
 
-        // Extraer numero sin prefijo whatsapp: y normalizar (quitar +)
-        const numeroCliente = From.replace('whatsapp:', '').replace('+', '');
+        // Normalizar número de teléfono usando helper (formato: 57XXXXXXXXXX sin +)
+        const numeroCliente = normalizarTelefonoConPrefijo57(From);
 
         // Capturar archivos multimedia si existen
         const numMedia = parseInt(NumMedia) || 0;
@@ -338,7 +339,8 @@ router.post('/status', async (req, res) => {
 
         // Solo procesar cuando el mensaje fue enviado exitosamente
         if (MessageStatus === 'sent' || MessageStatus === 'delivered') {
-            const numeroCliente = To.replace('whatsapp:', '');
+            // Normalizar número usando helper
+            const numeroCliente = normalizarTelefonoConPrefijo57(To);
 
             // Verificar si el mensaje ya existe en la base de datos
             const mensajeExistente = await pool.query(`

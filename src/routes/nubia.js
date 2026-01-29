@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require('../config/database');
 const { sendWhatsAppMessage, sendWhatsAppFreeText } = require('../services/whatsapp');
 const { HistoriaClinicaRepository } = require('../repositories');
+const { normalizarTelefonoConPrefijo57 } = require('../helpers/phone');
 
 // ==========================================
 // BARRIDO NUBIA - Enviar link médico virtual (a la hora exacta de la cita)
@@ -405,7 +406,8 @@ router.post('/nubia/atender/:id', async (req, res) => {
                     console.log(`📱 [NUBIA] Mensaje de certificado enviado a ${paciente.primerNombre} (${toNumber})`);
 
                     // Guardar mensaje en base de datos para que aparezca en el chat
-                    const numeroCliente = toNumber.startsWith('57') ? `+${toNumber}` : `+57${toNumber}`;
+                    // NORMALIZACIÓN: Usar helper para formato consistente (57XXXXXXXXXX sin +)
+                    const numeroCliente = normalizarTelefonoConPrefijo57(toNumber);
 
                     // Buscar o crear conversación
                     let conversacion = await pool.query(`

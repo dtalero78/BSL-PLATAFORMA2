@@ -384,9 +384,8 @@ router.post('/', async (req, res) => {
 
         // Gestionar registro en tabla conversaciones_whatsapp
         try {
-            // Normalizar celular: quitar + si existe, y asegurar formato 57XXXXXXXXXX
-            const celularNormalizado = celular.replace(/\+/g, '').replace(/^57/, '');
-            const celularConPrefijo = `57${celularNormalizado}`; // Agregar prefijo 57 a Colombia
+            // Normalizar celular usando helper (formato: 57XXXXXXXXXX sin +)
+            const celularConPrefijo = normalizarTelefonoConPrefijo57(celular);
             console.log('Gestionando conversacion WhatsApp para:', celularConPrefijo);
 
             // Verificar si ya existe un registro con ese celular
