@@ -62,6 +62,17 @@ window.toggleSidebar = function() {
                         }
                     });
                 }
+
+                // Mostrar/ocultar elementos solo para ADMIN
+                if (window.Auth) {
+                    const usuario = window.Auth.getUser();
+                    if (usuario && (usuario.rol === 'ADMIN' || usuario.rol === 'admin')) {
+                        const adminElements = document.querySelectorAll('.admin-only');
+                        adminElements.forEach(el => {
+                            el.style.display = 'block';
+                        });
+                    }
+                }
             }
         })
         .catch(error => {

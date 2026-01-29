@@ -60,5 +60,22 @@
             <i data-feather="dollar-sign"></i>
             <span>Generar Factura</span>
         </div>
+        <!-- Botones solo para ADMIN -->
+        <div class="nav-group admin-only" style="display: none;">
+            <div class="nav-item has-submenu" data-tooltip="Envío Agendamiento" onclick="toggleNavGroup(this)">
+                <i data-feather="send"></i>
+                <span>Envío Agendamiento</span>
+            </div>
+            <div class="nav-submenu">
+                <a href="/enviar-empresas.html" class="nav-item" data-tooltip="Envío Empresas" data-page="enviar-empresas">
+                    <i data-feather="building"></i>
+                    <span>Envío Empresas</span>
+                </a>
+                <a href="/enviar-siigo.html" class="nav-item" data-tooltip="Envío SIIGO" data-page="enviar-siigo">
+                    <i data-feather="package"></i>
+                    <span>Envío SIIGO</span>
+                </a>
+            </div>
+        </div>
     </nav>
 </aside>
