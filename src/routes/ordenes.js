@@ -269,31 +269,38 @@ router.post('/', async (req, res) => {
             console.log('   Hora seleccionada:', horaAtencion, '| Minutos:', horaSelMinutos);
 
             for (const med of Object.values(medicosPorId)) {
-                // Verificar si la hora está dentro de ALGUNO de los rangos del médico
-                // Y verificar que sea un slot válido según tiempo_consulta
-                let esSlotValido = false;
+                // Generar slots válidos para este médico (igual que en /api/turnos-disponibles)
                 const tiempoConsulta = med.tiempoConsulta;
+                let esSlotValido = false;
 
+                console.log(`   Evaluando médico: ${med.nombre} | Tiempo consulta: ${tiempoConsulta} min`);
+
+                // Generar todos los slots válidos para cada rango
                 for (const rango of med.rangos) {
-                    const [horaInicioH, horaInicioM] = rango.horaInicio.split(':').map(Number);
-                    const [horaFinH, horaFinM] = rango.horaFin.split(':').map(Number);
-                    const horaInicioMinutos = horaInicioH * 60 + horaInicioM;
-                    const horaFinMinutos = horaFinH * 60 + horaFinM;
+                    const [horaInicioH] = rango.horaInicio.split(':').map(Number);
+                    const [horaFinH] = rango.horaFin.split(':').map(Number);
 
-                    // Verificar si está dentro del rango
-                    if (horaSelMinutos >= horaInicioMinutos && horaSelMinutos < horaFinMinutos) {
-                        // Verificar si es un slot válido según tiempo_consulta
-                        const minutosDesdeInicio = horaSelMinutos - horaInicioMinutos;
-                        if (minutosDesdeInicio % tiempoConsulta === 0) {
-                            esSlotValido = true;
-                            break;
+                    // Generar slots igual que en /api/turnos-disponibles
+                    for (let hora = horaInicioH; hora < horaFinH; hora++) {
+                        for (let minuto = 0; minuto < 60; minuto += tiempoConsulta) {
+                            const slotMinutos = hora * 60 + minuto;
+                            if (slotMinutos === horaSelMinutos) {
+                                esSlotValido = true;
+                                console.log(`   ✓ Slot ${hora}:${String(minuto).padStart(2, '0')} es válido`);
+                                break;
+                            }
                         }
+                        if (esSlotValido) break;
                     }
+                    if (esSlotValido) break;
                 }
 
                 if (!esSlotValido) {
-                    continue; // No es un slot válido para este médico
+                    console.log(`   ✗ ${med.nombre} descartado (slot no válido)`);
+                    continue;
                 }
+                console.log(`   ✓ ${med.nombre} tiene slot válido`);
+
 
                 // Verificar que no tenga cita a esa hora
                 // EXCEPCIÓN: KM2 y SITEL pueden asignar médico aunque el turno esté ocupado
