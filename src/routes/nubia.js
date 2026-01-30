@@ -231,16 +231,30 @@ async function procesarRegistroNubia(registro) {
 
     console.log(`👤 [procesarRegistroNubia] ${primerNombre} ${primerApellido || ''} - Médico: ${medico} - Minutos desde cita: ${minutosDesdesCita.toFixed(1)}`);
 
+    // Valores por defecto (igual que en el panel manual)
+    const RECOMENDACIONES_DEFAULT = `1. PAUSAS ACTIVAS
+2. HIGIENE POSTURAL
+3. MEDIDAS ERGONOMICAS
+4. TÉCNICAS DE MANEJO DE ESTRÉS
+5. EJERCICIO AEROBICO
+6. MANTENER MEDIDAS DE BIOSEGURIDAD PARA COVID.
+7. ALIMENTACIÓN BALANCEADA`;
+
+    const OBSERVACIONES_DEFAULT = `Basándonos en los resultados obtenidos de la evaluación osteomuscular, certificamos que el paciente presenta un sistema osteomuscular en condiciones óptimas de salud. Esta condición le permite llevar a cabo una variedad de actividades físicas y cotidianas sin restricciones notables y con un riesgo mínimo de lesiones osteomusculares.`;
+
     // Si ya pasó la cita (más de 5 minutos), marcar como ATENDIDO
     if (minutosDesdesCita >= 5) {
         try {
-            // Actualizar el registro en HistoriaClinica
+            // Actualizar el registro en HistoriaClinica con todos los campos médicos
             await pool.query(`
                 UPDATE "HistoriaClinica"
                 SET "atendido" = 'ATENDIDO',
-                    "fechaConsulta" = COALESCE("fechaConsulta", NOW())
+                    "fechaConsulta" = COALESCE("fechaConsulta", NOW()),
+                    "mdConceptoFinal" = 'ELEGIBLE PARA EL CARGO SIN RECOMENDACIONES LABORALES',
+                    "mdRecomendacionesMedicasAdicionales" = $2,
+                    "mdObservacionesCertificado" = $3
                 WHERE "_id" = $1
-            `, [historiaId]);
+            `, [historiaId, RECOMENDACIONES_DEFAULT, OBSERVACIONES_DEFAULT]);
 
             console.log(`✅ [procesarRegistroNubia] Marcado como ATENDIDO: ${primerNombre} ${primerApellido || ''} (ID: ${historiaId})`);
         } catch (updateError) {
