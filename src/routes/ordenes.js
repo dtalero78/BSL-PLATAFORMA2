@@ -1262,7 +1262,7 @@ router.post('/importar-csv', upload.single('archivo'), async (req, res) => {
                         if (telefonoNormalizado) {
                             // Buscar conversación - primero con +, luego sin + (conversaciones viejas)
                             let conversacionExistente = await pool.query(
-                                'SELECT id FROM conversaciones_whatsapp WHERE celular = $1 AND estado != $2',
+                                'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1 AND estado != $2',
                                 [telefonoNormalizado, 'cerrada']
                             );
 
@@ -1270,7 +1270,7 @@ router.post('/importar-csv', upload.single('archivo'), async (req, res) => {
                             if (conversacionExistente.rows.length === 0 && telefonoNormalizado.startsWith('+')) {
                                 const numeroSinMas = telefonoNormalizado.substring(1);
                                 conversacionExistente = await pool.query(
-                                    'SELECT id FROM conversaciones_whatsapp WHERE celular = $1 AND estado != $2',
+                                    'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1 AND estado != $2',
                                     [numeroSinMas, 'cerrada']
                                 );
                             }
@@ -1281,10 +1281,6 @@ router.post('/importar-csv', upload.single('archivo'), async (req, res) => {
                                     INSERT INTO conversaciones_whatsapp (
                                         celular, paciente_id, nombre_paciente, bot_activo, estado, canal
                                     ) VALUES ($1, $2, $3, $4, $5, $6)
-                                    ON CONFLICT (celular) WHERE estado != 'cerrada'
-                                    DO UPDATE SET
-                                        bot_activo = false,
-                                        fecha_ultima_actividad = NOW()
                                 `, [
                                     telefonoNormalizado,
                                     ordenId,
@@ -1296,14 +1292,15 @@ router.post('/importar-csv', upload.single('archivo'), async (req, res) => {
 
                                 console.log(`Conversacion WhatsApp creada para ${telefonoNormalizado} (bot detenido)`);
                             } else {
-                                // Ya existe, actualizar para detener el bot
+                                // Ya existe, actualizar usando el celular como está en la BD
+                                const celularEnBD = conversacionExistente.rows[0].celular;
                                 await pool.query(`
                                     UPDATE conversaciones_whatsapp
                                     SET bot_activo = false, fecha_ultima_actividad = NOW()
                                     WHERE celular = $1 AND estado != 'cerrada'
-                                `, [telefonoNormalizado]);
+                                `, [celularEnBD]);
 
-                                console.log(`Conversacion WhatsApp actualizada para ${telefonoNormalizado} (bot detenido)`);
+                                console.log(`Conversacion WhatsApp actualizada para ${celularEnBD} (bot detenido)`);
                             }
                         }
                     } catch (whatsappError) {
