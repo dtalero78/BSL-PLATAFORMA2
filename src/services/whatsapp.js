@@ -60,7 +60,8 @@ async function sendWhatsAppMessage(toNumber, messageBody, variables = {}, templa
         console.log(`[WA] WhatsApp template enviado a ${toNumber} (Template: ${contentSid}, SID: ${message.sid})`);
 
         // Guardar mensaje en base de datos automaticamente
-        const numeroLimpio = toNumber.replace(/[^\d]/g, '');
+        // Usar helper para normalizar con formato +57XXXXXXXXXX
+        const numeroNormalizado = normalizarTelefonoConPrefijo57(toNumber);
 
         // Obtener el contenido real del mensaje desde Twilio API
         let contenidoTemplate;
@@ -94,7 +95,7 @@ async function sendWhatsAppMessage(toNumber, messageBody, variables = {}, templa
             }
         }
 
-        await guardarMensajeSaliente(numeroLimpio, contenidoTemplate, message.sid, 'template');
+        await guardarMensajeSaliente(numeroNormalizado, contenidoTemplate, message.sid, 'template');
 
         return { success: true, sid: message.sid, status: message.status };
     } catch (err) {
@@ -136,8 +137,9 @@ async function sendWhatsAppFreeText(toNumber, messageBody) {
         console.log(`[WA] WhatsApp texto libre enviado a ${toNumber} (Twilio SID: ${message.sid})`);
 
         // Guardar mensaje en base de datos automaticamente
-        const numeroLimpio = toNumber.replace(/[^\d]/g, '');
-        await guardarMensajeSaliente(numeroLimpio, messageBody, message.sid, 'text');
+        // Usar helper para normalizar con formato +57XXXXXXXXXX
+        const numeroNormalizado = normalizarTelefonoConPrefijo57(toNumber);
+        await guardarMensajeSaliente(numeroNormalizado, messageBody, message.sid, 'text');
 
         return { success: true, sid: message.sid, status: message.status };
     } catch (err) {
