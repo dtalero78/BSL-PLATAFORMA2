@@ -567,18 +567,30 @@ router.post('/enviar-manual', async (req, res) => {
         }
 
         try {
-            const conversacionExistente = await pool.query(
-                'SELECT id FROM conversaciones_whatsapp WHERE celular = $1',
+            // Buscar conversación - primero con +, luego sin + (conversaciones antiguas)
+            let conversacionExistente = await pool.query(
+                'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1',
                 [telefonoNormalizado]
             );
 
+            // Si no se encuentra con +, buscar sin + (conversaciones antiguas)
+            if (conversacionExistente.rows.length === 0 && telefonoNormalizado.startsWith('+')) {
+                const numeroSinMas = telefonoNormalizado.substring(1);
+                conversacionExistente = await pool.query(
+                    'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1',
+                    [numeroSinMas]
+                );
+            }
+
             if (conversacionExistente.rows.length > 0) {
+                // Usar el celular tal como está en la BD para el WHERE
+                const celularEnBD = conversacionExistente.rows[0].celular;
                 await pool.query(`
                     UPDATE conversaciones_whatsapp
                     SET "stopBot" = true,
                         fecha_ultima_actividad = NOW()
                     WHERE celular = $1
-                `, [telefonoNormalizado]);
+                `, [celularEnBD]);
             } else {
                 await pool.query(`
                     INSERT INTO conversaciones_whatsapp (

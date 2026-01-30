@@ -183,7 +183,7 @@ router.post('/enviar-individual', async (req, res) => {
         try {
             // Buscar conversación - primero con +, luego sin + (conversaciones viejas)
             let convExistente = await pool.query(
-                'SELECT id FROM conversaciones_whatsapp WHERE celular = $1',
+                'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1',
                 [telefonoConPrefijo]
             );
 
@@ -191,17 +191,19 @@ router.post('/enviar-individual', async (req, res) => {
             if (convExistente.rows.length === 0 && telefonoConPrefijo.startsWith('+')) {
                 const numeroSinMas = telefonoConPrefijo.substring(1);
                 convExistente = await pool.query(
-                    'SELECT id FROM conversaciones_whatsapp WHERE celular = $1',
+                    'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1',
                     [numeroSinMas]
                 );
             }
 
             if (convExistente.rows.length > 0) {
+                // Usar el celular tal como está en la BD para el WHERE
+                const celularEnBD = convExistente.rows[0].celular;
                 await pool.query(
                     `UPDATE conversaciones_whatsapp
                     SET "stopBot" = true, fecha_ultima_actividad = NOW()
                     WHERE celular = $1`,
-                    [telefonoConPrefijo]
+                    [celularEnBD]
                 );
             } else {
                 await pool.query(
@@ -335,17 +337,29 @@ router.post('/enviar-masivo', async (req, res) => {
                 const telefonoConPrefijo = normalizarTelefonoConPrefijo57(telefonoCompleto);
 
                 try {
-                    const convExistente = await pool.query(
-                        'SELECT id FROM conversaciones_whatsapp WHERE celular = $1',
+                    // Buscar conversación - primero con +, luego sin + (conversaciones viejas)
+                    let convExistente = await pool.query(
+                        'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1',
                         [telefonoConPrefijo]
                     );
 
+                    // Si no se encuentra con +, buscar sin + (conversaciones antiguas)
+                    if (convExistente.rows.length === 0 && telefonoConPrefijo.startsWith('+')) {
+                        const numeroSinMas = telefonoConPrefijo.substring(1);
+                        convExistente = await pool.query(
+                            'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1',
+                            [numeroSinMas]
+                        );
+                    }
+
                     if (convExistente.rows.length > 0) {
+                        // Usar el celular tal como está en la BD para el WHERE
+                        const celularEnBD = convExistente.rows[0].celular;
                         await pool.query(
                             `UPDATE conversaciones_whatsapp
                             SET "stopBot" = true, fecha_ultima_actividad = NOW()
                             WHERE celular = $1`,
-                            [telefonoConPrefijo]
+                            [celularEnBD]
                         );
                     } else {
                         await pool.query(
