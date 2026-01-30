@@ -37,16 +37,12 @@ router.get('/movimiento', authMiddleware, async (req, res) => {
             });
         }
 
-        // Crear objetos Date para comparación (como en HistoriaClinicaRepository.getStatsHoy)
-        const fechaInicioObj = new Date(fechaInicial + 'T00:00:00');
-        const fechaFinObj = new Date(fechaFinal + 'T23:59:59');
-
-        console.log('🔍 Buscando estadísticas:', {
-            fechaInicial: fechaInicioObj.toISOString(),
-            fechaFinal: fechaFinObj.toISOString()
-        });
+        // Usar fechas como strings YYYY-MM-DD para comparación con VARCHAR
+        // fechaAtencion es VARCHAR, no TIMESTAMP, así que usamos cast a DATE
+        console.log('🔍 Buscando estadísticas:', { fechaInicial, fechaFinal });
 
         // Consulta para obtener estadísticas generales
+        // Usamos CAST para convertir fechaAtencion (VARCHAR) a DATE de forma segura
         const statsQuery = `
             SELECT
                 COUNT(*) FILTER (WHERE "atendido" = 'AGENDADO') as agendados,
@@ -57,11 +53,14 @@ router.get('/movimiento', authMiddleware, async (req, res) => {
                     AND "tipoExamen" ~* 'virtual|teleconferencia') as virtual,
                 COUNT(*) FILTER (WHERE "atendido" NOT IN ('AGENDADO', 'ATENDIDO') OR "atendido" IS NULL) as sin_atender
             FROM "HistoriaClinica"
-            WHERE "fechaAtencion" >= $1 AND "fechaAtencion" <= $2
+            WHERE "fechaAtencion" IS NOT NULL
+                AND "fechaAtencion" != ''
+                AND "fechaAtencion"::DATE >= $1::DATE
+                AND "fechaAtencion"::DATE <= $2::DATE
         `;
 
         console.log('📊 Ejecutando consulta de estadísticas...');
-        const statsResult = await pool.query(statsQuery, [fechaInicioObj.toISOString(), fechaFinObj.toISOString()]);
+        const statsResult = await pool.query(statsQuery, [fechaInicial, fechaFinal]);
         console.log('✅ Estadísticas obtenidas:', statsResult.rows[0]);
         const stats = statsResult.rows[0];
 
@@ -76,7 +75,10 @@ router.get('/movimiento', authMiddleware, async (req, res) => {
                 "codEmpresa",
                 COUNT(*) as contador
             FROM "HistoriaClinica"
-            WHERE "fechaAtencion" >= $1 AND "fechaAtencion" <= $2
+            WHERE "fechaAtencion" IS NOT NULL
+                AND "fechaAtencion" != ''
+                AND "fechaAtencion"::DATE >= $1::DATE
+                AND "fechaAtencion"::DATE <= $2::DATE
                 AND "codEmpresa" IS NOT NULL
                 AND "codEmpresa" != ''
             GROUP BY "codEmpresa"
@@ -84,7 +86,7 @@ router.get('/movimiento', authMiddleware, async (req, res) => {
             LIMIT 20
         `;
 
-        const empresasResult = await pool.query(empresasQuery, [fechaInicioObj.toISOString(), fechaFinObj.toISOString()]);
+        const empresasResult = await pool.query(empresasQuery, [fechaInicial, fechaFinal]);
 
         // Consulta para obtener conteo por médico
         const medicosQuery = `
@@ -92,14 +94,17 @@ router.get('/movimiento', authMiddleware, async (req, res) => {
                 COALESCE("mdNombre", 'Sin asignar') as medico,
                 COUNT(*) as contador
             FROM "HistoriaClinica"
-            WHERE "fechaAtencion" >= $1 AND "fechaAtencion" <= $2
+            WHERE "fechaAtencion" IS NOT NULL
+                AND "fechaAtencion" != ''
+                AND "fechaAtencion"::DATE >= $1::DATE
+                AND "fechaAtencion"::DATE <= $2::DATE
                 AND "atendido" = 'ATENDIDO'
             GROUP BY "mdNombre"
             ORDER BY contador DESC
             LIMIT 20
         `;
 
-        const medicosResult = await pool.query(medicosQuery, [fechaInicioObj.toISOString(), fechaFinObj.toISOString()]);
+        const medicosResult = await pool.query(medicosQuery, [fechaInicial, fechaFinal]);
 
         // Construir respuesta
         const estadisticas = {
