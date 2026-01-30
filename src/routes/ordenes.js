@@ -920,7 +920,7 @@ router.post('/importar-desde-preview', async (req, res) => {
                         if (telefonoNormalizado) {
                             // Buscar conversación - primero con +, luego sin + (conversaciones viejas)
                             let conversacionExistente = await pool.query(
-                                'SELECT id FROM conversaciones_whatsapp WHERE celular = $1 AND estado != $2',
+                                'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1 AND estado != $2',
                                 [telefonoNormalizado, 'cerrada']
                             );
 
@@ -928,7 +928,7 @@ router.post('/importar-desde-preview', async (req, res) => {
                             if (conversacionExistente.rows.length === 0 && telefonoNormalizado.startsWith('+')) {
                                 const numeroSinMas = telefonoNormalizado.substring(1);
                                 conversacionExistente = await pool.query(
-                                    'SELECT id FROM conversaciones_whatsapp WHERE celular = $1 AND estado != $2',
+                                    'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1 AND estado != $2',
                                     [numeroSinMas, 'cerrada']
                                 );
                             }
@@ -949,14 +949,15 @@ router.post('/importar-desde-preview', async (req, res) => {
 
                                 console.log(`Conversacion WhatsApp creada para ${telefonoNormalizado} con stopBot = true`);
                             } else {
-                                // Ya existe, actualizar stopBot y bot_activo
+                                // Ya existe, actualizar usando el celular como está en la BD
+                                const celularEnBD = conversacionExistente.rows[0].celular;
                                 await pool.query(`
                                     UPDATE conversaciones_whatsapp
                                     SET "stopBot" = true, bot_activo = false, fecha_ultima_actividad = NOW()
                                     WHERE celular = $1 AND estado != 'cerrada'
-                                `, [telefonoNormalizado]);
+                                `, [celularEnBD]);
 
-                                console.log(`Conversacion WhatsApp actualizada para ${telefonoNormalizado} con stopBot = true`);
+                                console.log(`Conversacion WhatsApp actualizada para ${celularEnBD} con stopBot = true`);
                             }
                         }
                     } catch (whatsappError) {
