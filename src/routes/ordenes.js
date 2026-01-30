@@ -388,7 +388,7 @@ router.post('/', async (req, res) => {
             const celularConPrefijo = normalizarTelefonoConPrefijo57(celular);
             // Versión sin + para búsqueda retrocompatible (conversaciones antiguas)
             const celularSinMas = celularConPrefijo ? celularConPrefijo.replace(/^\+/, '') : null;
-            console.log('Gestionando conversacion WhatsApp para:', celularConPrefijo, '(retrocompat:', celularSinMas, ')');
+            console.log('🔥 [FIX-V2] Gestionando conversacion WhatsApp para:', celularConPrefijo, '(retrocompat:', celularSinMas, ')');
 
             // Verificar si ya existe un registro con ese celular (búsqueda retrocompatible)
             // Primero buscar con +, luego sin + para conversaciones antiguas
