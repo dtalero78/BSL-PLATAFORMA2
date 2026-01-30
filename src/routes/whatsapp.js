@@ -73,6 +73,7 @@ router.post('/webhook', async (req, res) => {
 
         if (conversacion.rows.length === 0) {
             // Crear nueva conversacion
+            console.log(`🔥🔥🔥 [WEBHOOK-V3] CREANDO NUEVA CONVERSACIÓN - numeroCliente="${numeroCliente}" tieneSignoMas=${numeroCliente.startsWith('+')}`);
             const nuevaConv = await pool.query(`
                 INSERT INTO conversaciones_whatsapp (
                     celular,
@@ -87,6 +88,7 @@ router.post('/webhook', async (req, res) => {
             `, [numeroCliente, ProfileName || 'Usuario WhatsApp']);
 
             conversacionId = nuevaConv.rows[0].id;
+            console.log(`🔥🔥🔥 [WEBHOOK-V3] Conversación creada ID=${conversacionId} con celular="${numeroCliente}"`);
         } else {
             conversacionId = conversacion.rows[0].id;
 
