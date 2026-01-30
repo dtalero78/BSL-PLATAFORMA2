@@ -37,12 +37,12 @@ router.get('/movimiento', authMiddleware, async (req, res) => {
             });
         }
 
-        // Usar fechas como strings YYYY-MM-DD para comparación con VARCHAR
-        // fechaAtencion es VARCHAR, no TIMESTAMP, así que usamos cast a DATE
+        // Usar fechas como strings YYYY-MM-DD para comparación
+        // fechaConsulta es cuando efectivamente se hace la consulta
         console.log('🔍 Buscando estadísticas:', { fechaInicial, fechaFinal });
 
         // Consulta para obtener estadísticas generales
-        // Usamos CAST para convertir fechaAtencion (VARCHAR) a DATE de forma segura
+        // Filtramos registros con fechaConsulta válida (no NULL, no vacío, y formato fecha válido)
         const statsQuery = `
             SELECT
                 COUNT(*) FILTER (WHERE "atendido" = 'AGENDADO') as agendados,
@@ -53,10 +53,11 @@ router.get('/movimiento', authMiddleware, async (req, res) => {
                     AND "tipoExamen" ~* 'virtual|teleconferencia') as virtual,
                 COUNT(*) FILTER (WHERE "atendido" NOT IN ('AGENDADO', 'ATENDIDO') OR "atendido" IS NULL) as sin_atender
             FROM "HistoriaClinica"
-            WHERE "fechaAtencion" IS NOT NULL
-                AND "fechaAtencion" != ''
-                AND "fechaAtencion"::DATE >= $1::DATE
-                AND "fechaAtencion"::DATE <= $2::DATE
+            WHERE "fechaConsulta" IS NOT NULL
+                AND "fechaConsulta"::TEXT != ''
+                AND "fechaConsulta"::TEXT ~ '^\\d{4}-\\d{2}-\\d{2}'
+                AND "fechaConsulta"::DATE >= $1::DATE
+                AND "fechaConsulta"::DATE <= $2::DATE
         `;
 
         console.log('📊 Ejecutando consulta de estadísticas...');
@@ -75,10 +76,11 @@ router.get('/movimiento', authMiddleware, async (req, res) => {
                 "codEmpresa",
                 COUNT(*) as contador
             FROM "HistoriaClinica"
-            WHERE "fechaAtencion" IS NOT NULL
-                AND "fechaAtencion" != ''
-                AND "fechaAtencion"::DATE >= $1::DATE
-                AND "fechaAtencion"::DATE <= $2::DATE
+            WHERE "fechaConsulta" IS NOT NULL
+                AND "fechaConsulta"::TEXT != ''
+                AND "fechaConsulta"::TEXT ~ '^\\d{4}-\\d{2}-\\d{2}'
+                AND "fechaConsulta"::DATE >= $1::DATE
+                AND "fechaConsulta"::DATE <= $2::DATE
                 AND "codEmpresa" IS NOT NULL
                 AND "codEmpresa" != ''
             GROUP BY "codEmpresa"
@@ -91,15 +93,16 @@ router.get('/movimiento', authMiddleware, async (req, res) => {
         // Consulta para obtener conteo por médico
         const medicosQuery = `
             SELECT
-                COALESCE("mdNombre", 'Sin asignar') as medico,
+                COALESCE("medico", 'Sin asignar') as medico,
                 COUNT(*) as contador
             FROM "HistoriaClinica"
-            WHERE "fechaAtencion" IS NOT NULL
-                AND "fechaAtencion" != ''
-                AND "fechaAtencion"::DATE >= $1::DATE
-                AND "fechaAtencion"::DATE <= $2::DATE
+            WHERE "fechaConsulta" IS NOT NULL
+                AND "fechaConsulta"::TEXT != ''
+                AND "fechaConsulta"::TEXT ~ '^\\d{4}-\\d{2}-\\d{2}'
+                AND "fechaConsulta"::DATE >= $1::DATE
+                AND "fechaConsulta"::DATE <= $2::DATE
                 AND "atendido" = 'ATENDIDO'
-            GROUP BY "mdNombre"
+            GROUP BY "medico"
             ORDER BY contador DESC
             LIMIT 20
         `;
