@@ -384,19 +384,36 @@ router.post('/', async (req, res) => {
 
         // Gestionar registro en tabla conversaciones_whatsapp
         try {
-            // Normalizar celular usando helper (formato: 57XXXXXXXXXX sin +)
+            // Normalizar celular usando helper (formato: +57XXXXXXXXXX con +)
             const celularConPrefijo = normalizarTelefonoConPrefijo57(celular);
-            console.log('Gestionando conversacion WhatsApp para:', celularConPrefijo);
+            // Versión sin + para búsqueda retrocompatible (conversaciones antiguas)
+            const celularSinMas = celularConPrefijo ? celularConPrefijo.replace(/^\+/, '') : null;
+            console.log('Gestionando conversacion WhatsApp para:', celularConPrefijo, '(retrocompat:', celularSinMas, ')');
 
-            // Verificar si ya existe un registro con ese celular
-            const conversacionExistente = await pool.query(`
+            // Verificar si ya existe un registro con ese celular (búsqueda retrocompatible)
+            // Primero buscar con +, luego sin + para conversaciones antiguas
+            let conversacionExistente = await pool.query(`
                 SELECT id, celular, "stopBot"
                 FROM conversaciones_whatsapp
                 WHERE celular = $1
             `, [celularConPrefijo]);
 
+            // Si no encuentra con +, buscar sin + (conversaciones antiguas)
+            if (conversacionExistente.rows.length === 0 && celularSinMas) {
+                conversacionExistente = await pool.query(`
+                    SELECT id, celular, "stopBot"
+                    FROM conversaciones_whatsapp
+                    WHERE celular = $1
+                `, [celularSinMas]);
+                if (conversacionExistente.rows.length > 0) {
+                    console.log('Conversacion encontrada con formato antiguo (sin +):', celularSinMas);
+                }
+            }
+
             if (conversacionExistente.rows.length > 0) {
                 // Si existe, actualizar stopBot a true, bot_activo a false y datos del paciente
+                // Usar el celular tal como está en la BD para el WHERE
+                const celularEnBD = conversacionExistente.rows[0].celular;
                 await pool.query(`
                     UPDATE conversaciones_whatsapp
                     SET "stopBot" = true,
@@ -405,10 +422,10 @@ router.post('/', async (req, res) => {
                         nombre_paciente = $3,
                         fecha_ultima_actividad = NOW()
                     WHERE celular = $1
-                `, [celularConPrefijo, numeroId, `${primerNombre} ${primerApellido}`]);
-                console.log('Conversacion WhatsApp actualizada: stopBot = true, bot_activo = false para', celularConPrefijo);
+                `, [celularEnBD, numeroId, `${primerNombre} ${primerApellido}`]);
+                console.log('Conversacion WhatsApp actualizada: stopBot = true, bot_activo = false para', celularEnBD);
             } else {
-                // Si no existe, crear nuevo registro con stopBot = true
+                // Si no existe, crear nuevo registro con stopBot = true (con formato +)
                 await pool.query(`
                     INSERT INTO conversaciones_whatsapp (
                         celular,
