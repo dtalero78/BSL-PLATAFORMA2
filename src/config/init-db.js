@@ -959,46 +959,17 @@ const initDB = async () => {
             console.log('Columna linkEnviado ya existe o tabla HistoriaClinica no encontrada');
         }
 
-        // ==================== TRIGGERS DE NORMALIZACIÓN ====================
-
-        // Trigger para normalizar números de teléfono en conversaciones_whatsapp
-        // Esto garantiza que SIEMPRE se guarden en formato 57XXXXXXXXXX (sin +, sin whatsapp:)
+        // ==================== ELIMINACIÓN DE TRIGGER OBSOLETO ====================
+        // IMPORTANTE: La normalización se hace en la aplicación con normalizarTelefonoConPrefijo57()
+        // El trigger anterior quitaba el + y causaba duplicados de conversaciones
         try {
             await pool.query(`
-                -- Función de normalización
-                CREATE OR REPLACE FUNCTION normalizar_celular_whatsapp()
-                RETURNS TRIGGER AS $$
-                BEGIN
-                    -- Quitar whatsapp:, +, espacios, guiones, paréntesis
-                    NEW.celular = REGEXP_REPLACE(NEW.celular, '[whatsapp:+\\s\\-()]', '', 'g');
-
-                    -- Si es número de 10 dígitos que empieza con 3 (móvil colombiano), agregar 57
-                    IF LENGTH(NEW.celular) = 10 AND LEFT(NEW.celular, 1) = '3' THEN
-                        NEW.celular = '57' || NEW.celular;
-                    END IF;
-
-                    -- Si empieza con 5757 (duplicado), quitar uno
-                    IF LENGTH(NEW.celular) >= 4 AND LEFT(NEW.celular, 4) = '5757' THEN
-                        NEW.celular = SUBSTRING(NEW.celular FROM 3);
-                    END IF;
-
-                    -- Guardar solo dígitos (por si quedó algo raro)
-                    NEW.celular = REGEXP_REPLACE(NEW.celular, '[^0-9]', '', 'g');
-
-                    RETURN NEW;
-                END;
-                $$ LANGUAGE plpgsql;
-
-                -- Aplicar trigger en INSERT y UPDATE
                 DROP TRIGGER IF EXISTS normalizar_celular_before_insert ON conversaciones_whatsapp;
-                CREATE TRIGGER normalizar_celular_before_insert
-                    BEFORE INSERT OR UPDATE ON conversaciones_whatsapp
-                    FOR EACH ROW EXECUTE FUNCTION normalizar_celular_whatsapp();
+                DROP FUNCTION IF EXISTS normalizar_celular_whatsapp();
             `);
-            console.log('✅ Trigger de normalización de celular creado correctamente');
+            console.log('✅ Trigger obsoleto de normalización eliminado (la normalización se hace en app)');
         } catch (err) {
-            console.error('⚠️ Error al crear trigger de normalización:', err.message);
-            // No bloqueamos la inicialización si falla el trigger
+            console.error('⚠️ Error al eliminar trigger obsoleto:', err.message);
         }
 
         console.log('Base de datos inicializada correctamente');
