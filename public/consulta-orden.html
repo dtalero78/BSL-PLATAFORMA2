@@ -569,12 +569,6 @@
                                 <span class="resumen-label">Documento</span>
                                 <span class="resumen-value">${orden.numeroId}</span>
                             </div>
-                            ${orden.mdConceptoFinal ? `
-                            <div class="resumen-item">
-                                <span class="resumen-label">Concepto Médico</span>
-                                <span class="resumen-value">${orden.mdConceptoFinal}</span>
-                            </div>
-                            ` : ''}
                         </div>
 
                         ${!todasCompletadas ? `
@@ -594,13 +588,18 @@
                         ` : `
                         <div class="pruebas-section">
                             <div style="text-align: center; padding: 20px;">
+                                <div style="background: #D1FAE5; border: 1px solid #6EE7B7; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                                    <span style="color: #059669; font-weight: 600;">✓ Has completado todas tus pruebas</span>
+                                </div>
                                 ${isAtendido ? `
                                 <a href="https://bsl-utilidades-yp78a.ondigitalocean.app/generar-certificado-desde-wix/${orden._id}"
                                    target="_blank"
                                    class="btn-certificado">
                                     Descargar Certificado
                                 </a>
-                                ` : ''}
+                                ` : `
+                                <p style="color: #6B7280; font-size: 14px;">Tu certificado estará disponible cuando el médico complete tu atención.</p>
+                                `}
                             </div>
                         </div>
                         `}
