@@ -4,6 +4,7 @@ const pool = require('../config/database');
 const { authMiddleware } = require('../middleware/auth');
 const { sendWhatsAppMessage, sendWhatsAppFreeText } = require('../services/whatsapp');
 const { normalizarTelefonoConPrefijo57 } = require('../helpers/phone');
+const { sendWhapiMessage, construirMensajeSiigo, construirMensajeSeguimiento } = require('../services/whapi');
 
 // ========== ENDPOINTS ENVÍO SIIGO ==========
 
@@ -311,8 +312,6 @@ router.post('/enviar-individual-whapi', async (req, res) => {
                 message: 'Se requieren campos: _id, celular'
             });
         }
-
-        const { sendWhapiMessage, construirMensajeSeguimiento } = require('../services/whapi');
 
         // Limpiar y formatear número de teléfono para WHAPI
         const telefonoLimpio = celular.replace(/\s+/g, '').replace(/-/g, '').replace(/\(/g, '').replace(/\)/g, '');
@@ -715,8 +714,6 @@ router.post('/enviar-whapi', async (req, res) => {
                 message: 'Se requiere un array de registros'
             });
         }
-
-        const { sendWhapiMessage, construirMensajeSiigo, construirMensajeSeguimiento } = require('../services/whapi');
 
         console.log('');
         console.log('===================================================================');
