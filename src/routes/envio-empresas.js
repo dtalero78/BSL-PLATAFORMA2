@@ -439,6 +439,132 @@ router.post('/enviar-masivo', async (req, res) => {
     }
 });
 
+// POST - Envío masivo mediante Make.com webhook
+router.post('/enviar-make', async (req, res) => {
+    try {
+        const { registros } = req.body;
+
+        if (!registros || !Array.isArray(registros) || registros.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Se requiere un array de registros'
+            });
+        }
+
+        console.log('');
+        console.log('===================================================================');
+        console.log(`ENVIO MASIVO MAKE.COM - ${registros.length} registros`);
+        console.log('===================================================================');
+
+        const resultados = {
+            total: registros.length,
+            enviados: 0,
+            errores: 0,
+            detalles: [],
+            agendaProgramada: []
+        };
+
+        // Importar el helper de webhook
+        const { dispararWebhookMake } = require('../helpers/webhook');
+
+        for (let i = 0; i < registros.length; i++) {
+            const item = registros[i];
+
+            try {
+                const nombrePaciente = `${item.primerNombre || ""} ${item.primerApellido || ""}`.trim();
+
+                console.log(`[${i + 1}/${registros.length}] Enviando webhook Make.com a ${nombrePaciente}...`);
+
+                // Disparar webhook a Make.com
+                await dispararWebhookMake({
+                    _id: item._id,
+                    celular: item.celular,
+                    numeroId: item.numeroId,
+                    primerNombre: item.primerNombre,
+                    codEmpresa: item.codEmpresa,
+                    examenes: item.examenes,
+                    ciudad: item.ciudad,
+                    fechaAtencion: item.fechaAtencion,
+                    horaAtencion: item.horaAtencion,
+                    medico: item.medico,
+                    modalidad: item.modalidad
+                });
+
+                // Actualizar linkEnviado
+                await pool.query(`
+                    UPDATE "HistoriaClinica"
+                    SET "linkEnviado" = 'ENVIADO_MAKE'
+                    WHERE "_id" = $1
+                `, [item._id]);
+
+                // Agregar a agenda programada
+                let fechaHoraTexto = "Sin fecha asignada";
+                if (item.fechaAtencion) {
+                    const fechaUTC = new Date(item.fechaAtencion);
+                    const offsetColombia = -5 * 60;
+                    const offsetLocal = fechaUTC.getTimezoneOffset();
+                    const fechaColombia = new Date(fechaUTC.getTime() + (offsetLocal + offsetColombia) * 60000);
+
+                    const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                    const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+                    const diaSemana = diasSemana[fechaColombia.getDay()];
+                    const dia = fechaColombia.getDate();
+                    const mes = meses[fechaColombia.getMonth()];
+                    const horas = fechaColombia.getHours().toString().padStart(2, '0');
+                    const minutos = fechaColombia.getMinutes().toString().padStart(2, '0');
+
+                    fechaHoraTexto = `${diaSemana} ${dia} de ${mes} - ${horas}:${minutos}`;
+                }
+
+                resultados.agendaProgramada.push({
+                    nombre: nombrePaciente,
+                    empresa: item.empresa || "N/A",
+                    fechaHora: fechaHoraTexto,
+                    ciudad: item.ciudad || "Sin ciudad"
+                });
+
+                resultados.enviados++;
+                console.log(`✅ Webhook Make.com enviado a ${nombrePaciente}`);
+
+                // Pausa de 3 segundos entre mensajes
+                if (i < registros.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                }
+
+            } catch (error) {
+                resultados.errores++;
+                resultados.detalles.push({
+                    nombre: `${item.primerNombre || ""} ${item.primerApellido || ""}`.trim(),
+                    numeroId: item.numeroId,
+                    celular: item.celular,
+                    empresa: item.empresa,
+                    error: error.message
+                });
+                console.error(`❌ Error enviando a ${item.primerNombre}:`, error.message);
+            }
+        }
+
+        console.log('');
+        console.log('===================================================================');
+        console.log(`RESUMEN MAKE.COM: ${resultados.enviados}/${resultados.total} exitosos`);
+        console.log('===================================================================');
+
+        res.json({
+            success: true,
+            message: 'Envío Make.com completado',
+            resultados: resultados
+        });
+    } catch (error) {
+        console.error('❌ Error en envío Make.com:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error en envío Make.com',
+            error: error.message
+        });
+    }
+});
+
 // POST - Marcar registros como enviados (sin enviar mensaje)
 router.post('/marcar-enviados', async (req, res) => {
     try {
