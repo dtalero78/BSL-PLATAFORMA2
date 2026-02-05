@@ -300,6 +300,121 @@ router.post('/enviar-individual', async (req, res) => {
     }
 });
 
+// POST - Enviar mensaje individual de seguimiento via WHAPI (para No Asistidos)
+router.post('/enviar-individual-whapi', async (req, res) => {
+    try {
+        const { _id, primerNombre, segundoNombre, primerApellido, segundoApellido, celular } = req.body;
+
+        if (!_id || !celular) {
+            return res.status(400).json({
+                success: false,
+                message: 'Se requieren campos: _id, celular'
+            });
+        }
+
+        const { sendWhapiMessage, construirMensajeSeguimiento } = require('../services/whapi');
+
+        // Limpiar y formatear número de teléfono para WHAPI
+        const telefonoLimpio = celular.replace(/\s+/g, '').replace(/-/g, '').replace(/\(/g, '').replace(/\)/g, '');
+        let telefonoCompleto;
+
+        // Formato para WHAPI: 573001234567 (sin + y sin @)
+        if (telefonoLimpio.startsWith('+')) {
+            telefonoCompleto = telefonoLimpio.substring(1);
+        } else if (/^(52|57|1|34|44|58|51|54)\d{10,}/.test(telefonoLimpio)) {
+            telefonoCompleto = telefonoLimpio;
+        } else if (/^\d{10}$/.test(telefonoLimpio)) {
+            telefonoCompleto = '57' + telefonoLimpio;
+        } else if (telefonoLimpio.startsWith('0')) {
+            const sinCero = telefonoLimpio.substring(1);
+            telefonoCompleto = '52' + sinCero;
+        } else if (/^\d{8,9}$/.test(telefonoLimpio)) {
+            telefonoCompleto = '52' + telefonoLimpio;
+        } else {
+            telefonoCompleto = '57' + telefonoLimpio;
+        }
+
+        const nombrePaciente = `${primerNombre || ""} ${primerApellido || ""}`.trim();
+
+        console.log(`📱 WHAPI: Enviando mensaje de seguimiento a ${nombrePaciente} (${telefonoCompleto})`);
+
+        // Construir mensaje de seguimiento
+        const mensaje = construirMensajeSeguimiento(req.body);
+
+        // Enviar via WHAPI
+        const resultWhapi = await sendWhapiMessage(telefonoCompleto, mensaje);
+
+        if (!resultWhapi.success) {
+            return res.status(500).json({
+                success: false,
+                message: 'Error al enviar WHAPI',
+                error: resultWhapi.error
+            });
+        }
+
+        // Marcar como enviado por WHAPI en la base de datos
+        await pool.query(`
+            UPDATE "HistoriaClinica"
+            SET "linkEnviado" = 'ENVIADO_WHAPI'
+            WHERE "_id" = $1
+        `, [_id]);
+
+        // Crear/actualizar conversación WhatsApp
+        const telefonoConPrefijo = '+' + telefonoCompleto;
+        try {
+            let convExistente = await pool.query(
+                'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1',
+                [telefonoConPrefijo]
+            );
+
+            if (convExistente.rows.length === 0 && telefonoConPrefijo.startsWith('+')) {
+                const numeroSinMas = telefonoConPrefijo.substring(1);
+                convExistente = await pool.query(
+                    'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1',
+                    [numeroSinMas]
+                );
+            }
+
+            if (convExistente.rows.length > 0) {
+                const celularEnBD = convExistente.rows[0].celular;
+                await pool.query(
+                    `UPDATE conversaciones_whatsapp
+                    SET "stopBot" = true, fecha_ultima_actividad = NOW()
+                    WHERE celular = $1`,
+                    [celularEnBD]
+                );
+            } else {
+                await pool.query(
+                    `INSERT INTO conversaciones_whatsapp
+                    (celular, nombre_paciente, estado, "stopBot", fecha_ultima_actividad)
+                    VALUES ($1, $2, 'cerrada', true, NOW())`,
+                    [telefonoConPrefijo, nombrePaciente]
+                );
+            }
+        } catch (whatsappError) {
+            console.log('⚠️ Error al gestionar conversación WhatsApp:', whatsappError.message);
+        }
+
+        console.log(`✅ WHAPI: Mensaje de seguimiento enviado a ${nombrePaciente}`);
+
+        res.json({
+            success: true,
+            message: 'Mensaje de seguimiento enviado exitosamente',
+            data: {
+                telefono: telefonoCompleto,
+                nombre: nombrePaciente
+            }
+        });
+    } catch (error) {
+        console.error('❌ Error enviando mensaje WHAPI individual:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al enviar mensaje',
+            error: error.message
+        });
+    }
+});
+
 // POST - Envío masivo de mensajes
 router.post('/enviar-masivo', async (req, res) => {
     try {

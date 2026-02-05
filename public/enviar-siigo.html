@@ -638,9 +638,20 @@
             try {
                 btn.disabled = true;
                 btn.innerHTML = '<span class="loading"></span> Enviando...';
-                log(`Enviando mensaje a ${registro.primerNombre} ${registro.primerApellido}...`, 'info');
 
-                const response = await fetch('/api/envio-siigo/enviar-individual', {
+                // Determinar el endpoint según el tipo de mensaje
+                let endpoint, metodoEnvio;
+                if (tipoMensajeActual === 'no-asistidos') {
+                    endpoint = '/api/envio-siigo/enviar-individual-whapi';
+                    metodoEnvio = 'WHAPI (seguimiento)';
+                    log(`Enviando mensaje de seguimiento WHAPI a ${registro.primerNombre} ${registro.primerApellido}...`, 'info');
+                } else {
+                    endpoint = '/api/envio-siigo/enviar-individual';
+                    metodoEnvio = 'Twilio';
+                    log(`Enviando mensaje Twilio a ${registro.primerNombre} ${registro.primerApellido}...`, 'info');
+                }
+
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -657,7 +668,7 @@
                 btn.classList.remove('btn-primary');
                 btn.classList.add('btn-success');
 
-                log(`✅ Mensaje enviado a ${registro.primerNombre} ${registro.primerApellido}`, 'success');
+                log(`✅ Mensaje enviado a ${registro.primerNombre} ${registro.primerApellido} vía ${metodoEnvio}`, 'success');
 
                 // Actualizar estadísticas
                 const enviados = parseInt(document.getElementById('totalEnviados').textContent);
