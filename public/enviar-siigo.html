@@ -315,6 +315,103 @@
             margin-bottom: 16px;
             opacity: 0.5;
         }
+
+        .search-bar {
+            background: var(--bg-secondary);
+            padding: 20px;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 24px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .search-bar input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .search-bar input:focus {
+            outline: none;
+            border-color: var(--medical-primary);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-header h3 {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--medical-primary);
+            margin-bottom: 8px;
+        }
+
+        .modal-header p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .modal-body textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: vertical;
+        }
+
+        .modal-body textarea:focus {
+            outline: none;
+            border-color: var(--medical-primary);
+        }
+
+        .modal-footer {
+            padding: 24px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
     </style>
 </head>
 <body>
@@ -388,6 +485,16 @@
             </div>
         </div>
 
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="🔍 Buscar por cédula o celular..." />
+            <button class="btn btn-primary" onclick="buscarRegistro()">
+                Buscar
+            </button>
+            <button class="btn" style="background: var(--bg-tertiary); color: var(--text-primary);" onclick="limpiarBusqueda()">
+                Limpiar
+            </button>
+        </div>
+
         <div class="table-container">
             <div class="table-header">
                 <h2>Registros SIIGO</h2>
@@ -408,10 +515,32 @@
         </div>
     </div>
 
+    <!-- Modal para mensaje personalizado -->
+    <div class="modal" id="modalMensaje">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>💬 Redactar Mensaje WHAPI</h3>
+                <p id="modalDestinatario">Para: <strong></strong></p>
+            </div>
+            <div class="modal-body">
+                <textarea id="mensajeTexto" placeholder="Escribe tu mensaje aquí..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" style="background: var(--bg-tertiary); color: var(--text-primary);" onclick="cerrarModal()">
+                    Cancelar
+                </button>
+                <button class="btn btn-whapi" onclick="enviarMensajePersonalizado()">
+                    💚 Enviar por WHAPI
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let registrosActuales = [];
         let tipoMensajeActual = 'pendientes';
         let registrosSeleccionados = new Set();
+        let registroSeleccionadoModal = null;
 
         // Función para agregar log a la consola
         function log(mensaje, tipo = 'info') {
@@ -630,8 +759,126 @@
             tableContent.innerHTML = html;
         }
 
+        // Buscar registro
+        async function buscarRegistro() {
+            const query = document.getElementById('searchInput').value.trim();
+
+            if (!query) {
+                log('Ingresa una cédula o celular para buscar', 'warning');
+                return;
+            }
+
+            try {
+                log(`🔍 Buscando: ${query}`, 'info');
+                const response = await fetch(`/api/envio-siigo/buscar?query=${encodeURIComponent(query)}`);
+
+                if (!response.ok) {
+                    throw new Error('Error al buscar');
+                }
+
+                const data = await response.json();
+                registrosActuales = data.data;
+                tipoMensajeActual = 'busqueda';
+
+                // Resetear selecciones
+                registrosSeleccionados.clear();
+
+                document.getElementById('totalRegistros').textContent = registrosActuales.length;
+                document.getElementById('totalSeleccionados').textContent = '0';
+                document.getElementById('btnEnvioWhapi').disabled = true;
+                document.getElementById('btnEnvioMasivo').disabled = true;
+
+                // Ocultar filtros de fecha
+                document.getElementById('filtrosFechas').style.display = 'none';
+
+                renderTable(registrosActuales);
+                log(`✅ ${registrosActuales.length} resultado(s) encontrado(s)`, 'success');
+            } catch (error) {
+                log(`❌ Error en búsqueda: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        // Limpiar búsqueda
+        function limpiarBusqueda() {
+            document.getElementById('searchInput').value = '';
+            log('Búsqueda limpiada', 'info');
+            cargarRegistros('pendientes');
+        }
+
+        // Abrir modal para mensaje personalizado
+        function abrirModal(index) {
+            const registro = registrosActuales[index];
+            registroSeleccionadoModal = registro;
+
+            const nombreCompleto = `${registro.primerNombre || ''} ${registro.primerApellido || ''}`.trim();
+            document.getElementById('modalDestinatario').innerHTML = `Para: <strong>${nombreCompleto} (${registro.numeroId})</strong>`;
+            document.getElementById('mensajeTexto').value = '';
+            document.getElementById('modalMensaje').classList.add('active');
+        }
+
+        // Cerrar modal
+        function cerrarModal() {
+            document.getElementById('modalMensaje').classList.remove('active');
+            registroSeleccionadoModal = null;
+        }
+
+        // Enviar mensaje personalizado
+        async function enviarMensajePersonalizado() {
+            const mensaje = document.getElementById('mensajeTexto').value.trim();
+
+            if (!mensaje) {
+                alert('Por favor, escribe un mensaje');
+                return;
+            }
+
+            if (!registroSeleccionadoModal) {
+                alert('No hay registro seleccionado');
+                return;
+            }
+
+            try {
+                log(`📱 Enviando mensaje personalizado a ${registroSeleccionadoModal.primerNombre}...`, 'info');
+
+                const response = await fetch('/api/envio-siigo/enviar-mensaje-personalizado', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        _id: registroSeleccionadoModal._id,
+                        primerNombre: registroSeleccionadoModal.primerNombre,
+                        primerApellido: registroSeleccionadoModal.primerApellido,
+                        celular: registroSeleccionadoModal.celular,
+                        mensaje: mensaje
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al enviar mensaje');
+                }
+
+                const data = await response.json();
+                log(`✅ Mensaje enviado exitosamente a ${registroSeleccionadoModal.primerNombre}`, 'success');
+                cerrarModal();
+
+                // Actualizar estadísticas
+                const enviados = parseInt(document.getElementById('totalEnviados').textContent);
+                document.getElementById('totalEnviados').textContent = enviados + 1;
+            } catch (error) {
+                log(`❌ Error enviando mensaje: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
         // Enviar mensaje individual
         async function enviarIndividual(index) {
+            // Si es una búsqueda, abrir modal para mensaje personalizado
+            if (tipoMensajeActual === 'busqueda') {
+                abrirModal(index);
+                return;
+            }
+
             const registro = registrosActuales[index];
             const btn = document.getElementById(`btn-${index}`);
 
@@ -928,6 +1175,20 @@
                 btn.innerHTML = '✅ Marcar como Enviados';
             }
         }
+
+        // Event listener para Enter en searchbar
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                buscarRegistro();
+            }
+        });
+
+        // Event listener para cerrar modal al hacer clic fuera
+        document.getElementById('modalMensaje').addEventListener('click', (e) => {
+            if (e.target.id === 'modalMensaje') {
+                cerrarModal();
+            }
+        });
 
         // Cargar registros automáticamente al abrir la página
         window.addEventListener('load', () => {

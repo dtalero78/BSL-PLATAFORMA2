@@ -8,6 +8,58 @@ const { sendWhapiMessage, construirMensajeSiigo, construirMensajeSeguimiento } =
 
 // ========== ENDPOINTS ENVÍO SIIGO ==========
 
+// GET - Buscar registro por cédula o celular
+router.get('/buscar', async (req, res) => {
+    try {
+        const { query } = req.query;
+
+        if (!query || query.trim() === '') {
+            return res.status(400).json({
+                success: false,
+                message: 'Se requiere un término de búsqueda'
+            });
+        }
+
+        // Buscar por numeroId o celular
+        const result = await pool.query(`
+            SELECT
+                "_id",
+                "primerNombre",
+                "segundoNombre",
+                "primerApellido",
+                "segundoApellido",
+                "numeroId",
+                "celular",
+                "ciudad",
+                "fechaAtencion",
+                "fechaConsulta",
+                "linkEnviado",
+                "atendido",
+                "_createdDate",
+                "codEmpresa"
+            FROM "HistoriaClinica"
+            WHERE "numeroId" = $1 OR "celular" LIKE $2
+            ORDER BY "_createdDate" DESC
+            LIMIT 10
+        `, [query, `%${query}%`]);
+
+        console.log(`🔍 Búsqueda: "${query}" - ${result.rows.length} resultados`);
+
+        res.json({
+            success: true,
+            data: result.rows,
+            count: result.rows.length
+        });
+    } catch (error) {
+        console.error('❌ Error en búsqueda:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al buscar registros',
+            error: error.message
+        });
+    }
+});
+
 // GET - Obtener registros de SIIGO con linkEnviado vacío (cargar automáticamente)
 router.get('/registros', async (req, res) => {
     try {
@@ -293,6 +345,103 @@ router.post('/enviar-individual', async (req, res) => {
         });
     } catch (error) {
         console.error('❌ Error enviando mensaje individual:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al enviar mensaje',
+            error: error.message
+        });
+    }
+});
+
+// POST - Enviar mensaje personalizado via WHAPI
+router.post('/enviar-mensaje-personalizado', async (req, res) => {
+    try {
+        const { _id, primerNombre, primerApellido, celular, mensaje } = req.body;
+
+        if (!_id || !celular || !mensaje) {
+            return res.status(400).json({
+                success: false,
+                message: 'Se requieren campos: _id, celular, mensaje'
+            });
+        }
+
+        // Limpiar y formatear número de teléfono para WHAPI
+        const telefonoLimpio = celular.replace(/\s+/g, '').replace(/-/g, '').replace(/\(/g, '').replace(/\)/g, '');
+        let telefonoCompleto;
+
+        if (telefonoLimpio.startsWith('+')) {
+            telefonoCompleto = telefonoLimpio.substring(1);
+        } else if (/^(52|57|1|34|44|58|51|54)\d{10,}/.test(telefonoLimpio)) {
+            telefonoCompleto = telefonoLimpio;
+        } else if (/^\d{10}$/.test(telefonoLimpio)) {
+            telefonoCompleto = '57' + telefonoLimpio;
+        } else {
+            telefonoCompleto = '57' + telefonoLimpio;
+        }
+
+        const nombrePaciente = `${primerNombre || ""} ${primerApellido || ""}`.trim();
+
+        console.log(`📱 WHAPI: Enviando mensaje personalizado a ${nombrePaciente} (${telefonoCompleto})`);
+
+        // Enviar via WHAPI con mensaje personalizado
+        const resultWhapi = await sendWhapiMessage(telefonoCompleto, mensaje);
+
+        if (!resultWhapi.success) {
+            return res.status(500).json({
+                success: false,
+                message: 'Error al enviar WHAPI',
+                error: resultWhapi.error
+            });
+        }
+
+        // Crear/actualizar conversación WhatsApp
+        const telefonoConPrefijo = '+' + telefonoCompleto;
+        try {
+            let convExistente = await pool.query(
+                'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1',
+                [telefonoConPrefijo]
+            );
+
+            if (convExistente.rows.length === 0 && telefonoConPrefijo.startsWith('+')) {
+                const numeroSinMas = telefonoConPrefijo.substring(1);
+                convExistente = await pool.query(
+                    'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1',
+                    [numeroSinMas]
+                );
+            }
+
+            if (convExistente.rows.length > 0) {
+                const celularEnBD = convExistente.rows[0].celular;
+                await pool.query(
+                    `UPDATE conversaciones_whatsapp
+                    SET "stopBot" = true, fecha_ultima_actividad = NOW()
+                    WHERE celular = $1`,
+                    [celularEnBD]
+                );
+            } else {
+                await pool.query(
+                    `INSERT INTO conversaciones_whatsapp
+                    (celular, nombre_paciente, estado, "stopBot", fecha_ultima_actividad)
+                    VALUES ($1, $2, 'cerrada', true, NOW())`,
+                    [telefonoConPrefijo, nombrePaciente]
+                );
+            }
+        } catch (whatsappError) {
+            console.log('⚠️ Error al gestionar conversación WhatsApp:', whatsappError.message);
+        }
+
+        console.log(`✅ WHAPI: Mensaje personalizado enviado a ${nombrePaciente}`);
+
+        res.json({
+            success: true,
+            message: 'Mensaje enviado exitosamente',
+            data: {
+                telefono: telefonoCompleto,
+                nombre: nombrePaciente
+            }
+        });
+    } catch (error) {
+        console.error('❌ Error enviando mensaje personalizado WHAPI:', error);
         res.status(500).json({
             success: false,
             message: 'Error al enviar mensaje',
