@@ -959,6 +959,58 @@ const initDB = async () => {
             console.log('Columna linkEnviado ya existe o tabla HistoriaClinica no encontrada');
         }
 
+        // Aumentar tamaño de campos de visiometrias que almacenan fórmulas de prescripción
+        const visiometriasFieldsToEnlarge = [
+            'refractometria_od',
+            'refractometria_oi',
+            'subjetivo_od',
+            'subjetivo_oi',
+            'rx_final_od',
+            'rx_final_oi',
+            'filtro',
+            'uso',
+            'cover_test_lejos',
+            'cover_test_cerca',
+            'vl_foria_lateral',
+            'vl_foria_vertical',
+            'vc_foria_lateral',
+            'vc_campimetria'
+        ];
+
+        for (const field of visiometriasFieldsToEnlarge) {
+            try {
+                await pool.query(`
+                    ALTER TABLE visiometrias
+                    ALTER COLUMN ${field} TYPE VARCHAR(200)
+                `);
+            } catch (err) {
+                // Campo no existe o ya tiene el tipo correcto
+            }
+        }
+
+        // Aumentar tamaño de campos de audiometrias que almacenan observaciones médicas
+        const audiometriasFieldsToEnlarge = [
+            'pabellon_auricular_oi',
+            'pabellon_auricular_od',
+            'conducto_auditivo_oi',
+            'conducto_auditivo_od',
+            'membrana_timpanica_oi',
+            'membrana_timpanica_od',
+            'cabina',
+            'equipo'
+        ];
+
+        for (const field of audiometriasFieldsToEnlarge) {
+            try {
+                await pool.query(`
+                    ALTER TABLE audiometrias
+                    ALTER COLUMN ${field} TYPE VARCHAR(200)
+                `);
+            } catch (err) {
+                // Campo no existe o ya tiene el tipo correcto
+            }
+        }
+
         // ==================== ELIMINACIÓN DE TRIGGER OBSOLETO ====================
         // IMPORTANTE: La normalización se hace en la aplicación con normalizarTelefonoConPrefijo57()
         // El trigger anterior quitaba el + y causaba duplicados de conversaciones
