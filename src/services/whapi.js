@@ -65,6 +65,31 @@ async function sendWhapiMessage(toNumber, messageBody) {
 }
 
 /**
+ * Construir mensaje de seguimiento para no asistidos
+ * @param {Object} paciente - Datos del paciente
+ * @returns {string} - Mensaje de seguimiento
+ */
+function construirMensajeSeguimiento(paciente) {
+    const primerNombre = paciente.primerNombre || 'Hola';
+
+    const mensaje = `Hola ${primerNombre}! 👋
+
+Notamos que aún no has completado tu examen médico ocupacional de SIIGO.
+
+¿Deseas continuar con el proceso? 🏥
+
+Si aún estás interesado(a), por favor responde este mensaje y con gusto te ayudamos a agendar tu cita.
+
+Si ya no deseas continuar, por favor confirma para actualizar tu registro.
+
+¡Quedamos atentos a tu respuesta!
+
+*BSL - Salud Laboral*`;
+
+    return mensaje;
+}
+
+/**
  * Construir mensaje de agendamiento para SIIGO
  * @param {Object} paciente - Datos del paciente
  * @returns {string} - Mensaje formateado
@@ -104,5 +129,6 @@ Si necesitas cambiar la fecha o tienes alguna pregunta, escríbenos.
 
 module.exports = {
     sendWhapiMessage,
-    construirMensajeSiigo
+    construirMensajeSiigo,
+    construirMensajeSeguimiento
 };
