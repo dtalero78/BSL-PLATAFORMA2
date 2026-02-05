@@ -121,6 +121,15 @@
             background: #1DA851;
         }
 
+        .btn-info {
+            background: var(--info-blue);
+            color: white;
+        }
+
+        .btn-info:hover:not(:disabled) {
+            background: #2563EB;
+        }
+
         .btn-warning {
             background: var(--warning-amber);
             color: white;
@@ -341,6 +350,9 @@
             <button class="btn btn-warning" onclick="cargarRegistros('segundo-envio')">
                 📨 Segundo Envío
             </button>
+            <button class="btn btn-info" onclick="cargarRegistros('no-asistidos')">
+                📋 No Asistidos
+            </button>
             <button class="btn btn-danger" onclick="cargarRegistros('emergencia')">
                 🚨 Emergencia
             </button>
@@ -353,6 +365,27 @@
             <button class="btn btn-primary" id="btnMarcarEnviados" onclick="marcarComoEnviados()" disabled>
                 ✅ Marcar como Enviados
             </button>
+        </div>
+
+        <div id="filtrosFechas" style="display: none; background: var(--bg-secondary); padding: 16px; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); margin-bottom: 24px;">
+            <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">Desde</label>
+                    <input type="date" id="fechaDesde" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px;">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">Hasta</label>
+                    <input type="date" id="fechaHasta" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px;">
+                </div>
+                <div style="display: flex; gap: 8px; align-items: flex-end;">
+                    <button class="btn btn-primary btn-sm" onclick="aplicarFiltroFechas()" style="margin-bottom: 0;">
+                        🔍 Filtrar
+                    </button>
+                    <button class="btn btn-sm" onclick="limpiarFiltroFechas()" style="background: var(--bg-tertiary); color: var(--text-primary); margin-bottom: 0;">
+                        ✖ Limpiar
+                    </button>
+                </div>
+            </div>
         </div>
 
         <div class="table-container">
@@ -446,12 +479,29 @@
         }
 
         // Cargar registros desde el backend
-        async function cargarRegistros(tipo) {
+        async function cargarRegistros(tipo, fechaDesde = null, fechaHasta = null) {
             try {
                 log(`Cargando registros de tipo: ${tipo}`, 'info');
                 tipoMensajeActual = tipo;
 
-                const response = await fetch(`/api/envio-siigo/registros?tipo=${tipo}`);
+                // Mostrar u ocultar filtros de fecha según el tipo
+                const filtrosFechas = document.getElementById('filtrosFechas');
+                if (tipo === 'no-asistidos') {
+                    filtrosFechas.style.display = 'block';
+                } else {
+                    filtrosFechas.style.display = 'none';
+                }
+
+                // Construir URL con parámetros de fecha si están presentes
+                let url = `/api/envio-siigo/registros?tipo=${tipo}`;
+                if (fechaDesde && tipo === 'no-asistidos') {
+                    url += `&fechaDesde=${fechaDesde}`;
+                }
+                if (fechaHasta && tipo === 'no-asistidos') {
+                    url += `&fechaHasta=${fechaHasta}`;
+                }
+
+                const response = await fetch(url);
 
                 if (!response.ok) {
                     throw new Error('Error al cargar registros');
@@ -469,11 +519,38 @@
                 document.getElementById('btnEnvioMasivo').disabled = true;
 
                 renderTable(registrosActuales);
-                log(`✅ ${registrosActuales.length} registros cargados`, 'success');
+
+                let mensajeLog = `✅ ${registrosActuales.length} registros cargados`;
+                if (fechaDesde || fechaHasta) {
+                    mensajeLog += ` (filtrado por fechas)`;
+                }
+                log(mensajeLog, 'success');
             } catch (error) {
                 log(`Error al cargar registros: ${error.message}`, 'error');
                 console.error(error);
             }
+        }
+
+        // Aplicar filtro de fechas
+        function aplicarFiltroFechas() {
+            const fechaDesde = document.getElementById('fechaDesde').value;
+            const fechaHasta = document.getElementById('fechaHasta').value;
+
+            if (!fechaDesde && !fechaHasta) {
+                log('Selecciona al menos una fecha para filtrar', 'warning');
+                return;
+            }
+
+            log(`Aplicando filtro: desde ${fechaDesde || 'inicio'} hasta ${fechaHasta || 'hoy'}`, 'info');
+            cargarRegistros('no-asistidos', fechaDesde, fechaHasta);
+        }
+
+        // Limpiar filtro de fechas
+        function limpiarFiltroFechas() {
+            document.getElementById('fechaDesde').value = '';
+            document.getElementById('fechaHasta').value = '';
+            log('Filtros de fecha limpiados', 'info');
+            cargarRegistros('no-asistidos');
         }
 
         // Renderizar tabla
@@ -626,7 +703,8 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        registros: registrosParaEnviar
+                        registros: registrosParaEnviar,
+                        tipoMensaje: tipoMensajeActual
                     })
                 });
 

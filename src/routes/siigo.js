@@ -10,7 +10,7 @@ const { normalizarTelefonoConPrefijo57 } = require('../helpers/phone');
 // GET - Obtener registros de SIIGO con linkEnviado vacío (cargar automáticamente)
 router.get('/registros', async (req, res) => {
     try {
-        const { tipo = 'pendientes' } = req.query;
+        const { tipo = 'pendientes', fechaDesde, fechaHasta } = req.query;
 
         let query;
         let params = ['SIIGO'];
@@ -56,6 +56,46 @@ router.get('/registros', async (req, res) => {
                 AND "linkEnviado" IS NOT NULL
                 AND "linkEnviado" != ''
                 AND ("fechaAtencion" IS NULL OR "fechaAtencion" = '')
+                ORDER BY "_createdDate" DESC
+                LIMIT 500
+            `;
+        } else if (tipo === 'no-asistidos') {
+            // Registros enviados pero que NO han asistido
+            // Con filtros opcionales por rango de fechas y sin fechaConsulta
+            query = `
+                SELECT
+                    "_id",
+                    "primerNombre",
+                    "segundoNombre",
+                    "primerApellido",
+                    "segundoApellido",
+                    "numeroId",
+                    "celular",
+                    "ciudad",
+                    "fechaAtencion",
+                    "fechaConsulta",
+                    "linkEnviado",
+                    "atendido",
+                    "_createdDate"
+                FROM "HistoriaClinica"
+                WHERE "codEmpresa" = $1
+                AND ("linkEnviado" = 'ENVIADO' OR "linkEnviado" = 'ENVIADO_WHAPI')
+                AND ("atendido" IS NULL OR "atendido" = '' OR "atendido" = 'PENDIENTE')
+            `;
+
+            // Agregar filtros de fecha si se proporcionan
+            if (fechaDesde) {
+                params.push(fechaDesde);
+                query += ` AND "_createdDate" >= $${params.length}`;
+            }
+
+            if (fechaHasta) {
+                params.push(fechaHasta);
+                // Agregar 1 día para incluir todo el día fechaHasta
+                query += ` AND "_createdDate" < ($${params.length}::date + interval '1 day')`;
+            }
+
+            query += `
                 ORDER BY "_createdDate" DESC
                 LIMIT 500
             `;
@@ -552,7 +592,7 @@ router.post('/marcar-enviados', async (req, res) => {
 // POST - Envío masivo mediante WHAPI
 router.post('/enviar-whapi', async (req, res) => {
     try {
-        const { registros } = req.body;
+        const { registros, tipoMensaje } = req.body;
 
         if (!registros || !Array.isArray(registros) || registros.length === 0) {
             return res.status(400).json({
@@ -561,7 +601,7 @@ router.post('/enviar-whapi', async (req, res) => {
             });
         }
 
-        const { sendWhapiMessage, construirMensajeSiigo } = require('../services/whapi');
+        const { sendWhapiMessage, construirMensajeSiigo, construirMensajeSeguimiento } = require('../services/whapi');
 
         console.log('');
         console.log('===================================================================');
@@ -604,8 +644,10 @@ router.post('/enviar-whapi', async (req, res) => {
 
                 console.log(`[${i + 1}/${registros.length}] Enviando WHAPI a ${nombrePaciente}...`);
 
-                // Construir mensaje
-                const mensaje = construirMensajeSiigo(item);
+                // Construir mensaje según el tipo
+                const mensaje = tipoMensaje === 'no-asistidos'
+                    ? construirMensajeSeguimiento(item)
+                    : construirMensajeSiigo(item);
 
                 // Enviar via WHAPI
                 const resultWhapi = await sendWhapiMessage(telefonoCompleto, mensaje);
