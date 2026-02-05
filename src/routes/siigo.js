@@ -549,6 +549,180 @@ router.post('/marcar-enviados', async (req, res) => {
     }
 });
 
+// POST - Envío masivo mediante WHAPI
+router.post('/enviar-whapi', async (req, res) => {
+    try {
+        const { registros } = req.body;
+
+        if (!registros || !Array.isArray(registros) || registros.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Se requiere un array de registros'
+            });
+        }
+
+        const { sendWhapiMessage, construirMensajeSiigo } = require('../services/whapi');
+
+        console.log('');
+        console.log('===================================================================');
+        console.log(`ENVIO MASIVO WHAPI - ${registros.length} registros`);
+        console.log('===================================================================');
+
+        const resultados = {
+            total: registros.length,
+            enviados: 0,
+            errores: 0,
+            detalles: [],
+            agendaProgramada: []
+        };
+
+        for (let i = 0; i < registros.length; i++) {
+            const item = registros[i];
+
+            try {
+                // Limpiar y formatear número para WHAPI
+                const telefonoLimpio = item.celular.replace(/\s+/g, '').replace(/-/g, '').replace(/\(/g, '').replace(/\)/g, '');
+                let telefonoCompleto;
+
+                // Formato para WHAPI: 573001234567 (sin + y sin @)
+                if (telefonoLimpio.startsWith('+')) {
+                    telefonoCompleto = telefonoLimpio.substring(1);
+                } else if (/^(52|57|1|34|44|58|51|54)\d{10,}/.test(telefonoLimpio)) {
+                    telefonoCompleto = telefonoLimpio;
+                } else if (/^\d{10}$/.test(telefonoLimpio)) {
+                    telefonoCompleto = '57' + telefonoLimpio;
+                } else if (telefonoLimpio.startsWith('0')) {
+                    const sinCero = telefonoLimpio.substring(1);
+                    telefonoCompleto = '52' + sinCero;
+                } else if (/^\d{8,9}$/.test(telefonoLimpio)) {
+                    telefonoCompleto = '52' + telefonoLimpio;
+                } else {
+                    telefonoCompleto = '57' + telefonoLimpio;
+                }
+
+                const nombrePaciente = `${item.primerNombre || ""} ${item.primerApellido || ""}`.trim();
+
+                console.log(`[${i + 1}/${registros.length}] Enviando WHAPI a ${nombrePaciente}...`);
+
+                // Construir mensaje
+                const mensaje = construirMensajeSiigo(item);
+
+                // Enviar via WHAPI
+                const resultWhapi = await sendWhapiMessage(telefonoCompleto, mensaje);
+
+                if (!resultWhapi.success) {
+                    throw new Error(resultWhapi.error || 'Error al enviar WHAPI');
+                }
+
+                // Actualizar linkEnviado
+                await pool.query(`
+                    UPDATE "HistoriaClinica"
+                    SET "linkEnviado" = 'ENVIADO_WHAPI'
+                    WHERE "_id" = $1
+                `, [item._id]);
+
+                // Crear/actualizar conversación WhatsApp
+                const telefonoConPrefijo = '+' + telefonoCompleto;
+                try {
+                    let convExistente = await pool.query(
+                        'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1',
+                        [telefonoConPrefijo]
+                    );
+
+                    if (convExistente.rows.length === 0 && telefonoConPrefijo.startsWith('+')) {
+                        const numeroSinMas = telefonoConPrefijo.substring(1);
+                        convExistente = await pool.query(
+                            'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1',
+                            [numeroSinMas]
+                        );
+                    }
+
+                    if (convExistente.rows.length > 0) {
+                        const celularEnBD = convExistente.rows[0].celular;
+                        await pool.query(
+                            `UPDATE conversaciones_whatsapp
+                            SET "stopBot" = true, fecha_ultima_actividad = NOW()
+                            WHERE celular = $1`,
+                            [celularEnBD]
+                        );
+                    } else {
+                        await pool.query(
+                            `INSERT INTO conversaciones_whatsapp
+                            (celular, nombre_paciente, estado, "stopBot", fecha_ultima_actividad)
+                            VALUES ($1, $2, 'cerrada', true, NOW())`,
+                            [telefonoConPrefijo, nombrePaciente]
+                        );
+                    }
+                } catch (whatsappError) {
+                    console.log('⚠️ Error al gestionar conversación WhatsApp:', whatsappError.message);
+                }
+
+                // Agregar a agenda programada
+                let fechaHoraTexto = "Sin fecha asignada";
+                if (item.fechaAtencion) {
+                    const fechaUTC = new Date(item.fechaAtencion);
+                    const offsetColombia = -5 * 60;
+                    const offsetLocal = fechaUTC.getTimezoneOffset();
+                    const fechaColombia = new Date(fechaUTC.getTime() + (offsetLocal + offsetColombia) * 60000);
+
+                    const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                    const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+                    const diaSemana = diasSemana[fechaColombia.getDay()];
+                    const dia = fechaColombia.getDate();
+                    const mes = meses[fechaColombia.getMonth()];
+                    const horas = fechaColombia.getHours().toString().padStart(2, '0');
+                    const minutos = fechaColombia.getMinutes().toString().padStart(2, '0');
+
+                    fechaHoraTexto = `${diaSemana} ${dia} de ${mes} - ${horas}:${minutos}`;
+                }
+
+                resultados.agendaProgramada.push({
+                    nombre: nombrePaciente,
+                    fechaHora: fechaHoraTexto,
+                    ciudad: item.ciudad || "Sin ciudad"
+                });
+
+                resultados.enviados++;
+                console.log(`✅ WHAPI enviado a ${nombrePaciente}`);
+
+                // Pausa de 2 segundos entre mensajes
+                if (i < registros.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+
+            } catch (error) {
+                resultados.errores++;
+                resultados.detalles.push({
+                    nombre: `${item.primerNombre || ""} ${item.primerApellido || ""}`.trim(),
+                    numeroId: item.numeroId,
+                    celular: item.celular,
+                    error: error.message
+                });
+                console.error(`❌ Error enviando a ${item.primerNombre}:`, error.message);
+            }
+        }
+
+        console.log('');
+        console.log('===================================================================');
+        console.log(`RESUMEN WHAPI: ${resultados.enviados}/${resultados.total} exitosos`);
+        console.log('===================================================================');
+
+        res.json({
+            success: true,
+            message: 'Envío WHAPI completado',
+            resultados: resultados
+        });
+    } catch (error) {
+        console.error('❌ Error en envío WHAPI:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error en envío WHAPI',
+            error: error.message
+        });
+    }
+});
+
 // NOTE: /enviar-manual moved to src/routes/whatsapp.js (mounted at /api/whatsapp)
 
 console.log('✅ Endpoints Envío SIIGO configurados');
