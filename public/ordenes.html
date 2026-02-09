@@ -2491,8 +2491,12 @@
                                 <input type="text" class="form-input" id="edit-hc-codEmpresa" name="hc_codEmpresa">
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Centro de Costos</label>
+                                <label class="form-label">Subempresa</label>
                                 <input type="text" class="form-input" id="edit-hc-subempresa" name="hc_subempresa">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Centro de Costos</label>
+                                <input type="text" class="form-input" id="edit-hc-centro-de-costo" name="hc_centro_de_costo">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Cargo</label>
@@ -4037,9 +4041,15 @@
                     </div>
                     <div class="detail-grid">
                         <div class="detail-field">
-                            <div class="detail-field-label">Centro de Costos</div>
+                            <div class="detail-field-label">Subempresa</div>
                             <div class="detail-field-value">${orden.subempresa || '—'}</div>
                         </div>
+                        <div class="detail-field">
+                            <div class="detail-field-label">Centro de Costos</div>
+                            <div class="detail-field-value">${orden.centro_de_costo || '—'}</div>
+                        </div>
+                    </div>
+                    <div class="detail-grid">
                         <div class="detail-field">
                             <div class="detail-field-label">Cargo</div>
                             <div class="detail-field-value">${orden.cargo || '—'}</div>
@@ -4482,6 +4492,7 @@
                 document.getElementById('edit-hc-empresa').value = orden.empresa || '';
                 document.getElementById('edit-hc-codEmpresa').value = orden.codEmpresa || '';
                 document.getElementById('edit-hc-subempresa').value = orden.subempresa || '';
+                document.getElementById('edit-hc-centro-de-costo').value = orden.centro_de_costo || '';
                 document.getElementById('edit-hc-cargo').value = orden.cargo || '';
 
                 // Datos del examen HC
