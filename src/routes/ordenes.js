@@ -304,8 +304,19 @@ router.post('/', async (req, res) => {
 
                 // Verificar que no tenga cita a esa hora
                 // EXCEPCIÓN: KM2 y SITEL pueden asignar médico aunque el turno esté ocupado
+                // Se usa asignación por menor carga para distribuir pacientes equitativamente
                 if (codEmpresa === 'KM2' || codEmpresa === 'SITEL') {
-                    medicosDisponibles.push(med.nombre);
+                    const cargaResult = await pool.query(`
+                        SELECT COUNT(*) as total
+                        FROM "HistoriaClinica"
+                        WHERE "fechaAtencion" >= $1::timestamp
+                          AND "fechaAtencion" < ($1::timestamp + interval '1 day')
+                          AND "medico" = $2
+                          AND "atendido" = 'PENDIENTE'
+                    `, [fechaAtencion, med.nombre]);
+                    const carga = parseInt(cargaResult.rows[0].total);
+                    console.log(`   ${med.nombre} tiene ${carga} pacientes PENDIENTES hoy`);
+                    medicosDisponibles.push({ nombre: med.nombre, carga });
                 } else {
                     // Solo contar como ocupados los turnos PENDIENTES (no los ATENDIDOS)
                     const citaExistente = await pool.query(`
@@ -334,9 +345,15 @@ router.post('/', async (req, res) => {
                 });
             }
 
-            // Asignar el primer médico disponible (o se podría aleatorizar)
-            medico = medicosDisponibles[0];
-            console.log('Medico asignado automaticamente:', medico);
+            // Asignar médico: por menor carga (SITEL/KM2) o el primero disponible
+            if (medicosDisponibles[0] && medicosDisponibles[0].carga !== undefined) {
+                medicosDisponibles.sort((a, b) => a.carga - b.carga);
+                medico = medicosDisponibles[0].nombre;
+                console.log('Medico asignado por menor carga:', medico, `(${medicosDisponibles[0].carga} pendientes)`);
+            } else {
+                medico = medicosDisponibles[0];
+                console.log('Medico asignado automaticamente:', medico);
+            }
         }
 
         // Generar un _id único para Wix (formato UUID-like)
