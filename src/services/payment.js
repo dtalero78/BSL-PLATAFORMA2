@@ -1,5 +1,6 @@
 const pool = require('../config/database');
 const { sendWhatsAppMessage, sendWhatsAppFreeText } = require('./whatsapp');
+const { sendWhapiMessage } = require('./whapi');
 const OpenAI = require('openai');
 
 // Lazy init para evitar error si falta API key al cargar módulo
@@ -578,7 +579,7 @@ async function enviarAlertasPreguntasCriticas(datos) {
 
         console.log('🚨 Enviando alertas de preguntas críticas para empresa', datos.codEmpresa, '...');
 
-        const promesas = numerosAlerta.map(numero => sendWhatsAppMessage(numero, mensaje));
+        const promesas = numerosAlerta.map(numero => sendWhapiMessage(numero, mensaje));
         await Promise.all(promesas);
 
         console.log('✅ Alertas enviadas a', numerosAlerta.length, 'números');
