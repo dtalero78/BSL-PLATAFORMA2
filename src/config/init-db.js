@@ -959,6 +959,17 @@ const initDB = async () => {
             console.log('Columna linkEnviado ya existe o tabla HistoriaClinica no encontrada');
         }
 
+        // Agregar columna observaciones_siigo a HistoriaClinica para observaciones de asistencia SIIGO
+        try {
+            await pool.query(`
+                ALTER TABLE "HistoriaClinica"
+                ADD COLUMN IF NOT EXISTS "observaciones_siigo" TEXT
+            `);
+            console.log('Columna observaciones_siigo agregada a HistoriaClinica');
+        } catch (err) {
+            console.log('Columna observaciones_siigo ya existe o tabla HistoriaClinica no encontrada');
+        }
+
         // Aumentar tamaño de campos de visiometrias que almacenan fórmulas de prescripción
         const visiometriasFieldsToEnlarge = [
             'refractometria_od',

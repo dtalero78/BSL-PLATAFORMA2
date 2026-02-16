@@ -551,7 +551,8 @@ class HistoriaClinicaRepository extends BaseRepository {
         const dataParams = [...params, limit, offset];
         const result = await this.query(`
             SELECT "_id", "numeroId", "primerNombre", "primerApellido",
-                   "fechaAtencion", "fechaConsulta", "ciudad", "celular", "atendido"
+                   "fechaAtencion", "fechaConsulta", "ciudad", "celular", "atendido",
+                   "observaciones_siigo"
             FROM ${this.tableName}
             ${whereClause}
             ORDER BY CASE WHEN "atendido" = 'PENDIENTE' OR "atendido" IS NULL OR "atendido" = '' THEN 0 ELSE 1 END,
@@ -597,8 +598,9 @@ class HistoriaClinicaRepository extends BaseRepository {
                             "atendido" = COALESCE($6, "atendido"),
                             "cargo" = COALESCE($7, "cargo"),
                             "email" = COALESCE($8, "email"),
+                            "observaciones_siigo" = COALESCE($9, "observaciones_siigo"),
                             "_updatedDate" = NOW()
-                        WHERE "_id" = $9
+                        WHERE "_id" = $10
                     `, [
                         reg.primerNombre || null,
                         reg.primerApellido || null,
@@ -608,6 +610,7 @@ class HistoriaClinicaRepository extends BaseRepository {
                         reg.atendido || null,
                         reg.cargo || null,
                         reg.email || null,
+                        reg.observaciones_siigo || null,
                         existente.rows[0]._id
                     ]);
                     actualizados++;
@@ -617,8 +620,9 @@ class HistoriaClinicaRepository extends BaseRepository {
                         INSERT INTO ${this.tableName} (
                             "_id", "numeroId", "primerNombre", "primerApellido",
                             "ciudad", "celular", "fechaAtencion",
-                            "atendido", "cargo", "email", "codEmpresa", "_createdDate", "_updatedDate"
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'SIIGO', NOW(), NOW())
+                            "atendido", "cargo", "email", "observaciones_siigo",
+                            "codEmpresa", "_createdDate", "_updatedDate"
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'SIIGO', NOW(), NOW())
                     `, [
                         id,
                         reg.numeroId,
@@ -629,7 +633,8 @@ class HistoriaClinicaRepository extends BaseRepository {
                         reg.fechaAtencion || null,
                         reg.atendido || 'PENDIENTE',
                         reg.cargo || null,
-                        reg.email || null
+                        reg.email || null,
+                        reg.observaciones_siigo || null
                     ]);
                     creados++;
                 }
