@@ -954,7 +954,8 @@
 
             document.getElementById('previewHead').innerHTML = `<tr>
                 <th>Documento</th><th>Nombre</th><th>Apellido</th>
-                <th>Ciudad</th><th>Celular</th><th>Estado</th>
+                <th>Ciudad</th><th>Celular</th><th>Cargo</th>
+                <th>Correo</th><th>Fecha Agendamiento</th><th>Estado</th>
             </tr>`;
 
             document.getElementById('previewBody').innerHTML = previewMax.map(r => `<tr>
@@ -963,6 +964,9 @@
                 <td>${r.primerApellido || '-'}</td>
                 <td>${r.ciudad || '-'}</td>
                 <td>${r.celular || '-'}</td>
+                <td>${r.cargo || '-'}</td>
+                <td>${r.email || '-'}</td>
+                <td>${r.fechaAtencion || '-'}</td>
                 <td>${r.atendido || 'PENDIENTE'}</td>
             </tr>`).join('');
 
