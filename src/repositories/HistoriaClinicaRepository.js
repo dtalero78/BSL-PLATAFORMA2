@@ -554,7 +554,8 @@ class HistoriaClinicaRepository extends BaseRepository {
                    "fechaAtencion", "fechaConsulta", "ciudad", "celular", "atendido"
             FROM ${this.tableName}
             ${whereClause}
-            ORDER BY "fechaConsulta" DESC NULLS LAST, "_createdDate" DESC
+            ORDER BY CASE WHEN "atendido" = 'PENDIENTE' OR "atendido" IS NULL OR "atendido" = '' THEN 0 ELSE 1 END,
+                     "fechaAtencion" DESC NULLS LAST, "_createdDate" DESC
             LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
         `, dataParams);
 
