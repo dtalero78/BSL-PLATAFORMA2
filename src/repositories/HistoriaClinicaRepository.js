@@ -563,6 +563,82 @@ class HistoriaClinicaRepository extends BaseRepository {
     }
 
     /**
+     * Upsert de registros de asistencia SIIGO (importación desde Excel)
+     * Si existe por numeroId + codEmpresa='SIIGO' actualiza, si no crea
+     * @param {Array} registros - [{numeroId, primerNombre, primerApellido, ciudad, celular, fechaConsulta, fechaAtencion, atendido}]
+     * @returns {Promise<{creados: number, actualizados: number, errores: Array}>}
+     */
+    async upsertAsistenciaSiigo(registros) {
+        let creados = 0;
+        let actualizados = 0;
+        const errores = [];
+
+        for (const reg of registros) {
+            try {
+                if (!reg.numeroId) {
+                    errores.push({ numeroId: reg.numeroId, error: 'Sin número de documento' });
+                    continue;
+                }
+
+                const existente = await this.query(`
+                    SELECT "_id" FROM ${this.tableName}
+                    WHERE "numeroId" = $1 AND "codEmpresa" = 'SIIGO'
+                    ORDER BY "_createdDate" DESC LIMIT 1
+                `, [reg.numeroId]);
+
+                if (existente.rows.length > 0) {
+                    await this.query(`
+                        UPDATE ${this.tableName} SET
+                            "primerNombre" = COALESCE($1, "primerNombre"),
+                            "primerApellido" = COALESCE($2, "primerApellido"),
+                            "ciudad" = COALESCE($3, "ciudad"),
+                            "celular" = COALESCE($4, "celular"),
+                            "fechaConsulta" = COALESCE($5, "fechaConsulta"),
+                            "fechaAtencion" = COALESCE($6, "fechaAtencion"),
+                            "atendido" = COALESCE($7, "atendido"),
+                            "_updatedDate" = NOW()
+                        WHERE "_id" = $8
+                    `, [
+                        reg.primerNombre || null,
+                        reg.primerApellido || null,
+                        reg.ciudad || null,
+                        reg.celular || null,
+                        reg.fechaConsulta || null,
+                        reg.fechaAtencion || null,
+                        reg.atendido || null,
+                        existente.rows[0]._id
+                    ]);
+                    actualizados++;
+                } else {
+                    const id = `siigo_import_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+                    await this.query(`
+                        INSERT INTO ${this.tableName} (
+                            "_id", "numeroId", "primerNombre", "primerApellido",
+                            "ciudad", "celular", "fechaConsulta", "fechaAtencion",
+                            "atendido", "codEmpresa", "_createdDate", "_updatedDate"
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'SIIGO', NOW(), NOW())
+                    `, [
+                        id,
+                        reg.numeroId,
+                        reg.primerNombre || null,
+                        reg.primerApellido || null,
+                        reg.ciudad || null,
+                        reg.celular || null,
+                        reg.fechaConsulta || null,
+                        reg.fechaAtencion || null,
+                        reg.atendido || 'PENDIENTE'
+                    ]);
+                    creados++;
+                }
+            } catch (error) {
+                errores.push({ numeroId: reg.numeroId, error: error.message });
+            }
+        }
+
+        return { creados, actualizados, errores };
+    }
+
+    /**
      * Obtiene estadísticas de órdenes por empresa
      * @param {string} codEmpresa
      * @returns {Promise<Object>}

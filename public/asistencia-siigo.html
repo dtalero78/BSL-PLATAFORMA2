@@ -305,6 +305,147 @@
             color: var(--text-secondary);
         }
 
+        .btn-warning { background: var(--warning-amber); color: white; }
+        .btn-warning:hover:not(:disabled) { background: #D97706; }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.5);
+            z-index: 900;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            width: 90%;
+            max-width: 900px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--medical-primary);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 4px;
+        }
+
+        .modal-close:hover { color: var(--text-primary); }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .paste-area {
+            width: 100%;
+            min-height: 150px;
+            padding: 14px;
+            border: 2px dashed var(--border-color);
+            border-radius: var(--radius-md);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            resize: vertical;
+            transition: border-color 0.2s;
+        }
+
+        .paste-area:focus {
+            outline: none;
+            border-color: var(--medical-secondary);
+        }
+
+        .paste-hint {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+
+        .preview-table { margin-top: 16px; }
+
+        .preview-table table {
+            font-size: 13px;
+        }
+
+        .preview-table th {
+            font-size: 11px;
+            padding: 8px 10px;
+        }
+
+        .preview-table td {
+            padding: 8px 10px;
+            font-size: 13px;
+        }
+
+        .preview-summary {
+            margin-top: 12px;
+            padding: 12px 16px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .column-mapper {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .column-mapper select {
+            padding: 6px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 12px;
+            font-family: inherit;
+        }
+
+        .column-mapper .mapper-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .column-mapper .mapper-item label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
         @media (max-width: 768px) {
             body { padding: 12px; }
             .filters-bar { flex-direction: column; align-items: stretch; }
@@ -342,6 +483,7 @@
             <button class="btn btn-outline" onclick="limpiarFiltros()">Limpiar</button>
             <button class="btn btn-success" onclick="copiarTabla()">Copiar tabla</button>
             <button class="btn btn-info" onclick="exportarCSV()">Exportar CSV</button>
+            <button class="btn btn-warning" onclick="abrirModalPegar()">Pegar datos Excel</button>
         </div>
 
         <div class="stats" id="statsContainer">
@@ -389,6 +531,39 @@
                 <button class="btn btn-outline" id="btnPrev" onclick="cambiarPagina(-1)">Anterior</button>
                 <span class="pagination-info" id="paginationInfo">P&aacute;gina 1 de 1</span>
                 <button class="btn btn-outline" id="btnNext" onclick="cambiarPagina(1)">Siguiente</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Pegar Datos -->
+    <div class="modal-overlay" id="modalPegar">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Importar datos desde Excel</h2>
+                <button class="modal-close" onclick="cerrarModalPegar()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 12px; font-size: 14px; color: var(--text-secondary);">
+                    Copia las filas del Excel y p&eacute;galas en el campo de abajo. La primera fila debe ser el encabezado.
+                </p>
+                <textarea class="paste-area" id="pasteArea" placeholder="Pega aqu&iacute; los datos copiados del Excel (Ctrl+V)..."></textarea>
+                <p class="paste-hint">Columnas esperadas: Documento, Nombre, Apellido, Ciudad, Celular, Fecha Consulta, Fecha Atenci&oacute;n, Estado</p>
+
+                <div id="columnMapper" class="column-mapper" style="display: none;"></div>
+                <div id="previewSection" style="display: none;">
+                    <div class="preview-summary" id="previewSummary"></div>
+                    <div class="preview-table table-scroll">
+                        <table>
+                            <thead id="previewHead"></thead>
+                            <tbody id="previewBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="cerrarModalPegar()">Cancelar</button>
+                <button class="btn btn-primary" id="btnProcesarPaste" onclick="procesarPaste()" style="display: none;">Previsualizar</button>
+                <button class="btn btn-success" id="btnConfirmarImport" onclick="confirmarImportacion()" style="display: none;">Importar</button>
             </div>
         </div>
     </div>
@@ -628,6 +803,167 @@
             toast.textContent = mensaje;
             toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // ========== IMPORTAR DESDE EXCEL ==========
+        let datosParseados = [];
+        let columnMapping = {};
+        let headersPegados = [];
+
+        const CAMPOS_DB = [
+            { key: 'numeroId', label: 'Documento' },
+            { key: 'primerNombre', label: 'Nombre' },
+            { key: 'primerApellido', label: 'Apellido' },
+            { key: 'ciudad', label: 'Ciudad' },
+            { key: 'celular', label: 'Celular' },
+            { key: 'fechaConsulta', label: 'Fecha Consulta' },
+            { key: 'fechaAtencion', label: 'Fecha Atencion' },
+            { key: 'atendido', label: 'Estado' }
+        ];
+
+        function abrirModalPegar() {
+            document.getElementById('modalPegar').classList.add('active');
+            document.getElementById('pasteArea').value = '';
+            document.getElementById('previewSection').style.display = 'none';
+            document.getElementById('columnMapper').style.display = 'none';
+            document.getElementById('btnProcesarPaste').style.display = 'none';
+            document.getElementById('btnConfirmarImport').style.display = 'none';
+            datosParseados = [];
+        }
+
+        function cerrarModalPegar() {
+            document.getElementById('modalPegar').classList.remove('active');
+        }
+
+        document.getElementById('pasteArea').addEventListener('input', function() {
+            const tiene = this.value.trim().length > 0;
+            document.getElementById('btnProcesarPaste').style.display = tiene ? 'inline-flex' : 'none';
+            document.getElementById('btnConfirmarImport').style.display = 'none';
+            document.getElementById('previewSection').style.display = 'none';
+        });
+
+        function procesarPaste() {
+            const texto = document.getElementById('pasteArea').value.trim();
+            if (!texto) return;
+
+            const lineas = texto.split('\n').map(l => l.split('\t'));
+            if (lineas.length < 2) {
+                mostrarToast('Se necesita al menos un encabezado y una fila de datos');
+                return;
+            }
+
+            headersPegados = lineas[0].map(h => h.trim());
+            const filas = lineas.slice(1).filter(f => f.some(c => c.trim()));
+
+            // Auto-mapear columnas por nombre similar
+            columnMapping = {};
+            CAMPOS_DB.forEach(campo => {
+                const idx = headersPegados.findIndex(h =>
+                    h.toLowerCase().includes(campo.label.toLowerCase()) ||
+                    h.toLowerCase().includes(campo.key.toLowerCase()) ||
+                    (campo.key === 'numeroId' && (h.toLowerCase().includes('cedula') || h.toLowerCase().includes('documento') || h.toLowerCase().includes('id'))) ||
+                    (campo.key === 'primerNombre' && h.toLowerCase().includes('nombre') && !h.toLowerCase().includes('apellido')) ||
+                    (campo.key === 'primerApellido' && h.toLowerCase().includes('apellido')) ||
+                    (campo.key === 'celular' && (h.toLowerCase().includes('telefono') || h.toLowerCase().includes('celular') || h.toLowerCase().includes('tel'))) ||
+                    (campo.key === 'atendido' && (h.toLowerCase().includes('estado') || h.toLowerCase().includes('atendido')))
+                );
+                if (idx >= 0) columnMapping[campo.key] = idx;
+            });
+
+            // Mostrar mapper
+            const mapperDiv = document.getElementById('columnMapper');
+            mapperDiv.innerHTML = CAMPOS_DB.map(campo => {
+                const options = headersPegados.map((h, i) =>
+                    `<option value="${i}" ${columnMapping[campo.key] === i ? 'selected' : ''}>${h}</option>`
+                ).join('');
+                return `<div class="mapper-item">
+                    <label>${campo.label}</label>
+                    <select onchange="columnMapping['${campo.key}'] = this.value === '' ? undefined : parseInt(this.value)">
+                        <option value="">-- Ignorar --</option>
+                        ${options}
+                    </select>
+                </div>`;
+            }).join('');
+            mapperDiv.style.display = 'flex';
+
+            // Parsear datos
+            datosParseados = filas.map(fila => {
+                const reg = {};
+                CAMPOS_DB.forEach(campo => {
+                    const idx = columnMapping[campo.key];
+                    if (idx !== undefined && fila[idx]) {
+                        reg[campo.key] = fila[idx].trim();
+                    }
+                });
+                return reg;
+            }).filter(r => r.numeroId);
+
+            // Preview
+            mostrarPreview(datosParseados);
+        }
+
+        function mostrarPreview(datos) {
+            if (!datos.length) {
+                mostrarToast('No se encontraron registros con documento valido');
+                return;
+            }
+
+            const previewMax = datos.slice(0, 10);
+            document.getElementById('previewSummary').innerHTML =
+                `<strong>${datos.length}</strong> registros detectados` +
+                (datos.length > 10 ? ` (mostrando primeros 10)` : '');
+
+            document.getElementById('previewHead').innerHTML = `<tr>
+                <th>Documento</th><th>Nombre</th><th>Apellido</th>
+                <th>Ciudad</th><th>Celular</th><th>Estado</th>
+            </tr>`;
+
+            document.getElementById('previewBody').innerHTML = previewMax.map(r => `<tr>
+                <td>${r.numeroId || '-'}</td>
+                <td>${r.primerNombre || '-'}</td>
+                <td>${r.primerApellido || '-'}</td>
+                <td>${r.ciudad || '-'}</td>
+                <td>${r.celular || '-'}</td>
+                <td>${r.atendido || 'PENDIENTE'}</td>
+            </tr>`).join('');
+
+            document.getElementById('previewSection').style.display = 'block';
+            document.getElementById('btnConfirmarImport').style.display = 'inline-flex';
+        }
+
+        async function confirmarImportacion() {
+            if (!datosParseados.length) return;
+
+            const btn = document.getElementById('btnConfirmarImport');
+            btn.disabled = true;
+            btn.textContent = 'Importando...';
+
+            try {
+                const response = await fetch('/api/asistencia-siigo/import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ registros: datosParseados })
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    const msg = [];
+                    if (result.creados > 0) msg.push(`${result.creados} creados`);
+                    if (result.actualizados > 0) msg.push(`${result.actualizados} actualizados`);
+                    if (result.errores.length > 0) msg.push(`${result.errores.length} errores`);
+                    mostrarToast(msg.join(', '));
+                    cerrarModalPegar();
+                    cargarDatos(1);
+                } else {
+                    mostrarToast(result.message || 'Error al importar');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarToast('Error de conexion al importar');
+            }
+
+            btn.disabled = false;
+            btn.textContent = 'Importar';
         }
 
         // Cargar datos al iniciar

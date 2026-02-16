@@ -62,4 +62,41 @@ router.get('/export', async (req, res) => {
     }
 });
 
+// POST /import - Importar registros desde Excel (upsert)
+router.post('/import', async (req, res) => {
+    try {
+        const { registros } = req.body;
+
+        if (!registros || !Array.isArray(registros) || registros.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'No se recibieron registros para importar'
+            });
+        }
+
+        if (registros.length > 5000) {
+            return res.status(400).json({
+                success: false,
+                message: 'Máximo 5000 registros por importación'
+            });
+        }
+
+        const result = await HistoriaClinicaRepository.upsertAsistenciaSiigo(registros);
+
+        res.json({
+            success: true,
+            creados: result.creados,
+            actualizados: result.actualizados,
+            errores: result.errores
+        });
+    } catch (error) {
+        console.error('Error importando asistencia SIIGO:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al importar registros',
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;
