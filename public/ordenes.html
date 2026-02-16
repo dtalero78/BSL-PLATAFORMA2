@@ -3228,6 +3228,7 @@
         let formularioActual = null;
         let searchTimeout = null;
         let buscandoEnServidor = false;
+        let cedulasMultiples = null; // Array de cédulas cuando se pega una lista
         let columnaOrden = '_createdDate';
         let direccionOrden = 'desc'; // 'asc' o 'desc'
 
@@ -3582,8 +3583,14 @@
                 document.getElementById('paginationContainer').style.display = 'none';
 
                 // Incluir búsqueda si hay término activo
-                let url = `/api/historia-clinica/list?page=${page}&limit=${registrosPorPagina}`;
-                if (busquedaActual && busquedaActual.length >= 2) {
+                let limitActual = registrosPorPagina;
+                if (cedulasMultiples && cedulasMultiples.length > 0) {
+                    limitActual = cedulasMultiples.length + 10;
+                }
+                let url = `/api/historia-clinica/list?page=${page}&limit=${limitActual}`;
+                if (cedulasMultiples && cedulasMultiples.length > 0) {
+                    url += `&cedulas=${encodeURIComponent(cedulasMultiples.join(','))}`;
+                } else if (busquedaActual && busquedaActual.length >= 2) {
                     url += `&buscar=${encodeURIComponent(busquedaActual)}`;
                 }
 
@@ -5011,14 +5018,28 @@
                     searchInput.value = buscarParam;
                 }
 
-                // Search - Búsqueda server-side con debounce (usa índice GIN pg_trgm)
-                searchInput.addEventListener('input', async function(e) {
-                    busquedaActual = e.target.value.trim();
+                // Detectar lista de cédulas (separadas por comas, saltos de línea o tabs)
+                function parsearCedulas(texto) {
+                    const tokens = texto.split(/[\n\r,\t]+/).map(t => t.trim()).filter(t => /^\d{5,}$/.test(t));
+                    return tokens.length >= 2 ? tokens : null;
+                }
 
-                    // Cancelar búsqueda anterior
+                // Search - Búsqueda server-side con debounce (usa índice GIN pg_trgm)
+                function procesarBusqueda(texto) {
+                    busquedaActual = texto.trim();
                     clearTimeout(searchTimeout);
 
-                    // Si tiene menos de 2 caracteres, volver a cargar sin filtro
+                    // Detectar si es una lista de cédulas
+                    const cedulas = parsearCedulas(busquedaActual);
+                    if (cedulas) {
+                        cedulasMultiples = cedulas;
+                        buscandoEnServidor = true;
+                        cargarFormularios(1);
+                        return;
+                    }
+
+                    cedulasMultiples = null;
+
                     if (busquedaActual.length < 2) {
                         if (busquedaActual.length === 0) {
                             buscandoEnServidor = false;
@@ -5027,11 +5048,19 @@
                         return;
                     }
 
-                    // Búsqueda server-side con debounce de 300ms
                     searchTimeout = setTimeout(async () => {
                         buscandoEnServidor = true;
-                        cargarFormularios(1); // Reiniciar a página 1 con búsqueda
+                        cargarFormularios(1);
                     }, 300);
+                }
+
+                searchInput.addEventListener('input', function(e) {
+                    procesarBusqueda(e.target.value);
+                });
+
+                // Paste: esperar a que el valor se actualice antes de procesar
+                searchInput.addEventListener('paste', function(e) {
+                    setTimeout(() => procesarBusqueda(e.target.value), 0);
                 });
             };
             setupSearchBar();

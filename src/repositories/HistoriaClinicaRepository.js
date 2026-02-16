@@ -370,13 +370,17 @@ class HistoriaClinicaRepository extends BaseRepository {
      * @returns {Promise<{rows: Array, total: number, totalPaginas: number}>}
      */
     async listWithFoto(options = {}) {
-        const { page = 1, limit = 20, buscar } = options;
+        const { page = 1, limit = 20, buscar, cedulas } = options;
         const offset = (page - 1) * limit;
 
         let whereClause = '';
         const params = [];
 
-        if (buscar && buscar.length >= 2) {
+        if (cedulas && cedulas.length > 0) {
+            // Búsqueda por lista de cédulas
+            whereClause = `WHERE h."numeroId" = ANY($1)`;
+            params.push(cedulas);
+        } else if (buscar && buscar.length >= 2) {
             whereClause = `WHERE (
                 COALESCE(h."numeroId", '') || ' ' ||
                 COALESCE(h."primerNombre", '') || ' ' ||
@@ -390,7 +394,12 @@ class HistoriaClinicaRepository extends BaseRepository {
 
         // Count
         let totalRegistros;
-        if (buscar && buscar.length >= 2) {
+        if (cedulas && cedulas.length > 0) {
+            const countResult = await this.query(
+                `SELECT COUNT(*) FROM ${this.tableName} h ${whereClause}`, params
+            );
+            totalRegistros = parseInt(countResult.rows[0].count);
+        } else if (buscar && buscar.length >= 2) {
             const countResult = await this.query(
                 `SELECT COUNT(*) FROM ${this.tableName} h ${whereClause}`, params
             );
@@ -405,9 +414,10 @@ class HistoriaClinicaRepository extends BaseRepository {
         const totalPaginas = Math.ceil(totalRegistros / limit);
 
         // Data
-        const queryParams = buscar ? [...params, limit, offset] : [limit, offset];
-        const limitParam = buscar ? '$2' : '$1';
-        const offsetParam = buscar ? '$3' : '$2';
+        const hasFilter = (cedulas && cedulas.length > 0) || (buscar && buscar.length >= 2);
+        const queryParams = hasFilter ? [...params, limit, offset] : [limit, offset];
+        const limitParam = hasFilter ? '$2' : '$1';
+        const offsetParam = hasFilter ? '$3' : '$2';
 
         const result = await this.query(`
             SELECT h."_id", h."numeroId", h."primerNombre", h."segundoNombre", h."primerApellido", h."segundoApellido",

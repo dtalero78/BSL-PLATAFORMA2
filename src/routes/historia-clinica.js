@@ -13,11 +13,14 @@ router.get('/list', async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
         const buscar = req.query.buscar?.trim();
+        const cedulas = req.query.cedulas
+            ? req.query.cedulas.split(',').map(c => c.trim()).filter(c => c.length > 0)
+            : undefined;
 
-        console.log(`📋 Listando órdenes de HistoriaClinica (página ${page}, limit ${limit}${buscar ? `, búsqueda: "${buscar}"` : ''})...`);
+        console.log(`📋 Listando órdenes de HistoriaClinica (página ${page}, limit ${limit}${buscar ? `, búsqueda: "${buscar}"` : ''}${cedulas ? `, cédulas: ${cedulas.length}` : ''})...`);
 
         // Use repository - 1 call instead of 70+ lines
-        const { rows, total, totalPaginas } = await HistoriaClinicaRepository.listWithFoto({ page, limit, buscar });
+        const { rows, total, totalPaginas } = await HistoriaClinicaRepository.listWithFoto({ page, limit, buscar, cedulas });
 
         console.log(`✅ HistoriaClinica: ${rows.length} registros (página ${page}/${totalPaginas})`);
 
