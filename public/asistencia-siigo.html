@@ -393,10 +393,15 @@
             margin-top: 8px;
         }
 
-        .preview-table { margin-top: 16px; }
+        .preview-table {
+            margin-top: 16px;
+            overflow-x: auto;
+            max-width: 100%;
+        }
 
         .preview-table table {
             font-size: 13px;
+            white-space: nowrap;
         }
 
         .preview-table th {
