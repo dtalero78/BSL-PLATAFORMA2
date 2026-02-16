@@ -5018,9 +5018,9 @@
                     searchInput.value = buscarParam;
                 }
 
-                // Detectar lista de cédulas (separadas por comas, saltos de línea o tabs)
+                // Detectar lista de cédulas (separadas por comas, saltos de línea, tabs o espacios)
                 function parsearCedulas(texto) {
-                    const tokens = texto.split(/[\n\r,\t]+/).map(t => t.trim()).filter(t => /^\d{5,}$/.test(t));
+                    const tokens = texto.split(/[\n\r,\t\s]+/).map(t => t.trim()).filter(t => /^\d{5,}$/.test(t));
                     return tokens.length >= 2 ? tokens : null;
                 }
 
