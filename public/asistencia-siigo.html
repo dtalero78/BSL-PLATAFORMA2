@@ -145,6 +145,34 @@
 
         .btn-outline:hover { background: var(--bg-tertiary); }
 
+        .btn-success { background: var(--success-green); color: white; }
+        .btn-success:hover:not(:disabled) { background: #047857; }
+
+        .btn-info { background: var(--info-blue); color: white; }
+        .btn-info:hover:not(:disabled) { background: #2563EB; }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--medical-primary);
+            color: white;
+            padding: 14px 24px;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            font-size: 14px;
+            font-weight: 500;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -312,6 +340,8 @@
             </div>
             <button class="btn btn-primary" id="btnFiltrar" onclick="cargarDatos(1)">Filtrar</button>
             <button class="btn btn-outline" onclick="limpiarFiltros()">Limpiar</button>
+            <button class="btn btn-success" onclick="copiarTabla()">Copiar tabla</button>
+            <button class="btn btn-info" onclick="exportarCSV()">Exportar CSV</button>
         </div>
 
         <div class="stats" id="statsContainer">
@@ -485,6 +515,119 @@
             document.getElementById('fechaHasta').value = '';
             document.getElementById('filtroEstado').value = '';
             cargarDatos(1);
+        }
+
+        function buildExportUrl() {
+            const buscar = document.getElementById('searchInput').value.trim();
+            const fechaDesde = document.getElementById('fechaDesde').value;
+            const fechaHasta = document.getElementById('fechaHasta').value;
+            const estado = document.getElementById('filtroEstado').value;
+
+            let url = '/api/asistencia-siigo/export?';
+            if (buscar) url += `buscar=${encodeURIComponent(buscar)}&`;
+            if (fechaDesde) url += `fechaDesde=${fechaDesde}&`;
+            if (fechaHasta) url += `fechaHasta=${fechaHasta}&`;
+            if (estado) url += `estado=${estado}&`;
+            return url;
+        }
+
+        function datosAFilas(datos) {
+            const headers = ['Documento', 'Nombre', 'Apellido', 'Ciudad', 'Celular', 'Fecha Consulta', 'Fecha Atencion', 'Estado'];
+            const filas = datos.map(row => [
+                row.numeroId || '',
+                row.primerNombre || '',
+                row.primerApellido || '',
+                row.ciudad || '',
+                row.celular || '',
+                formatearFecha(row.fechaConsulta),
+                formatearFecha(row.fechaAtencion),
+                row.atendido === 'ATENDIDO' ? 'ATENDIDO' : 'PENDIENTE'
+            ]);
+            return { headers, filas };
+        }
+
+        async function copiarTabla() {
+            try {
+                const btn = document.querySelector('.btn-success');
+                btn.disabled = true;
+                btn.textContent = 'Cargando...';
+
+                const response = await fetch(buildExportUrl());
+                const result = await response.json();
+
+                if (!result.success || !result.data.length) {
+                    mostrarToast('No hay datos para copiar');
+                    btn.disabled = false;
+                    btn.textContent = 'Copiar tabla';
+                    return;
+                }
+
+                const { headers, filas } = datosAFilas(result.data);
+                const tsv = [headers.join('\t'), ...filas.map(f => f.join('\t'))].join('\n');
+
+                await navigator.clipboard.writeText(tsv);
+                mostrarToast(`${result.data.length} registros copiados al portapapeles`);
+                btn.disabled = false;
+                btn.textContent = 'Copiar tabla';
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarToast('Error al copiar');
+                document.querySelector('.btn-success').disabled = false;
+                document.querySelector('.btn-success').textContent = 'Copiar tabla';
+            }
+        }
+
+        async function exportarCSV() {
+            try {
+                const btn = document.querySelector('.btn-info');
+                btn.disabled = true;
+                btn.textContent = 'Exportando...';
+
+                const response = await fetch(buildExportUrl());
+                const result = await response.json();
+
+                if (!result.success || !result.data.length) {
+                    mostrarToast('No hay datos para exportar');
+                    btn.disabled = false;
+                    btn.textContent = 'Exportar CSV';
+                    return;
+                }
+
+                const { headers, filas } = datosAFilas(result.data);
+                const bom = '\uFEFF';
+                const csv = bom + [headers.join(','), ...filas.map(f =>
+                    f.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')
+                )].join('\n');
+
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `asistencia-siigo-${new Date().toISOString().slice(0, 10)}.csv`;
+                link.click();
+                URL.revokeObjectURL(link.href);
+
+                mostrarToast(`${result.data.length} registros exportados`);
+                btn.disabled = false;
+                btn.textContent = 'Exportar CSV';
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarToast('Error al exportar');
+                document.querySelector('.btn-info').disabled = false;
+                document.querySelector('.btn-info').textContent = 'Exportar CSV';
+            }
+        }
+
+        function mostrarToast(mensaje) {
+            let toast = document.getElementById('toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'toast';
+                toast.className = 'toast';
+                document.body.appendChild(toast);
+            }
+            toast.textContent = mensaje;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
         // Cargar datos al iniciar
