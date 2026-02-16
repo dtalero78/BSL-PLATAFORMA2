@@ -521,12 +521,12 @@ class HistoriaClinicaRepository extends BaseRepository {
         }
 
         if (fechaDesde) {
-            whereClause += ` AND "fechaConsulta" >= $${paramIndex}`;
+            whereClause += ` AND "fechaAtencion" >= $${paramIndex}`;
             params.push(fechaDesde);
             paramIndex++;
         }
         if (fechaHasta) {
-            whereClause += ` AND "fechaConsulta" <= $${paramIndex}`;
+            whereClause += ` AND "fechaAtencion" < ($${paramIndex}::date + interval '1 day')`;
             params.push(fechaHasta);
             paramIndex++;
         }
