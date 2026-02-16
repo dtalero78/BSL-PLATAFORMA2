@@ -3524,8 +3524,8 @@
                 });
             }
 
-            // Filter by search
-            if (busquedaActual) {
+            // Filter by search (skip client-side filter when using multi-cedula search, server already filtered)
+            if (busquedaActual && !cedulasMultiples) {
                 const busqueda = busquedaActual.toLowerCase();
                 resultado = resultado.filter(f => {
                     const nombre = (f.primerNombre || '').toLowerCase();
