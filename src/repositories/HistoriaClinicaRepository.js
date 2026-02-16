@@ -502,6 +502,66 @@ class HistoriaClinicaRepository extends BaseRepository {
     }
 
     /**
+     * Lista registros de asistencia SIIGO con paginación, búsqueda y filtros
+     * @param {Object} options - {page, limit, buscar, estado, fechaDesde, fechaHasta}
+     * @returns {Promise<{rows: Array, total: number, totalPaginas: number}>}
+     */
+    async findAsistenciaSiigo(options = {}) {
+        const { page = 1, limit = 20, buscar, estado, fechaDesde, fechaHasta } = options;
+        const offset = (page - 1) * limit;
+
+        let whereClause = `WHERE "codEmpresa" = 'SIIGO'`;
+        const params = [];
+        let paramIndex = 1;
+
+        if (estado === 'ATENDIDO') {
+            whereClause += ` AND "atendido" = 'ATENDIDO'`;
+        } else if (estado === 'PENDIENTE') {
+            whereClause += ` AND ("atendido" IS NULL OR "atendido" = '' OR "atendido" = 'PENDIENTE')`;
+        }
+
+        if (fechaDesde) {
+            whereClause += ` AND "fechaConsulta" >= $${paramIndex}`;
+            params.push(fechaDesde);
+            paramIndex++;
+        }
+        if (fechaHasta) {
+            whereClause += ` AND "fechaConsulta" <= $${paramIndex}`;
+            params.push(fechaHasta);
+            paramIndex++;
+        }
+
+        if (buscar && buscar.length >= 2) {
+            whereClause += ` AND (
+                COALESCE("numeroId", '') || ' ' ||
+                COALESCE("primerNombre", '') || ' ' ||
+                COALESCE("primerApellido", '') || ' ' ||
+                COALESCE("celular", '')
+            ) ILIKE $${paramIndex}`;
+            params.push(`%${buscar}%`);
+            paramIndex++;
+        }
+
+        const countResult = await this.query(
+            `SELECT COUNT(*) FROM ${this.tableName} ${whereClause}`, params
+        );
+        const total = parseInt(countResult.rows[0].count);
+        const totalPaginas = Math.ceil(total / limit);
+
+        const dataParams = [...params, limit, offset];
+        const result = await this.query(`
+            SELECT "_id", "numeroId", "primerNombre", "primerApellido",
+                   "fechaAtencion", "fechaConsulta", "ciudad", "celular", "atendido"
+            FROM ${this.tableName}
+            ${whereClause}
+            ORDER BY "fechaConsulta" DESC NULLS LAST, "_createdDate" DESC
+            LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+        `, dataParams);
+
+        return { rows: result.rows, total, totalPaginas };
+    }
+
+    /**
      * Obtiene estadísticas de órdenes por empresa
      * @param {string} codEmpresa
      * @returns {Promise<Object>}

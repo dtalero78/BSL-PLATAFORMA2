@@ -168,6 +168,9 @@ app.use('/api/comunidad', require('./src/routes/comunidad'));
 // Envío SIIGO
 app.use('/api/envio-siigo', require('./src/routes/siigo'));
 
+// Asistencia SIIGO
+app.use('/api/asistencia-siigo', require('./src/routes/asistencia-siigo'));
+
 // Envío Agendamiento Empresas
 app.use('/api/envio-empresas', require('./src/routes/envio-empresas'));
 
