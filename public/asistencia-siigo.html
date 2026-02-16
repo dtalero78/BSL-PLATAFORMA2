@@ -812,12 +812,14 @@
 
         const CAMPOS_DB = [
             { key: 'numeroId', label: 'Documento' },
+            { key: 'nombreCompleto', label: 'Nombre Completo' },
             { key: 'primerNombre', label: 'Nombre' },
             { key: 'primerApellido', label: 'Apellido' },
             { key: 'ciudad', label: 'Ciudad' },
             { key: 'celular', label: 'Celular' },
-            { key: 'fechaConsulta', label: 'Fecha Consulta' },
-            { key: 'fechaAtencion', label: 'Fecha Atencion' },
+            { key: 'cargo', label: 'Cargo' },
+            { key: 'email', label: 'Correo' },
+            { key: 'fechaAtencion', label: 'Fecha Agendamiento' },
             { key: 'atendido', label: 'Estado' }
         ];
 
@@ -857,17 +859,29 @@
 
             // Auto-mapear columnas por nombre similar
             columnMapping = {};
-            CAMPOS_DB.forEach(campo => {
-                const idx = headersPegados.findIndex(h =>
-                    h.toLowerCase().includes(campo.label.toLowerCase()) ||
-                    h.toLowerCase().includes(campo.key.toLowerCase()) ||
-                    (campo.key === 'numeroId' && (h.toLowerCase().includes('cedula') || h.toLowerCase().includes('documento') || h.toLowerCase().includes('id'))) ||
-                    (campo.key === 'primerNombre' && h.toLowerCase().includes('nombre') && !h.toLowerCase().includes('apellido')) ||
-                    (campo.key === 'primerApellido' && h.toLowerCase().includes('apellido')) ||
-                    (campo.key === 'celular' && (h.toLowerCase().includes('telefono') || h.toLowerCase().includes('celular') || h.toLowerCase().includes('tel'))) ||
-                    (campo.key === 'atendido' && (h.toLowerCase().includes('estado') || h.toLowerCase().includes('atendido')))
-                );
-                if (idx >= 0) columnMapping[campo.key] = idx;
+            headersPegados.forEach((h, idx) => {
+                const hl = h.toLowerCase();
+                if (hl.includes('identificaci') || hl.includes('cedula') || hl.includes('documento')) {
+                    columnMapping['numeroId'] = idx;
+                } else if (hl.includes('nombres y apellidos') || hl.includes('nombre completo')) {
+                    columnMapping['nombreCompleto'] = idx;
+                } else if (hl.includes('nombre') && !hl.includes('apellido') && !hl.includes('completo')) {
+                    columnMapping['primerNombre'] = idx;
+                } else if (hl.includes('apellido')) {
+                    columnMapping['primerApellido'] = idx;
+                } else if (hl === 'ciudad') {
+                    columnMapping['ciudad'] = idx;
+                } else if (hl.includes('telefono') || hl.includes('celular') || hl.includes('tel')) {
+                    columnMapping['celular'] = idx;
+                } else if (hl.includes('cargo')) {
+                    columnMapping['cargo'] = idx;
+                } else if (hl.includes('correo') || hl.includes('email') || hl.includes('mail')) {
+                    columnMapping['email'] = idx;
+                } else if (hl.includes('agendamiento') || hl.includes('fecha de agenda')) {
+                    columnMapping['fechaAtencion'] = idx;
+                } else if (hl.includes('status') || hl.includes('estado') || hl.includes('atendido')) {
+                    columnMapping['atendido'] = idx;
+                }
             });
 
             // Mostrar mapper
@@ -895,6 +909,26 @@
                         reg[campo.key] = fila[idx].trim();
                     }
                 });
+
+                // Si hay nombreCompleto, dividir en nombre y apellido
+                if (reg.nombreCompleto && !reg.primerNombre) {
+                    const partes = reg.nombreCompleto.trim().split(/\s+/);
+                    if (partes.length === 1) {
+                        reg.primerNombre = partes[0];
+                    } else if (partes.length === 2) {
+                        reg.primerNombre = partes[0];
+                        reg.primerApellido = partes[1];
+                    } else if (partes.length === 3) {
+                        reg.primerNombre = partes[0];
+                        reg.primerApellido = partes.slice(1).join(' ');
+                    } else {
+                        // 4+ partes: primeras 2 = nombres, ultimas 2 = apellidos
+                        reg.primerNombre = partes.slice(0, 2).join(' ');
+                        reg.primerApellido = partes.slice(2).join(' ');
+                    }
+                    delete reg.nombreCompleto;
+                }
+
                 return reg;
             }).filter(r => r.numeroId);
 
