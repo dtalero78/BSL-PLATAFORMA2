@@ -3344,7 +3344,10 @@
             }
 
             // Aplicar búsqueda local
-            if (busquedaActual && busquedaActual.length >= 2) {
+            const cedulasLista = parsearCedulas(busquedaActual);
+            if (cedulasLista) {
+                data = data.filter(o => cedulasLista.includes(o.numeroId));
+            } else if (busquedaActual && busquedaActual.length >= 2) {
                 const query = busquedaActual.toLowerCase();
                 data = data.filter(o => {
                     const nombre = `${o.primerNombre || ''} ${o.segundoNombre || ''} ${o.primerApellido || ''} ${o.segundoApellido || ''}`.toLowerCase();
@@ -3363,16 +3366,34 @@
             renderTabla();
         }
 
+        // Detectar lista de cédulas (separadas por comas, saltos de línea, tabs o espacios)
+        function parsearCedulas(texto) {
+            if (!texto) return null;
+            const tokens = texto.split(/[\n\r,\t\s]+/).map(t => t.trim()).filter(t => /^\d{5,}$/.test(t));
+            return tokens.length >= 2 ? tokens : null;
+        }
+
         // Búsqueda
-        searchInput.addEventListener('input', (e) => {
+        function procesarBusqueda(texto) {
             clearTimeout(searchTimeout);
-            busquedaActual = e.target.value.trim();
+            busquedaActual = texto.trim();
+
+            const cedulas = parsearCedulas(busquedaActual);
+            if (cedulas) {
+                aplicarFiltros();
+                return;
+            }
 
             searchTimeout = setTimeout(() => {
                 if (busquedaActual.length >= 2 || busquedaActual.length === 0) {
                     aplicarFiltros();
                 }
             }, 300);
+        }
+
+        searchInput.addEventListener('input', (e) => procesarBusqueda(e.target.value));
+        searchInput.addEventListener('paste', (e) => {
+            setTimeout(() => procesarBusqueda(e.target.value), 0);
         });
 
         // Paginación
