@@ -510,7 +510,7 @@ class HistoriaClinicaRepository extends BaseRepository {
         const { page = 1, limit = 20, buscar, estado, fechaDesde, fechaHasta } = options;
         const offset = (page - 1) * limit;
 
-        let whereClause = `WHERE "codEmpresa" = 'SIIGO'`;
+        let whereClause = `WHERE "codEmpresa" = 'SIIGO' AND "fechaAtencion" < CURRENT_DATE`;
         const params = [];
         let paramIndex = 1;
 
