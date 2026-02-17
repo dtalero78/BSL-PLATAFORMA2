@@ -555,11 +555,28 @@ const initDB = async () => {
                 item81 VARCHAR(20), item82 VARCHAR(20), item83 VARCHAR(20), item84 VARCHAR(20), item85 VARCHAR(20),
                 item86 VARCHAR(20), item87 VARCHAR(20), item88 VARCHAR(20), item89 VARCHAR(20), item90 VARCHAR(20),
 
+                -- Resultados calculados
+                genero VARCHAR(20),
+                resultado JSONB,
+                interpretacion JSONB,
+                baremos JSONB,
+
                 -- Metadatos
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+
+        // Migrar columnas nuevas scl90 (para tablas existentes)
+        const columnasScl90 = [
+            { name: 'genero', type: 'VARCHAR(20)' },
+            { name: 'resultado', type: 'JSONB' },
+            { name: 'interpretacion', type: 'JSONB' },
+            { name: 'baremos', type: 'JSONB' }
+        ];
+        for (const col of columnasScl90) {
+            await pool.query(`ALTER TABLE scl90 ADD COLUMN IF NOT EXISTS ${col.name} ${col.type}`);
+        }
 
         // Crear tabla visiometrias_virtual si no existe
         await pool.query(`

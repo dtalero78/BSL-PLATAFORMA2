@@ -937,6 +937,72 @@
             color: var(--text-secondary);
         }
 
+        /* ========== SCL-90 RESULTADOS ========== */
+        .scl90-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .scl90-table th {
+            background: #1E40AF;
+            color: white;
+            padding: 10px 12px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 12px;
+        }
+        .scl90-table th:first-child {
+            text-align: left;
+        }
+        .scl90-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #E5E7EB;
+            text-align: center;
+        }
+        .scl90-table td:first-child {
+            text-align: left;
+            font-weight: 500;
+        }
+        .scl90-table tr:nth-child(even) {
+            background: #F9FAFB;
+        }
+        .scl90-cat-bajo {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            background: #D1FAE5;
+            color: #065F46;
+            font-weight: 600;
+            font-size: 12px;
+        }
+        .scl90-cat-medio {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            background: #FEF3C7;
+            color: #92400E;
+            font-weight: 600;
+            font-size: 12px;
+        }
+        .scl90-cat-alto {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            background: #FEE2E2;
+            color: #991B1B;
+            font-weight: 600;
+            font-size: 12px;
+        }
+        [data-theme="dark"] .scl90-table th {
+            background: #1E3A8A;
+        }
+        [data-theme="dark"] .scl90-table td {
+            border-bottom-color: #374151;
+        }
+        [data-theme="dark"] .scl90-table tr:nth-child(even) {
+            background: #1F2937;
+        }
+
         /* ========== MODAL DRAWER ========== */
         .modal-overlay {
             display: none;
@@ -2438,9 +2504,33 @@
                     </svg>
                     Resultado Psicológico
                 </a>
+                <button class="btn btn-primary" id="btnVerScl90" onclick="abrirModalScl90()" style="display: none; background: #7C3AED; color: #fff;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg>
+                    Ver SCL-90
+                </button>
                 <button class="btn" id="btnAprobar" onclick="aprobarOrden()" style="display: none; background: #000; color: #fff;">
                     Guardar
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Resultados SCL-90 -->
+    <div id="modalScl90" class="modal-overlay" style="z-index: 1100;">
+        <div class="modal modal-large">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title">Resultados SCL-90</h2>
+                    <p style="font-size: 13px; color: var(--text-tertiary); margin-top: 2px;">Inventario de Sintomas SCL-90</p>
+                </div>
+                <button class="btn-close" onclick="cerrarModalScl90()">&#x2715;</button>
+            </div>
+            <div class="modal-body" id="modalScl90Body">
+                <!-- Content loaded dynamically -->
             </div>
         </div>
     </div>
@@ -3928,7 +4018,8 @@
                         'Formulario': 'formulario',
                         'Pruebas ADC': 'adc',
                         'Audiometría': 'audiometria',
-                        'Visual': 'visiometria'
+                        'Visual': 'visiometria',
+                        'SCL-90': 'scl90'
                     };
 
                     // Definir orden de escalera: 1. Formulario, 2. ADC (excepto KM2), 3. Audiometría, 4. Visual
@@ -3936,7 +4027,8 @@
                         { numero: 1, nombre: 'Formulario', key: 'formulario' },
                         { numero: 2, nombre: 'Pruebas ADC', key: 'adc' },
                         { numero: 3, nombre: 'Audiometría', key: 'audiometria' },
-                        { numero: 4, nombre: 'Visual', key: 'visiometria' }
+                        { numero: 4, nombre: 'Visual', key: 'visiometria' },
+                        ...(p.scl90 && p.scl90.requerido ? [{ numero: 5, nombre: 'SCL-90', key: 'scl90' }] : [])
                     ];
 
                     // Si es KM2, quitar Pruebas ADC del orden y agregar Psicológica si no tiene audiometría
@@ -4107,6 +4199,13 @@
                 btnResultadoPsicologico.style.display = 'none';
             }
 
+            // Configurar botón Ver SCL-90
+            const btnVerScl90 = document.getElementById('btnVerScl90');
+            if (btnVerScl90) {
+                const tieneScl90 = estadoPruebas?.pruebas?.scl90?.completado;
+                btnVerScl90.style.display = tieneScl90 ? 'inline-flex' : 'none';
+            }
+
             // Configurar botón Editar según permisos
             const btnEditar = document.querySelector('.modal-footer .btn-secondary[onclick*="abrirModalEdicion"]');
             if (btnEditar) {
@@ -4266,6 +4365,146 @@
             if (e.target === this) {
                 cerrarModalDetalles();
             }
+        });
+
+        // ========== MODAL RESULTADOS SCL-90 ==========
+        const nombresDimensiones = {
+            SOM: "Somatizacion", OBS: "Obsesivo-Compulsivo", SI: "Sensibilidad Interpersonal",
+            DEP: "Depresion", ANS: "Ansiedad", HOS: "Hostilidad",
+            FOB: "Ansiedad Fobica", PAR: "Ideacion Paranoide", PSIC: "Psicoticismo"
+        };
+
+        const interpretacionesTexto = {
+            SOM: { ALTO: "Alta presencia de sintomas somaticos.", MEDIO: "Presencia moderada de sintomas somaticos.", BAJO: "Baja presencia de sintomas somaticos." },
+            OBS: { ALTO: "Alta presencia de sintomas obsesivo-compulsivos.", MEDIO: "Presencia moderada de sintomas obsesivo-compulsivos.", BAJO: "Baja presencia de sintomas obsesivo-compulsivos." },
+            SI: { ALTO: "Alta sensibilidad interpersonal.", MEDIO: "Sensibilidad interpersonal moderada.", BAJO: "Baja sensibilidad interpersonal." },
+            DEP: { ALTO: "Alta presencia de sintomas depresivos.", MEDIO: "Presencia moderada de sintomas depresivos.", BAJO: "Baja presencia de sintomas depresivos." },
+            ANS: { ALTO: "Alta presencia de ansiedad.", MEDIO: "Ansiedad moderada.", BAJO: "Baja ansiedad." },
+            HOS: { ALTO: "Alta hostilidad o irritabilidad.", MEDIO: "Hostilidad moderada.", BAJO: "Baja hostilidad." },
+            FOB: { ALTO: "Alta fobia o evitacion.", MEDIO: "Fobia moderada.", BAJO: "Baja fobia." },
+            PAR: { ALTO: "Alta ideacion paranoide.", MEDIO: "Ideacion paranoide moderada.", BAJO: "Baja ideacion paranoide." },
+            PSIC: { ALTO: "Alta sintomatologia psicotica.", MEDIO: "Sintomatologia psicotica moderada.", BAJO: "Baja sintomatologia psicotica." }
+        };
+
+        function interpretarGSI(v) { return v < 0.5 ? "Muy bajo" : v < 1 ? "Leve" : v < 1.3 ? "Moderado" : v < 1.7 ? "Clinico alto" : "Muy elevado"; }
+        function interpretarPST(v) { return v < 30 ? "Pocos sintomas" : v < 50 ? "Moderado" : v < 65 ? "Muchos" : "Extensa carga de sintomas"; }
+        function interpretarPSDI(v) { return v < 1 ? "Baja intensidad" : v < 1.5 ? "Moderada" : v < 2 ? "Moderada-alta" : "Alta intensidad"; }
+
+        function categoriaClass(cat) {
+            if (cat === 'BAJO') return 'scl90-cat-bajo';
+            if (cat === 'MEDIO') return 'scl90-cat-medio';
+            return 'scl90-cat-alto';
+        }
+
+        async function abrirModalScl90() {
+            if (!pacienteActual) return;
+            const ordenId = pacienteActual._id;
+            const body = document.getElementById('modalScl90Body');
+            body.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-tertiary);">Cargando resultados...</div>';
+            document.getElementById('modalScl90').classList.add('active');
+
+            try {
+                const response = await fetch(`/api/scl90/${ordenId}`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                const result = await response.json();
+
+                if (!result.success || !result.data || !result.data.resultado) {
+                    body.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-tertiary);">No hay resultados SCL-90 para esta orden.</div>';
+                    return;
+                }
+
+                const data = result.data;
+                const res = data.resultado;
+                const interp = data.interpretacion;
+                const bar = data.baremos;
+                const dims = ["SOM", "OBS", "SI", "DEP", "ANS", "HOS", "FOB", "PAR", "PSIC"];
+
+                // Tabla de interpretación clínica
+                const filasHTML = dims.map(dim => {
+                    const cat = interp[dim] || 'BAJO';
+                    const texto = interpretacionesTexto[dim]?.[cat] || '';
+                    return `<tr>
+                        <td>${nombresDimensiones[dim]}</td>
+                        <td>${res[dim] ?? '-'}</td>
+                        <td>${bar[dim]?.Pc50 ?? '-'}</td>
+                        <td>${bar[dim]?.Pc85 ?? '-'}</td>
+                        <td><span class="${categoriaClass(cat)}">${cat}</span></td>
+                        <td style="text-align:left; font-size:12px;">${texto}</td>
+                    </tr>`;
+                }).join('');
+
+                // Tabla de índices globales
+                const globalesHTML = `
+                    <tr>
+                        <td>Indice Global de Severidad (GSI)</td>
+                        <td>${res.GSI ?? '-'}</td>
+                        <td>${interpretarGSI(res.GSI)}</td>
+                    </tr>
+                    <tr>
+                        <td>Total de Sintomas Positivos (PST)</td>
+                        <td>${res.PST ?? '-'}</td>
+                        <td>${interpretarPST(res.PST)}</td>
+                    </tr>
+                    <tr>
+                        <td>Densidad de Sintomas Positivos (PSDI)</td>
+                        <td>${res.PSDI ?? '-'}</td>
+                        <td>${interpretarPSDI(res.PSDI)}</td>
+                    </tr>
+                `;
+
+                body.innerHTML = `
+                    <div class="detail-card">
+                        <div class="detail-card-title" style="margin-bottom:12px;">Interpretacion clinica</div>
+                        <div style="overflow-x:auto;">
+                            <table class="scl90-table">
+                                <thead>
+                                    <tr>
+                                        <th>Dimension</th>
+                                        <th>Puntaje</th>
+                                        <th>Pc50</th>
+                                        <th>Pc85</th>
+                                        <th>Categoria</th>
+                                        <th>Interpretacion</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${filasHTML}</tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="detail-card">
+                        <div class="detail-card-title" style="margin-bottom:12px;">Indices globales</div>
+                        <div style="overflow-x:auto;">
+                            <table class="scl90-table">
+                                <thead>
+                                    <tr>
+                                        <th>Indice</th>
+                                        <th>Valor</th>
+                                        <th>Interpretacion</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${globalesHTML}</tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div style="text-align:center; padding:8px; font-size:11px; color:var(--text-tertiary);">
+                        Genero: ${data.genero || 'N/A'} | Baremos oficiales Colombia | Fecha: ${new Date(data.created_at).toLocaleDateString('es-CO')}
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error cargando SCL-90:', error);
+                body.innerHTML = '<div style="text-align:center; padding:40px; color:#DC2626;">Error al cargar los resultados.</div>';
+            }
+        }
+
+        function cerrarModalScl90() {
+            document.getElementById('modalScl90').classList.remove('active');
+        }
+
+        document.getElementById('modalScl90').addEventListener('click', function(e) {
+            if (e.target === this) cerrarModalScl90();
         });
 
         // ========== MODAL EDICIÓN ==========
