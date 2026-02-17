@@ -709,7 +709,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         redirectUrl = `https://www.bsl.com.co/km2/${numeroId}`;
                     }
                     else if (codEmpresa === "SIIGO") {
-                        redirectUrl = `https://www.bsl.com.co/scl90/${numeroId}`;
+                        redirectUrl = `/scl90.html?ordenId=${itemId}`;
                     }
                     else if (examenes.includes("Test Riesgo Psicosocial A")) {
                         redirectUrl = `https://www.bsl.com.co/psicosociala/${itemId}`;

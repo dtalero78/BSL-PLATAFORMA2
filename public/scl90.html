@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Test SCL-90 - BSL</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Figtree', sans-serif;
+            background: #FFFFFF;
+            min-height: 100vh;
+            padding: 0;
+            color: #333333;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Logo */
+        .logo {
+            margin-bottom: 40px;
+            text-align: left;
+        }
+
+        .logo-img {
+            max-height: 60px;
+            width: auto;
+        }
+
+        /* Progress bar */
+        .progress-container {
+            width: 100%;
+            height: 4px;
+            background: #E5E7EB;
+            border-radius: 2px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: #00B8E6;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* Question counter */
+        .question-counter {
+            font-size: 14px;
+            color: #00B8E6;
+            font-weight: 600;
+            margin-bottom: 40px;
+        }
+
+        /* Question slides */
+        .question-slide {
+            display: none;
+            animation: fadeIn 0.4s ease-in-out;
+            flex: 1;
+        }
+
+        .question-slide.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .question-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Question label */
+        .question-label {
+            font-size: 28px;
+            font-weight: 600;
+            color: #1F2937;
+            margin-bottom: 32px;
+            line-height: 1.3;
+            display: block;
+        }
+
+        /* Options grid - 5 opciones en columna */
+        .options-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        /* Option cards */
+        .option-card {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 18px 24px;
+            border: 2px solid #E5E7EB;
+            border-radius: 12px;
+            background: #FFFFFF;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 16px;
+            font-weight: 500;
+            color: #4B5563;
+        }
+
+        .option-card:hover {
+            border-color: #00B8E6;
+            background: #F0F9FF;
+        }
+
+        .option-card input {
+            display: none;
+        }
+
+        .option-card.selected {
+            border-color: #00B8E6;
+            background: #E0F7FA;
+            color: #00838F;
+        }
+
+        .option-card:active {
+            transform: scale(0.98);
+        }
+
+        /* Patient info card */
+        .patient-card {
+            background: #F8FAFC;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .patient-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 25px;
+            background: linear-gradient(135deg, #00B8E6, #0088AA);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .patient-info {
+            flex: 1;
+        }
+
+        .patient-name {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 2px;
+            color: #1F2937;
+        }
+
+        .patient-id {
+            font-size: 14px;
+            color: #6B7280;
+        }
+
+        /* Welcome screen */
+        .welcome-screen {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .welcome-screen.hidden {
+            display: none;
+        }
+
+        .instructions-card {
+            background: #F8FAFC;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .instructions-card h2 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: #1F2937;
+        }
+
+        .instructions-card p {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #4B5563;
+            margin-bottom: 12px;
+        }
+
+        .instructions-card ul {
+            list-style: none;
+            margin-top: 16px;
+        }
+
+        .instructions-card li {
+            padding: 12px 0;
+            border-bottom: 1px solid #E5E7EB;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            font-size: 15px;
+            line-height: 1.4;
+            color: #4B5563;
+        }
+
+        .instructions-card li:last-child {
+            border-bottom: none;
+        }
+
+        .instruction-number {
+            width: 24px;
+            height: 24px;
+            border-radius: 12px;
+            background: #00B8E6;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .btn-primary {
+            background: #00B8E6;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 18px 32px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.15s ease;
+            font-family: 'Figtree', sans-serif;
+        }
+
+        .btn-primary:hover {
+            background: #0099C2;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary:disabled {
+            background: #C7C7CC;
+            cursor: not-allowed;
+        }
+
+        /* Test screen */
+        .test-screen {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+        }
+
+        .test-screen.active {
+            display: flex;
+        }
+
+        /* Results screen */
+        .results-screen {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .results-screen.active {
+            display: flex;
+        }
+
+        .results-icon {
+            font-size: 80px;
+            margin-bottom: 24px;
+        }
+
+        .results-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1F2937;
+            margin-bottom: 12px;
+        }
+
+        .results-subtitle {
+            font-size: 16px;
+            color: #6B7280;
+            margin-bottom: 32px;
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading-spinner {
+            text-align: center;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #E5E7EB;
+            border-top-color: #00B8E6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Error state */
+        .error-card {
+            background: #FEF2F2;
+            border: 1px solid #FCA5A5;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .error-card p {
+            color: #DC2626;
+            font-size: 15px;
+        }
+
+        /* WhatsApp button */
+        .whatsapp-btn {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            border-radius: 28px;
+            background: #25D366;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            text-decoration: none;
+            box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4);
+            z-index: 100;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .container {
+                padding: 24px 16px;
+            }
+
+            .question-label {
+                font-size: 22px;
+            }
+
+            .logo-img {
+                max-height: 50px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Logo -->
+        <div class="logo">
+            <img src="bsl-logo.png" alt="BSL Logo" class="logo-img">
+        </div>
+
+        <!-- Patient card -->
+        <div class="patient-card" id="patientCard">
+            <div class="patient-avatar" id="patientAvatar">--</div>
+            <div class="patient-info">
+                <div class="patient-name" id="patientName">Cargando...</div>
+                <div class="patient-id" id="patientId">---</div>
+            </div>
+        </div>
+
+        <!-- Error card -->
+        <div class="error-card" id="errorCard">
+            <p id="errorMessage"></p>
+        </div>
+
+        <!-- ========== PANTALLA DE BIENVENIDA ========== -->
+        <div class="welcome-screen" id="welcomeScreen">
+            <div class="instructions-card">
+                <h2>Inventario de Sintomas SCL-90</h2>
+                <p>A continuacion hay una lista de problemas que tiene la gente. Lea cada uno y marque la respuesta que mejor describa cuanto le ha molestado ese problema durante la ultima semana, incluyendo el dia de hoy.</p>
+                <ul>
+                    <li>
+                        <span class="instruction-number">1</span>
+                        <span>Lea cada afirmacion con atencion</span>
+                    </li>
+                    <li>
+                        <span class="instruction-number">2</span>
+                        <span>Seleccione la opcion que mejor describa cuanto le ha molestado</span>
+                    </li>
+                    <li>
+                        <span class="instruction-number">3</span>
+                        <span>No hay respuestas correctas o incorrectas, responda con sinceridad</span>
+                    </li>
+                </ul>
+            </div>
+
+            <button class="btn-primary" id="startBtn">
+                Comenzar Prueba
+            </button>
+        </div>
+
+        <!-- ========== PANTALLA DE PRUEBA ========== -->
+        <div class="test-screen" id="testScreen">
+            <!-- Progress bar -->
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+
+            <!-- Question counter -->
+            <div class="question-counter">
+                <span id="currentQuestion">1</span> de <span id="totalQuestions">90</span>
+            </div>
+
+            <!-- Question slide -->
+            <div class="question-slide active" id="questionSlide">
+                <div class="question-content">
+                    <label class="question-label" id="questionLabel">Pregunta...</label>
+                    <div class="options-grid" id="optionsGrid">
+                        <!-- Options will be generated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== PANTALLA DE RESULTADOS ========== -->
+        <div class="results-screen" id="resultsScreen">
+            <div class="results-icon">✅</div>
+            <div class="results-title">Prueba Completada</div>
+            <div class="results-subtitle">Tus respuestas han sido guardadas correctamente</div>
+            <button class="btn-primary" id="continueBtn" style="max-width: 300px;">
+                Continuar
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Guardando respuestas...</p>
+        </div>
+    </div>
+
+    <!-- WhatsApp button -->
+    <a href="https://api.whatsapp.com/send?phone=573008021701&text=Hola.%20Requiero%20soporte%20con%20la%20prueba%20SCL-90"
+       target="_blank"
+       class="whatsapp-btn">
+        💬
+    </a>
+
+    <script>
+        // ==========================================
+        // CONFIGURACIÓN DE PREGUNTAS SCL-90
+        // ==========================================
+        const opciones = ['Nada', 'Muy poco', 'Poco', 'Bastante', 'Mucho'];
+
+        const preguntas = [
+            { pregunta: 'Dolores de cabeza.', campo: 'item1' },
+            { pregunta: 'Nerviosismo.', campo: 'item2' },
+            { pregunta: 'Pensamientos desagradables que no se iban de mi cabeza.', campo: 'item3' },
+            { pregunta: 'Sensacion de mareo o desmayo.', campo: 'item4' },
+            { pregunta: 'Falta de interes en relaciones sexuales.', campo: 'item5' },
+            { pregunta: 'Criticar a los demas.', campo: 'item6' },
+            { pregunta: 'Sentir que otro puede controlar mis pensamientos.', campo: 'item7' },
+            { pregunta: 'Sentir que otros son culpables de lo que me pasa.', campo: 'item8' },
+            { pregunta: 'Tener dificultad para memorizar cosas.', campo: 'item9' },
+            { pregunta: 'Estar preocupado/a por mi falta de ganas para hacer algo.', campo: 'item10' },
+            { pregunta: 'Sentirme enojado/a, malhumorado/a.', campo: 'item11' },
+            { pregunta: 'Dolores en el pecho.', campo: 'item12' },
+            { pregunta: 'Miedo a los espacios abiertos o las calles.', campo: 'item13' },
+            { pregunta: 'Sentirme con muy pocas energias.', campo: 'item14' },
+            { pregunta: 'Pensar en quitarme la vida.', campo: 'item15' },
+            { pregunta: 'Escuchar voces que otras personas no oyen.', campo: 'item16' },
+            { pregunta: 'Temblores en mi cuerpo.', campo: 'item17' },
+            { pregunta: 'Perder la confianza en la mayoria de las personas.', campo: 'item18' },
+            { pregunta: 'No tener ganas de comer.', campo: 'item19' },
+            { pregunta: 'Llorar por cualquier cosa.', campo: 'item20' },
+            { pregunta: 'Sentirme incomodo/a con personas del otro sexo.', campo: 'item21' },
+            { pregunta: 'Sentirme atrapada/o o encerrado/a.', campo: 'item22' },
+            { pregunta: 'Asustarme de repente sin razon alguna.', campo: 'item23' },
+            { pregunta: 'Explotar y no poder controlarme.', campo: 'item24' },
+            { pregunta: 'Tener miedo a salir solo/a de mi casa.', campo: 'item25' },
+            { pregunta: 'Sentirme culpable por cosas que ocurren.', campo: 'item26' },
+            { pregunta: 'Dolores en la espalda.', campo: 'item27' },
+            { pregunta: 'No poder terminar las cosas que empece a hacer.', campo: 'item28' },
+            { pregunta: 'Sentirme solo/a.', campo: 'item29' },
+            { pregunta: 'Sentirme triste.', campo: 'item30' },
+            { pregunta: 'Preocuparme demasiado por todo lo que pasa.', campo: 'item31' },
+            { pregunta: 'No tener interes por nada.', campo: 'item32' },
+            { pregunta: 'Tener miedos.', campo: 'item33' },
+            { pregunta: 'Sentirme herido en mis sentimientos.', campo: 'item34' },
+            { pregunta: 'Creer que la gente sabe que estoy pensando.', campo: 'item35' },
+            { pregunta: 'Sentir que no me comprenden.', campo: 'item36' },
+            { pregunta: 'Sentir que no caigo bien a la gente, que no les gusto.', campo: 'item37' },
+            { pregunta: 'Tener que hacer las cosas muy despacio para estar seguro/a de que estan bien hechas.', campo: 'item38' },
+            { pregunta: 'Mi corazon late muy fuerte, se acelera.', campo: 'item39' },
+            { pregunta: 'Nauseas o dolor de estomago.', campo: 'item40' },
+            { pregunta: 'Sentirme inferior a los demas.', campo: 'item41' },
+            { pregunta: 'Calambres en manos, brazos o piernas.', campo: 'item42' },
+            { pregunta: 'Sentir que me vigilan o que hablan de mi.', campo: 'item43' },
+            { pregunta: 'Tener problemas para dormirme.', campo: 'item44' },
+            { pregunta: 'Tener que controlar una o mas veces lo que hago.', campo: 'item45' },
+            { pregunta: 'Tener dificultades para tomar decisiones.', campo: 'item46' },
+            { pregunta: 'Tener miedo de viajar en tren, omnibus o subterraneos.', campo: 'item47' },
+            { pregunta: 'Tener dificultades para respirar bien.', campo: 'item48' },
+            { pregunta: 'Ataques de frio o de calor.', campo: 'item49' },
+            { pregunta: 'Tener que evitar acercarme a algunos lugares o actividades porque me dan miedo.', campo: 'item50' },
+            { pregunta: 'Sentir que mi mente queda en blanco.', campo: 'item51' },
+            { pregunta: 'Hormigueos en alguna parte del cuerpo.', campo: 'item52' },
+            { pregunta: 'Tener un nudo en la garganta.', campo: 'item53' },
+            { pregunta: 'Perder las esperanzas en el futuro.', campo: 'item54' },
+            { pregunta: 'Dificultades para concentrarme en lo que estoy haciendo.', campo: 'item55' },
+            { pregunta: 'Sentir flojedad, debilidad, en partes de mi cuerpo.', campo: 'item56' },
+            { pregunta: 'Sentirme muy nervioso/a, agitado/a.', campo: 'item57' },
+            { pregunta: 'Sentir mis brazos y piernas muy pesados.', campo: 'item58' },
+            { pregunta: 'Pensar que me estoy por morir.', campo: 'item59' },
+            { pregunta: 'Comer demasiado.', campo: 'item60' },
+            { pregunta: 'Sentirme incomodo/a cuando me miran o hablan de mi.', campo: 'item61' },
+            { pregunta: 'Tener ideas, pensamientos que no son los mios.', campo: 'item62' },
+            { pregunta: 'Necesitar golpear o lastimar a alguien.', campo: 'item63' },
+            { pregunta: 'Despertarme muy temprano por la manana sin necesidad.', campo: 'item64' },
+            { pregunta: 'Repetir muchas veces algo que hago: contar, lavarme, tocar cosas.', campo: 'item65' },
+            { pregunta: 'Dormir con problemas, muy inquieto/a.', campo: 'item66' },
+            { pregunta: 'Necesitar romper o destrozar cosas.', campo: 'item67' },
+            { pregunta: 'Tener ideas, pensamientos que los demas no entienden.', campo: 'item68' },
+            { pregunta: 'Estar muy pendiente de lo que los demas puedan pensar de mi.', campo: 'item69' },
+            { pregunta: 'Sentirme incomodo/a en lugares donde hay mucha gente.', campo: 'item70' },
+            { pregunta: 'Sentir que todo me cuesta mucho esfuerzo.', campo: 'item71' },
+            { pregunta: 'Tener ataques de mucho miedo o de panico.', campo: 'item72' },
+            { pregunta: 'Sentirme mal si estoy comiendo o bebiendo en publico.', campo: 'item73' },
+            { pregunta: 'Meterme muy seguido en discusiones.', campo: 'item74' },
+            { pregunta: 'Ponerme nervioso/a cuando estoy solo/a.', campo: 'item75' },
+            { pregunta: 'Sentir que los demas no me valoran como merezco.', campo: 'item76' },
+            { pregunta: 'Sentirme solo/a aun estando con gente.', campo: 'item77' },
+            { pregunta: 'Estar inquieto/a; no poder estar sentado/a sin moverme.', campo: 'item78' },
+            { pregunta: 'Sentirme un/a inutil.', campo: 'item79' },
+            { pregunta: 'Sentir que algo malo me va a pasar.', campo: 'item80' },
+            { pregunta: 'Gritar o tirar cosas.', campo: 'item81' },
+            { pregunta: 'Miedo a desmayarme en medio de la gente.', campo: 'item82' },
+            { pregunta: 'Sentir que se aprovechan de mi si los dejo.', campo: 'item83' },
+            { pregunta: 'Pensar cosas sobre el sexo que me molestan.', campo: 'item84' },
+            { pregunta: 'Sentir que debo ser castigado/a por mis pecados.', campo: 'item85' },
+            { pregunta: 'Tener imagenes y pensamientos que me dan miedo.', campo: 'item86' },
+            { pregunta: 'Sentir que algo anda mal en mi cuerpo.', campo: 'item87' },
+            { pregunta: 'Sentirme alejado/a de las demas personas.', campo: 'item88' },
+            { pregunta: 'Sentirme culpable.', campo: 'item89' },
+            { pregunta: 'Pensar que en mi cabeza hay algo que no funciona bien.', campo: 'item90' }
+        ];
+
+        // ==========================================
+        // ESTADO DE LA APLICACIÓN
+        // ==========================================
+        let currentIndex = 0;
+        let respuestas = {};
+        let patientData = null;
+        let ordenId = null;
+
+        // Elementos del DOM
+        const welcomeScreen = document.getElementById('welcomeScreen');
+        const testScreen = document.getElementById('testScreen');
+        const resultsScreen = document.getElementById('resultsScreen');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const errorCard = document.getElementById('errorCard');
+        const progressBar = document.getElementById('progressBar');
+        const currentQuestionSpan = document.getElementById('currentQuestion');
+        const totalQuestionsSpan = document.getElementById('totalQuestions');
+        const questionLabel = document.getElementById('questionLabel');
+        const optionsGrid = document.getElementById('optionsGrid');
+
+        // ==========================================
+        // INICIALIZACIÓN
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Obtener ordenId de la URL
+            const urlParams = new URLSearchParams(window.location.search);
+            ordenId = urlParams.get('ordenId');
+
+            if (!ordenId) {
+                showError('No se proporciono un ID de orden valido.');
+                return;
+            }
+
+            // Actualizar total de preguntas
+            totalQuestionsSpan.textContent = preguntas.length;
+
+            // Cargar datos del paciente
+            await loadPatientData();
+
+            // Configurar eventos
+            setupEventListeners();
+        });
+
+        async function loadPatientData() {
+            try {
+                const response = await fetch(`/api/historia-clinica/${ordenId}`);
+                if (!response.ok) throw new Error('No se encontro la orden');
+
+                const result = await response.json();
+
+                if (!result.success || !result.data) {
+                    throw new Error('Datos del paciente no disponibles');
+                }
+
+                patientData = result.data;
+
+                // Actualizar UI
+                const initials = ((patientData.primerNombre || '')[0] || '') + ((patientData.primerApellido || '')[0] || '');
+                document.getElementById('patientAvatar').textContent = initials.toUpperCase();
+                document.getElementById('patientName').textContent = `${patientData.primerNombre || ''} ${patientData.primerApellido || ''}`.trim() || 'Paciente';
+                document.getElementById('patientId').textContent = `CC ${patientData.numeroId || '---'}`;
+
+            } catch (error) {
+                console.error('Error cargando paciente:', error);
+                showError('No se pudo cargar la informacion del paciente. Verifique el enlace.');
+            }
+        }
+
+        function setupEventListeners() {
+            document.getElementById('startBtn').addEventListener('click', startTest);
+
+            document.getElementById('continueBtn').addEventListener('click', () => {
+                window.location.href = `/audiometria-virtual.html?ordenId=${ordenId}`;
+            });
+        }
+
+        // ==========================================
+        // LÓGICA DE LA PRUEBA
+        // ==========================================
+        function startTest() {
+            currentIndex = 0;
+            respuestas = {};
+
+            welcomeScreen.classList.add('hidden');
+            testScreen.classList.add('active');
+
+            showQuestion(currentIndex);
+        }
+
+        function showQuestion(index) {
+            const pregunta = preguntas[index];
+
+            // Actualizar progreso
+            const progress = ((index + 1) / preguntas.length) * 100;
+            progressBar.style.width = `${progress}%`;
+            currentQuestionSpan.textContent = index + 1;
+
+            // Actualizar pregunta
+            questionLabel.textContent = pregunta.pregunta;
+
+            // Generar opciones (5 opciones Likert)
+            optionsGrid.innerHTML = '';
+            opciones.forEach((opcion, i) => {
+                const optionCard = document.createElement('div');
+                optionCard.className = 'option-card';
+                optionCard.textContent = opcion;
+                optionCard.addEventListener('click', () => selectOption(i));
+                optionsGrid.appendChild(optionCard);
+            });
+        }
+
+        function selectOption(valor) {
+            const pregunta = preguntas[currentIndex];
+
+            // Guardar respuesta como valor numérico (0-4)
+            respuestas[pregunta.campo] = valor;
+
+            // Marcar como seleccionada brevemente
+            const cards = document.querySelectorAll('.option-card');
+            cards[valor].classList.add('selected');
+
+            // Avanzar después de un breve delay
+            setTimeout(() => {
+                currentIndex++;
+                if (currentIndex < preguntas.length) {
+                    showQuestion(currentIndex);
+                } else {
+                    saveAllResponses();
+                }
+            }, 200);
+        }
+
+        // ==========================================
+        // GUARDAR RESULTADOS
+        // ==========================================
+        async function saveAllResponses() {
+            loadingOverlay.style.display = 'flex';
+
+            const dataToSave = {
+                orden_id: ordenId,
+                numero_id: patientData?.numeroId || '',
+                primer_nombre: patientData?.primerNombre || '',
+                primer_apellido: patientData?.primerApellido || '',
+                empresa: patientData?.empresa || '',
+                cod_empresa: patientData?.codEmpresa || '',
+                ...respuestas
+            };
+
+            try {
+                const response = await fetch('/api/scl90', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(dataToSave)
+                });
+
+                if (!response.ok) throw new Error('Error guardando resultados');
+
+                const result = await response.json();
+                console.log('Resultados SCL-90 guardados:', result);
+
+                showResults();
+
+            } catch (error) {
+                console.error('Error guardando:', error);
+                showError('Error guardando los resultados. Por favor contacte soporte.');
+            } finally {
+                loadingOverlay.style.display = 'none';
+            }
+        }
+
+        function showResults() {
+            testScreen.classList.remove('active');
+            resultsScreen.classList.add('active');
+        }
+
+        // ==========================================
+        // UTILIDADES
+        // ==========================================
+        function showError(message) {
+            errorCard.style.display = 'block';
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('startBtn').disabled = true;
+        }
+    </script>
+</body>
+</html>

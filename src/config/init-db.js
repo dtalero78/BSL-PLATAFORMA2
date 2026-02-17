@@ -524,6 +524,43 @@ const initDB = async () => {
             )
         `);
 
+        // Crear tabla scl90 si no existe
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS scl90 (
+                id SERIAL PRIMARY KEY,
+                orden_id VARCHAR(100) REFERENCES "HistoriaClinica"("_id") ON DELETE CASCADE,
+                numero_id VARCHAR(50),
+                primer_nombre VARCHAR(100),
+                primer_apellido VARCHAR(100),
+                empresa VARCHAR(100),
+                cod_empresa VARCHAR(50),
+
+                -- Items SCL-90 (90 preguntas, valores 0-4)
+                item1 VARCHAR(20), item2 VARCHAR(20), item3 VARCHAR(20), item4 VARCHAR(20), item5 VARCHAR(20),
+                item6 VARCHAR(20), item7 VARCHAR(20), item8 VARCHAR(20), item9 VARCHAR(20), item10 VARCHAR(20),
+                item11 VARCHAR(20), item12 VARCHAR(20), item13 VARCHAR(20), item14 VARCHAR(20), item15 VARCHAR(20),
+                item16 VARCHAR(20), item17 VARCHAR(20), item18 VARCHAR(20), item19 VARCHAR(20), item20 VARCHAR(20),
+                item21 VARCHAR(20), item22 VARCHAR(20), item23 VARCHAR(20), item24 VARCHAR(20), item25 VARCHAR(20),
+                item26 VARCHAR(20), item27 VARCHAR(20), item28 VARCHAR(20), item29 VARCHAR(20), item30 VARCHAR(20),
+                item31 VARCHAR(20), item32 VARCHAR(20), item33 VARCHAR(20), item34 VARCHAR(20), item35 VARCHAR(20),
+                item36 VARCHAR(20), item37 VARCHAR(20), item38 VARCHAR(20), item39 VARCHAR(20), item40 VARCHAR(20),
+                item41 VARCHAR(20), item42 VARCHAR(20), item43 VARCHAR(20), item44 VARCHAR(20), item45 VARCHAR(20),
+                item46 VARCHAR(20), item47 VARCHAR(20), item48 VARCHAR(20), item49 VARCHAR(20), item50 VARCHAR(20),
+                item51 VARCHAR(20), item52 VARCHAR(20), item53 VARCHAR(20), item54 VARCHAR(20), item55 VARCHAR(20),
+                item56 VARCHAR(20), item57 VARCHAR(20), item58 VARCHAR(20), item59 VARCHAR(20), item60 VARCHAR(20),
+                item61 VARCHAR(20), item62 VARCHAR(20), item63 VARCHAR(20), item64 VARCHAR(20), item65 VARCHAR(20),
+                item66 VARCHAR(20), item67 VARCHAR(20), item68 VARCHAR(20), item69 VARCHAR(20), item70 VARCHAR(20),
+                item71 VARCHAR(20), item72 VARCHAR(20), item73 VARCHAR(20), item74 VARCHAR(20), item75 VARCHAR(20),
+                item76 VARCHAR(20), item77 VARCHAR(20), item78 VARCHAR(20), item79 VARCHAR(20), item80 VARCHAR(20),
+                item81 VARCHAR(20), item82 VARCHAR(20), item83 VARCHAR(20), item84 VARCHAR(20), item85 VARCHAR(20),
+                item86 VARCHAR(20), item87 VARCHAR(20), item88 VARCHAR(20), item89 VARCHAR(20), item90 VARCHAR(20),
+
+                -- Metadatos
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
         // Crear tabla visiometrias_virtual si no existe
         await pool.query(`
             CREATE TABLE IF NOT EXISTS visiometrias_virtual (

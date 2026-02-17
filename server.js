@@ -144,6 +144,9 @@ app.use('/api', require('./src/routes/audiometria'));
 // Pruebas ADC
 app.use('/api/pruebas-adc', require('./src/routes/pruebas-adc'));
 
+// SCL-90
+app.use('/api/scl90', require('./src/routes/scl90'));
+
 // Estado de Pruebas
 app.use('/api/estado-pruebas', require('./src/routes/estado-pruebas'));
 

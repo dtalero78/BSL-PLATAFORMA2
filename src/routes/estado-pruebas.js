@@ -9,7 +9,7 @@ router.get('/:ordenId', async (req, res) => {
 
         // Obtener información de la orden (exámenes requeridos)
         const ordenResult = await pool.query(
-            'SELECT "examenes", "numeroId" FROM "HistoriaClinica" WHERE "_id" = $1',
+            'SELECT "examenes", "numeroId", "codEmpresa" FROM "HistoriaClinica" WHERE "_id" = $1',
             [ordenId]
         );
 
@@ -59,11 +59,20 @@ router.get('/:ordenId', async (req, res) => {
         );
         const tieneVisiometria = visioResult.rows.length > 0 || visioVirtualResult.rows.length > 0;
 
+        // Verificar SCL-90
+        const scl90Result = await pool.query(
+            'SELECT id FROM scl90 WHERE orden_id = $1',
+            [ordenId]
+        );
+        const tieneScl90 = scl90Result.rows.length > 0;
+
         // Determinar qué pruebas son requeridas según el campo exámenes
         const examLower = examenesRequeridos.toLowerCase();
         const requiereAudiometria = examLower.includes('audiometr');
         const requiereVisiometria = examLower.includes('visiometr') || examLower.includes('optometr');
         const requiereADC = true; // Siempre se requiere ADC para todos
+        const codEmpresa = orden.codEmpresa || '';
+        const requiereScl90 = examLower.includes('scl') || codEmpresa === 'SIIGO';
 
         res.json({
             success: true,
@@ -85,6 +94,10 @@ router.get('/:ordenId', async (req, res) => {
                     adc: {
                         completado: tieneADC,
                         requerido: requiereADC
+                    },
+                    scl90: {
+                        completado: tieneScl90,
+                        requerido: requiereScl90
                     }
                 }
             }
