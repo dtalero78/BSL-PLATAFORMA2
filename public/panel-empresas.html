@@ -4792,6 +4792,11 @@
                 return;
             }
 
+            if (examenesSeleccionadosModal.length === 0) {
+                mostrarAlertaModal('Debe seleccionar al menos un examen médico');
+                return;
+            }
+
             if (!fechaAtencion || !horaAtencion) {
                 mostrarAlertaModal('Debe seleccionar fecha y hora de atención');
                 return;
