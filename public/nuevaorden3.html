@@ -959,6 +959,11 @@
             // Capitalizar el nombre de la empresa
             empresaNombre = empresaNombre.charAt(0).toUpperCase() + empresaNombre.slice(1).toLowerCase();
 
+            // Mantener en mayúsculas para empresas que lo requieran
+            if (empresaNombre.toUpperCase() === 'SOFTSERVE') {
+                empresaNombre = 'SOFTSERVE';
+            }
+
             // Pre-seleccionar Telemedicina automáticamente
             document.getElementById('tipoConsulta').value = 'Telemedicina';
 
