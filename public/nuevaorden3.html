@@ -999,6 +999,84 @@
             if (examenesSlide) {
                 examenesSlide.style.display = 'none';
             }
+
+            // Configuración específica para SOFTSERVE: ciudades personalizadas por departamento
+            const empresaRef = refUpper
+                .replace('PERIODICO', '')
+                .replace('EGRESO', '')
+                .replace('INGRESO', '')
+                .trim();
+
+            if (empresaRef === 'SOFTSERVE') {
+                const ciudadSelect = document.getElementById('ciudad');
+                ciudadSelect.innerHTML = `
+                    <option value="">Seleccionar ciudad...</option>
+                    <optgroup label="Antioquia">
+                        <option value="Bello">Bello</option>
+                        <option value="Caldas">Caldas</option>
+                        <option value="El Carmen de Viboral">El Carmen de Viboral</option>
+                        <option value="Envigado">Envigado</option>
+                        <option value="Itaguí">Itaguí</option>
+                        <option value="La Ceja">La Ceja</option>
+                        <option value="La Estrella">La Estrella</option>
+                        <option value="Marinilla">Marinilla</option>
+                        <option value="Medellín">Medellín</option>
+                        <option value="Rionegro">Rionegro</option>
+                        <option value="Sabaneta">Sabaneta</option>
+                    </optgroup>
+                    <optgroup label="Atlántico">
+                        <option value="Barranquilla">Barranquilla</option>
+                    </optgroup>
+                    <optgroup label="Bolívar">
+                        <option value="Cartagena">Cartagena</option>
+                    </optgroup>
+                    <optgroup label="Boyacá">
+                        <option value="Tunja">Tunja</option>
+                        <option value="Úmbita">Úmbita</option>
+                        <option value="Villa de Leyva">Villa de Leyva</option>
+                    </optgroup>
+                    <optgroup label="Caldas">
+                        <option value="Manizales">Manizales</option>
+                    </optgroup>
+                    <optgroup label="Cauca">
+                        <option value="Popayán">Popayán</option>
+                    </optgroup>
+                    <optgroup label="Cundinamarca">
+                        <option value="Bogotá">Bogotá</option>
+                        <option value="Cajicá">Cajicá</option>
+                        <option value="Chía">Chía</option>
+                        <option value="Cota">Cota</option>
+                        <option value="Guaduas">Guaduas</option>
+                        <option value="Tenjo">Tenjo</option>
+                    </optgroup>
+                    <optgroup label="Huila">
+                        <option value="Neiva">Neiva</option>
+                    </optgroup>
+                    <optgroup label="Norte de Santander">
+                        <option value="Cúcuta">Cúcuta</option>
+                    </optgroup>
+                    <optgroup label="Quindío">
+                        <option value="Armenia">Armenia</option>
+                    </optgroup>
+                    <optgroup label="Risaralda">
+                        <option value="Apía">Apía</option>
+                        <option value="Dosquebradas">Dosquebradas</option>
+                        <option value="Pereira">Pereira</option>
+                    </optgroup>
+                    <optgroup label="Santander">
+                        <option value="Bucaramanga">Bucaramanga</option>
+                    </optgroup>
+                    <optgroup label="Tolima">
+                        <option value="Ibagué">Ibagué</option>
+                    </optgroup>
+                    <optgroup label="Valle del Cauca">
+                        <option value="Cali">Cali</option>
+                        <option value="Jamundí">Jamundí</option>
+                        <option value="Palmira">Palmira</option>
+                        <option value="Tuluá">Tuluá</option>
+                    </optgroup>
+                `;
+            }
         }
 
         // Cargar meses disponibles
