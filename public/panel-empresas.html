@@ -4031,6 +4031,13 @@
                         ...(p.scl90 && p.scl90.requerido ? [{ numero: 5, nombre: 'SCL-90', key: 'scl90' }] : [])
                     ];
 
+                    // Si es SIIGO, quitar Pruebas ADC (usan SCL-90 en su lugar)
+                    const esSIIGO = paciente.codEmpresa === 'SIIGO';
+                    if (esSIIGO) {
+                        ordenPruebas = ordenPruebas.filter(prueba => prueba.key !== 'adc');
+                        ordenPruebas = ordenPruebas.map((prueba, index) => ({ ...prueba, numero: index + 1 }));
+                    }
+
                     // Si es KM2, quitar Pruebas ADC del orden y agregar Psicológica si no tiene audiometría
                     if (esKM2) {
                         ordenPruebas = ordenPruebas.filter(prueba => prueba.key !== 'adc');

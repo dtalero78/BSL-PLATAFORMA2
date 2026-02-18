@@ -70,8 +70,8 @@ router.get('/:ordenId', async (req, res) => {
         const examLower = examenesRequeridos.toLowerCase();
         const requiereAudiometria = examLower.includes('audiometr');
         const requiereVisiometria = examLower.includes('visiometr') || examLower.includes('optometr');
-        const requiereADC = true; // Siempre se requiere ADC para todos
         const codEmpresa = orden.codEmpresa || '';
+        const requiereADC = codEmpresa !== 'SIIGO'; // SIIGO usa SCL-90 en lugar de ADC
         const requiereScl90 = examLower.includes('scl') || codEmpresa === 'SIIGO';
 
         res.json({
