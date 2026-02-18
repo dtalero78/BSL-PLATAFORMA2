@@ -681,8 +681,9 @@ router.post('/previsualizar-csv', upload.single('archivo'), async (req, res) => 
         console.log('PREVISUALIZACION CSV DE ORDENES');
         console.log('===================================================================');
 
-        // Parsear CSV desde buffer
-        const csvContent = req.file.buffer.toString('utf-8');
+        // Parsear CSV desde buffer - strip BOM
+        let csvContent = req.file.buffer.toString('utf-8');
+        if (csvContent.charCodeAt(0) === 0xFEFF) csvContent = csvContent.slice(1);
         const lines = csvContent.split('\n').filter(line => line.trim());
 
         if (lines.length < 2) {
@@ -692,8 +693,37 @@ router.post('/previsualizar-csv', upload.single('archivo'), async (req, res) => 
             });
         }
 
+        // Auto-detect delimiter (comma, semicolon, or tab)
+        const firstLine = lines[0];
+        const semicolonCount = (firstLine.match(/;/g) || []).length;
+        const commaCount = (firstLine.match(/,/g) || []).length;
+        const tabCount = (firstLine.match(/\t/g) || []).length;
+        let delimiter = ',';
+        if (semicolonCount > commaCount && semicolonCount > tabCount) delimiter = ';';
+        else if (tabCount > commaCount && tabCount > semicolonCount) delimiter = '\t';
+        console.log('Delimitador detectado:', delimiter === ',' ? 'coma' : delimiter === ';' ? 'punto y coma' : 'tab');
+
         // Obtener encabezados (primera línea) y normalizarlos
-        const headersRaw = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        const headersRaw = firstLine.split(delimiter).map(h => h.trim().replace(/"/g, ''));
+
+        // Helper: normalizar string para matching (sin acentos, minúsculas, sin espacios extra)
+        const normalizarH = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[_\s]+/g, ' ').trim();
+
+        // Helper: convertir hora AM/PM a formato 24h
+        const convertirHora24 = (hora) => {
+            if (!hora) return null;
+            hora = hora.trim();
+            const match = hora.match(/^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm|a\.?\s*m\.?|p\.?\s*m\.?)$/i);
+            if (match) {
+                let h = parseInt(match[1]);
+                const m = match[2];
+                const period = match[3].replace(/[\.\s]/g, '').toUpperCase();
+                if (period === 'PM' && h < 12) h += 12;
+                if (period === 'AM' && h === 12) h = 0;
+                return `${h.toString().padStart(2, '0')}:${m}`;
+            }
+            return hora;
+        };
 
         // Mapeo de nombres alternativos a nombres estándar
         const headerMapping = {
@@ -734,8 +764,47 @@ router.post('/previsualizar-csv', upload.single('archivo'), async (req, res) => 
             'MÉDICO': 'medico'
         };
 
-        // Normalizar headers
-        const headers = headersRaw.map(h => headerMapping[h] || h);
+        // Crear mapeo normalizado (sin acentos, minúsculas) para matching flexible
+        const mappingNormalizado = {};
+        for (const [key, value] of Object.entries(headerMapping)) {
+            mappingNormalizado[normalizarH(key)] = value;
+        }
+        // Agregar nombres estándar de campos al mapeo normalizado
+        ['fechaAtencion', 'horaAtencion', 'primerNombre', 'segundoNombre',
+         'primerApellido', 'segundoApellido', 'numeroId', 'tipoExamen',
+         'codEmpresa', 'celular', 'cargo', 'ciudad', 'empresa', 'medico',
+         'correo', 'direccion', 'examenes', 'atendido', 'tipoId'].forEach(f => {
+            mappingNormalizado[normalizarH(f)] = f;
+        });
+        // Agregar variaciones adicionales comunes
+        mappingNormalizado['fecha atencion'] = 'fechaAtencion';
+        mappingNormalizado['hora atencion'] = 'horaAtencion';
+        mappingNormalizado['fecha'] = 'fechaAtencion';
+        mappingNormalizado['hora'] = 'horaAtencion';
+        mappingNormalizado['tipo examen'] = 'tipoExamen';
+        mappingNormalizado['tipo de examen'] = 'tipoExamen';
+        mappingNormalizado['cod empresa'] = 'codEmpresa';
+        mappingNormalizado['codigo empresa'] = 'codEmpresa';
+        mappingNormalizado['numero id'] = 'numeroId';
+        mappingNormalizado['numero de documento'] = 'numeroId';
+        mappingNormalizado['numero de contacto'] = 'celular';
+        mappingNormalizado['correo electronico'] = 'correo';
+        mappingNormalizado['nombre'] = 'primerNombre';
+        mappingNormalizado['nombres'] = 'primerNombre';
+        mappingNormalizado['apellido'] = 'primerApellido';
+        mappingNormalizado['apellidos'] = 'primerApellido';
+        mappingNormalizado['observacion'] = 'examenes';
+        mappingNormalizado['rol'] = 'cargo';
+        mappingNormalizado['documento'] = 'numeroId';
+
+        // Normalizar headers con matching flexible (primero exacto, luego normalizado)
+        const headers = headersRaw.map(h => {
+            if (headerMapping[h]) return headerMapping[h];
+            const n = normalizarH(h);
+            if (mappingNormalizado[n]) return mappingNormalizado[n];
+            return h;
+        });
+        console.log('Encabezados originales:', headersRaw);
         console.log('Encabezados normalizados:', headers);
 
         // Campos requeridos
@@ -758,8 +827,8 @@ router.post('/previsualizar-csv', upload.single('archivo'), async (req, res) => 
             if (!line) continue;
 
             try {
-                // Parsear línea CSV
-                const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+                // Parsear línea CSV usando delimitador detectado
+                const values = line.split(delimiter).map(v => v.trim().replace(/^"|"$/g, ''));
 
                 // Crear objeto con los valores
                 const row = {};
@@ -789,24 +858,30 @@ router.post('/previsualizar-csv', upload.single('archivo'), async (req, res) => 
                 if (row.fechaAtencion) {
                     let fechaNormalizada = row.fechaAtencion.trim();
 
-                    if (fechaNormalizada.includes('/')) {
-                        const partes = fechaNormalizada.split('/');
-                        if (partes.length === 3) {
-                            const primero = parseInt(partes[0]);
-                            const segundo = parseInt(partes[1]);
-                            const anio = partes[2];
+                    // Manejar separadores: /, -, .
+                    const separadorMatch = fechaNormalizada.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/);
+                    if (separadorMatch) {
+                        const primero = parseInt(separadorMatch[1]);
+                        const segundo = parseInt(separadorMatch[2]);
+                        let anio = separadorMatch[3];
+                        // Año de 2 dígitos -> 4 dígitos
+                        if (anio.length === 2) anio = (parseInt(anio) > 50 ? '19' : '20') + anio;
 
-                            if (segundo > 12) {
-                                fechaNormalizada = `${anio}-${partes[0].padStart(2, '0')}-${partes[1].padStart(2, '0')}`;
-                            } else if (primero > 12) {
-                                fechaNormalizada = `${anio}-${partes[1].padStart(2, '0')}-${partes[0].padStart(2, '0')}`;
-                            } else {
-                                fechaNormalizada = `${anio}-${partes[0].padStart(2, '0')}-${partes[1].padStart(2, '0')}`;
-                            }
+                        if (segundo > 12) {
+                            fechaNormalizada = `${anio}-${separadorMatch[1].padStart(2, '0')}-${separadorMatch[2].padStart(2, '0')}`;
+                        } else if (primero > 12) {
+                            fechaNormalizada = `${anio}-${separadorMatch[2].padStart(2, '0')}-${separadorMatch[1].padStart(2, '0')}`;
+                        } else {
+                            fechaNormalizada = `${anio}-${separadorMatch[1].padStart(2, '0')}-${separadorMatch[2].padStart(2, '0')}`;
                         }
+                    } else if (/^\d{4}-\d{2}-\d{2}$/.test(fechaNormalizada)) {
+                        // Ya está en formato YYYY-MM-DD, no hacer nada
                     }
                     fechaFormateada = fechaNormalizada;
                 }
+
+                // Convertir hora AM/PM a 24h
+                const horaConvertida = convertirHora24(row.horaAtencion) || '08:00';
 
                 registros.push({
                     fila: i + 1,
@@ -821,7 +896,7 @@ router.post('/previsualizar-csv', upload.single('archivo'), async (req, res) => 
                     cargo: row.cargo,
                     ciudad: row.ciudad,
                     fechaAtencion: fechaFormateada,
-                    horaAtencion: row.horaAtencion || '08:00',
+                    horaAtencion: horaConvertida,
                     empresa: row.empresa || row.codEmpresa,
                     tipoExamen: row.tipoExamen,
                     medico: row.medico,
@@ -885,10 +960,21 @@ router.post('/importar-desde-preview', async (req, res) => {
                 // Generar ID único para la orden
                 const ordenId = `orden_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-                // Parsear fecha de atención
+                // Parsear fecha de atención (convertir AM/PM por si el usuario editó en el preview)
                 let fechaAtencionParsed = null;
-                if (registro.fechaAtencion && registro.horaAtencion) {
-                    const fechaObj = construirFechaAtencionColombia(registro.fechaAtencion, registro.horaAtencion);
+                if (registro.fechaAtencion) {
+                    let hora = registro.horaAtencion || '08:00';
+                    // Convertir hora AM/PM a 24h
+                    const ampmMatch = hora.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm|a\.?\s*m\.?|p\.?\s*m\.?)$/i);
+                    if (ampmMatch) {
+                        let h = parseInt(ampmMatch[1]);
+                        const m = ampmMatch[2];
+                        const period = ampmMatch[3].replace(/[\.\s]/g, '').toUpperCase();
+                        if (period === 'PM' && h < 12) h += 12;
+                        if (period === 'AM' && h === 12) h = 0;
+                        hora = `${h.toString().padStart(2, '0')}:${m}`;
+                    }
+                    const fechaObj = construirFechaAtencionColombia(registro.fechaAtencion, hora);
                     if (fechaObj) {
                         fechaAtencionParsed = fechaObj;
                     }
@@ -1091,8 +1177,9 @@ router.post('/importar-csv', upload.single('archivo'), async (req, res) => {
             ordenesCreadas: []
         };
 
-        // Parsear CSV desde buffer
-        const csvContent = req.file.buffer.toString('utf-8');
+        // Parsear CSV desde buffer - strip BOM
+        let csvContent = req.file.buffer.toString('utf-8');
+        if (csvContent.charCodeAt(0) === 0xFEFF) csvContent = csvContent.slice(1);
         const lines = csvContent.split('\n').filter(line => line.trim());
 
         if (lines.length < 2) {
@@ -1102,8 +1189,37 @@ router.post('/importar-csv', upload.single('archivo'), async (req, res) => {
             });
         }
 
+        // Auto-detect delimiter (comma, semicolon, or tab)
+        const firstLine = lines[0];
+        const semicolonCount = (firstLine.match(/;/g) || []).length;
+        const commaCount = (firstLine.match(/,/g) || []).length;
+        const tabCount = (firstLine.match(/\t/g) || []).length;
+        let delimiter = ',';
+        if (semicolonCount > commaCount && semicolonCount > tabCount) delimiter = ';';
+        else if (tabCount > commaCount && tabCount > semicolonCount) delimiter = '\t';
+        console.log('Delimitador detectado:', delimiter === ',' ? 'coma' : delimiter === ';' ? 'punto y coma' : 'tab');
+
         // Obtener encabezados (primera línea) y normalizarlos
-        const headersRaw = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        const headersRaw = firstLine.split(delimiter).map(h => h.trim().replace(/"/g, ''));
+
+        // Helper: normalizar string para matching (sin acentos, minúsculas)
+        const normalizarH = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[_\s]+/g, ' ').trim();
+
+        // Helper: convertir hora AM/PM a formato 24h
+        const convertirHora24 = (hora) => {
+            if (!hora) return null;
+            hora = hora.trim();
+            const match = hora.match(/^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm|a\.?\s*m\.?|p\.?\s*m\.?)$/i);
+            if (match) {
+                let h = parseInt(match[1]);
+                const m = match[2];
+                const period = match[3].replace(/[\.\s]/g, '').toUpperCase();
+                if (period === 'PM' && h < 12) h += 12;
+                if (period === 'AM' && h === 12) h = 0;
+                return `${h.toString().padStart(2, '0')}:${m}`;
+            }
+            return hora;
+        };
 
         // Mapeo de nombres alternativos a nombres estándar
         const headerMapping = {
@@ -1144,8 +1260,44 @@ router.post('/importar-csv', upload.single('archivo'), async (req, res) => {
             'MÉDICO': 'medico'
         };
 
-        // Normalizar headers
-        const headers = headersRaw.map(h => headerMapping[h] || h);
+        // Crear mapeo normalizado para matching flexible
+        const mappingNormalizado = {};
+        for (const [key, value] of Object.entries(headerMapping)) {
+            mappingNormalizado[normalizarH(key)] = value;
+        }
+        ['fechaAtencion', 'horaAtencion', 'primerNombre', 'segundoNombre',
+         'primerApellido', 'segundoApellido', 'numeroId', 'tipoExamen',
+         'codEmpresa', 'celular', 'cargo', 'ciudad', 'empresa', 'medico',
+         'correo', 'direccion', 'examenes', 'atendido', 'tipoId'].forEach(f => {
+            mappingNormalizado[normalizarH(f)] = f;
+        });
+        mappingNormalizado['fecha atencion'] = 'fechaAtencion';
+        mappingNormalizado['hora atencion'] = 'horaAtencion';
+        mappingNormalizado['fecha'] = 'fechaAtencion';
+        mappingNormalizado['hora'] = 'horaAtencion';
+        mappingNormalizado['tipo examen'] = 'tipoExamen';
+        mappingNormalizado['tipo de examen'] = 'tipoExamen';
+        mappingNormalizado['cod empresa'] = 'codEmpresa';
+        mappingNormalizado['codigo empresa'] = 'codEmpresa';
+        mappingNormalizado['numero id'] = 'numeroId';
+        mappingNormalizado['numero de documento'] = 'numeroId';
+        mappingNormalizado['numero de contacto'] = 'celular';
+        mappingNormalizado['correo electronico'] = 'correo';
+        mappingNormalizado['nombre'] = 'primerNombre';
+        mappingNormalizado['nombres'] = 'primerNombre';
+        mappingNormalizado['apellido'] = 'primerApellido';
+        mappingNormalizado['apellidos'] = 'primerApellido';
+        mappingNormalizado['observacion'] = 'examenes';
+        mappingNormalizado['rol'] = 'cargo';
+        mappingNormalizado['documento'] = 'numeroId';
+
+        // Normalizar headers con matching flexible
+        const headers = headersRaw.map(h => {
+            if (headerMapping[h]) return headerMapping[h];
+            const n = normalizarH(h);
+            if (mappingNormalizado[n]) return mappingNormalizado[n];
+            return h;
+        });
         console.log('Encabezados originales:', headersRaw);
         console.log('Encabezados normalizados:', headers);
 
@@ -1166,8 +1318,8 @@ router.post('/importar-csv', upload.single('archivo'), async (req, res) => {
             if (!line) continue;
 
             try {
-                // Parsear línea CSV (split simple por coma, luego limpiar comillas)
-                const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+                // Parsear línea CSV usando delimitador detectado
+                const values = line.split(delimiter).map(v => v.trim().replace(/^"|"$/g, ''));
 
                 // Crear objeto con los valores
                 const row = {};
@@ -1199,32 +1351,26 @@ router.post('/importar-csv', upload.single('archivo'), async (req, res) => {
                 if (row.fechaAtencion) {
                     let fechaNormalizada = row.fechaAtencion.trim();
 
-                    if (fechaNormalizada.includes('/')) {
-                        // Formato con barras: MM/DD/YYYY o DD/MM/YYYY
-                        const partes = fechaNormalizada.split('/');
-                        if (partes.length === 3) {
-                            const primero = parseInt(partes[0]);
-                            const segundo = parseInt(partes[1]);
-                            const anio = partes[2];
+                    // Manejar separadores: /, -, .
+                    const separadorMatch = fechaNormalizada.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/);
+                    if (separadorMatch) {
+                        const primero = parseInt(separadorMatch[1]);
+                        const segundo = parseInt(separadorMatch[2]);
+                        let anio = separadorMatch[3];
+                        if (anio.length === 2) anio = (parseInt(anio) > 50 ? '19' : '20') + anio;
 
-                            // Detectar formato: si el segundo número es > 12, es MM/DD/YYYY
-                            // Si el primero es > 12, es DD/MM/YYYY
-                            if (segundo > 12) {
-                                // Formato MM/DD/YYYY (ej: 12/23/2025)
-                                fechaNormalizada = `${anio}-${partes[0].padStart(2, '0')}-${partes[1].padStart(2, '0')}`;
-                            } else if (primero > 12) {
-                                // Formato DD/MM/YYYY (ej: 23/12/2025)
-                                fechaNormalizada = `${anio}-${partes[1].padStart(2, '0')}-${partes[0].padStart(2, '0')}`;
-                            } else {
-                                // Ambiguo (ej: 12/10/2025) - asumir MM/DD/YYYY por defecto
-                                fechaNormalizada = `${anio}-${partes[0].padStart(2, '0')}-${partes[1].padStart(2, '0')}`;
-                            }
-                            console.log(`   Fecha convertida: ${row.fechaAtencion} -> ${fechaNormalizada}`);
+                        if (segundo > 12) {
+                            fechaNormalizada = `${anio}-${separadorMatch[1].padStart(2, '0')}-${separadorMatch[2].padStart(2, '0')}`;
+                        } else if (primero > 12) {
+                            fechaNormalizada = `${anio}-${separadorMatch[2].padStart(2, '0')}-${separadorMatch[1].padStart(2, '0')}`;
+                        } else {
+                            fechaNormalizada = `${anio}-${separadorMatch[1].padStart(2, '0')}-${separadorMatch[2].padStart(2, '0')}`;
                         }
+                        console.log(`   Fecha convertida: ${row.fechaAtencion} -> ${fechaNormalizada}`);
                     }
 
-                    // Usar horaAtencion del CSV o default 08:00
-                    const horaAtencion = row.horaAtencion || '08:00';
+                    // Convertir hora AM/PM a 24h
+                    const horaAtencion = convertirHora24(row.horaAtencion) || '08:00';
 
                     // Usar la función helper para construir la fecha con zona horaria Colombia
                     const fechaObj = construirFechaAtencionColombia(fechaNormalizada, horaAtencion);
