@@ -103,6 +103,7 @@ src/
     nubia.js            - /api/nubia/* - Virtual appointments
     audiometria.js      - /api/audiometrias/* - Hearing tests
     pruebas-adc.js      - /api/pruebas-adc/* - ADC tests
+    scl90.js            - /api/scl90/* - SCL-90 psychological test
     estado-pruebas.js   - /api/estado-pruebas/* - Test status
     consulta-publica.js - /api/consulta-ordenes - Public lookups
     visiometria.js      - /api/visiometrias/* - Vision tests
@@ -133,6 +134,7 @@ Multiple HTML pages with vanilla JavaScript (no framework):
 - `index.html` - Patient intake form (multi-step wizard)
 - `audiometria.html`, `audiometria-virtual.html` - Audiometry exam interfaces
 - `visiometria.html` - Vision exam interface
+- `scl90.html` - SCL-90 psychological symptom test (SIIGO only)
 - `medicos.html` - Medical staff management
 - `calendario.html` - Appointment scheduling interface
 - `consulta-orden.html` - Public order lookup
@@ -239,6 +241,7 @@ All tables are created automatically on server startup with `CREATE TABLE IF NOT
 - **visiometrias**: Vision test results → `VisiometriasRepository`
 - **visiometrias_virtual**: Virtual vision test results
 - **pruebasADC**: ADC (Atención Domiciliaria Continuada) test data
+- **scl90**: SCL-90 psychological symptom test (items 1-90, resultado/interpretacion/baremos as JSONB). Required for SIIGO instead of ADC. Auto-scored with Colombian baremos by gender.
 - **laboratorios**: Laboratory test results
 - **medicos_disponibilidad**: Doctor availability/scheduling → `MedicosRepository`
 - **empresas**: Company records → `EmpresasRepository`
