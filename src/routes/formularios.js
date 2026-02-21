@@ -901,9 +901,15 @@ router.post('/actualizar-foto', async (req, res) => {
             return res.status(500).json({ success: false, message: 'Error al subir la foto' });
         }
 
-        // Actualizar foto_url en formularios
-        const formulario = await FormulariosRepository.findUltimoPorNumeroId(numeroId);
+        // Buscar en HistoriaClinica para obtener el _id (wix_id)
+        const hc = await HistoriaClinicaRepository.findByNumeroId(numeroId);
         let actualizado = false;
+
+        // Actualizar foto_url en formularios (buscar por numero_id O por wix_id)
+        let formulario = await FormulariosRepository.findUltimoPorNumeroId(numeroId);
+        if (!formulario && hc) {
+            formulario = await FormulariosRepository.findByWixId(hc._id);
+        }
 
         if (formulario) {
             await FormulariosRepository.actualizarFotoUrl(formulario.id, fotoUrl);
@@ -912,7 +918,6 @@ router.post('/actualizar-foto', async (req, res) => {
         }
 
         // Actualizar foto_url en HistoriaClinica
-        const hc = await HistoriaClinicaRepository.findByNumeroId(numeroId);
         if (hc) {
             await HistoriaClinicaRepository.update(hc._id, { foto_url: fotoUrl });
             actualizado = true;
