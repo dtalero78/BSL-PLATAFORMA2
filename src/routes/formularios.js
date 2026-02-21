@@ -834,4 +834,101 @@ router.delete('/formularios/:id', async (req, res) => {
     }
 });
 
+// Buscar paciente por numero de identificacion (para actualizar-foto.html)
+router.get('/buscar-paciente/:numeroId', async (req, res) => {
+    try {
+        const { numeroId } = req.params;
+
+        if (!numeroId) {
+            return res.status(400).json({ success: false, message: 'Numero de identificacion requerido' });
+        }
+
+        // Buscar en formularios primero
+        const formulario = await FormulariosRepository.findUltimoPorNumeroId(numeroId);
+
+        if (formulario) {
+            return res.json({
+                success: true,
+                data: {
+                    numero_id: formulario.numero_id,
+                    nombre: [formulario.primer_nombre, formulario.primer_apellido].filter(Boolean).join(' '),
+                    fuente: 'formularios',
+                    formulario_id: formulario.id
+                }
+            });
+        }
+
+        // Fallback: buscar en HistoriaClinica
+        const hc = await HistoriaClinicaRepository.findByNumeroId(numeroId);
+
+        if (hc) {
+            return res.json({
+                success: true,
+                data: {
+                    numero_id: hc.numeroId,
+                    nombre: [hc.primerNombre, hc.primerApellido].filter(Boolean).join(' '),
+                    fuente: 'historia_clinica',
+                    hc_id: hc._id
+                }
+            });
+        }
+
+        res.json({ success: false, message: 'No se encontro el paciente' });
+
+    } catch (error) {
+        console.error('❌ Error buscando paciente:', error);
+        res.status(500).json({ success: false, message: 'Error al buscar paciente' });
+    }
+});
+
+// Actualizar foto de un paciente (para actualizar-foto.html)
+router.post('/actualizar-foto', async (req, res) => {
+    try {
+        const { numeroId, foto } = req.body;
+
+        if (!numeroId || !foto) {
+            return res.status(400).json({ success: false, message: 'Se requiere numeroId y foto' });
+        }
+
+        if (!foto.startsWith('data:image')) {
+            return res.status(400).json({ success: false, message: 'Formato de imagen invalido' });
+        }
+
+        // Subir foto a DigitalOcean Spaces
+        const fotoUrl = await subirFotoASpaces(foto, numeroId, 'update');
+
+        if (!fotoUrl) {
+            return res.status(500).json({ success: false, message: 'Error al subir la foto' });
+        }
+
+        // Actualizar foto_url en formularios
+        const formulario = await FormulariosRepository.findUltimoPorNumeroId(numeroId);
+        let actualizado = false;
+
+        if (formulario) {
+            await FormulariosRepository.actualizarFotoUrl(formulario.id, fotoUrl);
+            actualizado = true;
+            console.log('✅ Foto actualizada en formularios para:', numeroId);
+        }
+
+        // Actualizar foto en HistoriaClinica
+        const hc = await HistoriaClinicaRepository.findByNumeroId(numeroId);
+        if (hc) {
+            await HistoriaClinicaRepository.update(hc._id, { foto: fotoUrl });
+            actualizado = true;
+            console.log('✅ Foto actualizada en HistoriaClinica para:', numeroId);
+        }
+
+        if (!actualizado) {
+            return res.status(404).json({ success: false, message: 'No se encontro registro del paciente' });
+        }
+
+        res.json({ success: true, message: 'Foto actualizada correctamente', fotoUrl });
+
+    } catch (error) {
+        console.error('❌ Error actualizando foto:', error);
+        res.status(500).json({ success: false, message: 'Error al actualizar la foto' });
+    }
+});
+
 module.exports = router;
