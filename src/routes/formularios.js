@@ -903,13 +903,25 @@ router.post('/actualizar-foto', async (req, res) => {
 
         // Actualizar foto_url en formularios
         const formulario = await FormulariosRepository.findUltimoPorNumeroId(numeroId);
+        let actualizado = false;
 
-        if (!formulario) {
-            return res.status(404).json({ success: false, message: 'No se encontro registro del paciente' });
+        if (formulario) {
+            await FormulariosRepository.actualizarFotoUrl(formulario.id, fotoUrl);
+            actualizado = true;
+            console.log('✅ Foto actualizada en formularios para:', numeroId);
         }
 
-        await FormulariosRepository.actualizarFotoUrl(formulario.id, fotoUrl);
-        console.log('✅ Foto actualizada en formularios para:', numeroId);
+        // Actualizar foto_url en HistoriaClinica
+        const hc = await HistoriaClinicaRepository.findByNumeroId(numeroId);
+        if (hc) {
+            await HistoriaClinicaRepository.update(hc._id, { foto_url: fotoUrl });
+            actualizado = true;
+            console.log('✅ Foto actualizada en HistoriaClinica para:', numeroId);
+        }
+
+        if (!actualizado) {
+            return res.status(404).json({ success: false, message: 'No se encontro registro del paciente' });
+        }
 
         res.json({ success: true, message: 'Foto actualizada correctamente', fotoUrl });
 
