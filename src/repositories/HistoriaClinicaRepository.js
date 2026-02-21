@@ -44,11 +44,12 @@ class HistoriaClinicaRepository extends BaseRepository {
                    h."_createdDate", h."_updatedDate", h."fechaConsulta", h."aprobacion",
                    h."mdConceptoFinal", h."mdRecomendacionesMedicasAdicionales",
                    h."mdObservacionesCertificado", h."mdObsParaMiDocYa", h."centro_de_costo",
-                   (
-                       SELECT foto_url FROM formularios
-                       WHERE (wix_id = h."_id" OR numero_id = h."numeroId")
-                       AND foto_url IS NOT NULL
-                       ORDER BY fecha_registro DESC LIMIT 1
+                   COALESCE(
+                       (SELECT foto_url FROM formularios
+                        WHERE (wix_id = h."_id" OR numero_id = h."numeroId")
+                        AND foto_url IS NOT NULL
+                        ORDER BY fecha_registro DESC LIMIT 1),
+                       h."foto_url"
                    ) as foto_url
             FROM ${this.tableName} h
             WHERE h."codEmpresa" = $1
@@ -426,7 +427,7 @@ class HistoriaClinicaRepository extends BaseRepository {
                    h."mdConceptoFinal", h."mdRecomendacionesMedicasAdicionales", h."mdObservacionesCertificado", h."mdObsParaMiDocYa",
                    h."pvEstado",
                    'historia' as origen,
-                   COALESCE(f_exact.foto_url, f_fallback.foto_url) as foto_url
+                   COALESCE(f_exact.foto_url, f_fallback.foto_url, h."foto_url") as foto_url
             FROM ${this.tableName} h
             LEFT JOIN formularios f_exact ON f_exact.wix_id = h."_id"
             LEFT JOIN LATERAL (
@@ -461,7 +462,7 @@ class HistoriaClinicaRepository extends BaseRepository {
                    h."fechaAtencion", h."horaAtencion",
                    h."mdConceptoFinal", h."mdRecomendacionesMedicasAdicionales", h."mdObservacionesCertificado", h."mdObsParaMiDocYa",
                    'historia' as origen,
-                   COALESCE(f_exact.foto_url, f_fallback.foto_url) as foto_url
+                   COALESCE(f_exact.foto_url, f_fallback.foto_url, h."foto_url") as foto_url
             FROM ${this.tableName} h
             LEFT JOIN formularios f_exact ON f_exact.wix_id = h."_id"
             LEFT JOIN LATERAL (
