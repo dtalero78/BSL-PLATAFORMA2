@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 const { generarHTMLCertificado, generarPDFConPuppeteer, generarPDFDesdeURL } = require('../helpers/certificate');
+const { generarHTMLHistoriaClinica } = require('../helpers/historia-clinica-html');
 
 // GET /preview-certificado/:id - Preview HTML del certificado médico
 router.get('/preview-certificado/:id', async (req, res) => {
@@ -193,6 +194,138 @@ router.get('/api/validar-certificado/:numeroId', async (req, res) => {
             success: false,
             existe: false,
             message: 'Error al validar el certificado. Por favor intente nuevamente.'
+        });
+    }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HISTORIA CLÍNICA COMPLETA (preview + PDF)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// GET /preview-historia-clinica/:id  — devuelve HTML completo
+router.get('/preview-historia-clinica/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log(`📋 Generando preview de historia clínica para: ${id}`);
+
+        // 1. Historia Clínica
+        const hcResult = await pool.query(
+            'SELECT * FROM "HistoriaClinica" WHERE "_id" = $1',
+            [id]
+        );
+        if (hcResult.rows.length === 0) {
+            return res.status(404).send('<h1>Historia clínica no encontrada</h1>');
+        }
+        const historia = hcResult.rows[0];
+
+        // 2. Formulario (datos demográficos + antecedentes + firma)
+        let formulario = null;
+        const fResult = await pool.query(`
+            SELECT * FROM formularios
+            WHERE wix_id = $1 OR numero_id = $2
+            ORDER BY fecha_registro DESC LIMIT 1
+        `, [id, historia.numeroId]);
+        if (fResult.rows.length > 0) formulario = fResult.rows[0];
+
+        // 3. Audiometría
+        let audiometria = null;
+        const audioResult = await pool.query(
+            'SELECT * FROM audiometrias WHERE orden_id = $1 LIMIT 1', [id]
+        );
+        if (audioResult.rows.length > 0) audiometria = audioResult.rows[0];
+
+        // 4. Visiometría (presencial primero, luego virtual)
+        let visiometria = null;
+        const visioResult = await pool.query(
+            'SELECT * FROM visiometrias WHERE orden_id = $1 LIMIT 1', [id]
+        );
+        if (visioResult.rows.length > 0) {
+            visiometria = visioResult.rows[0];
+        } else {
+            const visioVirtResult = await pool.query(
+                'SELECT * FROM visiometrias_virtual WHERE orden_id = $1 LIMIT 1', [id]
+            );
+            if (visioVirtResult.rows.length > 0) visiometria = visioVirtResult.rows[0];
+        }
+
+        // 5. Laboratorios
+        let laboratorios = [];
+        const labResult = await pool.query(
+            'SELECT * FROM laboratorios WHERE orden_id = $1 ORDER BY created_at ASC', [id]
+        );
+        if (labResult.rows.length > 0) laboratorios = labResult.rows;
+
+        // 6. Prueba ADC
+        let adc = null;
+        const adcResult = await pool.query(
+            'SELECT * FROM "pruebasADC" WHERE orden_id = $1 LIMIT 1', [id]
+        );
+        if (adcResult.rows.length > 0) adc = adcResult.rows[0];
+
+        // 7. SCL-90
+        let scl90 = null;
+        const sclResult = await pool.query(
+            'SELECT * FROM scl90 WHERE orden_id = $1 LIMIT 1', [id]
+        );
+        if (sclResult.rows.length > 0) scl90 = sclResult.rows[0];
+
+        const html = generarHTMLHistoriaClinica({
+            historia,
+            formulario,
+            audiometria,
+            visiometria,
+            laboratorios,
+            adc,
+            scl90
+        });
+
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.send(html);
+
+    } catch (error) {
+        console.error('❌ Error generando preview de historia clínica:', error);
+        res.status(500).send('<h1>Error generando historia clínica</h1><p>' + error.message + '</p>');
+    }
+});
+
+// GET /api/historia-clinica-pdf/:id  — genera y descarga el PDF
+router.get('/api/historia-clinica-pdf/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log(`📄 Generando PDF de historia clínica para: ${id}`);
+
+        // Verificar que la orden existe
+        const hcCheck = await pool.query(
+            'SELECT "numeroId" FROM "HistoriaClinica" WHERE "_id" = $1', [id]
+        );
+        if (hcCheck.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Historia clínica no encontrada' });
+        }
+        const numeroId = hcCheck.rows[0].numeroId;
+
+        // Construir URL del preview
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+        const host = req.headers['x-forwarded-host'] || req.headers.host;
+        const previewUrl = `${protocol}://${host}/preview-historia-clinica/${id}`;
+        console.log('📍 Preview URL:', previewUrl);
+
+        const pdfBuffer = await generarPDFDesdeURL(previewUrl);
+
+        const nombreArchivo = `historia_clinica_${numeroId || id}_${Date.now()}.pdf`;
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivo}"`);
+        res.setHeader('Content-Length', pdfBuffer.length);
+        res.send(pdfBuffer);
+
+        console.log(`✅ PDF historia clínica enviado: ${nombreArchivo} (${(pdfBuffer.length / 1024).toFixed(1)} KB)`);
+
+    } catch (error) {
+        console.error('❌ Error generando PDF de historia clínica:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error generando el PDF de la historia clínica',
+            error: error.message
         });
     }
 });

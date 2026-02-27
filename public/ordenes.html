@@ -2416,6 +2416,7 @@
             <!-- Acciones -->
             <div class="modal-footer">
                 <a href="#" target="_blank" class="btn btn-secondary" id="btnFormularioFromModal">Formulario</a>
+                <a href="#" target="_blank" class="btn btn-secondary" id="btnImprimirHCFromModal">Imprimir HC</a>
                 <a href="#" target="_blank" class="btn btn-secondary" id="btnWhatsappFromModal">WhatsApp</a>
                 <a href="#" target="_blank" class="btn btn-secondary" id="btnDescargarFromModal">PDF</a>
                 <button class="btn btn-secondary" id="btnEditarFromModal">Editar</button>
@@ -3820,6 +3821,7 @@
 
             // Configure buttons - usar ordenIdActual capturado para evitar race conditions
             document.getElementById('btnFormularioFromModal').href = `/?_id=${ordenIdActual}`;
+            document.getElementById('btnImprimirHCFromModal').href = `/api/historia-clinica-pdf/${ordenIdActual}`;
             document.getElementById('btnWhatsappFromModal').href = `https://bsl-utilidades-yp78a.ondigitalocean.app/static/solicitar-certificado.html?id=${ordenIdActual}`;
             document.getElementById('btnDescargarFromModal').href = `https://bsl-utilidades-yp78a.ondigitalocean.app/generar-certificado-desde-wix/${ordenIdActual}`;
             document.getElementById('btnEditarFromModal').onclick = () => {
