@@ -755,7 +755,7 @@
         // Función para capitalizar (primera letra mayúscula de cada palabra)
         function capitalize(str) {
             if (!str) return str;
-            return str.trim().toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
+            return str.trim().toLowerCase().replace(/(^|\s)\S/g, char => char.toUpperCase());
         }
 
         // Buscar órdenes globalmente
