@@ -134,6 +134,7 @@ app.use('/api/empresas', require('./src/routes/empresas'));
 
 // Facturación
 app.use('/api/facturacion', require('./src/routes/facturacion'));
+app.use('/api/facturacion-empresas', require('./src/routes/facturacion-empresas'));
 
 // NUBIA
 app.use('/api', require('./src/routes/nubia'));
