@@ -329,18 +329,18 @@
                         <th>Tipo</th>
                         <th>Examenes</th>
                         <th>Fecha Consulta</th>
-                        <th>Sede</th>
                         <th>Tipo Atencion</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
                     <tr>
-                        <td colspan="16">
+                        <td colspan="15">
                             <div class="empty-state">
                                 <div class="icon">📋</div>
                                 <p>Selecciona un rango de fechas y haz clic en Buscar</p>
                             </div>
                         </td>
+
                     </tr>
                 </tbody>
             </table>
@@ -402,7 +402,7 @@
         const tbody = document.getElementById('tableBody');
 
         if (rows.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="16"><div class="empty-state"><div class="icon">📭</div><p>No se encontraron registros SITEL en este periodo</p></div></td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="15"><div class="empty-state"><div class="icon">📭</div><p>No se encontraron registros SITEL en este periodo</p></div></td></tr>`;
             return;
         }
 
@@ -422,7 +422,6 @@
                 <td><span class="badge badge-blue">${r.tipo || '—'}</span></td>
                 <td class="td-examenes">${r.examenes || '—'}</td>
                 <td>${formatFecha(r.fechaConsulta)}</td>
-                <td>${r.sede || '—'}</td>
                 <td>${r.tipo_atencion ? `<span class="badge badge-purple">${r.tipo_atencion}</span>` : '—'}</td>
             </tr>
         `).join('');
@@ -447,7 +446,7 @@
         const headers = [
             'NUMERO DE ID', 'PRIMER NOMBRE', 'SEGUNDO NOMBRE', 'PRIMER APELLIDO',
             'SEGUNDO APELLIDO', 'GENERO', 'CIUDAD CONSULTA', 'EMPRESA', 'SUB EMPRESA',
-            'CARGO', 'TIPO', 'EXAMENES', 'FECHA CONSULTA', 'SEDE', 'TIPO DE ATENCION'
+            'CARGO', 'TIPO', 'EXAMENES', 'FECHA CONSULTA', 'TIPO DE ATENCION'
         ];
 
         const rows = allData.map(r => [
@@ -464,7 +463,6 @@
             r.tipo || '',
             (r.examenes || '').replace(/,/g, ';'),
             formatFecha(r.fechaConsulta),
-            r.sede || '',
             r.tipo_atencion || ''
         ]);
 

@@ -34,7 +34,6 @@ router.get('/', async (req, res) => {
                 hc."tipoExamen" AS tipo,
                 hc."examenes",
                 hc."fechaConsulta",
-                f.sede,
                 f.origen AS tipo_atencion
             FROM "HistoriaClinica" hc
             LEFT JOIN formularios f ON f.wix_id = hc."_id"
