@@ -28,13 +28,13 @@ router.get('/', async (req, res) => {
                 hc."segundoApellido",
                 f.genero,
                 hc."ciudad",
-                hc."empresa",
-                hc."subempresa",
+                hc."subempresa" AS empresa,
+                hc."centro_de_costo" AS subempresa,
                 hc."cargo",
                 hc."tipoExamen" AS tipo,
                 hc."examenes",
                 hc."fechaConsulta",
-                f.origen AS tipo_atencion
+                CASE WHEN hc."medico" = 'PRESENCIAL' THEN 'PRESENCIAL' ELSE 'TELEMEDICINA' END AS tipo_atencion
             FROM "HistoriaClinica" hc
             LEFT JOIN formularios f ON f.wix_id = hc."_id"
             WHERE hc."codEmpresa" = 'SITEL'

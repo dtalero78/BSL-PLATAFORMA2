@@ -422,7 +422,7 @@
                 <td><span class="badge badge-blue">${r.tipo || '—'}</span></td>
                 <td class="td-examenes">${r.examenes || '—'}</td>
                 <td>${formatFecha(r.fechaConsulta)}</td>
-                <td>${r.tipo_atencion ? `<span class="badge badge-purple">${r.tipo_atencion}</span>` : '—'}</td>
+                <td><span class="badge ${r.tipo_atencion === 'PRESENCIAL' ? 'badge-green' : 'badge-purple'}">${r.tipo_atencion || '—'}</span></td>
             </tr>
         `).join('');
     }
