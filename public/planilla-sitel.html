@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planilla SITEL - BSL</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --medical-primary: #0C4A6E;
+            --medical-secondary: #0EA5E9;
+            --success-green: #059669;
+            --warning-amber: #F59E0B;
+            --error-red: #DC2626;
+            --info-blue: #3B82F6;
+            --bg-primary: #F8FAFC;
+            --bg-secondary: #FFFFFF;
+            --bg-tertiary: #F1F5F9;
+            --text-primary: #0F172A;
+            --text-secondary: #475569;
+            --text-muted: #94A3B8;
+            --border-color: #E2E8F0;
+            --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
+            --shadow-md: 0 4px 6px rgba(15, 23, 42, 0.1), 0 2px 4px rgba(15, 23, 42, 0.06);
+            --shadow-lg: 0 10px 15px rgba(15, 23, 42, 0.1), 0 4px 6px rgba(15, 23, 42, 0.05);
+            --radius-md: 12px;
+            --radius-lg: 16px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            padding: 24px;
+        }
+
+        .container { max-width: 1600px; margin: 0 auto; }
+
+        .header {
+            background: var(--bg-secondary);
+            padding: 24px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--medical-primary);
+            margin-bottom: 4px;
+        }
+
+        .header p { color: var(--text-secondary); font-size: 14px; }
+
+        .filtros {
+            background: var(--bg-secondary);
+            padding: 20px 24px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            margin-bottom: 24px;
+            display: flex;
+            align-items: flex-end;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .filtro-group { display: flex; flex-direction: column; gap: 6px; }
+
+        .filtro-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filtro-group input[type="date"] {
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            font-family: inherit;
+            color: var(--text-primary);
+            background: var(--bg-primary);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .filtro-group input[type="date"]:focus { border-color: var(--medical-secondary); }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: inherit;
+        }
+
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: var(--medical-primary); color: white; }
+        .btn-primary:hover:not(:disabled) { background: #0A3A54; }
+        .btn-success { background: var(--success-green); color: white; }
+        .btn-success:hover:not(:disabled) { background: #047857; }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            padding: 20px;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .stat-card h3 {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--medical-primary);
+        }
+
+        .table-container {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .table-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .table-header h2 {
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--medical-primary);
+        }
+
+        .table-overflow { overflow-x: auto; }
+
+        table { width: 100%; border-collapse: collapse; }
+        thead { background: var(--bg-tertiary); }
+
+        th {
+            padding: 10px 12px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        tbody tr:hover { background: var(--bg-tertiary); }
+        tbody tr:last-child td { border-bottom: none; }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-blue { background: #DBEAFE; color: #1D4ED8; }
+        .badge-green { background: #D1FAE5; color: #065F46; }
+        .badge-purple { background: #EDE9FE; color: #6D28D9; }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 24px;
+            color: var(--text-muted);
+        }
+
+        .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+        .empty-state p { font-size: 15px; }
+
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.4);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-overlay.visible { display: flex; }
+
+        .loading-box {
+            background: white;
+            padding: 32px 40px;
+            border-radius: var(--radius-lg);
+            text-align: center;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border-color);
+            border-top-color: var(--medical-primary);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-box p { color: var(--text-secondary); font-size: 14px; }
+
+        .search-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 8px 14px;
+            max-width: 320px;
+        }
+
+        .search-bar input {
+            border: none;
+            background: none;
+            outline: none;
+            font-size: 14px;
+            font-family: inherit;
+            color: var(--text-primary);
+            width: 100%;
+        }
+
+        .td-examenes {
+            white-space: normal;
+            max-width: 250px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="header">
+        <h1>Planilla SITEL</h1>
+        <p>Reporte de pacientes de la empresa SITEL por rango de fechas</p>
+    </div>
+
+    <div class="filtros">
+        <div class="filtro-group">
+            <label>Fecha desde</label>
+            <input type="date" id="fechaDesde">
+        </div>
+        <div class="filtro-group">
+            <label>Fecha hasta</label>
+            <input type="date" id="fechaHasta">
+        </div>
+        <button class="btn btn-primary" onclick="buscar()">Buscar</button>
+        <button class="btn btn-success" id="btnExportar" onclick="exportarExcel()" style="display:none;">Descargar Excel</button>
+    </div>
+
+    <div class="stats" id="statsSection" style="display:none;">
+        <div class="stat-card">
+            <h3>Total Registros</h3>
+            <div class="value" id="statTotal">0</div>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <div class="table-header">
+            <h2>Registros SITEL</h2>
+            <div class="search-bar">
+                <span>🔍</span>
+                <input type="text" id="searchInput" placeholder="Buscar por nombre o documento..." oninput="filtrar()">
+            </div>
+        </div>
+        <div class="table-overflow">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Num. ID</th>
+                        <th>Primer Nombre</th>
+                        <th>Segundo Nombre</th>
+                        <th>Primer Apellido</th>
+                        <th>Segundo Apellido</th>
+                        <th>Genero</th>
+                        <th>Ciudad</th>
+                        <th>Empresa</th>
+                        <th>Sub Empresa</th>
+                        <th>Cargo</th>
+                        <th>Tipo</th>
+                        <th>Examenes</th>
+                        <th>Fecha Consulta</th>
+                        <th>Sede</th>
+                        <th>Tipo Atencion</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr>
+                        <td colspan="16">
+                            <div class="empty-state">
+                                <div class="icon">📋</div>
+                                <p>Selecciona un rango de fechas y haz clic en Buscar</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-box">
+        <div class="spinner"></div>
+        <p>Cargando planilla SITEL...</p>
+    </div>
+</div>
+
+<script>
+    let allData = [];
+
+    (function setDefaultDates() {
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        document.getElementById('fechaDesde').value = firstDay.toISOString().split('T')[0];
+        document.getElementById('fechaHasta').value = lastDay.toISOString().split('T')[0];
+    })();
+
+    async function buscar() {
+        const fechaDesde = document.getElementById('fechaDesde').value;
+        const fechaHasta = document.getElementById('fechaHasta').value;
+
+        if (!fechaDesde || !fechaHasta) {
+            alert('Por favor selecciona ambas fechas.');
+            return;
+        }
+
+        document.getElementById('loadingOverlay').classList.add('visible');
+
+        try {
+            const resp = await fetch(`/api/planilla-sitel?fechaDesde=${fechaDesde}&fechaHasta=${fechaHasta}`);
+            const data = await resp.json();
+
+            if (!data.success) throw new Error(data.error || 'Error al consultar');
+
+            allData = data.data;
+            document.getElementById('statTotal').textContent = data.total;
+            document.getElementById('statsSection').style.display = 'grid';
+            document.getElementById('btnExportar').style.display = 'inline-flex';
+            document.getElementById('searchInput').value = '';
+
+            renderTable(allData);
+        } catch (err) {
+            alert('Error: ' + err.message);
+        } finally {
+            document.getElementById('loadingOverlay').classList.remove('visible');
+        }
+    }
+
+    function renderTable(rows) {
+        const tbody = document.getElementById('tableBody');
+
+        if (rows.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="16"><div class="empty-state"><div class="icon">📭</div><p>No se encontraron registros SITEL en este periodo</p></div></td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = rows.map((r, i) => `
+            <tr>
+                <td>${i + 1}</td>
+                <td><strong>${r.numeroId || '—'}</strong></td>
+                <td>${r.primerNombre || '—'}</td>
+                <td>${r.segundoNombre || '—'}</td>
+                <td>${r.primerApellido || '—'}</td>
+                <td>${r.segundoApellido || '—'}</td>
+                <td>${r.genero || '—'}</td>
+                <td>${r.ciudad || '—'}</td>
+                <td>${r.empresa || '—'}</td>
+                <td>${r.subempresa || '—'}</td>
+                <td>${r.cargo || '—'}</td>
+                <td><span class="badge badge-blue">${r.tipo || '—'}</span></td>
+                <td class="td-examenes">${r.examenes || '—'}</td>
+                <td>${formatFecha(r.fechaConsulta)}</td>
+                <td>${r.sede || '—'}</td>
+                <td>${r.tipo_atencion ? `<span class="badge badge-purple">${r.tipo_atencion}</span>` : '—'}</td>
+            </tr>
+        `).join('');
+    }
+
+    function filtrar() {
+        const q = document.getElementById('searchInput').value.toLowerCase();
+        if (!q) { renderTable(allData); return; }
+        const filtrados = allData.filter(r =>
+            (r.numeroId || '').toLowerCase().includes(q) ||
+            (r.primerNombre || '').toLowerCase().includes(q) ||
+            (r.primerApellido || '').toLowerCase().includes(q) ||
+            (r.empresa || '').toLowerCase().includes(q) ||
+            (r.subempresa || '').toLowerCase().includes(q)
+        );
+        renderTable(filtrados);
+    }
+
+    function exportarExcel() {
+        if (allData.length === 0) { alert('No hay datos para exportar.'); return; }
+
+        const headers = [
+            'NUMERO DE ID', 'PRIMER NOMBRE', 'SEGUNDO NOMBRE', 'PRIMER APELLIDO',
+            'SEGUNDO APELLIDO', 'GENERO', 'CIUDAD CONSULTA', 'EMPRESA', 'SUB EMPRESA',
+            'CARGO', 'TIPO', 'EXAMENES', 'FECHA CONSULTA', 'SEDE', 'TIPO DE ATENCION'
+        ];
+
+        const rows = allData.map(r => [
+            r.numeroId || '',
+            r.primerNombre || '',
+            r.segundoNombre || '',
+            r.primerApellido || '',
+            r.segundoApellido || '',
+            r.genero || '',
+            r.ciudad || '',
+            r.empresa || '',
+            r.subempresa || '',
+            r.cargo || '',
+            r.tipo || '',
+            (r.examenes || '').replace(/,/g, ';'),
+            formatFecha(r.fechaConsulta),
+            r.sede || '',
+            r.tipo_atencion || ''
+        ]);
+
+        const csvContent = [headers, ...rows].map(row => row.map(v => `"${v}"`).join(',')).join('\n');
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const fechaDesde = document.getElementById('fechaDesde').value;
+        const fechaHasta = document.getElementById('fechaHasta').value;
+        a.href = url;
+        a.download = `planilla_SITEL_${fechaDesde}_${fechaHasta}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function formatFecha(fecha) {
+        if (!fecha) return '—';
+        const d = new Date(fecha);
+        return d.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+</script>
+</body>
+</html>
