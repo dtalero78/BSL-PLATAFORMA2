@@ -208,10 +208,10 @@ router.post('/', async (req, res) => {
         console.log('Datos recibidos:', JSON.stringify(req.body, null, 2));
 
         // Validar campos requeridos
-        if (!numeroId || !primerNombre || !primerApellido || !codEmpresa || !celular) {
+        if (!numeroId || !primerNombre || !primerApellido || !codEmpresa || !celular || !ciudad) {
             return res.status(400).json({
                 success: false,
-                message: 'Faltan campos requeridos: numeroId, primerNombre, primerApellido, codEmpresa, celular'
+                message: 'Faltan campos requeridos: numeroId, primerNombre, primerApellido, codEmpresa, celular, ciudad'
             });
         }
 
@@ -500,9 +500,9 @@ router.post('/', async (req, res) => {
                     const telefonoCompleto = normalizarTelefonoConPrefijo57(celular);
 
                     if (telefonoCompleto) {
-                        // Template: confirmación de cita (HX43d06a0a97e11919c1e4b19d3e4b6957)
+                        // Template: confirmación de cita
                         // Variables: {{1}} = nombre, {{2}} = fecha y hora
-                        const templateSid = 'HX43d06a0a97e11919c1e4b19d3e4b6957';
+                        const templateSid = 'HXf1636975b3d3e25a40b8419252566a9d';
                         const variables = {
                             "1": nombreCompleto,
                             "2": fechaHoraCompleta
