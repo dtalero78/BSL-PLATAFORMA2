@@ -1034,6 +1034,24 @@ const initDB = async () => {
             // Columna ya existe o tabla no existe
         }
 
+        // Columnas para aprobación externa (SIIGO)
+        try {
+            await pool.query(`
+                ALTER TABLE "HistoriaClinica"
+                ADD COLUMN IF NOT EXISTS "aprobacion_externa" VARCHAR(50)
+            `);
+            await pool.query(`
+                ALTER TABLE "HistoriaClinica"
+                ADD COLUMN IF NOT EXISTS "fecha_aprobacion_externa" TIMESTAMP
+            `);
+            await pool.query(`
+                ALTER TABLE "HistoriaClinica"
+                ADD COLUMN IF NOT EXISTS "concepto_aprobado" VARCHAR(100)
+            `);
+        } catch (err) {
+            // Columnas ya existen
+        }
+
         // Aumentar tamaño de campos de visiometrias que almacenan fórmulas de prescripción
         const visiometriasFieldsToEnlarge = [
             'refractometria_od',
