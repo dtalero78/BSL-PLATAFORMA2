@@ -37,30 +37,42 @@
             color: var(--text-primary);
             min-height: 100vh;
             line-height: 1.6;
-            padding: 24px;
+        }
+
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 240px;
+            padding: 32px 40px;
+            padding-top: 96px;
+            transition: margin-left 0.3s ease;
+        }
+
+        body.sidebar-collapsed .main-content {
+            margin-left: 68px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                margin-left: 0;
+                padding: 20px 16px;
+                padding-top: 84px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+                padding: 16px;
+                padding-top: 72px;
+            }
         }
 
         .container { max-width: 1400px; margin: 0 auto; }
-
-        .header {
-            background: var(--bg-secondary);
-            padding: 24px;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-md);
-            margin-bottom: 24px;
-        }
-
-        .header h1 {
-            font-size: 28px;
-            font-weight: 700;
-            color: var(--medical-primary);
-            margin-bottom: 8px;
-        }
-
-        .header p {
-            color: var(--text-secondary);
-            font-size: 14px;
-        }
 
         .filters-bar {
             display: flex;
@@ -460,11 +472,11 @@
     </style>
 </head>
 <body>
+    <div class="app-container">
+    <div id="sidebar-container"></div>
+    <div id="topbar-container"></div>
+    <main class="main-content">
     <div class="container">
-        <div class="header">
-            <h1>Asistencia SIIGO</h1>
-            <p>Control de asistencia de pacientes SIIGO</p>
-        </div>
 
         <div class="filters-bar">
             <input type="text" class="search-input" id="searchInput" placeholder="Buscar por documento, nombre o celular...">
@@ -1019,5 +1031,9 @@
         // Cargar datos al iniciar
         cargarDatos(1);
     </script>
+    </main>
+    </div>
+    <script src="/js/load-sidebar.js"></script>
+    <script src="/js/load-topbar.js?v=3"></script>
 </body>
 </html>

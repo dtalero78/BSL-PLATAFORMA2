@@ -4,6 +4,7 @@
 
 const express = require('express');
 const router = express.Router();
+const pool = require('../config/database');
 
 const EMPRESAS_EXCLUIDAS = [
     'SANITHELP-JJ', 'SITEL', 'PARTICULAR', 'EMPRESA', 'CP360', 'PHIDIAS',
@@ -21,7 +22,6 @@ const EMPRESAS_EXCLUIDAS = [
  * Retorna resumen agrupado por empresa y detalle de pacientes pendientes de facturar
  */
 router.get('/empresas-a-facturar', async (req, res) => {
-    const pool = req.app.locals.pool;
 
     try {
         const { fechaDesde, fechaHasta } = req.query;

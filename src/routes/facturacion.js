@@ -4,6 +4,7 @@
 
 const express = require('express');
 const router = express.Router();
+const pool = require('../config/database');
 const AlegraClient = require('../../lib/alegra-client');
 
 // Middleware de autenticación (importar del server.js principal)
@@ -14,7 +15,6 @@ const AlegraClient = require('../../lib/alegra-client');
  * Genera factura por lote para una empresa
  */
 router.post('/generar-lote', async (req, res) => {
-    const pool = req.app.locals.pool; // Pool de PostgreSQL
 
     try {
         const { codEmpresa, fechaInicio, fechaFin, observaciones, terminos, diasVencimiento } = req.body;
@@ -361,7 +361,6 @@ router.post('/generar-lote', async (req, res) => {
  * Obtener lista de facturas
  */
 router.get('/facturas', async (req, res) => {
-    const pool = req.app.locals.pool;
 
     try {
         const { codEmpresa, estado, fechaInicio, fechaFin, page = 1, limit = 50 } = req.query;
@@ -434,7 +433,6 @@ router.get('/facturas', async (req, res) => {
  * Obtener detalle de una factura con sus items
  */
 router.get('/facturas/:id', async (req, res) => {
-    const pool = req.app.locals.pool;
 
     try {
         const { id } = req.params;
@@ -482,7 +480,6 @@ router.get('/facturas/:id', async (req, res) => {
  * Obtener configuración de facturación de una empresa
  */
 router.get('/configuracion/:codEmpresa', async (req, res) => {
-    const pool = req.app.locals.pool;
 
     try {
         const { codEmpresa } = req.params;
@@ -519,7 +516,6 @@ router.get('/configuracion/:codEmpresa', async (req, res) => {
  * Crear o actualizar configuración de facturación para una empresa
  */
 router.post('/configuracion', async (req, res) => {
-    const pool = req.app.locals.pool;
 
     try {
         const {
@@ -590,7 +586,6 @@ router.post('/configuracion', async (req, res) => {
  * Asociar un examen con su ID en Alegra
  */
 router.post('/examenes-alegra', async (req, res) => {
-    const pool = req.app.locals.pool;
 
     try {
         const { examenId, alegraItemId } = req.body;
@@ -633,7 +628,6 @@ router.post('/examenes-alegra', async (req, res) => {
  * Obtener todos los mapeos de exámenes a Alegra
  */
 router.get('/examenes-alegra', async (req, res) => {
-    const pool = req.app.locals.pool;
 
     try {
         const result = await pool.query(`
@@ -667,7 +661,6 @@ router.get('/examenes-alegra', async (req, res) => {
  * Obtener preview de exámenes para facturar
  */
 router.get('/preview', async (req, res) => {
-    const pool = req.app.locals.pool;
 
     try {
         const { codEmpresa, fechaInicio, fechaFin } = req.query;

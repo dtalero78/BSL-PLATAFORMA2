@@ -4,13 +4,13 @@
 
 const express = require('express');
 const router = express.Router();
+const pool = require('../config/database');
 
 /**
  * GET /api/planilla-sitel?fechaDesde=YYYY-MM-DD&fechaHasta=YYYY-MM-DD
  * Retorna datos de pacientes SITEL con JOIN a formularios
  */
 router.get('/', async (req, res) => {
-    const pool = req.app.locals.pool;
 
     try {
         const { fechaDesde, fechaHasta } = req.query;
@@ -27,11 +27,11 @@ router.get('/', async (req, res) => {
                 hc."primerApellido",
                 hc."segundoApellido",
                 f.genero,
-                hc."ciudad",
-                hc."subempresa" AS empresa,
+                COALESCE(NULLIF(TRIM(hc."ciudad"), ''), 'Bogotá') AS ciudad,
+                COALESCE(NULLIF(TRIM(hc."subempresa"), ''), 'FOUNDEVER') AS empresa,
                 hc."centro_de_costo" AS subempresa,
                 hc."cargo",
-                hc."tipoExamen" AS tipo,
+                UPPER(TRANSLATE(hc."tipoExamen", 'áéíóúÁÉÍÓÚñÑ', 'aeiouAEIOUnN')) AS tipo,
                 hc."examenes",
                 hc."fechaConsulta",
                 CASE WHEN hc."medico" = 'PRESENCIAL' THEN 'PRESENCIAL' ELSE 'TELEMEDICINA' END AS tipo_atencion

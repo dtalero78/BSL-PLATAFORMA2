@@ -74,21 +74,22 @@ src/
     webhook.js          - Make.com webhook utilities
     sse.js              - Server-Sent Events for real-time notifications
     certificate.js      - PDF certificate generation
+    historia-clinica-html.js - HTML generation for medical history PDF export
   services/
     spaces-upload.js    - DigitalOcean Spaces file uploads
     whatsapp.js         - Twilio WhatsApp messaging
+    whapi.js            - WHAPI WhatsApp messaging (alternative channel)
     bot.js              - AI chatbot (OpenAI RAG)
     payment.js          - Payment classification (OpenAI Vision)
     wix-sync.js         - Wix CMS synchronization
   repositories/
-    BaseRepository.js           - Base CRUD operations
-    HistoriaClinicaRepository.js - Medical records
-    FormulariosRepository.js     - Patient intake forms
-    UsuariosRepository.js        - User management
-    AudiometriasRepository.js    - Hearing tests
-    VisiometriasRepository.js    - Vision tests
-    EmpresasRepository.js        - Company records
-    MedicosRepository.js         - Doctor records
+    BaseRepository.js                  - Base CRUD operations
+    HistoriaClinicaRepository.js       - Medical records
+    FormulariosRepository.js           - Patient intake forms
+    UsuariosRepository.js              - User management
+    ConversacionesWhatsAppRepository.js - WhatsApp conversations
+    MensajesWhatsAppRepository.js      - WhatsApp messages
+    EmpresasRepository.js              - Company records
   routes/
     auth.js             - /api/auth/* - Authentication
     admin.js            - /api/admin/* - Admin operations
@@ -113,14 +114,26 @@ src/
     comunidad.js        - /api/comunidad/* - Community features
     siigo.js            - /api/envio-siigo/* - Siigo accounting
     facturacion.js      - /api/facturacion/* - Alegra invoicing
+    asistencia-siigo.js - /api/asistencia-siigo/* - SIIGO attendance tracking
+    envio-empresas.js   - /api/envio-empresas/* - Company scheduling notifications via WhatsApp
+    estadisticas.js     - /api/estadisticas/* - Patient movement statistics
+    facturacion-empresas.js - /api/facturacion-empresas/* - Company billing reports
+    planilla-sitel.js   - /api/planilla-sitel/* - SITEL payroll report generation
+    external.js         - /api/external/* - External API for SIIGO (API key auth)
     basic.js            - /, /health, /api/events (SSE), /api/wix/*
-  cron/
-    (cron scheduling configured in server.js)
+lib/
+  alegra-client.js      - Alegra accounting API client class
+  rips-generator.js     - RIPS JSON generator (Resolución 2275/2023)
+scripts/
+  migrar-fotos-spaces.js              - Migrate photos to DigitalOcean Spaces
+  consolidar-duplicados-whatsapp.js   - Consolidate duplicate WhatsApp conversations
+  limpiar-server-chat.js              - Clean chat server data
+  one-time/                           - One-off migration and fix scripts
 ```
 
 **Key Features**:
 - **Repository Pattern**: Data access abstraction with BaseRepository + specialized repos
-- **Modular Routing**: 20+ route modules organized by domain
+- **Modular Routing**: 25+ route modules organized by domain
 - **Service Layer**: Specialized services for external integrations
 - **Automated Tasks**: Cron jobs for NUBIA virtual appointments (every 5 min)
 
@@ -132,17 +145,42 @@ Multiple HTML pages with vanilla JavaScript (no framework):
 - `panel-admin.html` - Admin panel for user management
 - `panel-empresas.html` / `empresas.html` - Company portal for viewing employee exams
 - `index.html` - Patient intake form (multi-step wizard)
+- `login.html` / `registro.html` - Authentication and registration pages
 - `audiometria.html`, `audiometria-virtual.html` - Audiometry exam interfaces
-- `visiometria.html` - Vision exam interface
+- `visiometria.html`, `visiometria-virtual.html` - Vision exam interfaces
 - `scl90.html` - SCL-90 psychological symptom test (SIIGO only)
+- `pruebas-adc.html` - ADC test interface
 - `medicos.html` - Medical staff management
 - `calendario.html` - Appointment scheduling interface
+- `nubia.html` - NUBIA virtual appointments interface
 - `consulta-orden.html` - Public order lookup
+- `validar-certificado.html` - Certificate validation page
 - `examenes.html` - Exam type management
 - `estadisticas.html` - Statistics dashboard
+- `movimiento.html` - Patient movement statistics by date range
 - `certificado-template.html` - Medical certificate PDF template
 - `enviar-siigo.html` - Integration with Siigo accounting system
+- `asistencia-siigo.html` - SIIGO attendance tracking
+- `enviar-empresas.html` - Company scheduling notifications
+- `facturacion-empresas.html` - Company billing reports
+- `planilla-sitel.html` - SITEL payroll report
+- `panel-laboratorios.html` - Laboratory results panel
+- `panel-rips.html` - RIPS Colombian health reports panel
+- `panel-comunidad.html` - Community features panel
+- `twilio-chat.html` - WhatsApp agent chat interface
+- `subir-lote.html` - Batch upload interface
 - `actualizar-foto.html` - Photo upload interface
+
+Shared frontend modules (`public/js/`):
+- `auth.js` - Authentication utilities (token management, redirects)
+- `load-sidebar.js` - Dynamic sidebar component loader
+- `load-topbar.js` - Dynamic topbar component loader
+- `modal-disponibilidad.js` - Doctor availability modal
+
+Reusable components (`public/components/`):
+- `sidebar.html` - Shared navigation sidebar
+- `topbar.html` - Shared top navigation bar
+- `modal-disponibilidad.html` - Doctor availability modal template
 
 Frontend architecture:
 - Direct DOM manipulation (no virtual DOM)
@@ -150,6 +188,9 @@ Frontend architecture:
 - Inline event handlers and global functions
 - Modal-based workflows for patient details
 - Socket.io for real-time updates (appointments, notifications)
+- Shared sidebar/topbar loaded dynamically via `load-sidebar.js` and `load-topbar.js`
+- All internal pages MUST use the shared sidebar/topbar pattern (see ordenes.html as reference)
+- Exceptions: `twilio-chat.html` (custom chat UI), `validar-certificado.html` (public page), `index.html` (patient form)
 
 ### Wix Integration (WIX/)
 
@@ -164,6 +205,8 @@ Backend functions that run on Wix platform (deployed separately):
 - `audiometriaVirtual.js` - Virtual audiometry exam logic
 - `ansiedadWix.js`, `depresionWix.js`, `congruenciaWix.js` - Psychological test handlers
 - `adcVirtual.js` - Virtual ADC (Atención Domiciliaria Continuada) handling
+- `visualVirtual.js` - Virtual vision test handling
+- `panel_empresas_wix.js` - Company panel Wix-side logic
 
 These files use Wix SDK (`wix-data`, `wix-fetch`) and must be deployed to Wix separately from the main platform.
 
@@ -184,26 +227,37 @@ The platform includes a full WhatsApp-based customer service system:
 - Message persistence in PostgreSQL
 
 **Key Components**:
-- `conversaciones_whatsapp`: Conversation threads with status tracking
-- `mensajes_whatsapp`: Message history (customer + agent messages)
+- `conversaciones_whatsapp`: Conversation threads with status tracking → `ConversacionesWhatsAppRepository`
+- `mensajes_whatsapp`: Message history (customer + agent messages) → `MensajesWhatsAppRepository`
 - `agentes_estado`: Real-time agent availability
 - `reglas_enrutamiento`: Smart routing rules (priority-based, condition-driven)
 - `transferencias_conversacion`: Transfer audit trail
 
+**Default Routing Rules** (created automatically on startup):
+- "Fuera de horario laboral" (Priority 10) - Routes to bot outside 08:00-18:00
+- "Emergencias" (Priority 20) - Routes urgent keywords to available agents
+- "Solicitar humano" (Priority 15) - Routes human requests to available agents
+
 **Integration Points**:
-- Twilio WhatsApp API for message sending
-- WHAPI for alternative WhatsApp channel
+- Twilio WhatsApp API for message sending (`src/services/whatsapp.js`)
+- WHAPI for alternative WhatsApp channel (`src/services/whapi.js`)
 - Automated message templates for common scenarios
 
 ## Data Flow Patterns
 
-### Patient Order Creation
+### Patient Order Creation (Internal)
 1. Company creates order in Wix → generates `_id`
 2. Patient fills form at `/index.html?_id=xxx`
 3. Form data saved to PostgreSQL `formularios` table
 4. Data synced back to Wix `FORMULARIO` collection
 5. Medical exam conducted → doctor enters results in Wix
 6. Results synced to PostgreSQL via `sincronizar-datos-medicos.js`
+
+### External Order Creation (SIIGO API)
+1. External platform sends POST to `/api/external/ordenes` with `X-API-Key` header
+2. Creates HistoriaClinica record in PostgreSQL + syncs to Wix
+3. Manages WhatsApp conversation for the patient
+4. After exam, POST to `/api/external/aprobar` to approve and send results back
 
 ### Modal Details in ordenes.html
 The patient details modal loads data from **PostgreSQL HistoriaClinica table** via `/api/historia-clinica/:id` endpoint. If medical fields (mdConceptoFinal, mdDx1, etc.) appear empty, run the sync script to pull latest data from Wix.
@@ -226,6 +280,7 @@ All tables are created automatically on server startup with `CREATE TABLE IF NOT
 - Medical history records synced from Wix
 - Primary key: `_id` (Wix-generated UUID)
 - Critical fields: `numeroId` (patient ID), `atendido` (status), `mdConceptoFinal` (medical concept), `mdDx1/mdDx2` (diagnoses)
+- Dynamic columns (added on startup): `horaAtencion`, `subempresa`, `centro_de_costo`, `aprobacion`, `aprobacion_externa`, `fecha_aprobacion_externa`, `concepto_aprobado`, `linkEnviado`, `observaciones_siigo`, `foto_url`, `recordatorioLinkEnviado`
 - Index on: `numeroId`, `celular`, `codEmpresa`, `fechaAtencion`
 - **Access via**: `HistoriaClinicaRepository`
 
@@ -237,14 +292,14 @@ All tables are created automatically on server startup with `CREATE TABLE IF NOT
 
 ### Exam & Medical Data Tables
 
-- **audiometrias**: Audiometry test results → `AudiometriasRepository`
-- **visiometrias**: Vision test results → `VisiometriasRepository`
+- **audiometrias**: Audiometry test results
+- **visiometrias**: Vision test results
 - **visiometrias_virtual**: Virtual vision test results
 - **pruebasADC**: ADC (Atención Domiciliaria Continuada) test data
 - **scl90**: SCL-90 psychological symptom test (items 1-90, resultado/interpretacion/baremos as JSONB). Required for SIIGO instead of ADC. Auto-scored with Colombian baremos by gender.
 - **laboratorios**: Laboratory test results
-- **medicos_disponibilidad**: Doctor availability/scheduling → `MedicosRepository`
-- **empresas**: Company records → `EmpresasRepository`
+- **medicos_disponibilidad**: Doctor availability/scheduling
+- **empresas**: Company records → `EmpresasRepository`. JSONB columns: `ciudades`, `examenes`, `subempresas`, `centros_de_costo`, `cargos`
 
 ### WhatsApp Chat System Tables
 
@@ -331,6 +386,9 @@ SPACES_ENDPOINT=
 SPACES_BUCKET=
 SPACES_CDN=
 
+# External API
+EXTERNAL_API_KEY=  # API key for external integrations (SIIGO order creation)
+
 # Other
 COORDINADOR_CELULAR=  # Coordinator phone for notifications
 ```
@@ -367,6 +425,11 @@ Manages virtual medical appointments for NUBIA telemedicine platform:
 Location: [server.js:13369-13383](server.js#L13369-L13383)
 
 ## Important Patterns & Gotchas
+
+### Database Pool Import
+- **ALWAYS** import pool as: `const pool = require('../config/database');`
+- **NEVER** use `req.app.locals.pool` - this is an anti-pattern that breaks consistency
+- For repositories, pool is handled internally by BaseRepository
 
 ### Images and Base64
 - Patient photos stored as base64 in PostgreSQL
@@ -494,9 +557,17 @@ const duplicado = await HistoriaClinicaRepository.findDuplicadoPendiente('123456
    - `findByEmail()`, `findByUsername()`, `findWithFilters()`
    - `aprobarUsuario()`, `rechazarUsuario()`, `desactivarUsuario()`
 
-5. **AudiometriasRepository**, **VisiometriasRepository**, **EmpresasRepository**, **MedicosRepository**
+5. **ConversacionesWhatsAppRepository** (`src/repositories/ConversacionesWhatsAppRepository.js`)
+   - WhatsApp conversation management
+   - `findByCelular()` - Find conversation by phone number
+
+6. **MensajesWhatsAppRepository** (`src/repositories/MensajesWhatsAppRepository.js`)
+   - WhatsApp message management
+   - `findByConversacion()` - Get messages for a conversation
+
+7. **EmpresasRepository** (`src/repositories/EmpresasRepository.js`)
+   - Company record management
    - Domain-specific CRUD operations
-   - Follow same BaseRepository patterns
 
 ### When to Use Repositories
 
@@ -509,7 +580,7 @@ const duplicado = await HistoriaClinicaRepository.findDuplicadoPendiente('123456
 - Complex queries with JOINs across multiple unrelated tables
 - One-off queries specific to a single endpoint
 - Dynamic filter builders with many optional parameters
-- Queries for tables without repositories (e.g., `conversaciones_whatsapp`)
+- Queries for tables without repositories
 
 ### Adding New Repository Methods
 

@@ -33,7 +33,39 @@
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
-            padding: 20px;
+        }
+
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 240px;
+            padding: 32px 40px;
+            padding-top: 96px;
+            transition: margin-left 0.3s ease;
+        }
+
+        body.sidebar-collapsed .main-content {
+            margin-left: 68px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                margin-left: 0;
+                padding: 20px 16px;
+                padding-top: 84px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+                padding: 16px;
+                padding-top: 72px;
+            }
         }
 
         .container {
@@ -431,6 +463,10 @@
     </style>
 </head>
 <body>
+    <div class="app-container">
+    <div id="sidebar-container"></div>
+    <div id="topbar-container"></div>
+    <main class="main-content">
     <div class="container">
         <!-- Header -->
         <div class="page-header">
@@ -438,10 +474,6 @@
                 <i data-feather="activity"></i>
                 Panel de Laboratorios
             </h1>
-            <button class="btn btn-secondary" onclick="window.location.href='ordenes.html'">
-                <i data-feather="arrow-left"></i>
-                Volver a Órdenes
-            </button>
         </div>
 
         <!-- Patient Info -->
@@ -1246,5 +1278,9 @@
             }, 3000);
         }
     </script>
+    </main>
+    </div>
+    <script src="/js/load-sidebar.js"></script>
+    <script src="/js/load-topbar.js?v=3"></script>
 </body>
 </html>

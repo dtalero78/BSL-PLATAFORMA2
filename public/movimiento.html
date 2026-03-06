@@ -43,33 +43,44 @@
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
-            padding: 24px;
+        }
+
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 240px;
+            padding: 32px 40px;
+            padding-top: 96px;
+            transition: margin-left 0.3s ease;
+        }
+
+        body.sidebar-collapsed .main-content {
+            margin-left: 68px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                margin-left: 0;
+                padding: 20px 16px;
+                padding-top: 84px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+                padding: 16px;
+                padding-top: 72px;
+            }
         }
 
         .container {
             max-width: 1400px;
             margin: 0 auto;
-        }
-
-        /* Header */
-        .header {
-            background: var(--bg-secondary);
-            padding: 24px;
-            border-radius: 12px;
-            margin-bottom: 24px;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .header h1 {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 8px;
-        }
-
-        .header p {
-            color: var(--text-secondary);
-            font-size: 14px;
         }
 
         /* Filtros */
@@ -347,12 +358,11 @@
     </style>
 </head>
 <body>
+    <div class="app-container">
+    <div id="sidebar-container"></div>
+    <div id="topbar-container"></div>
+    <main class="main-content">
     <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <h1>📊 Estadísticas de Movimiento</h1>
-            <p>Visualiza estadísticas de atención médica por rango de fechas</p>
-        </div>
 
         <!-- Filtros -->
         <div class="filtros">
@@ -452,7 +462,11 @@
         </div>
     </div>
 
+    </main>
+    </div>
     <script src="/js/auth.js"></script>
+    <script src="/js/load-sidebar.js"></script>
+    <script src="/js/load-topbar.js?v=3"></script>
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
     <script>
         let usuarioActual = null;
