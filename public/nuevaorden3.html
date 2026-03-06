@@ -950,10 +950,11 @@
             }
 
             // Extraer el nombre de la empresa (sin el tipo de examen)
+            // La 'S' antes del tipo conecta empresa con tipo (ej: SOFTSERVESINGRESO)
             let empresaNombre = ref
-                .replace(/PERIODICO/gi, '')
-                .replace(/EGRESO/gi, '')
-                .replace(/INGRESO/gi, '')
+                .replace(/S?PERIODICO/gi, '')
+                .replace(/S?EGRESO/gi, '')
+                .replace(/S?INGRESO/gi, '')
                 .trim();
 
             // Capitalizar el nombre de la empresa
