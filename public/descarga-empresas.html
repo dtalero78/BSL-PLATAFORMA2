@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Descarga de Certificados - BSL</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #F3F3F3;
+            --bg-secondary: #FFFFFF;
+            --bg-tertiary: #F9FAFB;
+            --text-primary: #181818;
+            --text-secondary: #444444;
+            --text-tertiary: #706E6B;
+            --border-color: #DDDBDA;
+            --border-light: #E5E5E5;
+            --accent-color: #0176D3;
+            --accent-hover: #014486;
+            --success-color: #059669;
+            --success-bg: #ECFDF5;
+            --warning-color: #D97706;
+            --warning-bg: #FEF3C7;
+            --error-color: #DC2626;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        .header {
+            background: var(--bg-secondary);
+            padding: 24px 32px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header img { height: 48px; }
+
+        .header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .header .empresa-badge {
+            background: var(--accent-color);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-left: auto;
+        }
+
+        .filtros {
+            background: var(--bg-secondary);
+            padding: 20px 24px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 24px;
+            display: flex;
+            align-items: flex-end;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .filtro-grupo {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filtro-grupo label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .filtro-grupo input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .filtro-grupo input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(1, 118, 211, 0.1);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            height: 42px;
+            white-space: nowrap;
+        }
+
+        .btn:hover { background: var(--accent-hover); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .btn-descargar {
+            padding: 6px 14px;
+            background: var(--success-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .btn-descargar:hover {
+            background: #047857;
+            transform: translateY(-1px);
+        }
+
+        .btn-descargar.disabled {
+            background: var(--border-color);
+            color: var(--text-tertiary);
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .tabla-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+
+        .tabla-card .titulo {
+            padding: 20px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .titulo .contador {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-tertiary);
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+
+        thead {
+            position: sticky;
+            top: 0;
+            background: var(--bg-tertiary);
+            z-index: 10;
+        }
+
+        th {
+            padding: 12px 20px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--border-light);
+            transition: background 0.15s;
+        }
+
+        tbody tr:hover { background: var(--bg-tertiary); }
+
+        td {
+            padding: 14px 20px;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge.atendido { background: var(--success-bg); color: var(--success-color); }
+        .badge.pendiente { background: var(--warning-bg); color: var(--warning-color); }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 24px;
+            color: var(--text-tertiary);
+        }
+
+        .empty-state h3 { margin-bottom: 8px; font-size: 16px; color: var(--text-secondary); }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .tabla-wrapper { max-height: 70vh; overflow-y: auto; }
+
+        .tabla-wrapper::-webkit-scrollbar { width: 8px; }
+        .tabla-wrapper::-webkit-scrollbar-track { background: var(--bg-tertiary); }
+        .tabla-wrapper::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+
+        @media (max-width: 768px) {
+            body { padding: 12px; }
+            .header { flex-wrap: wrap; padding: 16px; }
+            .header .empresa-badge { margin-left: 0; }
+            th, td { padding: 10px 12px; font-size: 13px; }
+            .filtros { flex-direction: column; }
+            .filtro-grupo { min-width: unset; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="/bsl-logo.png" alt="BSL">
+            <h1>Descarga de Certificados</h1>
+            <span class="empresa-badge" id="empresaBadge"></span>
+        </div>
+
+        <div class="filtros">
+            <div class="filtro-grupo">
+                <label for="documento">Buscar por documento</label>
+                <input type="text" id="documento" placeholder="Ingrese el numero de documento...">
+            </div>
+            <button class="btn" id="btnBuscar" onclick="buscar()">Buscar</button>
+            <button class="btn" style="background: var(--text-tertiary);" onclick="cargarCertificados()">Ver todos</button>
+        </div>
+
+        <div class="tabla-card">
+            <div class="titulo">
+                <span>Certificados Disponibles</span>
+                <span class="contador" id="contador"></span>
+            </div>
+            <div class="tabla-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Paciente</th>
+                            <th>Documento</th>
+                            <th>Estado</th>
+                            <th>Fecha Consulta</th>
+                            <th>Fecha Atencion</th>
+                            <th>Accion</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaCuerpo">
+                        <tr>
+                            <td colspan="6" class="loading">Cargando certificados...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const codEmpresa = window.location.pathname.split('/').pop();
+        document.getElementById('empresaBadge').textContent = decodeURIComponent(codEmpresa);
+
+        document.getElementById('documento').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') buscar();
+        });
+
+        function buscar() {
+            const documento = document.getElementById('documento').value.trim();
+            if (!documento) return;
+            cargarCertificados(documento);
+        }
+
+        async function cargarCertificados(documento) {
+            const tbody = document.getElementById('tablaCuerpo');
+            tbody.innerHTML = '<tr><td colspan="6" class="loading">Cargando...</td></tr>';
+
+            try {
+                let url = `/api/descarga-empresas/${encodeURIComponent(codEmpresa)}`;
+                if (documento) url += `?documento=${encodeURIComponent(documento)}`;
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (!data.success || !data.certificados.length) {
+                    tbody.innerHTML = `
+                        <tr><td colspan="6" class="empty-state">
+                            <h3>No se encontraron certificados</h3>
+                            <p>${documento ? 'No hay registros para ese documento.' : 'No hay certificados disponibles para esta empresa.'}</p>
+                        </td></tr>`;
+                    document.getElementById('contador').textContent = '0 registros';
+                    return;
+                }
+
+                document.getElementById('contador').textContent = `${data.certificados.length} registros`;
+
+                tbody.innerHTML = data.certificados.map(cert => {
+                    const nombre = `${cert.nombres} ${cert.apellidos}`;
+                    const esAtendido = cert.estado === 'ATENDIDO';
+                    const badgeClass = esAtendido ? 'atendido' : 'pendiente';
+                    const fechaConsulta = cert.fechaConsulta ? new Date(cert.fechaConsulta).toLocaleDateString('es-CO') : '-';
+                    const fechaAtencion = cert.fechaAtencion ? new Date(cert.fechaAtencion).toLocaleDateString('es-CO') : '-';
+
+                    const botonDescarga = esAtendido
+                        ? `<a class="btn-descargar" href="/api/descarga-empresas/pdf/${cert._id}" target="_blank">Descargar</a>`
+                        : `<span class="btn-descargar disabled">Pendiente</span>`;
+
+                    return `<tr>
+                        <td style="font-weight:500">${nombre}</td>
+                        <td>${cert.numeroId}</td>
+                        <td><span class="badge ${badgeClass}">${cert.estado}</span></td>
+                        <td>${fechaConsulta}</td>
+                        <td>${fechaAtencion}</td>
+                        <td>${botonDescarga}</td>
+                    </tr>`;
+                }).join('');
+
+            } catch (error) {
+                console.error('Error:', error);
+                tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><h3>Error al cargar datos</h3></td></tr>';
+            }
+        }
+
+        cargarCertificados();
+    </script>
+</body>
+</html>

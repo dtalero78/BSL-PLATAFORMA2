@@ -122,20 +122,25 @@ router.get('/api/certificado-pdf/:id', async (req, res) => {
     }
 });
 
-// GET /descarga-empresas/:id - Descarga directa del certificado médico (link público para empresas)
-router.get('/descarga-empresas/:id', async (req, res) => {
+// GET /descarga-empresas/:codEmpresa - Página pública para descargar certificados de una empresa
+router.get('/descarga-empresas/:codEmpresa', async (req, res) => {
+    res.sendFile(require('path').join(__dirname, '..', '..', 'public', 'descarga-empresas.html'));
+});
+
+// IMPORTANTE: ruta con /pdf/ debe ir ANTES de la ruta con :codEmpresa para evitar conflicto
+// GET /api/descarga-empresas/pdf/:id - Descarga directa del PDF de un certificado (público)
+router.get('/api/descarga-empresas/pdf/:id', async (req, res) => {
     try {
         const { id } = req.params;
         console.log(`📄 Descarga directa de certificado para orden: ${id}`);
 
-        // 1. Verificar que la orden existe y está ATENDIDO
         const historiaResult = await pool.query(
-            'SELECT "numeroId", "atendido", "primerNombre", "primerApellido" FROM "HistoriaClinica" WHERE "_id" = $1',
+            'SELECT "numeroId", "atendido" FROM "HistoriaClinica" WHERE "_id" = $1',
             [id]
         );
 
         if (historiaResult.rows.length === 0) {
-            return res.status(404).send('<h1>Certificado no encontrado</h1><p>La orden especificada no existe.</p>');
+            return res.status(404).send('<h1>Certificado no encontrado</h1>');
         }
 
         const historia = historiaResult.rows[0];
@@ -144,19 +149,13 @@ router.get('/descarga-empresas/:id', async (req, res) => {
             return res.status(400).send('<h1>Certificado no disponible</h1><p>El paciente aún no ha sido atendido.</p>');
         }
 
-        // 2. Construir URL del preview
         const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
         const host = req.headers['x-forwarded-host'] || req.headers.host;
         const previewUrl = `${protocol}://${host}/preview-certificado/${id}`;
-        console.log('📍 Preview URL:', previewUrl);
 
-        // 3. Generar PDF
         const pdfBuffer = await generarPDFDesdeURL(previewUrl);
-
-        // 4. Nombre del archivo
         const nombreArchivo = `certificado_${historia.numeroId || id}.pdf`;
 
-        // 5. Enviar PDF
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `inline; filename="${nombreArchivo}"`);
         res.setHeader('Content-Length', pdfBuffer.length);
@@ -165,8 +164,55 @@ router.get('/descarga-empresas/:id', async (req, res) => {
         console.log(`✅ Certificado descargado: ${nombreArchivo} (${(pdfBuffer.length / 1024).toFixed(1)} KB)`);
 
     } catch (error) {
-        console.error('❌ Error en descarga directa de certificado:', error);
+        console.error('❌ Error en descarga de certificado:', error);
         res.status(500).send('<h1>Error generando certificado</h1><p>Por favor intente nuevamente.</p>');
+    }
+});
+
+// GET /api/descarga-empresas/:codEmpresa - API: lista certificados disponibles de una empresa
+router.get('/api/descarga-empresas/:codEmpresa', async (req, res) => {
+    try {
+        const { codEmpresa } = req.params;
+        const { documento } = req.query;
+        console.log(`📄 Consultando certificados para empresa: ${codEmpresa}`);
+
+        let query = `
+            SELECT "_id", "numeroId", "primerNombre", "segundoNombre",
+                   "primerApellido", "segundoApellido", "atendido",
+                   "fechaConsulta", "fechaAtencion", "examenes", "mdConceptoFinal"
+            FROM "HistoriaClinica"
+            WHERE "codEmpresa" = $1
+              AND "fechaConsulta" IS NOT NULL
+              AND "fechaConsulta" != ''
+        `;
+        const params = [codEmpresa];
+
+        if (documento) {
+            query += ` AND "numeroId" = $2`;
+            params.push(documento);
+        }
+
+        query += ` ORDER BY "fechaConsulta" DESC LIMIT 100`;
+
+        const result = await pool.query(query, params);
+
+        const certificados = result.rows.map(row => ({
+            _id: row._id,
+            nombres: [row.primerNombre, row.segundoNombre].filter(Boolean).join(' '),
+            apellidos: [row.primerApellido, row.segundoApellido].filter(Boolean).join(' '),
+            numeroId: row.numeroId,
+            estado: row.atendido,
+            fechaConsulta: row.fechaConsulta,
+            fechaAtencion: row.fechaAtencion,
+            examenes: row.examenes,
+            concepto: row.mdConceptoFinal
+        }));
+
+        res.json({ success: true, certificados, codEmpresa });
+
+    } catch (error) {
+        console.error('❌ Error consultando certificados empresa:', error);
+        res.status(500).json({ success: false, message: 'Error al consultar certificados' });
     }
 });
 
