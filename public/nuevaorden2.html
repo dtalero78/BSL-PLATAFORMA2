@@ -929,6 +929,11 @@
         const wixPrimerApellido = urlParams.get('invitee_last_name');
         const wixCedula = urlParams.get('answer_3');
 
+        // Parámetros de empresa desde URL (epa1=codEmpresa, epa2=empresa, epa3=tipoExamen)
+        const epa1 = urlParams.get('epa1');
+        const epa2 = urlParams.get('epa2');
+        const epa3 = urlParams.get('epa3');
+
         // Inicialización
         document.addEventListener('DOMContentLoaded', () => {
             actualizarProgreso();
@@ -1338,19 +1343,18 @@
             const hora = document.getElementById('horaSelect').value; // HH:MM
 
             const aNombreDe = document.getElementById('aNombreDe').value;
-            // Por defecto SANITHELP-JJ, pero PARTICULAR si viene de Wix
             let codEmpresa = wixCedula ? 'PARTICULAR' : 'SANITHELP-JJ';
             let empresaNombre = '';
-
-            if (aNombreDe === 'PARTICULAR' || wixCedula) {
-                empresaNombre = 'PARTICULAR';
-            } else if (aNombreDe === 'EMPRESA') {
-                empresaNombre = document.getElementById('empresa').value.trim() || '';
-            }
-
-            // Solo empresas especiales tienen su propio codEmpresa (override de Wix)
             let tipoExamenFinal = 'Ingreso'; // valor por defecto
-            if (refEmpresa) {
+
+            // Prioridad 1: parámetros epa1/epa2/epa3 de la URL (viene de Wix/Calendly)
+            if (epa1) {
+                codEmpresa = epa1;
+                empresaNombre = epa2 ? decodeURIComponent(epa2) : '';
+                tipoExamenFinal = epa3 ? decodeURIComponent(epa3) : 'Ingreso';
+            }
+            // Prioridad 2: empresas especiales por ref
+            else if (refEmpresa) {
                 const empresasEspeciales = {
                     'DeStori': { codEmpresa: 'STORI', empresa: 'Stori Card', tipoExamen: 'Ingreso' },
                     'EVERTEC': { codEmpresa: 'EVERTEC', empresa: 'EVERTEC', tipoExamen: 'Ingreso' },
@@ -1362,6 +1366,14 @@
                     codEmpresa = empresasEspeciales[refEmpresa].codEmpresa;
                     empresaNombre = empresasEspeciales[refEmpresa].empresa;
                     tipoExamenFinal = empresasEspeciales[refEmpresa].tipoExamen;
+                }
+            }
+            // Prioridad 3: selección manual del formulario
+            else {
+                if (aNombreDe === 'PARTICULAR' || wixCedula) {
+                    empresaNombre = 'PARTICULAR';
+                } else if (aNombreDe === 'EMPRESA') {
+                    empresaNombre = document.getElementById('empresa').value.trim() || '';
                 }
             }
 
