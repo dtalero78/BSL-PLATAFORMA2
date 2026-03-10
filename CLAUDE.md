@@ -109,7 +109,7 @@ src/
     consulta-publica.js - /api/consulta-ordenes - Public lookups
     visiometria.js      - /api/visiometrias/* - Vision tests
     laboratorios.js     - /api/laboratorios/* - Lab results
-    certificados.js     - /preview-certificado/*, /api/certificado-pdf/*
+    certificados.js     - /preview-certificado/*, /api/certificado-pdf/*, /descarga-empresas/:codEmpresa, /api/descarga-empresas/*
     rips.js             - /api/rips/* - Colombian health reports
     comunidad.js        - /api/comunidad/* - Community features
     siigo.js            - /api/envio-siigo/* - Siigo accounting
@@ -157,7 +157,8 @@ Multiple HTML pages with vanilla JavaScript (no framework):
 - `validar-certificado.html` - Certificate validation page
 - `examenes.html` - Exam type management
 - `estadisticas.html` - Statistics dashboard
-- `movimiento.html` - Patient movement statistics by date range
+- `movimiento.html` - Patient movement statistics by date range (standalone, no sidebar/topbar)
+- `descarga-empresas.html` - Public page for downloading certificates by codEmpresa (standalone, no sidebar/topbar)
 - `certificado-template.html` - Medical certificate PDF template
 - `enviar-siigo.html` - Integration with Siigo accounting system
 - `asistencia-siigo.html` - SIIGO attendance tracking
@@ -190,7 +191,7 @@ Frontend architecture:
 - Socket.io for real-time updates (appointments, notifications)
 - Shared sidebar/topbar loaded dynamically via `load-sidebar.js` and `load-topbar.js`
 - All internal pages MUST use the shared sidebar/topbar pattern (see ordenes.html as reference)
-- Exceptions: `twilio-chat.html` (custom chat UI), `validar-certificado.html` (public page), `index.html` (patient form)
+- Exceptions: `twilio-chat.html` (custom chat UI), `validar-certificado.html` (public page), `index.html` (patient form), `movimiento.html` (standalone stats), `descarga-empresas.html` (public company downloads)
 
 ### Wix Integration (WIX/)
 
