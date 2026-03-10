@@ -341,7 +341,7 @@
                     const fechaAtencion = cert.fechaAtencion ? new Date(cert.fechaAtencion).toLocaleDateString('es-CO') : '-';
 
                     const botonDescarga = esAtendido
-                        ? `<a class="btn-descargar" href="/api/descarga-empresas/pdf/${cert._id}" target="_blank">Descargar</a>`
+                        ? `<a class="btn-descargar" href="https://bsl-utilidades-yp78a.ondigitalocean.app/generar-certificado-desde-wix/${cert._id}" target="_blank">Descargar</a>`
                         : `<span class="btn-descargar disabled">Pendiente</span>`;
 
                     return `<tr>
