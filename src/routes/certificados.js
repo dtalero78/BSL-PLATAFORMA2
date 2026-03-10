@@ -122,6 +122,54 @@ router.get('/api/certificado-pdf/:id', async (req, res) => {
     }
 });
 
+// GET /descarga-empresas/:id - Descarga directa del certificado médico (link público para empresas)
+router.get('/descarga-empresas/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log(`📄 Descarga directa de certificado para orden: ${id}`);
+
+        // 1. Verificar que la orden existe y está ATENDIDO
+        const historiaResult = await pool.query(
+            'SELECT "numeroId", "atendido", "primerNombre", "primerApellido" FROM "HistoriaClinica" WHERE "_id" = $1',
+            [id]
+        );
+
+        if (historiaResult.rows.length === 0) {
+            return res.status(404).send('<h1>Certificado no encontrado</h1><p>La orden especificada no existe.</p>');
+        }
+
+        const historia = historiaResult.rows[0];
+
+        if (historia.atendido !== 'ATENDIDO') {
+            return res.status(400).send('<h1>Certificado no disponible</h1><p>El paciente aún no ha sido atendido.</p>');
+        }
+
+        // 2. Construir URL del preview
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+        const host = req.headers['x-forwarded-host'] || req.headers.host;
+        const previewUrl = `${protocol}://${host}/preview-certificado/${id}`;
+        console.log('📍 Preview URL:', previewUrl);
+
+        // 3. Generar PDF
+        const pdfBuffer = await generarPDFDesdeURL(previewUrl);
+
+        // 4. Nombre del archivo
+        const nombreArchivo = `certificado_${historia.numeroId || id}.pdf`;
+
+        // 5. Enviar PDF
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="${nombreArchivo}"`);
+        res.setHeader('Content-Length', pdfBuffer.length);
+        res.send(pdfBuffer);
+
+        console.log(`✅ Certificado descargado: ${nombreArchivo} (${(pdfBuffer.length / 1024).toFixed(1)} KB)`);
+
+    } catch (error) {
+        console.error('❌ Error en descarga directa de certificado:', error);
+        res.status(500).send('<h1>Error generando certificado</h1><p>Por favor intente nuevamente.</p>');
+    }
+});
+
 // GET /api/validar-certificado/:numeroId - Valida la existencia de un certificado médico
 router.get('/api/validar-certificado/:numeroId', async (req, res) => {
     try {
