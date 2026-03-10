@@ -183,7 +183,6 @@ router.get('/api/descarga-empresas/:codEmpresa', async (req, res) => {
             FROM "HistoriaClinica"
             WHERE "codEmpresa" = $1
               AND "fechaConsulta" IS NOT NULL
-              AND "fechaConsulta" != ''
         `;
         const params = [codEmpresa];
 
