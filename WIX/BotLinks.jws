@@ -247,7 +247,7 @@ async function actualizarHistoriaClinica(idGeneral) {
         const fechaConsulta = new Date();
         currentItem.fechaConsulta = fechaConsulta;
         currentItem.atendido = "ATENDIDO";
-        currentItem.mdConceptoFinal = "ELEGIBLE PARA EL CARGO SIN RECOMENDACIONES LABORALES";
+        currentItem.mdConceptoFinal = "APTO";
         currentItem.mdRecomendacionesMedicasAdicionales = `1. PAUSAS ACTIVAS
 2. HIGIENE POSTURAL
 3. MEDIDAS ERGONOMICAS

@@ -250,7 +250,7 @@ async function procesarRegistroNubia(registro) {
                 UPDATE "HistoriaClinica"
                 SET "atendido" = 'ATENDIDO',
                     "fechaConsulta" = COALESCE("fechaConsulta", NOW()),
-                    "mdConceptoFinal" = 'ELEGIBLE PARA EL CARGO SIN RECOMENDACIONES LABORALES',
+                    "mdConceptoFinal" = 'APTO',
                     "mdRecomendacionesMedicasAdicionales" = $2,
                     "mdObservacionesCertificado" = $3
                 WHERE "_id" = $1
@@ -388,7 +388,7 @@ router.post('/nubia/atender/:id', async (req, res) => {
             UPDATE "HistoriaClinica"
             SET "atendido" = 'ATENDIDO',
                 "fechaConsulta" = NOW(),
-                "mdConceptoFinal" = 'ELEGIBLE PARA EL CARGO SIN RECOMENDACIONES LABORALES',
+                "mdConceptoFinal" = 'APTO',
                 "mdRecomendacionesMedicasAdicionales" = $2,
                 "mdObservacionesCertificado" = $3
             WHERE "_id" = $1
