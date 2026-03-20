@@ -86,7 +86,7 @@ router.get('/ordenes-aprobador', async (req, res) => {
     }
 });
 
-// Route 3 - AI statistics endpoint using OpenAI
+// Route 3 - AI statistics endpoint (SQL-powered via OpenAI)
 router.post('/estadisticas-ia', async (req, res) => {
     try {
         const { codEmpresa, pregunta } = req.body;
@@ -98,142 +98,17 @@ router.post('/estadisticas-ia', async (req, res) => {
             });
         }
 
-        console.log('');
-        console.log('===================================================================');
-        console.log('CONSULTA IA - Empresa:', codEmpresa);
-        console.log('Pregunta:', pregunta);
-        console.log('===================================================================');
-
-        // Use repositories - 2 lines instead of 60+
-        const stats = await FormulariosRepository.getEstadisticasSalud(codEmpresa);
-        const ordenes = await HistoriaClinicaRepository.getEstadisticasOrdenes(codEmpresa);
-
-        const datosEstadisticos = `
-DATOS DE SALUD DE LOS COLABORADORES:
-- Total de empleados con formulario completado: ${stats.total_empleados}
-- Hombres: ${stats.hombres} | Mujeres: ${stats.mujeres}
-- Edad promedio: ${stats.edad_promedio || 'N/A'} anos (min: ${stats.edad_minima || 'N/A'}, max: ${stats.edad_maxima || 'N/A'})
-
-HABITOS Y FACTORES DE RIESGO:
-- Fumadores (fuman o fumaban): ${stats.fumadores}
-- Con presion arterial alta: ${stats.presion_alta}
-- Con problemas cardiacos: ${stats.problemas_cardiacos}
-- Con diabetes o problemas de azucar: ${stats.diabetes}
-- Con problemas de sueno: ${stats.problemas_sueno}
-
-CONSUMO DE LICOR:
-- Nunca consumen licor: ${stats.licor_nunca}
-- Consumen ocasionalmente: ${stats.licor_ocasional}
-- Consumen 1 dia a la semana: ${stats.licor_1_dia}
-- Consumen 2 dias a la semana: ${stats.licor_2_dias}
-- Consumen mas de 2 dias a la semana: ${stats.licor_mas_2_dias}
-
-EJERCICIO FISICO:
-- Hacen ejercicio ocasionalmente: ${stats.ejercicio_ocasional}
-- Hacen ejercicio 1 dia a la semana: ${stats.ejercicio_1_dia}
-- Hacen ejercicio 2 dias a la semana: ${stats.ejercicio_2_dias}
-- Hacen ejercicio mas de 2 dias a la semana: ${stats.ejercicio_mas_2_dias}
-
-SINTOMAS Y CONDICIONES:
-- Con hormigueos: ${stats.hormigueos}
-- Con dolor de espalda: ${stats.dolor_espalda}
-- Con dolor de cabeza frecuente: ${stats.dolor_cabeza}
-- Con hernias: ${stats.hernias}
-- Con varices: ${stats.varices}
-- Con hepatitis: ${stats.hepatitis}
-- Con enfermedad del higado: ${stats.enfermedad_higado}
-- Con enfermedad pulmonar: ${stats.enfermedad_pulmonar}
-- Con condicion medica en tratamiento: ${stats.condicion_medica_tratamiento}
-- Embarazos actuales: ${stats.embarazos}
-
-SALUD VISUAL:
-- Usan anteojos: ${stats.usa_anteojos}
-- Usan lentes de contacto: ${stats.usa_lentes_contacto}
-- Con cirugia ocular previa: ${stats.cirugia_ocular}
-
-SALUD MENTAL:
-- Con trastorno psicologico o psiquiatrico: ${stats.trastorno_psicologico}
-- Con sintomas psicologicos recientes: ${stats.sintomas_psicologicos}
-
-OTRAS CONDICIONES:
-- Con diagnostico o sospecha de cancer: ${stats.diagnostico_cancer}
-- Con enfermedades laborales o accidentes de trabajo: ${stats.enfermedades_laborales}
-- Con enfermedad osteomuscular: ${stats.enfermedad_osteomuscular}
-- Con enfermedad autoinmune: ${stats.enfermedad_autoinmune}
-
-ANTECEDENTES FAMILIARES:
-- Familiares con diabetes: ${stats.familia_diabetes}
-- Familiares con hipertension: ${stats.familia_hipertension}
-- Familiares con cancer: ${stats.familia_cancer}
-- Familiares con infartos: ${stats.familia_infartos}
-- Familiares con trastornos mentales: ${stats.familia_trastornos_mentales}
-- Familiares con enfermedades hereditarias: ${stats.familia_enfermedades_hereditarias}
-- Familiares con enfermedades geneticas: ${stats.familia_enfermedades_geneticas}
-
-ORDENES/CITAS MEDICAS:
-- Total de ordenes: ${ordenes.total_ordenes}
-- Atendidos: ${ordenes.atendidos}
-- Pendientes: ${ordenes.pendientes}
-`;
-
-        console.log('Datos estadisticos obtenidos');
-
-        const fetch = (await import('node-fetch')).default;
-        const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-            },
-            body: JSON.stringify({
-                model: 'gpt-4o-mini',
-                messages: [
-                    {
-                        role: 'system',
-                        content: `Eres un asistente de análisis de salud ocupacional para la empresa ${codEmpresa}.
-Tu rol es ayudar al área de recursos humanos a entender la salud de sus colaboradores.
-
-Tienes acceso a los siguientes datos estadísticos:
-${datosEstadisticos}
-
-INSTRUCCIONES:
-- Responde de forma clara, concisa y profesional
-- Siempre incluye números absolutos y porcentajes cuando sea relevante
-- Si la pregunta no puede ser respondida con los datos disponibles, indícalo amablemente
-- Usa emojis moderadamente para hacer la respuesta más visual
-- Si detectas datos preocupantes, sugiere acciones preventivas
-- Nunca inventes datos, solo usa los proporcionados
-- Responde en español`
-                    },
-                    {
-                        role: 'user',
-                        content: pregunta
-                    }
-                ],
-                temperature: 0.7,
-                max_tokens: 1000
-            })
-        });
-
-        if (!openaiResponse.ok) {
-            const errorData = await openaiResponse.text();
-            console.error('Error de OpenAI:', errorData);
-            throw new Error('Error al comunicarse con OpenAI');
+        // Validate codEmpresa format (alphanumeric + hyphens only)
+        if (!/^[a-zA-Z0-9\-_]+$/.test(codEmpresa)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Código de empresa inválido'
+            });
         }
 
-        const openaiData = await openaiResponse.json();
-        const respuestaIA = openaiData.choices[0].message.content;
-
-        console.log('Respuesta IA generada exitosamente');
-
-        res.json({
-            success: true,
-            respuesta: respuestaIA,
-            datosBase: {
-                totalEmpleados: parseInt(stats.total_empleados),
-                totalOrdenes: parseInt(ordenes.total_ordenes)
-            }
-        });
+        const { procesarPreguntaIA } = require('../services/estadisticas-ia');
+        const result = await procesarPreguntaIA(codEmpresa, pregunta);
+        res.json(result);
 
     } catch (error) {
         console.error('Error en estadisticas IA:', error);

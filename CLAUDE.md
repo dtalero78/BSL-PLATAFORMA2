@@ -141,7 +141,7 @@ scripts/
 
 Multiple HTML pages with vanilla JavaScript (no framework):
 - `ordenes.html` - Main dashboard for viewing/managing patient orders
-- `nueva-orden.html`, `nuevaorden1.html`, `nuevaorden2.html`, `nuevaorden3.html` - Multi-step order creation wizards
+- `nueva-orden.html`, `nuevaorden1.html`, `nuevaorden2.html`, `nuevaorden3.html` - Multi-step order creation wizards. `nuevaorden2.html` supports URL params `epa1`, `epa2`, `epa3` to pre-select codEmpresa
 - `panel-admin.html` - Admin panel for user management
 - `panel-empresas.html` / `empresas.html` - Company portal for viewing employee exams
 - `index.html` - Patient intake form (multi-step wizard)
@@ -162,9 +162,9 @@ Multiple HTML pages with vanilla JavaScript (no framework):
 - `certificado-template.html` - Medical certificate PDF template
 - `enviar-siigo.html` - Integration with Siigo accounting system
 - `asistencia-siigo.html` - SIIGO attendance tracking
-- `enviar-empresas.html` - Company scheduling notifications
+- `enviar-empresas.html` - Company scheduling notifications (standalone, no sidebar/topbar)
 - `facturacion-empresas.html` - Company billing reports
-- `planilla-sitel.html` - SITEL payroll report
+- `planilla-sitel.html` - SITEL payroll report (standalone, no sidebar/topbar)
 - `panel-laboratorios.html` - Laboratory results panel
 - `panel-rips.html` - RIPS Colombian health reports panel
 - `panel-comunidad.html` - Community features panel
@@ -191,7 +191,7 @@ Frontend architecture:
 - Socket.io for real-time updates (appointments, notifications)
 - Shared sidebar/topbar loaded dynamically via `load-sidebar.js` and `load-topbar.js`
 - All internal pages MUST use the shared sidebar/topbar pattern (see ordenes.html as reference)
-- Exceptions: `twilio-chat.html` (custom chat UI), `validar-certificado.html` (public page), `index.html` (patient form), `movimiento.html` (standalone stats), `descarga-empresas.html` (public company downloads)
+- Exceptions: `twilio-chat.html` (custom chat UI), `validar-certificado.html` (public page), `index.html` (patient form), `movimiento.html` (standalone stats), `descarga-empresas.html` (public company downloads), `enviar-empresas.html` (standalone notifications), `planilla-sitel.html` (standalone report)
 
 ### Wix Integration (WIX/)
 
@@ -259,6 +259,12 @@ The platform includes a full WhatsApp-based customer service system:
 2. Creates HistoriaClinica record in PostgreSQL + syncs to Wix
 3. Manages WhatsApp conversation for the patient
 4. After exam, POST to `/api/external/aprobar` to approve and send results back
+5. Alternatively, EMPRESA users can approve directly via the APROBAR button in `panel-empresas.html`
+
+### Historia Clínica PDF Export
+- Preview HTML and download PDF of complete medical history via `/api/historia-clinica/:id/pdf`
+- HTML generation handled by `src/helpers/historia-clinica-html.js`
+- PDF rendered server-side with Puppeteer (Chromium)
 
 ### Modal Details in ordenes.html
 The patient details modal loads data from **PostgreSQL HistoriaClinica table** via `/api/historia-clinica/:id` endpoint. If medical fields (mdConceptoFinal, mdDx1, etc.) appear empty, run the sync script to pull latest data from Wix.
@@ -281,6 +287,7 @@ All tables are created automatically on server startup with `CREATE TABLE IF NOT
 - Medical history records synced from Wix
 - Primary key: `_id` (Wix-generated UUID)
 - Critical fields: `numeroId` (patient ID), `atendido` (status), `mdConceptoFinal` (medical concept), `mdDx1/mdDx2` (diagnoses)
+- Valid `mdConceptoFinal` values: `APTO`, `APLAZADO`, `NO APTO`, `APTO CON RECOMENDACIONES`
 - Dynamic columns (added on startup): `horaAtencion`, `subempresa`, `centro_de_costo`, `aprobacion`, `aprobacion_externa`, `fecha_aprobacion_externa`, `concepto_aprobado`, `linkEnviado`, `observaciones_siigo`, `foto_url`, `recordatorioLinkEnviado`
 - Index on: `numeroId`, `celular`, `codEmpresa`, `fechaAtencion`
 - **Access via**: `HistoriaClinicaRepository`
