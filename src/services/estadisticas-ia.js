@@ -118,15 +118,17 @@ function validarSQL(sql) {
         return { valid: false, sql: trimmed, reason: 'Query contiene operaciones no permitidas' };
     }
 
-    if (trimmed.includes(';')) {
-        return { valid: false, sql: trimmed, reason: 'No se permiten multiples statements' };
+    // Remove trailing semicolon (OpenAI always adds one) then check for multiple statements
+    const cleaned = trimmed.replace(/;\s*$/, '');
+    if (cleaned.includes(';')) {
+        return { valid: false, sql: cleaned, reason: 'No se permiten multiples statements' };
     }
 
-    if (/\b(foto|firma|foto_url)\b/i.test(trimmed)) {
-        return { valid: false, sql: trimmed, reason: 'No se permite acceder a campos de imagen' };
+    if (/\b(foto|firma|foto_url)\b/i.test(cleaned)) {
+        return { valid: false, sql: cleaned, reason: 'No se permite acceder a campos de imagen' };
     }
 
-    return { valid: true, sql: trimmed };
+    return { valid: true, sql: cleaned };
 }
 
 function verificarFiltroEmpresa(sql, codEmpresa) {
