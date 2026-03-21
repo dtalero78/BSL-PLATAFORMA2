@@ -176,17 +176,24 @@ async function ejecutarConsulta(sql) {
     }
 }
 
-async function procesarPreguntaIA(codEmpresa, pregunta) {
+async function procesarPreguntaIA(codEmpresa, pregunta, historial = []) {
     console.log('');
     console.log('===================================================================');
     console.log('CONSULTA IA (SQL) - Empresa:', codEmpresa);
     console.log('Pregunta:', pregunta);
+    console.log('Historial:', historial.length, 'mensajes');
     console.log('===================================================================');
+
+    // Build conversation context from history (last 10 messages max)
+    const historialReciente = historial.slice(-10);
+    const contextoHistorial = historialReciente.length > 0
+        ? `\n\nCONTEXTO DE LA CONVERSACION ANTERIOR:\n${historialReciente.map(m => `${m.role === 'user' ? 'Usuario' : 'Asistente'}: ${m.content}`).join('\n')}\n\nTen en cuenta este contexto para entender la pregunta actual.`
+        : '';
 
     // Step 1: Generate SQL
     const sqlPrompt = SYSTEM_PROMPT_SQL.replace(/\{codEmpresa\}/g, codEmpresa);
     const sqlRaw = await callOpenAI([
-        { role: 'system', content: sqlPrompt },
+        { role: 'system', content: sqlPrompt + contextoHistorial },
         { role: 'user', content: pregunta }
     ], 0, 500);
 

@@ -5576,6 +5576,7 @@
         // ==================== FUNCIONES SECCIÓN ESTADÍSTICAS ====================
 
         let estadisticasIsLoading = false;
+        let estadisticasHistorial = [];
 
         function estadisticasInicializar() {
             // Mostrar nombre de empresa
@@ -5626,7 +5627,8 @@
                     },
                     body: JSON.stringify({
                         codEmpresa: codEmpresa,
-                        pregunta: pregunta
+                        pregunta: pregunta,
+                        historial: estadisticasHistorial
                     })
                 });
 
@@ -5636,6 +5638,8 @@
                 estadisticasRemoverCargando(loadingId);
 
                 if (result.success) {
+                    estadisticasHistorial.push({ role: 'user', content: pregunta });
+                    estadisticasHistorial.push({ role: 'assistant', content: result.respuesta });
                     estadisticasAgregarMensaje(result.respuesta, 'ai');
                 } else {
                     estadisticasAgregarMensaje('Lo siento, hubo un error al procesar tu consulta. Por favor intenta de nuevo.', 'ai');

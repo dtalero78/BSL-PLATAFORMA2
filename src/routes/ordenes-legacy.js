@@ -89,7 +89,7 @@ router.get('/ordenes-aprobador', async (req, res) => {
 // Route 3 - AI statistics endpoint (SQL-powered via OpenAI)
 router.post('/estadisticas-ia', async (req, res) => {
     try {
-        const { codEmpresa, pregunta } = req.body;
+        const { codEmpresa, pregunta, historial } = req.body;
 
         if (!codEmpresa || !pregunta) {
             return res.status(400).json({
@@ -107,7 +107,7 @@ router.post('/estadisticas-ia', async (req, res) => {
         }
 
         const { procesarPreguntaIA } = require('../services/estadisticas-ia');
-        const result = await procesarPreguntaIA(codEmpresa, pregunta);
+        const result = await procesarPreguntaIA(codEmpresa, pregunta, historial || []);
         res.json(result);
 
     } catch (error) {
