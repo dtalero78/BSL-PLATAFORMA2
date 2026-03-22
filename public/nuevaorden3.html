@@ -952,9 +952,9 @@
             // Extraer el nombre de la empresa (sin el tipo de examen)
             // La 'S' antes del tipo conecta empresa con tipo (ej: SOFTSERVESINGRESO)
             let empresaNombre = ref
-                .replace(/S?PERIODICO/gi, '')
-                .replace(/S?EGRESO/gi, '')
-                .replace(/S?INGRESO/gi, '')
+                .replace(/S?PERIODICOS?/gi, '')
+                .replace(/S?EGRESOS?/gi, '')
+                .replace(/S?INGRESOS?/gi, '')
                 .trim();
 
             // Capitalizar el nombre de la empresa
@@ -1010,9 +1010,9 @@
 
             // Configuración específica para SOFTSERVE: ciudades personalizadas por departamento
             const empresaRef = refUpper
-                .replace('PERIODICO', '')
-                .replace('EGRESO', '')
-                .replace('INGRESO', '')
+                .replace(/PERIODICOS?/g, '')
+                .replace(/EGRESOS?/g, '')
+                .replace(/INGRESOS?/g, '')
                 .trim();
 
             if (empresaRef === 'SOFTSERVE' || empresaRef === 'TEN') {
@@ -1545,9 +1545,9 @@
 
                 // Extraer el nombre de la empresa (sin el tipo de examen) para usarlo como codEmpresa
                 codEmpresa = refEmpresa
-                    .replace(/PERIODICO/gi, '')
-                    .replace(/EGRESO/gi, '')
-                    .replace(/INGRESO/gi, '')
+                    .replace(/PERIODICOS?/gi, '')
+                    .replace(/EGRESOS?/gi, '')
+                    .replace(/INGRESOS?/gi, '')
                     .trim()
                     .toUpperCase();
 
