@@ -963,6 +963,8 @@
             // Mantener en mayúsculas para empresas que lo requieran
             if (empresaNombre.toUpperCase() === 'SOFTSERVE') {
                 empresaNombre = 'SOFTSERVE';
+            } else if (empresaNombre.toUpperCase() === 'TEN') {
+                empresaNombre = 'T.EN COLOMBIA';
             }
 
             // Pre-seleccionar Telemedicina automáticamente
@@ -1013,75 +1015,102 @@
                 .replace('INGRESO', '')
                 .trim();
 
-            if (empresaRef === 'SOFTSERVE') {
+            if (empresaRef === 'SOFTSERVE' || empresaRef === 'TEN') {
                 const ciudadSelect = document.getElementById('ciudad');
-                ciudadSelect.innerHTML = `
-                    <option value="">Seleccionar ciudad...</option>
-                    <optgroup label="Antioquia">
-                        <option value="Bello">Bello</option>
-                        <option value="Caldas">Caldas</option>
-                        <option value="El Carmen de Viboral">El Carmen de Viboral</option>
-                        <option value="Envigado">Envigado</option>
-                        <option value="Itaguí">Itaguí</option>
-                        <option value="La Ceja">La Ceja</option>
-                        <option value="La Estrella">La Estrella</option>
-                        <option value="Marinilla">Marinilla</option>
-                        <option value="Medellín">Medellín</option>
-                        <option value="Rionegro">Rionegro</option>
-                        <option value="Sabaneta">Sabaneta</option>
-                    </optgroup>
-                    <optgroup label="Atlántico">
-                        <option value="Barranquilla">Barranquilla</option>
-                    </optgroup>
-                    <optgroup label="Bolívar">
-                        <option value="Cartagena">Cartagena</option>
-                    </optgroup>
-                    <optgroup label="Boyacá">
-                        <option value="Tunja">Tunja</option>
-                        <option value="Úmbita">Úmbita</option>
-                        <option value="Villa de Leyva">Villa de Leyva</option>
-                    </optgroup>
-                    <optgroup label="Caldas">
-                        <option value="Manizales">Manizales</option>
-                    </optgroup>
-                    <optgroup label="Cauca">
-                        <option value="Popayán">Popayán</option>
-                    </optgroup>
-                    <optgroup label="Cundinamarca">
+
+                if (empresaRef === 'SOFTSERVE') {
+                    ciudadSelect.innerHTML = `
+                        <option value="">Seleccionar ciudad...</option>
+                        <optgroup label="Antioquia">
+                            <option value="Bello">Bello</option>
+                            <option value="Caldas">Caldas</option>
+                            <option value="El Carmen de Viboral">El Carmen de Viboral</option>
+                            <option value="Envigado">Envigado</option>
+                            <option value="Itaguí">Itaguí</option>
+                            <option value="La Ceja">La Ceja</option>
+                            <option value="La Estrella">La Estrella</option>
+                            <option value="Marinilla">Marinilla</option>
+                            <option value="Medellín">Medellín</option>
+                            <option value="Rionegro">Rionegro</option>
+                            <option value="Sabaneta">Sabaneta</option>
+                        </optgroup>
+                        <optgroup label="Atlántico">
+                            <option value="Barranquilla">Barranquilla</option>
+                        </optgroup>
+                        <optgroup label="Bolívar">
+                            <option value="Cartagena">Cartagena</option>
+                        </optgroup>
+                        <optgroup label="Boyacá">
+                            <option value="Tunja">Tunja</option>
+                            <option value="Úmbita">Úmbita</option>
+                            <option value="Villa de Leyva">Villa de Leyva</option>
+                        </optgroup>
+                        <optgroup label="Caldas">
+                            <option value="Manizales">Manizales</option>
+                        </optgroup>
+                        <optgroup label="Cauca">
+                            <option value="Popayán">Popayán</option>
+                        </optgroup>
+                        <optgroup label="Cundinamarca">
+                            <option value="Bogotá">Bogotá</option>
+                            <option value="Cajicá">Cajicá</option>
+                            <option value="Chía">Chía</option>
+                            <option value="Cota">Cota</option>
+                            <option value="Guaduas">Guaduas</option>
+                            <option value="Tenjo">Tenjo</option>
+                        </optgroup>
+                        <optgroup label="Huila">
+                            <option value="Neiva">Neiva</option>
+                        </optgroup>
+                        <optgroup label="Norte de Santander">
+                            <option value="Cúcuta">Cúcuta</option>
+                        </optgroup>
+                        <optgroup label="Quindío">
+                            <option value="Armenia">Armenia</option>
+                        </optgroup>
+                        <optgroup label="Risaralda">
+                            <option value="Apía">Apía</option>
+                            <option value="Dosquebradas">Dosquebradas</option>
+                            <option value="Pereira">Pereira</option>
+                        </optgroup>
+                        <optgroup label="Santander">
+                            <option value="Bucaramanga">Bucaramanga</option>
+                        </optgroup>
+                        <optgroup label="Tolima">
+                            <option value="Ibagué">Ibagué</option>
+                        </optgroup>
+                        <optgroup label="Valle del Cauca">
+                            <option value="Cali">Cali</option>
+                            <option value="Jamundí">Jamundí</option>
+                            <option value="Palmira">Palmira</option>
+                            <option value="Tuluá">Tuluá</option>
+                        </optgroup>
+                    `;
+                } else if (empresaRef === 'TEN') {
+                    ciudadSelect.innerHTML = `
+                        <option value="">Seleccionar ciudad...</option>
                         <option value="Bogotá">Bogotá</option>
-                        <option value="Cajicá">Cajicá</option>
-                        <option value="Chía">Chía</option>
-                        <option value="Cota">Cota</option>
-                        <option value="Guaduas">Guaduas</option>
-                        <option value="Tenjo">Tenjo</option>
-                    </optgroup>
-                    <optgroup label="Huila">
-                        <option value="Neiva">Neiva</option>
-                    </optgroup>
-                    <optgroup label="Norte de Santander">
-                        <option value="Cúcuta">Cúcuta</option>
-                    </optgroup>
-                    <optgroup label="Quindío">
-                        <option value="Armenia">Armenia</option>
-                    </optgroup>
-                    <optgroup label="Risaralda">
-                        <option value="Apía">Apía</option>
-                        <option value="Dosquebradas">Dosquebradas</option>
-                        <option value="Pereira">Pereira</option>
-                    </optgroup>
-                    <optgroup label="Santander">
-                        <option value="Bucaramanga">Bucaramanga</option>
-                    </optgroup>
-                    <optgroup label="Tolima">
-                        <option value="Ibagué">Ibagué</option>
-                    </optgroup>
-                    <optgroup label="Valle del Cauca">
+                        <option value="Medellín">Medellín</option>
                         <option value="Cali">Cali</option>
-                        <option value="Jamundí">Jamundí</option>
-                        <option value="Palmira">Palmira</option>
-                        <option value="Tuluá">Tuluá</option>
-                    </optgroup>
-                `;
+                        <option value="Barranquilla">Barranquilla</option>
+                        <option value="Cartagena">Cartagena</option>
+                        <option value="Bucaramanga">Bucaramanga</option>
+                        <option value="Cúcuta">Cúcuta</option>
+                        <option value="Pereira">Pereira</option>
+                        <option value="Manizales">Manizales</option>
+                        <option value="Armenia">Armenia</option>
+                        <option value="Ibagué">Ibagué</option>
+                        <option value="Neiva">Neiva</option>
+                        <option value="Villavicencio">Villavicencio</option>
+                        <option value="Popayán">Popayán</option>
+                        <option value="Pasto">Pasto</option>
+                        <option value="Montería">Montería</option>
+                        <option value="Santa Marta">Santa Marta</option>
+                        <option value="Tunja">Tunja</option>
+                        <option value="Valledupar">Valledupar</option>
+                        <option value="Sincelejo">Sincelejo</option>
+                    `;
+                }
             }
         }
 
