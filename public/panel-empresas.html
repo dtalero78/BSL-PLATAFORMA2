@@ -3056,6 +3056,11 @@
     <script src="/js/auth.js"></script>
     <script>
         let codEmpresa = '';
+        // Empresas con flujo de aprobación SST (columna aprobación, pruebas escalonadas, ADC obligatorio)
+        const EMPRESAS_CON_APROBACION = ['SITEL', 'OMEGA'];
+        function esEmpresaConAprobacion() {
+            return EMPRESAS_CON_APROBACION.includes(codEmpresa);
+        }
         let usuarioActual = null;
         let permisosUsuario = []; // Permisos cargados del servidor
         let configEmpresa = null; // Configuración de ciudades, exámenes y subempresas
@@ -3584,8 +3589,8 @@
         function obtenerExamenesFaltantes(orden) {
             const faltantes = [];
 
-            // Para SITEL, SIEMPRE incluir Prueba ADC por defecto
-            if (codEmpresa === 'SITEL') {
+            // Para empresas con aprobación, SIEMPRE incluir Prueba ADC por defecto
+            if (esEmpresaConAprobacion()) {
                 faltantes.push('PRUEBA ADC');
             }
 
@@ -3628,8 +3633,8 @@
             const headerRow = document.getElementById('tableHeaderRow');
             if (!headerRow) return;
 
-            if (codEmpresa === 'SITEL') {
-                // Encabezados para SITEL
+            if (esEmpresaConAprobacion()) {
+                // Encabezados para empresas con aprobación
                 headerRow.innerHTML = `
                     <th style="width: 40px; text-align: center;">
                         <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" title="Seleccionar todos" style="cursor: pointer;">
@@ -3680,8 +3685,8 @@
             tableCount.innerHTML = `<strong>${filteredData.length}</strong> registros`;
 
             // Renderizar filas según empresa
-            if (codEmpresa === 'SITEL') {
-                // Vista SITEL con columnas personalizadas
+            if (esEmpresaConAprobacion()) {
+                // Vista empresas con aprobación - columnas personalizadas
                 tableBody.innerHTML = pageData.map(orden => {
                     const nombre = `${orden.primerNombre || ''} ${orden.segundoNombre || ''} ${orden.primerApellido || ''} ${orden.segundoApellido || ''}`.trim();
                     const cedula = orden.numeroId || '-';
@@ -4147,7 +4152,7 @@
                     ).join('');
 
                     // Si el codEmpresa es Sitel, hacer clickeable SOLO la primera prueba pendiente (la siguiente en la escalera)
-                    const esSitel = paciente.codEmpresa && paciente.codEmpresa.toUpperCase() === 'SITEL';
+                    const esSitel = paciente.codEmpresa && EMPRESAS_CON_APROBACION.includes(paciente.codEmpresa.toUpperCase());
                     const ordenId = paciente._id;
                     const tagsPendientesHTML = tagsPendientes.map((prueba, index) => {
                         const esPrimeraPendiente = index === 0; // Solo la primera pendiente es clickeable
