@@ -3742,7 +3742,7 @@
                             <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;">${aprobacionBadge}</td>
                             <td style="text-align: center;" onclick="event.stopPropagation();">
                                 ${tienePermiso('DESCARGAR_CERTIFICADO_TABLA') ? `
-                                <button class="btn-icon-small" onclick="descargarCertificado('${orden._id}')" title="Descargar certificado" style="padding: 6px; border: none; background: #F3F4F6; border-radius: 6px; cursor: pointer;">
+                                <button class="btn-icon-small" onclick="${orden.aprobacion === 'APROBADO' ? `descargarCertificado('${orden._id}')` : 'return'}" title="${orden.aprobacion === 'APROBADO' ? 'Descargar certificado' : 'Certificado no aprobado'}" style="padding: 6px; border: none; background: #F3F4F6; border-radius: 6px; ${orden.aprobacion === 'APROBADO' ? 'cursor: pointer;' : 'cursor: not-allowed; opacity: 0.35;'}">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2">
                                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                                         <polyline points="7 10 12 15 17 10"/>
@@ -3894,7 +3894,22 @@
                 return;
             }
 
-            const ids = Array.from(ordenesSeleccionadas);
+            // Para empresas con aprobación, filtrar solo los aprobados
+            let ids = Array.from(ordenesSeleccionadas);
+            if (esEmpresaConAprobacion()) {
+                const idsOriginales = ids.length;
+                ids = ids.filter(id => {
+                    const orden = allData.find(o => o._id === id);
+                    return orden && orden.aprobacion === 'APROBADO';
+                });
+                if (ids.length === 0) {
+                    alert('Ninguna de las órdenes seleccionadas está aprobada');
+                    return;
+                }
+                if (ids.length < idsOriginales) {
+                    alert(`Se descargarán ${ids.length} de ${idsOriginales} certificados (solo los aprobados)`);
+                }
+            }
             const btn = event.target.closest('button');
             const originalText = btn.innerHTML;
             const container = document.getElementById('download-frames-container');
@@ -4254,20 +4269,24 @@
                 ` : ''}
             `;
 
-            // Configurar botón PDF según permisos
+            // Configurar botón PDF según permisos y aprobación
             const btnPDF = document.getElementById('btnDescargarPDF');
+            const requiereAprobacion = esEmpresaConAprobacion();
+            const estaAprobado = paciente.aprobacion === 'APROBADO';
             if (!tienePermiso('DESCARGAR_CERTIFICADO')) {
                 btnPDF.style.display = 'none';
-            } else if (estado === 'ATENDIDO') {
+            } else if (estado === 'ATENDIDO' && (!requiereAprobacion || estaAprobado)) {
                 btnPDF.style.display = 'inline-flex';
                 btnPDF.href = `https://bsl-utilidades-yp78a.ondigitalocean.app/generar-certificado-desde-wix/${paciente._id}`;
                 btnPDF.style.opacity = '1';
                 btnPDF.style.pointerEvents = 'auto';
+                btnPDF.title = 'Descargar certificado';
             } else {
                 btnPDF.style.display = 'inline-flex';
                 btnPDF.href = '#';
-                btnPDF.style.opacity = '0.5';
+                btnPDF.style.opacity = '0.35';
                 btnPDF.style.pointerEvents = 'none';
+                btnPDF.title = requiereAprobacion && !estaAprobado ? 'Certificado pendiente de aprobación' : 'Paciente no atendido';
             }
 
             // Configurar botón Resultado Psicológico solo para KM2
