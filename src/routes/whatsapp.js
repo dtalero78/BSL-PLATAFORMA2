@@ -61,12 +61,15 @@ router.post('/webhook', async (req, res) => {
             SELECT id FROM conversaciones_whatsapp WHERE celular = $1
         `, [numeroCliente]);
 
-        // Si no se encuentra con +, buscar sin + (conversaciones antiguas)
+        // Si no se encuentra con +, buscar sin + (conversaciones antiguas) y migrar formato
         if (conversacion.rows.length === 0 && numeroCliente.startsWith('+')) {
             const numeroSinMas = numeroCliente.substring(1);
             conversacion = await pool.query(`
                 SELECT id FROM conversaciones_whatsapp WHERE celular = $1
             `, [numeroSinMas]);
+            if (conversacion.rows.length > 0) {
+                await pool.query(`UPDATE conversaciones_whatsapp SET celular = $1 WHERE id = $2`, [numeroCliente, conversacion.rows[0].id]);
+            }
         }
 
         let conversacionId;
@@ -373,12 +376,15 @@ router.post('/status', async (req, res) => {
                 SELECT id FROM conversaciones_whatsapp WHERE celular = $1
             `, [numeroCliente]);
 
-            // Si no se encuentra con +, buscar sin + (conversaciones antiguas)
+            // Si no se encuentra con +, buscar sin + (conversaciones antiguas) y migrar formato
             if (conversacion.rows.length === 0 && numeroCliente.startsWith('+')) {
                 const numeroSinMas = numeroCliente.substring(1);
                 conversacion = await pool.query(`
                     SELECT id FROM conversaciones_whatsapp WHERE celular = $1
                 `, [numeroSinMas]);
+                if (conversacion.rows.length > 0) {
+                    await pool.query(`UPDATE conversaciones_whatsapp SET celular = $1 WHERE id = $2`, [numeroCliente, conversacion.rows[0].id]);
+                }
             }
 
             let conversacionId;
@@ -575,18 +581,20 @@ router.post('/enviar-manual', async (req, res) => {
                 [telefonoNormalizado]
             );
 
-            // Si no se encuentra con +, buscar sin + (conversaciones antiguas)
+            // Si no se encuentra con +, buscar sin + (conversaciones antiguas) y migrar formato
             if (conversacionExistente.rows.length === 0 && telefonoNormalizado.startsWith('+')) {
                 const numeroSinMas = telefonoNormalizado.substring(1);
                 conversacionExistente = await pool.query(
                     'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1',
                     [numeroSinMas]
                 );
+                if (conversacionExistente.rows.length > 0) {
+                    await pool.query(`UPDATE conversaciones_whatsapp SET celular = $1 WHERE id = $2`, [telefonoNormalizado, conversacionExistente.rows[0].id]);
+                }
             }
 
             if (conversacionExistente.rows.length > 0) {
-                // Usar el celular tal como está en la BD para el WHERE
-                const celularEnBD = conversacionExistente.rows[0].celular;
+                const celularEnBD = telefonoNormalizado;
                 await pool.query(`
                     UPDATE conversaciones_whatsapp
                     SET "stopBot" = true,

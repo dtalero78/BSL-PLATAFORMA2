@@ -198,12 +198,15 @@ async function guardarMensajeSaliente(numeroCliente, contenido, twilioSid, tipoM
             SELECT id FROM conversaciones_whatsapp WHERE celular = $1
         `, [numeroNormalizado]);
 
-        // Si no se encuentra con +, buscar sin + (conversaciones antiguas)
+        // Si no se encuentra con +, buscar sin + (conversaciones antiguas) y migrar formato
         if (conversacion.rows.length === 0 && numeroNormalizado.startsWith('+')) {
             const numeroSinMas = numeroNormalizado.substring(1);
             conversacion = await pool.query(`
                 SELECT id FROM conversaciones_whatsapp WHERE celular = $1
             `, [numeroSinMas]);
+            if (conversacion.rows.length > 0) {
+                await pool.query(`UPDATE conversaciones_whatsapp SET celular = $1 WHERE id = $2`, [numeroNormalizado, conversacion.rows[0].id]);
+            }
         }
 
         let conversacionId;

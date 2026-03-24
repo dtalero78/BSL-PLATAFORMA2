@@ -120,6 +120,9 @@ router.post('/ordenes', apiKeyAuth, async (req, res) => {
                     `SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1`,
                     [celularSinMas]
                 );
+                if (conversacionExistente.rows.length > 0) {
+                    await pool.query(`UPDATE conversaciones_whatsapp SET celular = $1 WHERE id = $2`, [celularConPrefijo, conversacionExistente.rows[0].id]);
+                }
             }
 
             if (conversacionExistente.rows.length > 0) {
@@ -128,7 +131,7 @@ router.post('/ordenes', apiKeyAuth, async (req, res) => {
                     SET "stopBot" = true, bot_activo = false, paciente_id = $2,
                         nombre_paciente = $3, fecha_ultima_actividad = NOW()
                     WHERE celular = $1
-                `, [conversacionExistente.rows[0].celular, numeroId, `${primerNombre} ${primerApellido}`]);
+                `, [celularConPrefijo, numeroId, `${primerNombre} ${primerApellido}`]);
             } else {
                 await pool.query(`
                     INSERT INTO conversaciones_whatsapp (
