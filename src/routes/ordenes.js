@@ -4,6 +4,7 @@ const multer = require('multer');
 const pool = require('../config/database');
 const { authMiddleware } = require('../middleware/auth');
 const { construirFechaAtencionColombia } = require('../helpers/date');
+const { generarLinkGoogleCalendar } = require('../helpers/google-calendar');
 const { normalizarTelefonoConPrefijo57 } = require('../helpers/phone');
 const { dispararWebhookMake, limpiarString, limpiarTelefono, mapearCiudad } = require('../helpers/webhook');
 const { notificarNuevaOrden } = require('../helpers/sse');
@@ -519,6 +520,36 @@ router.post('/', async (req, res) => {
                             console.log(`Mensaje de confirmacion enviado a ${telefonoCompleto}`);
                         } else {
                             console.error(`No se pudo enviar mensaje de confirmacion: ${resultWhatsApp.error}`);
+                        }
+
+                        // Enviar mensaje con link de Google Calendar
+                        if (process.env.TWILIO_TEMPLATE_CITA_CALENDARIO) {
+                            try {
+                                const linkCalendar = generarLinkGoogleCalendar({
+                                    titulo: 'Consulta Médica Ocupacional - BSL',
+                                    fechaInicio: fechaObj,
+                                    descripcion: `Paciente: ${nombreCompleto}\nEmpresa: ${codEmpresa || ''}`,
+                                    ubicacion: ciudad || '',
+                                });
+
+                                const resultCalendar = await sendWhatsAppMessage(
+                                    telefonoCompleto,
+                                    null,
+                                    {
+                                        "1": fechaHoraCompleta,
+                                        "2": linkCalendar.replace('https://calendar.google.com/calendar/render?', '')
+                                    },
+                                    process.env.TWILIO_TEMPLATE_CITA_CALENDARIO
+                                );
+
+                                if (resultCalendar.success) {
+                                    console.log(`Mensaje Google Calendar enviado a ${telefonoCompleto}`);
+                                } else {
+                                    console.error(`No se pudo enviar link de calendario: ${resultCalendar.error}`);
+                                }
+                            } catch (calendarError) {
+                                console.error('Error al enviar link de Google Calendar:', calendarError.message);
+                            }
                         }
                     }
                 }
