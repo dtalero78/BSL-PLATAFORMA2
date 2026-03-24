@@ -42,21 +42,17 @@
 
         .main-content {
             flex: 1;
-            margin-left: 240px;
+            margin-left: 0;
             padding: 32px 40px;
-            padding-top: 96px;
+            padding-top: 32px;
             transition: margin-left 0.3s ease;
-        }
-
-        body.sidebar-collapsed .main-content {
-            margin-left: 68px;
         }
 
         @media (max-width: 1024px) {
             .main-content {
                 margin-left: 0;
                 padding: 20px 16px;
-                padding-top: 84px;
+                padding-top: 20px;
             }
         }
 
@@ -464,8 +460,6 @@
 </head>
 <body>
     <div class="app-container">
-    <div id="sidebar-container"></div>
-    <div id="topbar-container"></div>
     <main class="main-content">
     <div class="container">
         <!-- Header -->
@@ -1280,7 +1274,5 @@
     </script>
     </main>
     </div>
-    <script src="/js/load-sidebar.js"></script>
-    <script src="/js/load-topbar.js?v=3"></script>
 </body>
 </html>
