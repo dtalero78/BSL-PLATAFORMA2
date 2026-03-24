@@ -37,7 +37,24 @@ router.get('/:ordenId', async (req, res) => {
             });
         }
 
-        res.json({ success: true, data: result.rows });
+        // Also fetch patient info when lab records exist
+        const ordenResult = await pool.query(
+            'SELECT "numeroId", "primerNombre", "primerApellido", "empresa", "codEmpresa" FROM "HistoriaClinica" WHERE "_id" = $1',
+            [ordenId]
+        );
+        const orden = ordenResult.rows[0];
+
+        res.json({
+            success: true,
+            data: result.rows,
+            paciente: orden ? {
+                numeroId: orden.numeroId,
+                primerNombre: orden.primerNombre,
+                primerApellido: orden.primerApellido,
+                empresa: orden.empresa,
+                codEmpresa: orden.codEmpresa
+            } : null
+        });
     } catch (error) {
         console.error('❌ Error obteniendo laboratorios:', error);
         res.status(500).json({ success: false, error: error.message });
