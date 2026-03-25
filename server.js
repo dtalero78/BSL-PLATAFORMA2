@@ -200,22 +200,6 @@ cron.schedule('*/5 * * * *', async () => {
 });
 console.log('✅ Cron job configurado: Barrido NUBIA cada 5 minutos');
 
-// Cron: Mensaje cumpleaños 25 de marzo 2026 a las 12:00 AM (hora Colombia)
-cron.schedule('0 0 25 3 *', async () => {
-    const hoy = new Date();
-    if (hoy.getFullYear() !== 2026) return; // Solo ejecutar en 2026
-    console.log('🎂 [CRON] Enviando mensaje de cumpleaños...');
-    try {
-        const { sendWhapiMessage } = require('./src/services/whapi');
-        const mensaje = `Princesa linda:\n\nOtro año más en el que tengo la felicidad de estar cerca de ti para celebrar tu cumpleaños. Es increíble cuando pienso en aquella primera vez que te felicité: estábamos en ese concierto en Bogotá, y recuerdo  esa sensación tan extraña de sentir algo por ti, una idea que parecía absurda pero que era completamente real. Pasé casi media hora grabando el video que Melannie estaba recopilando para sumarlo a los saludos de todos. Y me detengo ahí, porque ese recuerdo dice mucho de ti: en ese momento apenas estabas comenzando a tener tu espacio en Livingroom, y ya eras tan especial que Melannie se tomó el trabajo de reunir esos videos para hacerte sentir única. Y es que definitivamente lo eres. Te lo he dicho mil veces y lo seguiré diciendo: brillas con luz propia, y ese brillo tiene un radio de alcance cada vez más grande.\n\nYo, por supuesto, me siento privilegiado. Estoy genuinamente orgullosopor tener tu atención y tu amor. Cuando pienso en todo lo que hemos construido hasta aquí, no puedo verlo de otra forma que como un milagro y, al mismo tiempo, como una señal de amor verdadero.\n\nEste cumpleaños no viene acompañado del mismo despliegue de años anteriores: el viaje a Barú, el video cantando, la transferencia y todas esas cosas con las que intenté mostrarte mis plumas de pavo real y llamar tu atención —y que además mereces—. Este año solo tengo un detalle material sencillo, pero también los pasos concretos para avanzar hacia una relación que te dé paz y plenitud. Eso, hoy, me parece lo más valioso que puedo ofrecerte.\n\nY ya.\n\nMientras te veo, te mando un abrazo lleno de amor.\n\nFeliz cumpleaños. Te amo.`;
-        const result = await sendWhapiMessage('573187639040', mensaje);
-        console.log('🎂 [CRON] Resultado:', result.success ? 'Enviado ✅' : `Error: ${result.error}`);
-    } catch (error) {
-        console.error('❌ [CRON] Error enviando mensaje cumpleaños:', error);
-    }
-}, { timezone: 'America/Bogota' });
-console.log('✅ Cron job configurado: Mensaje cumpleaños 25 de marzo 2026 a las 12:00 AM');
-
 // Crear reglas de enrutamiento por defecto
 async function crearReglasEnrutamientoPorDefecto() {
     try {
