@@ -446,6 +446,13 @@ Location: [server.js:13369-13383](server.js#L13369-L13383)
 - **NEVER** include `foto` field in list queries (causes memory issues)
 - Always exclude in SELECT: `SELECT _id, nombre, apellido FROM ...` (not SELECT *)
 
+### Certificate Download & SST Approval (panel-empresas.html)
+- Empresas with SST approval flow: `EMPRESAS_CON_APROBACION = ['SITEL', 'OMEGA']`
+- For these companies, certificate download normally requires `aprobacion === 'APROBADO'`
+- **OMEGA exception**: allows download when patient is ATENDIDO and `mdConceptoFinal === 'APTO'`, even without SST approval
+- This exception applies to: modal PDF button, table row download icon, and bulk download
+- Other companies in `EMPRESAS_CON_APROBACION` (e.g., SITEL) strictly require `aprobacion === 'APROBADO'`
+
 ### Wix Sync Failures
 - Wix sync failures are logged but **do not block** the user response
 - Form submissions succeed even if Wix sync fails
