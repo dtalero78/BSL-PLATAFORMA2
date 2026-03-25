@@ -9,6 +9,7 @@ const { normalizarTelefonoConPrefijo57 } = require('../helpers/phone');
 const { dispararWebhookMake, limpiarString, limpiarTelefono, mapearCiudad } = require('../helpers/webhook');
 const { notificarNuevaOrden } = require('../helpers/sse');
 const { sendWhatsAppMessage } = require('../services/whatsapp');
+const { sendWhapiMessage } = require('../services/whapi');
 const { notificarCoordinadorNuevaOrden } = require('../services/payment');
 const { HistoriaClinicaRepository, FormulariosRepository } = require('../repositories');
 
@@ -572,6 +573,20 @@ router.post('/', async (req, res) => {
             medico,
             modalidad
         });
+
+        // Notificar ingreso SITEL por WHAPI (async, no bloquea)
+        if (codEmpresa === 'SITEL' && tipoExamen && tipoExamen.toUpperCase() === 'INGRESO') {
+            const nombreCompleto = [primerNombre, segundoNombre, primerApellido, segundoApellido].filter(Boolean).join(' ');
+            let fechaStr = '';
+            if (fechaAtencion) {
+                const f = new Date(fechaAtencion);
+                fechaStr = `${String(f.getDate()).padStart(2, '0')}/${String(f.getMonth() + 1).padStart(2, '0')}/${f.getFullYear()}`;
+            }
+            const mensajeSitel = `📋 *Nueva orden de ingreso SITEL*\n\n👤 *Nombre:* ${nombreCompleto}\n🪪 *Cédula:* ${numeroId}\n📍 *Ciudad:* ${ciudad}\n📅 *Fecha de atención:* ${fechaStr}`;
+            sendWhapiMessage('573125727007', mensajeSitel).catch(err => {
+                console.error('Error enviando WHAPI SITEL ingreso:', err.message);
+            });
+        }
 
         // Notificar al coordinador de agendamiento (async, no bloquea)
         notificarCoordinadorNuevaOrden({
