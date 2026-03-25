@@ -575,7 +575,8 @@ router.post('/', async (req, res) => {
         });
 
         // Notificar ingreso SITEL por WHAPI (async, no bloquea)
-        if (codEmpresa === 'SITEL' && tipoExamen && tipoExamen.toUpperCase() === 'INGRESO') {
+        const ciudadNorm = (ciudad || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
+        if (codEmpresa === 'SITEL' && tipoExamen && tipoExamen.toUpperCase() === 'INGRESO' && ciudadNorm !== 'BOGOTA') {
             const nombreCompleto = [primerNombre, segundoNombre, primerApellido, segundoApellido].filter(Boolean).join(' ');
             let fechaStr = '';
             if (fechaAtencion) {
