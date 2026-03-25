@@ -75,6 +75,7 @@ src/
     sse.js              - Server-Sent Events for real-time notifications
     certificate.js      - PDF certificate generation
     historia-clinica-html.js - HTML generation for medical history PDF export
+    google-calendar.js  - Google Calendar link generator for appointment events
   services/
     spaces-upload.js    - DigitalOcean Spaces file uploads
     whatsapp.js         - Twilio WhatsApp messaging
@@ -374,6 +375,7 @@ TWILIO_WHATSAPP_FROM=
 TWILIO_WHATSAPP_NUMBER=
 TWILIO_MESSAGING_SERVICE_SID=
 TWILIO_TEMPLATE_*=  # Various message templates
+TWILIO_TEMPLATE_CITA_CALENDARIO=  # Google Calendar appointment link template
 
 # WHAPI
 WHAPI_TOKEN=
