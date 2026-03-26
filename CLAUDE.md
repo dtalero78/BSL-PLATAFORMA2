@@ -451,7 +451,8 @@ Location: [server.js:13369-13383](server.js#L13369-L13383)
 - For these companies, certificate download normally requires `aprobacion === 'APROBADO'`
 - **OMEGA exception**: allows download when patient is ATENDIDO and `mdConceptoFinal === 'APTO'`, even without SST approval
 - This exception applies to: modal PDF button, table row download icon, and bulk download
-- Other companies in `EMPRESAS_CON_APROBACION` (e.g., SITEL) strictly require `aprobacion === 'APROBADO'`
+- **SITEL APROBADOR exception**: users with `APROBADOR` permission on SITEL can always download certificates without approval restriction
+- Other SITEL users (non-APROBADOR) strictly require `aprobacion === 'APROBADO'`
 
 ### Wix Sync Failures
 - Wix sync failures are logged but **do not block** the user response

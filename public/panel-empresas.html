@@ -3742,7 +3742,7 @@
                             <td onclick="abrirModalDetalles('${orden._id}')" style="cursor: pointer;">${aprobacionBadge}</td>
                             <td style="text-align: center;" onclick="event.stopPropagation();">
                                 ${tienePermiso('DESCARGAR_CERTIFICADO_TABLA') ? `
-                                <button class="btn-icon-small" onclick="${(orden.aprobacion === 'APROBADO' || (codEmpresa === 'OMEGA' && orden.mdConceptoFinal === 'APTO')) ? `descargarCertificado('${orden._id}')` : 'return'}" title="${(orden.aprobacion === 'APROBADO' || (codEmpresa === 'OMEGA' && orden.mdConceptoFinal === 'APTO')) ? 'Descargar certificado' : 'Certificado no aprobado'}" style="padding: 6px; border: none; background: #F3F4F6; border-radius: 6px; ${(orden.aprobacion === 'APROBADO' || (codEmpresa === 'OMEGA' && orden.mdConceptoFinal === 'APTO')) ? 'cursor: pointer;' : 'cursor: not-allowed; opacity: 0.35;'}">
+                                <button class="btn-icon-small" onclick="${(orden.aprobacion === 'APROBADO' || (codEmpresa === 'OMEGA' && orden.mdConceptoFinal === 'APTO') || (codEmpresa === 'SITEL' && tienePermiso('APROBADOR'))) ? `descargarCertificado('${orden._id}')` : 'return'}" title="${(orden.aprobacion === 'APROBADO' || (codEmpresa === 'OMEGA' && orden.mdConceptoFinal === 'APTO') || (codEmpresa === 'SITEL' && tienePermiso('APROBADOR'))) ? 'Descargar certificado' : 'Certificado no aprobado'}" style="padding: 6px; border: none; background: #F3F4F6; border-radius: 6px; ${(orden.aprobacion === 'APROBADO' || (codEmpresa === 'OMEGA' && orden.mdConceptoFinal === 'APTO') || (codEmpresa === 'SITEL' && tienePermiso('APROBADOR'))) ? 'cursor: pointer;' : 'cursor: not-allowed; opacity: 0.35;'}">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2">
                                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                                         <polyline points="7 10 12 15 17 10"/>
@@ -3894,9 +3894,10 @@
                 return;
             }
 
-            // Para empresas con aprobación, filtrar solo los aprobados (OMEGA: también permite APTO sin aprobación)
+            // Para empresas con aprobación, filtrar solo los aprobados (excepciones: OMEGA APTO, SITEL APROBADOR)
             let ids = Array.from(ordenesSeleccionadas);
-            if (esEmpresaConAprobacion()) {
+            const sitelAprobadorDescarga = codEmpresa === 'SITEL' && tienePermiso('APROBADOR');
+            if (esEmpresaConAprobacion() && !sitelAprobadorDescarga) {
                 const idsOriginales = ids.length;
                 ids = ids.filter(id => {
                     const orden = allData.find(o => o._id === id);
@@ -4278,9 +4279,11 @@
             const estaAprobado = paciente.aprobacion === 'APROBADO';
             // OMEGA: permitir descarga si está ATENDIDO y concepto es APTO, sin requerir aprobación
             const omegaAptoSinAprobacion = codEmpresa === 'OMEGA' && paciente.mdConceptoFinal === 'APTO';
+            // SITEL APROBADOR: siempre puede descargar certificados
+            const sitelAprobador = codEmpresa === 'SITEL' && tienePermiso('APROBADOR');
             if (!tienePermiso('DESCARGAR_CERTIFICADO')) {
                 btnPDF.style.display = 'none';
-            } else if (estado === 'ATENDIDO' && (!requiereAprobacion || estaAprobado || omegaAptoSinAprobacion)) {
+            } else if (estado === 'ATENDIDO' && (!requiereAprobacion || estaAprobado || omegaAptoSinAprobacion || sitelAprobador)) {
                 btnPDF.style.display = 'inline-flex';
                 btnPDF.href = `https://bsl-utilidades-yp78a.ondigitalocean.app/generar-certificado-desde-wix/${paciente._id}`;
                 btnPDF.style.opacity = '1';
