@@ -14,7 +14,7 @@ const transporter = nodemailer.createTransport({
 const EMAIL_FROM = process.env.SMTP_FROM || process.env.SMTP_USER;
 
 // Enviar email de confirmacion de cita al paciente
-async function enviarEmailConfirmacionCita({ correo, nombreCompleto, fechaHoraCompleta, codEmpresa, empresa, ciudad }) {
+async function enviarEmailConfirmacionCita({ correo, nombreCompleto, fechaHoraCompleta, codEmpresa, empresa, ciudad, linkCalendar }) {
     if (!correo || !EMAIL_FROM) {
         console.log('[EMAIL] No se envio email: correo o SMTP no configurado');
         return { success: false, error: 'Correo o SMTP no configurado' };
@@ -50,6 +50,12 @@ async function enviarEmailConfirmacionCita({ correo, nombreCompleto, fechaHoraCo
                             </tr>` : ''}
                         </table>
                     </div>
+                    ${linkCalendar ? `<div style="text-align: center; margin: 24px 0;">
+                        <a href="${linkCalendar}" target="_blank"
+                           style="background: #0D6EFD; color: #ffffff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-size: 15px; font-weight: 600; display: inline-block;">
+                            &#128197; Agregar a Google Calendar
+                        </a>
+                    </div>` : ''}
                     <p style="color: #4B5563; font-size: 14px; line-height: 1.6;">
                         Por favor asiste puntualmente a tu cita. Si tienes alguna pregunta, no dudes en contactarnos por WhatsApp.
                     </p>

@@ -3,6 +3,8 @@ const router = express.Router();
 const pool = require('../config/database');
 const { subirFotoASpaces } = require('../services/spaces-upload');
 const { enviarAlertasPreguntasCriticas } = require('../services/payment');
+const { enviarEmailConfirmacionCita } = require('../services/email');
+const { generarLinkGoogleCalendar } = require('../helpers/google-calendar');
 const { FormulariosRepository, HistoriaClinicaRepository } = require('../repositories');
 
 // Ruta para recibir el formulario
@@ -137,14 +139,52 @@ router.post('/formulario', async (req, res) => {
             console.log('✅ Formulario guardado en PostgreSQL:', result.rows[0].id);
         }
 
-        // Sincronizar email del paciente a HistoriaClinica.correo
+        // Sincronizar email del paciente a HistoriaClinica.correo y enviar email de confirmacion
         if (datos.email && datos.wixId) {
             try {
+                // Guardar correo en HistoriaClinica
                 await pool.query(
                     `UPDATE "HistoriaClinica" SET correo = $1 WHERE "_id" = $2`,
                     [datos.email, datos.wixId]
                 );
                 console.log(`[EMAIL] Correo ${datos.email} sincronizado a HistoriaClinica ${datos.wixId}`);
+
+                // Obtener datos de la cita para el email de confirmacion
+                const hcResult = await pool.query(
+                    `SELECT "fechaAtencion", "horaAtencion", "codEmpresa", empresa, ciudad, "primerNombre", "primerApellido" FROM "HistoriaClinica" WHERE "_id" = $1`,
+                    [datos.wixId]
+                );
+                const hc = hcResult.rows[0];
+
+                if (hc && hc.fechaAtencion) {
+                    const fechaObj = new Date(hc.fechaAtencion);
+                    const offsetColombia = -5 * 60;
+                    const offsetLocal = fechaObj.getTimezoneOffset();
+                    const fechaColombia = new Date(fechaObj.getTime() + (offsetLocal + offsetColombia) * 60000);
+
+                    const fechaFormateada = fechaColombia.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    const horaFormateada = fechaColombia.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
+                    const fechaHoraCompleta = `${fechaFormateada} a las ${horaFormateada}`;
+                    const nombreCompleto = `${hc.primerNombre || ''} ${hc.primerApellido || ''}`.trim();
+
+                    // Generar link de Google Calendar
+                    const linkCalendar = generarLinkGoogleCalendar({
+                        titulo: 'Consulta Medica Ocupacional - BSL',
+                        fechaInicio: fechaObj,
+                        descripcion: `Paciente: ${nombreCompleto}\nEmpresa: ${hc.empresa || hc.codEmpresa || ''}`,
+                        ubicacion: hc.ciudad || ''
+                    });
+
+                    enviarEmailConfirmacionCita({
+                        correo: datos.email,
+                        nombreCompleto,
+                        fechaHoraCompleta,
+                        codEmpresa: hc.codEmpresa,
+                        empresa: hc.empresa,
+                        ciudad: hc.ciudad,
+                        linkCalendar
+                    }).catch(err => console.error('Error enviando email confirmacion:', err.message));
+                }
             } catch (syncError) {
                 console.error('Error sincronizando correo a HistoriaClinica:', syncError.message);
             }
