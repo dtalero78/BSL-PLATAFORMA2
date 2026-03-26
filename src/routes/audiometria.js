@@ -7,6 +7,51 @@ const { syncAudiometriaToWix } = require('../services/wix-sync');
 // ENDPOINTS AUDIOMETRIA
 // ==========================================
 
+// Informe de audiometrías por empresa (MUST be before /:ordenId)
+router.get('/audiometrias/informe/:codEmpresa', async (req, res) => {
+    try {
+        const { codEmpresa } = req.params;
+        const { desde, hasta } = req.query;
+
+        let query = `
+            SELECT
+                a.numero_id,
+                a.primer_nombre,
+                a.primer_apellido,
+                a.diagnostico_od,
+                a.diagnostico_oi,
+                a.aereo_od_250, a.aereo_od_500, a.aereo_od_1000, a.aereo_od_2000,
+                a.aereo_od_3000, a.aereo_od_4000, a.aereo_od_6000, a.aereo_od_8000,
+                a.aereo_oi_250, a.aereo_oi_500, a.aereo_oi_1000, a.aereo_oi_2000,
+                a.aereo_oi_3000, a.aereo_oi_4000, a.aereo_oi_6000, a.aereo_oi_8000,
+                h."tipoExamen",
+                h."primerNombre", h."segundoNombre", h."primerApellido", h."segundoApellido",
+                COALESCE(h."fechaAtencion", a.created_at) as fecha
+            FROM audiometrias a
+            LEFT JOIN "HistoriaClinica" h ON a.orden_id = h."_id"
+            WHERE a.cod_empresa = $1
+        `;
+        const params = [codEmpresa];
+
+        if (desde) {
+            params.push(desde);
+            query += ` AND COALESCE(h."fechaAtencion", a.created_at)::date >= $${params.length}`;
+        }
+        if (hasta) {
+            params.push(hasta);
+            query += ` AND COALESCE(h."fechaAtencion", a.created_at)::date <= $${params.length}`;
+        }
+
+        query += ` ORDER BY fecha DESC`;
+
+        const result = await pool.query(query, params);
+        res.json({ success: true, data: result.rows });
+    } catch (error) {
+        console.error('Error generando informe audiometrias:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Obtener audiometria por orden_id
 router.get('/audiometrias/:ordenId', async (req, res) => {
     try {

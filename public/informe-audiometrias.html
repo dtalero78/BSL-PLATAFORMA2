@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Informe Audiometrías - BSL</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --medical-primary: #0C4A6E;
+            --medical-secondary: #0EA5E9;
+            --success-green: #059669;
+            --warning-amber: #F59E0B;
+            --error-red: #DC2626;
+            --bg-primary: #F8FAFC;
+            --bg-secondary: #FFFFFF;
+            --text-primary: #0F172A;
+            --text-secondary: #475569;
+            --text-muted: #94A3B8;
+            --border-color: #E2E8F0;
+            --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
+            --shadow-md: 0 4px 6px rgba(15, 23, 42, 0.1), 0 2px 4px rgba(15, 23, 42, 0.06);
+            --radius-md: 12px;
+            --radius-lg: 16px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            padding: 24px;
+        }
+
+        .container { max-width: 1800px; margin: 0 auto; }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--medical-primary);
+            margin-bottom: 20px;
+        }
+
+        .filtros {
+            background: var(--bg-secondary);
+            padding: 20px 24px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            margin-bottom: 24px;
+            display: flex;
+            align-items: flex-end;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .filtro-group { display: flex; flex-direction: column; gap: 6px; }
+
+        .filtro-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filtro-group input[type="date"],
+        .filtro-group input[type="text"] {
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            font-family: inherit;
+            color: var(--text-primary);
+            background: var(--bg-primary);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .filtro-group input:focus { border-color: var(--medical-secondary); }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: inherit;
+        }
+
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: var(--medical-primary); color: white; }
+        .btn-primary:hover:not(:disabled) { background: #0A3A54; }
+        .btn-success { background: var(--success-green); color: white; }
+        .btn-success:hover:not(:disabled) { background: #047857; }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            padding: 20px;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .stat-card h3 {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--medical-primary);
+        }
+
+        .table-container {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .table-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .table-header h2 {
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--medical-primary);
+        }
+
+        .table-scroll { overflow-x: auto; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            min-width: 1200px;
+        }
+
+        thead th {
+            background: var(--medical-primary);
+            color: white;
+            padding: 10px 12px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+            border: 1px solid #093a57;
+        }
+
+        tbody td {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        tbody tr:nth-child(4n+1),
+        tbody tr:nth-child(4n+2) {
+            background: #f0f7ff;
+        }
+
+        tbody tr:nth-child(4n+3),
+        tbody tr:nth-child(4n+4) {
+            background: var(--bg-secondary);
+        }
+
+        .td-nombre { text-align: left; white-space: nowrap; }
+        .td-fecha { white-space: nowrap; }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-normal { background: #D1FAE5; color: #065F46; }
+        .badge-leve { background: #FEF3C7; color: #92400E; }
+        .badge-moderada { background: #FED7AA; color: #9A3412; }
+        .badge-severa { background: #FECACA; color: #991B1B; }
+        .badge-profunda { background: #FCA5A5; color: #7F1D1D; }
+        .badge-na { background: #E2E8F0; color: #475569; }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: var(--text-muted);
+            font-size: 15px;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 60px;
+            color: var(--text-muted);
+        }
+
+        @media print {
+            body { padding: 0; background: white; }
+            .filtros, .btn-success, .no-print { display: none !important; }
+            .table-container { box-shadow: none; }
+            table { font-size: 10px; min-width: unset; }
+            thead th { padding: 6px 4px; font-size: 9px; }
+            tbody td { padding: 4px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Informe de Audiometrías</h1>
+
+        <div class="filtros">
+            <div class="filtro-group">
+                <label>Empresa</label>
+                <input type="text" id="codEmpresa" value="SIIGO" placeholder="Código empresa">
+            </div>
+            <div class="filtro-group">
+                <label>Desde</label>
+                <input type="date" id="fechaDesde">
+            </div>
+            <div class="filtro-group">
+                <label>Hasta</label>
+                <input type="date" id="fechaHasta">
+            </div>
+            <button class="btn btn-primary" id="btnConsultar" onclick="consultar()">Consultar</button>
+            <button class="btn btn-success" id="btnExportar" onclick="exportarExcel()" style="display:none;">Descargar Excel</button>
+        </div>
+
+        <div class="stats" id="statsContainer" style="display:none;">
+            <div class="stat-card">
+                <h3>Total Registros</h3>
+                <div class="value" id="statTotal">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Normal</h3>
+                <div class="value" id="statNormal" style="color: var(--success-green);">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Con Hallazgos</h3>
+                <div class="value" id="statHallazgos" style="color: var(--warning-amber);">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Sin Diagnóstico</h3>
+                <div class="value" id="statSinDx" style="color: var(--text-muted);">0</div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <div class="table-header">
+                <h2 id="tableTitle">Resultados</h2>
+            </div>
+            <div class="table-scroll">
+                <div id="contenido" class="loading">Ingrese los filtros y presione Consultar</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allData = [];
+
+        function formatFecha(fecha) {
+            if (!fecha) return '';
+            const d = new Date(fecha);
+            return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'numeric', year: 'numeric' });
+        }
+
+        function getNombreCompleto(row) {
+            const parts = [row.primerNombre, row.segundoNombre, row.primerApellido, row.segundoApellido].filter(Boolean);
+            return parts.length > 0 ? parts.join(' ').toUpperCase() : `${row.primer_nombre || ''} ${row.primer_apellido || ''}`.trim().toUpperCase();
+        }
+
+        function getAudiometriaBadge(diagnostico) {
+            if (!diagnostico || diagnostico === '') return '<span class="badge badge-na">N/A</span>';
+            const d = diagnostico.toUpperCase();
+            if (d === 'NORMAL') return '<span class="badge badge-normal">NORMAL</span>';
+            if (d.includes('LEVE')) return '<span class="badge badge-leve">' + d + '</span>';
+            if (d.includes('MODERADA SEVERA')) return '<span class="badge badge-severa">' + d + '</span>';
+            if (d.includes('MODERADA')) return '<span class="badge badge-moderada">' + d + '</span>';
+            if (d.includes('SEVERA')) return '<span class="badge badge-severa">' + d + '</span>';
+            if (d.includes('PROFUNDA') || d === 'COFOSIS') return '<span class="badge badge-profunda">' + d + '</span>';
+            return '<span class="badge badge-na">' + d + '</span>';
+        }
+
+        function getAudiometriaGeneral(row) {
+            const od = (row.diagnostico_od || '').toUpperCase();
+            const oi = (row.diagnostico_oi || '').toUpperCase();
+            if (!od && !oi) return 'N/A';
+            if (od === 'NORMAL' && oi === 'NORMAL') return 'NORMAL';
+            if (od === 'NORMAL' && !oi) return 'NORMAL';
+            if (!od && oi === 'NORMAL') return 'NORMAL';
+            // Return the worst diagnosis
+            const severity = ['COFOSIS', 'HIPOACUSIA PROFUNDA', 'HIPOACUSIA SEVERA', 'HIPOACUSIA MODERADA SEVERA', 'HIPOACUSIA MODERADA', 'HIPOACUSIA LEVE'];
+            for (const s of severity) {
+                if (od === s || oi === s) return s;
+            }
+            return od || oi || 'N/A';
+        }
+
+        async function consultar() {
+            const codEmpresa = document.getElementById('codEmpresa').value.trim();
+            if (!codEmpresa) { alert('Ingrese el código de empresa'); return; }
+
+            const desde = document.getElementById('fechaDesde').value;
+            const hasta = document.getElementById('fechaHasta').value;
+
+            const btn = document.getElementById('btnConsultar');
+            btn.disabled = true;
+            btn.textContent = 'Consultando...';
+            document.getElementById('contenido').innerHTML = '<div class="loading">Cargando datos...</div>';
+
+            try {
+                let url = `/api/audiometrias/informe/${encodeURIComponent(codEmpresa)}?`;
+                if (desde) url += `desde=${desde}&`;
+                if (hasta) url += `hasta=${hasta}&`;
+
+                const token = localStorage.getItem('token');
+                const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+                const json = await resp.json();
+
+                if (!json.success) throw new Error(json.error || 'Error al consultar');
+
+                allData = json.data;
+                renderTabla(allData);
+                renderStats(allData);
+                document.getElementById('btnExportar').style.display = 'inline-flex';
+                document.getElementById('tableTitle').textContent = `Resultados - ${codEmpresa} (${allData.length} registros)`;
+            } catch (err) {
+                document.getElementById('contenido').innerHTML = `<div class="empty">Error: ${err.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Consultar';
+            }
+        }
+
+        function renderStats(data) {
+            const container = document.getElementById('statsContainer');
+            container.style.display = 'grid';
+
+            const total = data.length;
+            let normal = 0, hallazgos = 0, sinDx = 0;
+
+            data.forEach(row => {
+                const gen = getAudiometriaGeneral(row);
+                if (gen === 'NORMAL') normal++;
+                else if (gen === 'N/A') sinDx++;
+                else hallazgos++;
+            });
+
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statNormal').textContent = normal;
+            document.getElementById('statHallazgos').textContent = hallazgos;
+            document.getElementById('statSinDx').textContent = sinDx;
+        }
+
+        function renderTabla(data) {
+            if (data.length === 0) {
+                document.getElementById('contenido').innerHTML = '<div class="empty">No se encontraron registros</div>';
+                return;
+            }
+
+            let html = `<table>
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Tipo Examen</th>
+                        <th>Nombre</th>
+                        <th>Documento</th>
+                        <th>Audiometría</th>
+                        <th>Oídos</th>
+                        <th>250</th>
+                        <th>500</th>
+                        <th>1000</th>
+                        <th>2000</th>
+                        <th>3000</th>
+                        <th>4000</th>
+                        <th>6000</th>
+                        <th>8000</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            data.forEach(row => {
+                const nombre = getNombreCompleto(row);
+                const fecha = formatFecha(row.fecha);
+                const tipo = (row.tipoExamen || '').toUpperCase();
+                const general = getAudiometriaGeneral(row);
+
+                // Row OD
+                html += `<tr>
+                    <td class="td-fecha" rowspan="2">${fecha}</td>
+                    <td rowspan="2">${tipo}</td>
+                    <td class="td-nombre" rowspan="2">${nombre}</td>
+                    <td rowspan="2">${row.numero_id || ''}</td>
+                    <td rowspan="2">${getAudiometriaBadge(general)}</td>
+                    <td><strong>OD</strong></td>
+                    <td>${row.aereo_od_250 ?? ''}</td>
+                    <td>${row.aereo_od_500 ?? ''}</td>
+                    <td>${row.aereo_od_1000 ?? ''}</td>
+                    <td>${row.aereo_od_2000 ?? ''}</td>
+                    <td>${row.aereo_od_3000 ?? ''}</td>
+                    <td>${row.aereo_od_4000 ?? ''}</td>
+                    <td>${row.aereo_od_6000 ?? ''}</td>
+                    <td>${row.aereo_od_8000 ?? ''}</td>
+                </tr>`;
+
+                // Row OI
+                html += `<tr>
+                    <td><strong>OI</strong></td>
+                    <td>${row.aereo_oi_250 ?? ''}</td>
+                    <td>${row.aereo_oi_500 ?? ''}</td>
+                    <td>${row.aereo_oi_1000 ?? ''}</td>
+                    <td>${row.aereo_oi_2000 ?? ''}</td>
+                    <td>${row.aereo_oi_3000 ?? ''}</td>
+                    <td>${row.aereo_oi_4000 ?? ''}</td>
+                    <td>${row.aereo_oi_6000 ?? ''}</td>
+                    <td>${row.aereo_oi_8000 ?? ''}</td>
+                </tr>`;
+            });
+
+            html += '</tbody></table>';
+            document.getElementById('contenido').innerHTML = html;
+        }
+
+        function exportarExcel() {
+            if (allData.length === 0) { alert('No hay datos para exportar.'); return; }
+
+            const headers = ['FECHA', 'TIPO EXAMEN', 'NOMBRE', 'DOCUMENTO', 'AUDIOMETRIA', 'OIDOS', '250', '500', '1000', '2000', '3000', '4000', '6000', '8000'];
+
+            const rows = [];
+            allData.forEach(row => {
+                const nombre = getNombreCompleto(row);
+                const fecha = formatFecha(row.fecha);
+                const tipo = (row.tipoExamen || '').toUpperCase();
+                const general = getAudiometriaGeneral(row);
+
+                rows.push([
+                    fecha, tipo, nombre, row.numero_id || '', general, 'OD',
+                    row.aereo_od_250 ?? '', row.aereo_od_500 ?? '', row.aereo_od_1000 ?? '', row.aereo_od_2000 ?? '',
+                    row.aereo_od_3000 ?? '', row.aereo_od_4000 ?? '', row.aereo_od_6000 ?? '', row.aereo_od_8000 ?? ''
+                ]);
+                rows.push([
+                    '', '', '', '', '', 'OI',
+                    row.aereo_oi_250 ?? '', row.aereo_oi_500 ?? '', row.aereo_oi_1000 ?? '', row.aereo_oi_2000 ?? '',
+                    row.aereo_oi_3000 ?? '', row.aereo_oi_4000 ?? '', row.aereo_oi_6000 ?? '', row.aereo_oi_8000 ?? ''
+                ]);
+            });
+
+            const csvContent = [headers, ...rows].map(row => row.map(v => `"${v}"`).join(',')).join('\n');
+            const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const codEmpresa = document.getElementById('codEmpresa').value.trim();
+            const desde = document.getElementById('fechaDesde').value;
+            const hasta = document.getElementById('fechaHasta').value;
+            a.download = `informe_audiometrias_${codEmpresa}${desde ? '_' + desde : ''}${hasta ? '_' + hasta : ''}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
