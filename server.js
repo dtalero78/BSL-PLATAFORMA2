@@ -194,11 +194,12 @@ cron.schedule('*/5 * * * *', async () => {
         await nubiaRouter.barridoNubiaEnviarLink();
         await nubiaRouter.barridoNubiaMarcarAtendido();
         await nubiaRouter.barridoNubiaRecordatorioPago();
+        await nubiaRouter.barridoRecordatorio1h();
     } catch (error) {
         console.error('❌ [CRON] Error en barrido NUBIA:', error);
     }
 });
-console.log('✅ Cron job configurado: Barrido NUBIA cada 5 minutos');
+console.log('✅ Cron job configurado: Barrido NUBIA + recordatorios cada 5 minutos');
 
 // Crear reglas de enrutamiento por defecto
 async function crearReglasEnrutamientoPorDefecto() {

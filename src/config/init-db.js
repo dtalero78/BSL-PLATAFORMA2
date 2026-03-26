@@ -219,6 +219,16 @@ const initDB = async () => {
             // Columna ya existe o tabla no existe
         }
 
+        // Agregar columna recordatorio1hEnviado a HistoriaClinica si no existe
+        try {
+            await pool.query(`
+                ALTER TABLE "HistoriaClinica"
+                ADD COLUMN IF NOT EXISTS "recordatorio1hEnviado" BOOLEAN DEFAULT false
+            `);
+        } catch (err) {
+            // Columna ya existe o tabla no existe
+        }
+
         // Crear tabla medicos_disponibilidad si no existe
         await pool.query(`
             CREATE TABLE IF NOT EXISTS medicos_disponibilidad (

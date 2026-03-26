@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 const { sendWhatsAppMessage, sendWhatsAppFreeText } = require('../services/whatsapp');
+const { enviarEmailConfirmacionCita } = require('../services/email');
+const { generarLinkGoogleCalendar } = require('../helpers/google-calendar');
 const { HistoriaClinicaRepository } = require('../repositories');
 const { normalizarTelefonoConPrefijo57 } = require('../helpers/phone');
 
@@ -729,8 +731,117 @@ router.get('/nubia/buscar', async (req, res) => {
     }
 });
 
+// ==========================================
+// BARRIDO GENERAL - Recordatorio 1 hora antes de la cita
+// Aplica a TODAS las citas (no solo NUBIA) que tengan fechaAtencion
+// Envía WhatsApp + email si tiene correo registrado
+// ==========================================
+async function barridoRecordatorio1h() {
+    console.log("🔔 [barridoRecordatorio1h] Iniciando ejecución...");
+    try {
+        const ahora = new Date();
+        // Ventana: citas que son en ~1 hora (55 a 65 minutos desde ahora)
+        const en55min = new Date(ahora.getTime() + 55 * 60 * 1000);
+        const en65min = new Date(ahora.getTime() + 65 * 60 * 1000);
+
+        console.log(`📅 [barridoRecordatorio1h] Buscando citas entre ${en55min.toISOString()} y ${en65min.toISOString()}`);
+
+        const result = await pool.query(`
+            SELECT h."_id", h."primerNombre", h."primerApellido", h."celular",
+                   h."fechaAtencion", h."horaAtencion", h."codEmpresa", h.empresa, h.ciudad,
+                   COALESCE(h.correo, (SELECT f.email FROM formularios f WHERE f.wix_id = h."_id" LIMIT 1)) as correo
+            FROM "HistoriaClinica" h
+            WHERE h."fechaAtencion" >= $1
+              AND h."fechaAtencion" <= $2
+              AND h."atendido" = 'PENDIENTE'
+              AND (h."recordatorio1hEnviado" IS NULL OR h."recordatorio1hEnviado" = false)
+            LIMIT 50
+        `, [en55min.toISOString(), en65min.toISOString()]);
+
+        console.log(`📊 [barridoRecordatorio1h] Registros encontrados: ${result.rows.length}`);
+
+        if (result.rows.length === 0) {
+            console.log("⚠️ [barridoRecordatorio1h] No hay citas próximas para recordar");
+            return { mensaje: 'No hay citas próximas para recordar.', enviados: 0 };
+        }
+
+        let enviados = 0;
+
+        for (const registro of result.rows) {
+            const { _id, primerNombre, primerApellido, celular, fechaAtencion, codEmpresa, empresa, ciudad, correo } = registro;
+            const nombreCompleto = `${primerNombre || ''} ${primerApellido || ''}`.trim();
+
+            // Formatear fecha/hora para Colombia
+            const fechaObj = new Date(fechaAtencion);
+            const offsetColombia = -5 * 60;
+            const offsetLocal = fechaObj.getTimezoneOffset();
+            const fechaColombia = new Date(fechaObj.getTime() + (offsetLocal + offsetColombia) * 60000);
+            const fechaFormateada = fechaColombia.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const horaFormateada = fechaColombia.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
+            const fechaHoraCompleta = `${fechaFormateada} a las ${horaFormateada}`;
+
+            // 1. Enviar recordatorio por WhatsApp
+            if (celular) {
+                try {
+                    const telefonoLimpio = celular.replace(/\s+/g, '').replace(/[^\d]/g, '');
+                    const toNumber = telefonoLimpio.startsWith('57') ? telefonoLimpio : `57${telefonoLimpio}`;
+
+                    const mensaje = `Hola ${primerNombre}, te recordamos que tu cita de examen médico ocupacional es hoy ${fechaHoraCompleta}.\n\nPor favor asiste puntualmente. ¡Te esperamos!`;
+
+                    await sendWhatsAppFreeText(toNumber, mensaje);
+                    console.log(`✅ [barridoRecordatorio1h] WhatsApp enviado a ${nombreCompleto} (${toNumber})`);
+                } catch (waError) {
+                    console.error(`❌ [barridoRecordatorio1h] Error WhatsApp ${nombreCompleto}:`, waError.message);
+                }
+            }
+
+            // 2. Enviar recordatorio por email
+            if (correo) {
+                try {
+                    const linkCalendar = generarLinkGoogleCalendar({
+                        titulo: 'Consulta Medica Ocupacional - BSL',
+                        fechaInicio: fechaObj,
+                        descripcion: `Paciente: ${nombreCompleto}\nEmpresa: ${empresa || codEmpresa || ''}`,
+                        ubicacion: ciudad || ''
+                    });
+
+                    await enviarEmailConfirmacionCita({
+                        correo,
+                        nombreCompleto,
+                        fechaHoraCompleta,
+                        codEmpresa,
+                        empresa,
+                        ciudad,
+                        linkCalendar
+                    });
+                    console.log(`✅ [barridoRecordatorio1h] Email enviado a ${correo}`);
+                } catch (emailError) {
+                    console.error(`❌ [barridoRecordatorio1h] Error email ${correo}:`, emailError.message);
+                }
+            }
+
+            // Marcar como enviado
+            await pool.query(`
+                UPDATE "HistoriaClinica"
+                SET "recordatorio1hEnviado" = true
+                WHERE "_id" = $1
+            `, [_id]);
+
+            enviados++;
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        console.log(`✅ [barridoRecordatorio1h] Enviados ${enviados} recordatorios`);
+        return { mensaje: `Enviados ${enviados} recordatorios.`, enviados };
+    } catch (error) {
+        console.error("❌ Error en barridoRecordatorio1h:", error.message);
+        throw error;
+    }
+}
+
 // Export router and barrido functions (for cron jobs)
 module.exports = router;
 module.exports.barridoNubiaEnviarLink = barridoNubiaEnviarLink;
 module.exports.barridoNubiaMarcarAtendido = barridoNubiaMarcarAtendido;
 module.exports.barridoNubiaRecordatorioPago = barridoNubiaRecordatorioPago;
+module.exports.barridoRecordatorio1h = barridoRecordatorio1h;
