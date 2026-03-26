@@ -166,6 +166,7 @@ Multiple HTML pages with vanilla JavaScript (no framework):
 - `enviar-empresas.html` - Company scheduling notifications (standalone, no sidebar/topbar)
 - `facturacion-empresas.html` - Company billing reports
 - `planilla-sitel.html` - SITEL payroll report (standalone, no sidebar/topbar)
+- `informe-audiometrias.html` - Audiometry report by company with CSV export (standalone, no sidebar/topbar)
 - `panel-laboratorios.html` - Laboratory results panel
 - `panel-rips.html` - RIPS Colombian health reports panel
 - `panel-comunidad.html` - Community features panel
@@ -451,6 +452,7 @@ Location: [server.js:13369-13383](server.js#L13369-L13383)
 - For these companies, certificate download normally requires `aprobacion === 'APROBADO'`
 - **OMEGA exception**: allows download when patient is ATENDIDO and `mdConceptoFinal === 'APTO'`, even without SST approval
 - This exception applies to: modal PDF button, table row download icon, and bulk download
+- OMEGA also displays approval badge as `APROBADO` in the table when `mdConceptoFinal === 'APTO'`
 - **SITEL APROBADOR exception**: users with `APROBADOR` permission on SITEL can always download certificates without approval restriction
 - Other SITEL users (non-APROBADOR) strictly require `aprobacion === 'APROBADO'`
 
