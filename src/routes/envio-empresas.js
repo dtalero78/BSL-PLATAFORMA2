@@ -56,7 +56,7 @@ router.get('/registros', async (req, res) => {
                 h."segundoApellido",
                 h."numeroId",
                 h."celular",
-                h."correo",
+                COALESCE(h.correo, (SELECT f.email FROM formularios f WHERE f.wix_id = h."_id" LIMIT 1)) as correo,
                 h."ciudad",
                 h."fechaAtencion",
                 h."linkEnviado",

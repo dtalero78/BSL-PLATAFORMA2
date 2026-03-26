@@ -11,7 +11,6 @@ const { notificarNuevaOrden } = require('../helpers/sse');
 const { sendWhatsAppMessage } = require('../services/whatsapp');
 const { sendWhapiMessage } = require('../services/whapi');
 const { notificarCoordinadorNuevaOrden } = require('../services/payment');
-const { enviarEmailConfirmacionCita } = require('../services/email');
 const { HistoriaClinicaRepository, FormulariosRepository } = require('../repositories');
 
 // Configuración de multer para uploads en memoria
@@ -201,8 +200,7 @@ router.post('/', async (req, res) => {
             examenes,
             empresa,
             asignarMedicoAuto,
-            modalidad,
-            correo
+            modalidad
         } = req.body;
 
         console.log('');
@@ -371,9 +369,9 @@ router.post('/', async (req, res) => {
             INSERT INTO "HistoriaClinica" (
                 "_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
                 "celular", "codEmpresa", "empresa", "cargo", "ciudad", "subempresa", "centro_de_costo", "tipoExamen", "medico",
-                "fechaAtencion", "horaAtencion", "atendido", "examenes", "correo", "_createdDate", "_updatedDate"
+                "fechaAtencion", "horaAtencion", "atendido", "examenes", "_createdDate", "_updatedDate"
             ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, NOW(), NOW()
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW(), NOW()
             )
             RETURNING "_id", "numeroId", "primerNombre", "primerApellido"
         `;
@@ -397,8 +395,7 @@ router.post('/', async (req, res) => {
             construirFechaAtencionColombia(fechaAtencion, horaAtencion),
             horaAtencion || null,
             atendido || 'PENDIENTE',
-            examenes || null,
-            correo || null
+            examenes || null
         ];
 
         const pgResult = await pool.query(insertQuery, insertValues);
@@ -559,28 +556,6 @@ router.post('/', async (req, res) => {
             } catch (confirmacionError) {
                 console.error('Error al enviar mensaje de confirmacion:', confirmacionError.message);
                 // No bloqueamos la creación de la orden si falla el envío del mensaje
-            }
-        }
-
-        // Enviar email de confirmacion de cita (async, no bloquea)
-        if (correo && fechaAtencion && horaAtencion) {
-            const fechaObj = construirFechaAtencionColombia(fechaAtencion, horaAtencion);
-            if (fechaObj) {
-                const offsetColombia = -5 * 60;
-                const offsetLocal = fechaObj.getTimezoneOffset();
-                const fechaColombia = new Date(fechaObj.getTime() + (offsetLocal + offsetColombia) * 60000);
-                const fechaFormateada = fechaColombia.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                const horaFormateada = fechaColombia.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
-                const fechaHoraCompleta = `${fechaFormateada} a las ${horaFormateada}`;
-
-                enviarEmailConfirmacionCita({
-                    correo,
-                    nombreCompleto: `${primerNombre} ${primerApellido}`,
-                    fechaHoraCompleta,
-                    codEmpresa,
-                    empresa,
-                    ciudad
-                }).catch(err => console.error('Error enviando email confirmacion:', err.message));
             }
         }
 

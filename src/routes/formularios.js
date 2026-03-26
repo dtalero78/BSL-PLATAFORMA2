@@ -137,6 +137,19 @@ router.post('/formulario', async (req, res) => {
             console.log('✅ Formulario guardado en PostgreSQL:', result.rows[0].id);
         }
 
+        // Sincronizar email del paciente a HistoriaClinica.correo
+        if (datos.email && datos.wixId) {
+            try {
+                await pool.query(
+                    `UPDATE "HistoriaClinica" SET correo = $1 WHERE "_id" = $2`,
+                    [datos.email, datos.wixId]
+                );
+                console.log(`[EMAIL] Correo ${datos.email} sincronizado a HistoriaClinica ${datos.wixId}`);
+            } catch (syncError) {
+                console.error('Error sincronizando correo a HistoriaClinica:', syncError.message);
+            }
+        }
+
         // Enviar alertas por WhatsApp si hay respuestas afirmativas en preguntas criticas
         try {
             await enviarAlertasPreguntasCriticas(datos);
