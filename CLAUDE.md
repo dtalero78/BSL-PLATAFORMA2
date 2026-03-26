@@ -244,6 +244,7 @@ The platform includes a full WhatsApp-based customer service system:
 **Integration Points**:
 - Twilio WhatsApp API for message sending (`src/services/whatsapp.js`)
 - WHAPI for alternative WhatsApp channel (`src/services/whapi.js`)
+- Email notifications via Nodemailer (`src/services/email.js`)
 - Automated message templates for common scenarios
 
 ## Data Flow Patterns
@@ -290,7 +291,7 @@ All tables are created automatically on server startup with `CREATE TABLE IF NOT
 - Primary key: `_id` (Wix-generated UUID)
 - Critical fields: `numeroId` (patient ID), `atendido` (status), `mdConceptoFinal` (medical concept), `mdDx1/mdDx2` (diagnoses)
 - Valid `mdConceptoFinal` values: `APTO`, `APLAZADO`, `NO APTO`, `APTO CON RECOMENDACIONES`
-- Dynamic columns (added on startup): `horaAtencion`, `subempresa`, `centro_de_costo`, `aprobacion`, `aprobacion_externa`, `fecha_aprobacion_externa`, `concepto_aprobado`, `linkEnviado`, `observaciones_siigo`, `foto_url`, `recordatorioLinkEnviado`
+- Dynamic columns (added on startup): `horaAtencion`, `subempresa`, `centro_de_costo`, `aprobacion`, `aprobacion_externa`, `fecha_aprobacion_externa`, `concepto_aprobado`, `linkEnviado`, `observaciones_siigo`, `foto_url`, `recordatorioLinkEnviado`, `correo`
 - Index on: `numeroId`, `celular`, `codEmpresa`, `fechaAtencion`
 - **Access via**: `HistoriaClinicaRepository`
 
@@ -399,6 +400,14 @@ SPACES_CDN=
 
 # External API
 EXTERNAL_API_KEY=  # API key for external integrations (SIIGO order creation)
+
+# Email (SMTP - Nodemailer)
+SMTP_HOST=smtp.gmail.com        # SMTP server (Gmail, SendGrid, AWS SES, etc.)
+SMTP_PORT=587                    # SMTP port (587 for TLS, 465 for SSL)
+SMTP_SECURE=false                # true for port 465, false for 587
+SMTP_USER=                       # SMTP username (email address for Gmail)
+SMTP_PASS=                       # SMTP password (app password for Gmail)
+SMTP_FROM=                       # Sender email (defaults to SMTP_USER)
 
 # Other
 COORDINADOR_CELULAR=  # Coordinator phone for notifications

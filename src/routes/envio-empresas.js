@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 const { sendWhatsAppMessage } = require('../services/whatsapp');
+const { enviarEmailLinkFormulario } = require('../services/email');
 const { normalizarTelefonoConPrefijo57 } = require('../helpers/phone');
 
 // ========== ENDPOINTS ENVÍO AGENDAMIENTO EMPRESAS ==========
@@ -55,6 +56,7 @@ router.get('/registros', async (req, res) => {
                 h."segundoApellido",
                 h."numeroId",
                 h."celular",
+                h."correo",
                 h."ciudad",
                 h."fechaAtencion",
                 h."linkEnviado",
@@ -92,7 +94,7 @@ router.get('/registros', async (req, res) => {
 // POST - Enviar mensaje individual de WhatsApp
 router.post('/enviar-individual', async (req, res) => {
     try {
-        const { _id, primerNombre, segundoNombre, primerApellido, celular, numeroId, fechaAtencion, empresa } = req.body;
+        const { _id, primerNombre, segundoNombre, primerApellido, celular, correo, numeroId, fechaAtencion, empresa } = req.body;
 
         if (!_id || !celular || !empresa) {
             return res.status(400).json({
@@ -176,6 +178,18 @@ router.post('/enviar-individual', async (req, res) => {
             SET "linkEnviado" = 'ENVIADO'
             WHERE "_id" = $1
         `, [_id]);
+
+        // Enviar email con link al formulario (async, no bloquea)
+        if (correo) {
+            enviarEmailLinkFormulario({
+                correo,
+                nombreCompleto,
+                empresa,
+                fechaFormateada,
+                horaFormateada,
+                ordenId: _id
+            }).catch(err => console.error('Error enviando email link formulario:', err.message));
+        }
 
         // Crear registro en conversaciones_whatsapp con stopBot
         const telefonoConPrefijo = normalizarTelefonoConPrefijo57(telefonoCompleto);
@@ -333,6 +347,18 @@ router.post('/enviar-masivo', async (req, res) => {
                     SET "linkEnviado" = 'ENVIADO'
                     WHERE "_id" = $1
                 `, [item._id]);
+
+                // Enviar email con link al formulario (async, no bloquea)
+                if (item.correo) {
+                    enviarEmailLinkFormulario({
+                        correo: item.correo,
+                        nombreCompleto,
+                        empresa: item.empresa || "la empresa",
+                        fechaFormateada,
+                        horaFormateada,
+                        ordenId: item._id
+                    }).catch(err => console.error('Error enviando email link formulario:', err.message));
+                }
 
                 // Crear/actualizar conversación WhatsApp
                 const telefonoConPrefijo = normalizarTelefonoConPrefijo57(telefonoCompleto);
