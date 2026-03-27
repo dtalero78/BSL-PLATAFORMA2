@@ -1849,10 +1849,15 @@
             `;
 
             const mensajeFormulario = document.getElementById('mensajeFormularioDup');
-            if (ordenExistente.tieneFormulario) {
+            if (esSiigoEgreso) {
+                mensajeFormulario.innerHTML = 'Si necesitas una nueva orden, comunícate con tu empresa.';
+                document.getElementById('btnCrearNuevaDup').style.display = 'none';
+            } else if (ordenExistente.tieneFormulario) {
                 mensajeFormulario.innerHTML = 'Esta orden <strong>ya tiene</strong> formulario completado.';
+                document.getElementById('btnCrearNuevaDup').style.display = '';
             } else {
                 mensajeFormulario.innerHTML = 'Esta orden <strong>no tiene</strong> formulario completado.';
+                document.getElementById('btnCrearNuevaDup').style.display = '';
             }
 
             document.getElementById('modalDuplicado').classList.add('show');
@@ -1919,6 +1924,23 @@
                     year: 'numeric', month: 'long', day: 'numeric'
                 });
             }
+
+            // Para SIIGO egreso: no permitir reagendar, pedir que contacte a la empresa
+            if (esSiigoEgreso) {
+                document.getElementById('ordenExpiradaInfo').innerHTML = `
+                    <div class="resumen-item">
+                        <span class="resumen-label">Fecha programada</span>
+                        <span class="resumen-value" style="color: #DC2626;">${fechaAtencionStr} (Expirada)</span>
+                    </div>
+                `;
+                document.getElementById('expiradoReagendar').style.display = 'none';
+                document.getElementById('expiradoContactar').style.display = 'block';
+                document.getElementById('modalExpirado').classList.add('show');
+                return;
+            }
+
+            document.getElementById('expiradoReagendar').style.display = 'block';
+            document.getElementById('expiradoContactar').style.display = 'none';
 
             document.getElementById('ordenExpiradaInfo').innerHTML = `
                 <div class="resumen-item">
@@ -2111,7 +2133,7 @@
                 <button type="button" class="nav-btn" onclick="usarOrdenExistente()" style="width: 100%;">
                     Continuar con mi cita existente
                 </button>
-                <button type="button" class="nav-btn prev-btn" onclick="crearNuevaOrden()" style="width: 100%; background: #F59E0B; color: white; border-color: #F59E0B;">
+                <button type="button" id="btnCrearNuevaDup" class="nav-btn prev-btn" onclick="crearNuevaOrden()" style="width: 100%; background: #F59E0B; color: white; border-color: #F59E0B;">
                     Crear nueva cita de todos modos
                 </button>
                 <button type="button" class="nav-btn prev-btn" onclick="cerrarModalDuplicado()" style="width: 100%;">
@@ -2167,49 +2189,66 @@
                     </svg>
                 </div>
                 <h3 style="font-size: 20px; font-weight: 600; color: #1F2937; margin-bottom: 8px;">Tu cita ha expirado</h3>
-                <p style="color: #6B7280; font-size: 14px;">Tenías una cita programada pero la fecha ya pasó. Puedes reagendar tu cita.</p>
+                <p style="color: #6B7280; font-size: 14px;">Tenías una cita programada pero la fecha ya pasó.</p>
             </div>
 
             <div class="resumen-container" id="ordenExpiradaInfo" style="background: #FEF2F2; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
                 <!-- Se llena dinámicamente -->
             </div>
 
-            <div style="background: #F0FDF4; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
-                <h4 style="font-size: 14px; font-weight: 600; color: #166534; margin-bottom: 12px;">Selecciona nueva fecha y hora:</h4>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                    <div>
-                        <label style="font-size: 12px; color: #374151; display: block; margin-bottom: 4px;">Mes</label>
-                        <select id="mesExpirado" onchange="actualizarDiasExpirado()" style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 14px;">
-                            <option value="">Seleccionar...</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="font-size: 12px; color: #374151; display: block; margin-bottom: 4px;">Día</label>
-                        <select id="diaExpirado" onchange="actualizarHorasExpirado()" style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 14px;">
-                            <option value="">Seleccionar...</option>
-                        </select>
-                    </div>
+            <!-- Mensaje para SIIGO egreso: contactar empresa -->
+            <div id="expiradoContactar" style="display: none;">
+                <div style="background: #FEF3C7; border-radius: 12px; padding: 20px; margin-bottom: 20px; text-align: center;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" width="40" height="40" style="margin-bottom: 12px;">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                    </svg>
+                    <h4 style="font-size: 16px; font-weight: 600; color: #92400E; margin-bottom: 8px;">Comunícate con tu empresa</h4>
+                    <p style="font-size: 14px; color: #78350F;">Tu cita de egreso ha expirado y no es posible reagendarla desde aquí. Por favor comunícate con tu empresa para que te generen una nueva orden.</p>
                 </div>
-
-                <div>
-                    <label style="font-size: 12px; color: #374151; display: block; margin-bottom: 4px;">Hora</label>
-                    <select id="horaExpirado" style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 14px;">
-                        <option value="">Primero selecciona un día</option>
-                    </select>
-                </div>
+                <button type="button" class="nav-btn prev-btn" onclick="cerrarModalExpirado()" style="width: 100%;">
+                    Cerrar
+                </button>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 12px;">
-                <button type="button" class="nav-btn" id="btnActualizarFecha" onclick="actualizarFechaYContinuar()" style="width: 100%; background: #10B981; border-color: #10B981;">
-                    Reagendar y continuar
-                </button>
-                <button type="button" class="nav-btn prev-btn" onclick="crearNuevaOrdenExpirado()" style="width: 100%; background: #F59E0B; color: white; border-color: #F59E0B;">
-                    Crear nueva orden
-                </button>
-                <button type="button" class="nav-btn prev-btn" onclick="cerrarModalExpirado()" style="width: 100%;">
-                    Cancelar
-                </button>
+            <!-- Opciones normales de reagendar (no SIIGO) -->
+            <div id="expiradoReagendar">
+                <div style="background: #F0FDF4; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                    <h4 style="font-size: 14px; font-weight: 600; color: #166534; margin-bottom: 12px;">Selecciona nueva fecha y hora:</h4>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                        <div>
+                            <label style="font-size: 12px; color: #374151; display: block; margin-bottom: 4px;">Mes</label>
+                            <select id="mesExpirado" onchange="actualizarDiasExpirado()" style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 14px;">
+                                <option value="">Seleccionar...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; color: #374151; display: block; margin-bottom: 4px;">Día</label>
+                            <select id="diaExpirado" onchange="actualizarHorasExpirado()" style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 14px;">
+                                <option value="">Seleccionar...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="font-size: 12px; color: #374151; display: block; margin-bottom: 4px;">Hora</label>
+                        <select id="horaExpirado" style="width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 14px;">
+                            <option value="">Primero selecciona un día</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <button type="button" class="nav-btn" id="btnActualizarFecha" onclick="actualizarFechaYContinuar()" style="width: 100%; background: #10B981; border-color: #10B981;">
+                        Reagendar y continuar
+                    </button>
+                    <button type="button" class="nav-btn prev-btn" onclick="crearNuevaOrdenExpirado()" style="width: 100%; background: #F59E0B; color: white; border-color: #F59E0B;">
+                        Crear nueva orden
+                    </button>
+                    <button type="button" class="nav-btn prev-btn" onclick="cerrarModalExpirado()" style="width: 100%;">
+                        Cancelar
+                    </button>
+                </div>
             </div>
             <div style="text-align: center; padding: 4px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; margin-top: 16px;">modalExpirado</div>
         </div>
