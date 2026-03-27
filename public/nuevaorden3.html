@@ -1710,6 +1710,17 @@
             btn.textContent = 'Verificando...';
             ocultarAlerta();
 
+            // SIIGO egreso: saltar verificación de duplicados, ir directo a buscar historia y prellenar
+            if (esSiigoEgreso) {
+                try {
+                    await mostrarPaso1b();
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = 'Continuar →';
+                }
+                return;
+            }
+
             try {
                 const response = await fetch(`/api/ordenes/verificar-duplicado/${encodeURIComponent(numeroId)}`);
                 const result = await response.json();
