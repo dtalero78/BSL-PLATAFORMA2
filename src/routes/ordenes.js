@@ -402,8 +402,12 @@ router.post('/', async (req, res) => {
         const pgResult = await pool.query(insertQuery, insertValues);
         console.log('PostgreSQL: Orden guardada con _id:', wixId);
 
+        // Empresas que solo reciben notificacion por email (sin WhatsApp, Twilio ni Make.com)
+        const EMPRESAS_SOLO_EMAIL = ['T.EN COLOMBIA SA.'];
+        const esSoloEmail = EMPRESAS_SOLO_EMAIL.includes(codEmpresa);
+
         // Gestionar registro en tabla conversaciones_whatsapp
-        try {
+        if (!esSoloEmail) try {
             // Normalizar celular usando helper (formato: +57XXXXXXXXXX con +)
             const celularConPrefijo = normalizarTelefonoConPrefijo57(celular);
             // Versión sin + para búsqueda retrocompatible (conversaciones antiguas)
@@ -472,7 +476,7 @@ router.post('/', async (req, res) => {
         }
 
         // Enviar mensaje de confirmación por WhatsApp con Twilio (solo si tiene fecha y hora)
-        if (fechaAtencion && horaAtencion && celular) {
+        if (!esSoloEmail && fechaAtencion && horaAtencion && celular) {
             try {
                 console.log('Enviando mensaje de confirmacion por WhatsApp...');
 
@@ -606,7 +610,7 @@ router.post('/', async (req, res) => {
         }
 
         // Disparar webhook a Make.com (async, no bloquea) para enviar WhatsApp al paciente
-        dispararWebhookMake({
+        if (!esSoloEmail) dispararWebhookMake({
             _id: wixId,
             celular,
             numeroId,
@@ -636,7 +640,7 @@ router.post('/', async (req, res) => {
         }
 
         // Notificar al coordinador de agendamiento (async, no bloquea)
-        notificarCoordinadorNuevaOrden({
+        if (!esSoloEmail) notificarCoordinadorNuevaOrden({
             _id: wixId,
             numeroId,
             primerNombre,
