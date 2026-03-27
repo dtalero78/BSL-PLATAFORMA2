@@ -907,6 +907,8 @@
         let tipoConsultaSeleccionado = '';
         let examenesSeleccionados = [];
         let examenesData = [];
+        let fechaCreacionSiigo = null; // Para limitar días en egreso SIIGO
+        let esSiigoEgreso = false;
 
         // Función para capitalizar (primera letra mayúscula de cada palabra)
         function capitalize(str) {
@@ -965,6 +967,9 @@
                 empresaNombre = 'SOFTSERVE';
             } else if (empresaNombre.toUpperCase() === 'TEN') {
                 empresaNombre = 'T.EN COLOMBIA';
+            } else if (empresaNombre.toUpperCase() === 'SIIGO') {
+                empresaNombre = 'SIIGO';
+                esSiigoEgreso = true;
             }
 
             // Pre-seleccionar Telemedicina automáticamente
@@ -1114,6 +1119,21 @@
             }
         }
 
+        // Calcular fecha límite: N días hábiles (lun-vie) desde una fecha dada
+        function calcularFechaLimiteDiasHabiles(fechaBase, diasHabiles) {
+            const fecha = new Date(fechaBase);
+            fecha.setHours(0, 0, 0, 0);
+            let contados = 0;
+            while (contados < diasHabiles) {
+                fecha.setDate(fecha.getDate() + 1);
+                const dow = fecha.getDay();
+                if (dow !== 0 && dow !== 6) { // Lunes a Viernes
+                    contados++;
+                }
+            }
+            return fecha;
+        }
+
         // Cargar meses disponibles
         function cargarMeses() {
             const select = document.getElementById('mes');
@@ -1126,10 +1146,20 @@
 
             select.innerHTML = '<option value="">Seleccionar...</option>';
 
+            // Para SIIGO egreso, solo mostrar meses que caigan dentro de los 5 días hábiles
+            let fechaLimite = null;
+            if (esSiigoEgreso && fechaCreacionSiigo) {
+                fechaLimite = calcularFechaLimiteDiasHabiles(new Date(fechaCreacionSiigo), 5);
+            }
+
             for (let i = 0; i < 3; i++) {
                 const fecha = new Date(hoy.getFullYear(), hoy.getMonth() + i, 1);
                 const mesIndex = fecha.getMonth();
                 const year = fecha.getFullYear();
+
+                // Si hay límite y el primer día del mes ya supera el límite, no agregar
+                if (fechaLimite && fecha > fechaLimite) break;
+
                 select.innerHTML += `<option value="${mesIndex + 1}-${year}">${meses[mesIndex]} ${year}</option>`;
             }
         }
@@ -1149,6 +1179,13 @@
             const primerDia = new Date(year, mes - 1, 1);
             const ultimoDia = new Date(year, mes, 0);
 
+            // Límite de 5 días hábiles para SIIGO egreso
+            let fechaLimite = null;
+            if (esSiigoEgreso && fechaCreacionSiigo) {
+                fechaLimite = calcularFechaLimiteDiasHabiles(new Date(fechaCreacionSiigo), 5);
+                fechaLimite.setHours(23, 59, 59, 999);
+            }
+
             let diaInicio = primerDia;
             if (mes - 1 === hoy.getMonth() && year === hoy.getFullYear()) {
                 diaInicio = hoy;
@@ -1159,6 +1196,9 @@
 
             let diaActual = new Date(diaInicio);
             while (diaActual <= ultimoDia) {
+                // Si hay límite SIIGO y el día lo supera, parar
+                if (fechaLimite && diaActual > fechaLimite) break;
+
                 const diaSemana = diasSemana[diaActual.getDay()];
                 const diaNum = diaActual.getDate();
                 const esHoy = diaActual.getTime() === hoy.getTime();
@@ -1701,9 +1741,81 @@
             }
         }
 
-        function mostrarPaso1b() {
+        async function mostrarPaso1b() {
             const numeroId = document.getElementById('numeroId').value.trim();
             document.getElementById('displayNumeroId').value = numeroId;
+
+            // Si es SIIGO egreso, buscar historia clínica y prellenar datos
+            if (esSiigoEgreso) {
+                try {
+                    const resp = await fetch(`/api/ordenes/buscar-historia-siigo/${encodeURIComponent(numeroId)}`);
+                    const result = await resp.json();
+
+                    if (result.success && result.data) {
+                        const d = result.data;
+                        fechaCreacionSiigo = d.fechaCreacion;
+
+                        // Prellenar step 1b - datos personales
+                        if (d.primerNombre) {
+                            document.getElementById('primerNombre').value = d.primerNombre;
+                            document.getElementById('primerNombre').readOnly = true;
+                            document.getElementById('primerNombre').style.backgroundColor = '#f5f5f5';
+                        }
+                        if (d.segundoNombre) {
+                            document.getElementById('segundoNombre').value = d.segundoNombre;
+                            document.getElementById('segundoNombre').readOnly = true;
+                            document.getElementById('segundoNombre').style.backgroundColor = '#f5f5f5';
+                        }
+                        if (d.primerApellido) {
+                            document.getElementById('primerApellido').value = d.primerApellido;
+                            document.getElementById('primerApellido').readOnly = true;
+                            document.getElementById('primerApellido').style.backgroundColor = '#f5f5f5';
+                        }
+                        if (d.segundoApellido) {
+                            document.getElementById('segundoApellido').value = d.segundoApellido;
+                            document.getElementById('segundoApellido').readOnly = true;
+                            document.getElementById('segundoApellido').style.backgroundColor = '#f5f5f5';
+                        }
+                        if (d.celular) {
+                            document.getElementById('celular').value = d.celular;
+                        }
+
+                        // Prellenar step 2 - empresa, cargo, ciudad
+                        if (d.empresa) {
+                            document.getElementById('empresa').value = d.empresa;
+                            document.getElementById('empresa').readOnly = true;
+                            document.getElementById('empresa').style.backgroundColor = '#f5f5f5';
+                            document.getElementById('empresaContainer').style.display = 'block';
+                        }
+                        if (d.cargo) {
+                            document.getElementById('cargo').value = d.cargo;
+                            document.getElementById('cargo').readOnly = true;
+                            document.getElementById('cargo').style.backgroundColor = '#f5f5f5';
+                        }
+                        if (d.ciudad) {
+                            const ciudadSelect = document.getElementById('ciudad');
+                            // Si la ciudad no existe en el select, agregarla
+                            const existe = Array.from(ciudadSelect.options).some(o => o.value === d.ciudad);
+                            if (!existe) {
+                                ciudadSelect.innerHTML += `<option value="${d.ciudad}">${d.ciudad}</option>`;
+                            }
+                            ciudadSelect.value = d.ciudad;
+                            ciudadSelect.disabled = true;
+                            ciudadSelect.style.backgroundColor = '#f5f5f5';
+                        }
+
+                        // Recargar meses con el nuevo límite de 5 días hábiles
+                        cargarMeses();
+                    } else {
+                        mostrarAlerta('No se encontró un registro de SIIGO para esta cédula. Verifica el número.');
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Error al buscar historia SIIGO:', error);
+                    mostrarAlerta('Error al buscar datos. Intente de nuevo.');
+                    return;
+                }
+            }
 
             // Ocultar step 1, mostrar step 1b
             document.querySelectorAll('.question-slide').forEach(s => s.classList.remove('active'));

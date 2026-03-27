@@ -97,6 +97,52 @@ router.get('/verificar-duplicado/:numeroId', async (req, res) => {
     }
 });
 
+// GET /api/ordenes/buscar-historia-siigo/:numeroId - Buscar última historia clínica SIIGO para egresos
+router.get('/buscar-historia-siigo/:numeroId', async (req, res) => {
+    try {
+        const { numeroId } = req.params;
+
+        if (!numeroId) {
+            return res.status(400).json({ success: false, message: 'Número de cédula requerido' });
+        }
+
+        const result = await HistoriaClinicaRepository.query(`
+            SELECT "_id", "numeroId", "primerNombre", "segundoNombre",
+                   "primerApellido", "segundoApellido", "codEmpresa", "empresa",
+                   "cargo", "ciudad", "celular", "_createdDate"
+            FROM "HistoriaClinica"
+            WHERE "numeroId" = $1
+            AND "codEmpresa" = 'SIIGO'
+            ORDER BY "_createdDate" DESC
+            LIMIT 1
+        `, [numeroId]);
+
+        if (result.rows.length === 0) {
+            return res.json({ success: false, message: 'No se encontró registro de SIIGO para esta cédula' });
+        }
+
+        const registro = result.rows[0];
+        res.json({
+            success: true,
+            data: {
+                primerNombre: registro.primerNombre,
+                segundoNombre: registro.segundoNombre,
+                primerApellido: registro.primerApellido,
+                segundoApellido: registro.segundoApellido,
+                empresa: registro.empresa,
+                codEmpresa: registro.codEmpresa,
+                cargo: registro.cargo,
+                ciudad: registro.ciudad,
+                celular: registro.celular,
+                fechaCreacion: registro._createdDate
+            }
+        });
+    } catch (error) {
+        console.error('Error al buscar historia SIIGO:', error);
+        res.status(500).json({ success: false, message: 'Error al buscar registro', error: error.message });
+    }
+});
+
 // PATCH /api/ordenes/:id/fecha-atencion - Actualizar fecha de atención de una orden existente
 router.patch('/:id/fecha-atencion', async (req, res) => {
     try {
