@@ -538,7 +538,7 @@ router.post('/', async (req, res) => {
                                     null,
                                     {
                                         "1": fechaHoraCompleta,
-                                        "2": linkCalendar.replace('https://calendar.google.com/calendar/render?', '')
+                                        "2": linkCalendar.replace('https://calendar.google.com/calendar/render', '')
                                     },
                                     process.env.TWILIO_TEMPLATE_CITA_CALENDARIO
                                 );
