@@ -1591,6 +1591,11 @@
                     .trim()
                     .toUpperCase();
 
+                // Mapear códigos cortos al codEmpresa real
+                if (codEmpresa === 'TEN') {
+                    codEmpresa = 'T.EN COLOMBIA SA';
+                }
+
                 // El nombre de la empresa ya está en el campo empresa (configurado en configurarPorReferencia)
                 empresaNombre = document.getElementById('empresa').value.trim() || codEmpresa;
             }
