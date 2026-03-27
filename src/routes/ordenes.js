@@ -449,7 +449,7 @@ router.post('/', async (req, res) => {
         console.log('PostgreSQL: Orden guardada con _id:', wixId);
 
         // Empresas que solo reciben notificacion por email (sin WhatsApp, Twilio ni Make.com)
-        const EMPRESAS_SOLO_EMAIL = ['T.EN COLOMBIA SA.'];
+        const EMPRESAS_SOLO_EMAIL = ['T.EN COLOMBIA SA'];
         const esSoloEmail = EMPRESAS_SOLO_EMAIL.includes(codEmpresa);
 
         // Gestionar registro en tabla conversaciones_whatsapp
