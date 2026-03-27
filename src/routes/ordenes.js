@@ -12,7 +12,6 @@ const { sendWhatsAppMessage } = require('../services/whatsapp');
 const { sendWhapiMessage } = require('../services/whapi');
 const { notificarCoordinadorNuevaOrden } = require('../services/payment');
 const { enviarEmailConfirmacionCita } = require('../services/email');
-const { generarLinkGoogleCalendar } = require('../helpers/google-calendar');
 const { HistoriaClinicaRepository, FormulariosRepository } = require('../repositories');
 
 // Configuración de multer para uploads en memoria
