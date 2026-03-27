@@ -11,6 +11,8 @@ const { notificarNuevaOrden } = require('../helpers/sse');
 const { sendWhatsAppMessage } = require('../services/whatsapp');
 const { sendWhapiMessage } = require('../services/whapi');
 const { notificarCoordinadorNuevaOrden } = require('../services/payment');
+const { enviarEmailConfirmacionCita } = require('../services/email');
+const { generarLinkGoogleCalendar } = require('../helpers/google-calendar');
 const { HistoriaClinicaRepository, FormulariosRepository } = require('../repositories');
 
 // Configuración de multer para uploads en memoria
@@ -556,6 +558,51 @@ router.post('/', async (req, res) => {
             } catch (confirmacionError) {
                 console.error('Error al enviar mensaje de confirmacion:', confirmacionError.message);
                 // No bloqueamos la creación de la orden si falla el envío del mensaje
+            }
+        }
+
+        // Enviar email de confirmacion si el paciente ya tiene correo de un formulario anterior
+        if (fechaAtencion && horaAtencion) {
+            try {
+                const emailResult = await pool.query(
+                    `SELECT email FROM formularios WHERE numero_id = $1 AND email IS NOT NULL AND email != '' ORDER BY fecha_registro DESC LIMIT 1`,
+                    [numeroId]
+                );
+                const correoPaciente = emailResult.rows[0]?.email;
+
+                if (correoPaciente) {
+                    // Guardar correo en la orden recien creada
+                    await pool.query(`UPDATE "HistoriaClinica" SET correo = $1 WHERE "_id" = $2`, [correoPaciente, wixId]);
+
+                    const fechaObj = construirFechaAtencionColombia(fechaAtencion, horaAtencion);
+                    if (fechaObj) {
+                        const offsetColombia = -5 * 60;
+                        const offsetLocal = fechaObj.getTimezoneOffset();
+                        const fechaColombia = new Date(fechaObj.getTime() + (offsetLocal + offsetColombia) * 60000);
+                        const fechaFormateada = fechaColombia.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                        const horaFormateada = fechaColombia.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
+                        const fechaHoraCompleta = `${fechaFormateada} a las ${horaFormateada}`;
+
+                        const linkCalendar = generarLinkGoogleCalendar({
+                            titulo: 'Consulta Medica Ocupacional - BSL',
+                            fechaInicio: fechaObj,
+                            descripcion: `Paciente: ${primerNombre} ${primerApellido}\nEmpresa: ${empresa || codEmpresa || ''}`,
+                            ubicacion: ciudad || ''
+                        });
+
+                        enviarEmailConfirmacionCita({
+                            correo: correoPaciente,
+                            nombreCompleto: `${primerNombre} ${primerApellido}`,
+                            fechaHoraCompleta,
+                            codEmpresa,
+                            empresa,
+                            ciudad,
+                            linkCalendar
+                        }).catch(err => console.error('Error enviando email confirmacion:', err.message));
+                    }
+                }
+            } catch (emailError) {
+                console.error('Error buscando correo del paciente:', emailError.message);
             }
         }
 
