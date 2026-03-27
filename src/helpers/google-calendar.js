@@ -16,13 +16,14 @@ function generarLinkGoogleCalendar({ titulo, fechaInicio, fechaFin, descripcion,
 
     const fin = fechaFin || new Date(fechaInicio.getTime() + 60 * 60 * 1000); // +1 hora por defecto
 
-    const params = new URLSearchParams({
-        action: 'TEMPLATE',
-        text: titulo,
-        dates: `${formatDate(fechaInicio)}/${formatDate(fin)}`,
-        details: descripcion || '',
-        location: ubicacion || '',
-    });
+    // Construir URL manualmente para evitar que URLSearchParams encodee / en dates
+    const params = [
+        `action=TEMPLATE`,
+        `text=${encodeURIComponent(titulo)}`,
+        `dates=${formatDate(fechaInicio)}/${formatDate(fin)}`,
+        `details=${encodeURIComponent(descripcion || '')}`,
+        `location=${encodeURIComponent(ubicacion || '')}`
+    ].join('&');
 
     return `https://calendar.google.com/calendar/render?${params}`;
 }
