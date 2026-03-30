@@ -499,6 +499,80 @@
             font-size: 14px;
             font-weight: 700;
         }
+
+        /* Mic check */
+        .mic-check-meter {
+            width: 100%;
+            height: 40px;
+            background: #F2F2F7;
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+            margin: 16px 0;
+        }
+
+        .mic-check-fill {
+            height: 100%;
+            border-radius: 20px;
+            transition: width 0.1s ease, background 0.3s ease;
+            width: 0%;
+            background: #E5E5EA;
+        }
+
+        .mic-check-zones {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            pointer-events: none;
+        }
+
+        .mic-check-zone {
+            flex: 1;
+            border-right: 2px solid rgba(255,255,255,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 600;
+            color: rgba(0,0,0,0.25);
+        }
+
+        .mic-check-zone:last-child {
+            border-right: none;
+        }
+
+        .mic-status {
+            text-align: center;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            margin: 12px 0;
+            transition: all 0.3s ease;
+        }
+
+        .mic-status.low {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        .mic-status.good {
+            background: #DCFCE7;
+            color: #166534;
+        }
+
+        .mic-status.loud {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+
+        .mic-status.waiting {
+            background: #F2F2F7;
+            color: #8E8E93;
+        }
     </style>
 </head>
 <body>
@@ -549,6 +623,39 @@
             </div>
 
             <button class="btn-primary" id="startBtn">Comenzar Prueba</button>
+        </div>
+
+        <!-- ========== SCREEN: Mic Check ========== -->
+        <div class="screen" id="micCheckScreen">
+            <div class="card">
+                <div class="card-title">Verificacion del Microfono</div>
+                <p class="card-text">Vamos a verificar que su microfono funcione correctamente. Diga <strong>"Hola, buenos dias"</strong> con su voz normal.</p>
+                <p class="card-text" style="font-size: 13px; color: #8E8E93;">Acerque el dispositivo a 20-30 cm de su boca. La barra debe mantenerse en la zona verde.</p>
+            </div>
+
+            <div class="card">
+                <div class="mic-check-meter">
+                    <div class="mic-check-fill" id="micCheckFill"></div>
+                    <div class="mic-check-zones">
+                        <div class="mic-check-zone">MUY BAJO</div>
+                        <div class="mic-check-zone">BUENO</div>
+                        <div class="mic-check-zone">MUY ALTO</div>
+                    </div>
+                </div>
+
+                <div class="mic-status waiting" id="micStatus">
+                    Presione el boton para iniciar la verificacion
+                </div>
+
+                <div class="mic-container" style="padding: 20px 0;">
+                    <button class="mic-btn" id="micCheckBtn" style="width: 90px; height: 90px; font-size: 36px;">🎤</button>
+                    <div class="mic-label" id="micCheckLabel">Toque para verificar</div>
+                </div>
+
+                <div class="waveform-container" id="waveformCheck"></div>
+            </div>
+
+            <button class="btn-primary" id="micCheckOkBtn" disabled>Continuar con la Prueba</button>
         </div>
 
         <!-- ========== SCREEN: Test 1 - Sustained Vowel ========== -->
@@ -731,6 +838,15 @@
         let scriptProcessor = null;
         let recordedChunks = [];
 
+        // Mic check state
+        let micCheckStream = null;
+        let micCheckContext = null;
+        let micCheckAnalyser = null;
+        let micCheckActive = false;
+        let micCheckAnimFrame = null;
+        let goodLevelCount = 0;
+        const GOOD_LEVEL_THRESHOLD = 30; // ~3 seconds of good level = pass
+
         // ==========================================
         // INICIALIZACION
         // ==========================================
@@ -773,6 +889,15 @@
         }
 
         function setupWaveformBars() {
+            // Mic check waveform
+            const checkContainer = document.getElementById('waveformCheck');
+            for (let j = 0; j < 60; j++) {
+                const bar = document.createElement('div');
+                bar.className = 'waveform-bar';
+                bar.style.height = '4px';
+                checkContainer.appendChild(bar);
+            }
+
             for (let i = 1; i <= 3; i++) {
                 const container = document.getElementById(`waveform${i}`);
                 for (let j = 0; j < 60; j++) {
@@ -785,7 +910,12 @@
         }
 
         function setupEventListeners() {
-            document.getElementById('startBtn').addEventListener('click', () => showScreen('test1Screen'));
+            document.getElementById('startBtn').addEventListener('click', () => showScreen('micCheckScreen'));
+            document.getElementById('micCheckBtn').addEventListener('click', toggleMicCheck);
+            document.getElementById('micCheckOkBtn').addEventListener('click', () => {
+                stopMicCheck();
+                showScreen('test1Screen');
+            });
 
             document.getElementById('mic1Btn').addEventListener('click', () => toggleRecording(1, 20));
             document.getElementById('mic2Btn').addEventListener('click', () => toggleRecording(2, 30));
@@ -794,6 +924,129 @@
             document.getElementById('next1Btn').addEventListener('click', () => showScreen('test2Screen'));
             document.getElementById('next2Btn').addEventListener('click', () => showScreen('test3Screen'));
             document.getElementById('next3Btn').addEventListener('click', finishTest);
+        }
+
+        // ==========================================
+        // VERIFICACION DE MICROFONO
+        // ==========================================
+        async function toggleMicCheck() {
+            if (micCheckActive) {
+                stopMicCheck();
+                return;
+            }
+
+            try {
+                micCheckStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false
+                    }
+                });
+
+                micCheckContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = micCheckContext.createMediaStreamSource(micCheckStream);
+
+                micCheckAnalyser = micCheckContext.createAnalyser();
+                micCheckAnalyser.fftSize = 2048;
+                source.connect(micCheckAnalyser);
+
+                micCheckActive = true;
+                goodLevelCount = 0;
+
+                const btn = document.getElementById('micCheckBtn');
+                btn.classList.add('recording');
+                btn.textContent = '⏹';
+                document.getElementById('micCheckLabel').textContent = 'Verificando... hable ahora';
+
+                updateMicCheck();
+
+            } catch (err) {
+                console.error('Error accediendo al microfono:', err);
+                showError('No se pudo acceder al microfono. Por favor, permita el acceso y recargue la pagina.');
+            }
+        }
+
+        function stopMicCheck() {
+            micCheckActive = false;
+            cancelAnimationFrame(micCheckAnimFrame);
+
+            if (micCheckStream) {
+                micCheckStream.getTracks().forEach(t => t.stop());
+                micCheckStream = null;
+            }
+            if (micCheckContext) {
+                micCheckContext.close();
+                micCheckContext = null;
+            }
+
+            const btn = document.getElementById('micCheckBtn');
+            btn.classList.remove('recording');
+            btn.textContent = '🎤';
+            document.getElementById('micCheckLabel').textContent = 'Toque para verificar';
+        }
+
+        function updateMicCheck() {
+            if (!micCheckActive || !micCheckAnalyser) return;
+
+            const dataArray = new Float32Array(micCheckAnalyser.fftSize);
+            micCheckAnalyser.getFloatTimeDomainData(dataArray);
+
+            // Calculate RMS
+            let sumSquares = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                sumSquares += dataArray[i] * dataArray[i];
+            }
+            const rms = Math.sqrt(sumSquares / dataArray.length);
+            const dbLevel = 20 * Math.log10(rms + 1e-10);
+
+            // Map dB to percentage (roughly -60dB to -5dB range)
+            const minDb = -60;
+            const maxDb = -5;
+            const percent = Math.max(0, Math.min(100, ((dbLevel - minDb) / (maxDb - minDb)) * 100));
+
+            // Update meter fill
+            const fill = document.getElementById('micCheckFill');
+            fill.style.width = `${percent}%`;
+
+            // Determine zone and color
+            const status = document.getElementById('micStatus');
+            if (percent < 20) {
+                fill.style.background = '#FF3B30';
+                status.className = 'mic-status low';
+                status.textContent = '🔇 Muy bajo - acerquese al microfono';
+                goodLevelCount = Math.max(0, goodLevelCount - 1);
+            } else if (percent > 75) {
+                fill.style.background = '#FF9500';
+                status.className = 'mic-status loud';
+                status.textContent = '🔊 Muy alto - alejese un poco del microfono';
+                goodLevelCount = Math.max(0, goodLevelCount - 1);
+            } else {
+                fill.style.background = '#34C759';
+                status.className = 'mic-status good';
+                status.textContent = '✅ Nivel correcto - mantenga esta distancia';
+                goodLevelCount++;
+            }
+
+            // Update waveform
+            const byteArray = new Uint8Array(micCheckAnalyser.frequencyBinCount);
+            micCheckAnalyser.getByteTimeDomainData(byteArray);
+            const bars = document.getElementById('waveformCheck').children;
+            const step = Math.floor(byteArray.length / bars.length);
+            for (let i = 0; i < bars.length; i++) {
+                const value = byteArray[i * step];
+                const height = Math.max(4, ((value - 128) / 128) * 60 + 4);
+                bars[i].style.height = `${Math.abs(height)}px`;
+            }
+
+            // Enable continue button after sustained good level
+            if (goodLevelCount >= GOOD_LEVEL_THRESHOLD) {
+                const okBtn = document.getElementById('micCheckOkBtn');
+                okBtn.disabled = false;
+                status.textContent = '✅ Excelente! Su microfono esta listo. Puede continuar.';
+            }
+
+            micCheckAnimFrame = requestAnimationFrame(updateMicCheck);
         }
 
         // ==========================================
