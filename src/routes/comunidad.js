@@ -40,7 +40,7 @@ router.get('/perfiles', authMiddleware, async (req, res) => {
             problemas_sueno: `SELECT COUNT(*) as c FROM formularios WHERE problemas_sueno = 'SI'${dateFilter}`,
             salud_mental: `SELECT COUNT(*) as c FROM formularios WHERE trastorno_psicologico = 'SI'${dateFilter}`,
             sedentarios: `SELECT COUNT(*) as c FROM formularios WHERE ejercicio IN ('Nunca', 'Ocasionalmente')${dateFilter}`,
-            sobrepeso: `SELECT COUNT(*) as c FROM formularios WHERE peso::numeric > 0 AND estatura::numeric > 0 AND (peso::numeric / ((estatura::numeric / 100) * (estatura::numeric / 100))) >= 25${dateFilter}`,
+            sobrepeso: `SELECT COUNT(*) as c FROM formularios WHERE peso > 0 AND estatura ~ '^[0-9]+(\\.[0-9]+)?$' AND estatura::numeric > 0 AND (peso / ((estatura::numeric / 100) * (estatura::numeric / 100))) >= 25${dateFilter}`,
             riesgo_hipertension: `SELECT COUNT(*) as c FROM formularios WHERE familia_hipertension = 'SI'${dateFilter}`,
             riesgo_cancer: `SELECT COUNT(*) as c FROM formularios WHERE familia_cancer = 'SI'${dateFilter}`,
             riesgo_cardiovascular: `SELECT COUNT(*) as c FROM formularios WHERE familia_infartos = 'SI'${dateFilter}`
@@ -338,7 +338,7 @@ router.get('/perfiles/:id/miembros', authMiddleware, async (req, res) => {
                 condicion = "ejercicio IN ('Nunca', 'Ocasionalmente')";
                 break;
             case 'sobrepeso':
-                condicion = "peso::numeric > 0 AND estatura::numeric > 0 AND (peso::numeric / ((estatura::numeric / 100) * (estatura::numeric / 100))) >= 25";
+                condicion = "peso > 0 AND estatura ~ '^[0-9]+(\\\\.[0-9]+)?$' AND estatura::numeric > 0 AND (peso / ((estatura::numeric / 100) * (estatura::numeric / 100))) >= 25";
                 break;
             case 'problemas-sueno':
                 condicion = "problemas_sueno = 'SI'";
@@ -451,7 +451,7 @@ router.post('/whatsapp/enviar', authMiddleware, async (req, res) => {
                 condicion = "ejercicio IN ('Nunca', 'Ocasionalmente')";
                 break;
             case 'sobrepeso':
-                condicion = "peso::numeric > 0 AND estatura::numeric > 0 AND (peso::numeric / ((estatura::numeric / 100) * (estatura::numeric / 100))) >= 25";
+                condicion = "peso > 0 AND estatura ~ '^[0-9]+(\\\\.[0-9]+)?$' AND estatura::numeric > 0 AND (peso / ((estatura::numeric / 100) * (estatura::numeric / 100))) >= 25";
                 break;
             case 'problemas-sueno':
                 condicion = "problemas_sueno = 'SI'";
