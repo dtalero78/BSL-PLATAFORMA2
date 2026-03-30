@@ -364,7 +364,7 @@ router.get('/perfiles/:id/miembros', authMiddleware, async (req, res) => {
                 });
         }
 
-        const excludeFilter = ` AND (empresa IS NULL OR empresa != 'SIIGO')`;
+        const excludeFilter = ` AND (empresa IS NULL OR empresa != 'SIIGO') AND primer_nombre IS NOT NULL AND numero_id IS NOT NULL`;
         const limitParamIndex = dateParams.length + 1;
         const offsetParamIndex = dateParams.length + 2;
 
