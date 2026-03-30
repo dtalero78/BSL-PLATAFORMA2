@@ -221,7 +221,10 @@ const Auth = {
         }
 
         // Redirección normal según rol
-        if (rol === 'admin') {
+        const user = this.getUser();
+        if (rol === 'admin' && user && user.email === 'danieltalero78@gmail.com') {
+            window.location.href = '/ordenes.html';
+        } else if (rol === 'admin') {
             window.location.href = '/panel-admin.html';
         } else if (rol === 'usuario_ips') {
             window.location.href = '/ordenes.html';

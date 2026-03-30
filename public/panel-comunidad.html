@@ -842,6 +842,25 @@
                     <p class="page-description">Gestiona perfiles de salud, envía campañas educativas y mantén conectada a tu comunidad</p>
                 </div>
 
+                <!-- Date Filter -->
+                <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px; flex-wrap: wrap;">
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 13px; margin-bottom: 4px;">Fecha Desde</label>
+                        <input type="date" id="filtro-fecha-desde" class="search-input" style="width: 180px; padding: 8px 12px;">
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 13px; margin-bottom: 4px;">Fecha Hasta</label>
+                        <input type="date" id="filtro-fecha-hasta" class="search-input" style="width: 180px; padding: 8px 12px;">
+                    </div>
+                    <button class="btn btn-primary" onclick="aplicarFiltroFecha()" style="margin-top: 18px;">
+                        Filtrar
+                    </button>
+                    <button class="btn btn-secondary" onclick="limpiarFiltroFecha()" style="margin-top: 18px;">
+                        Limpiar
+                    </button>
+                    <span id="filtro-fecha-info" style="margin-top: 18px; font-size: 13px; color: var(--text-secondary);"></span>
+                </div>
+
                 <!-- Stats Overview -->
                 <div class="stats-grid">
                     <div class="stat-card">
@@ -1061,9 +1080,42 @@
             }
         }
 
+        function getDateFilterParams() {
+            const desde = document.getElementById('filtro-fecha-desde').value;
+            const hasta = document.getElementById('filtro-fecha-hasta').value;
+            const params = new URLSearchParams();
+            if (desde) params.set('fechaDesde', desde);
+            if (hasta) params.set('fechaHasta', hasta);
+            return params.toString();
+        }
+
+        function aplicarFiltroFecha() {
+            const desde = document.getElementById('filtro-fecha-desde').value;
+            const hasta = document.getElementById('filtro-fecha-hasta').value;
+            if (!desde && !hasta) {
+                alert('Selecciona al menos una fecha');
+                return;
+            }
+            const info = document.getElementById('filtro-fecha-info');
+            const parts = [];
+            if (desde) parts.push(`desde ${desde}`);
+            if (hasta) parts.push(`hasta ${hasta}`);
+            info.textContent = 'Filtro: ' + parts.join(' ');
+            cargarDatos();
+        }
+
+        function limpiarFiltroFecha() {
+            document.getElementById('filtro-fecha-desde').value = '';
+            document.getElementById('filtro-fecha-hasta').value = '';
+            document.getElementById('filtro-fecha-info').textContent = '';
+            cargarDatos();
+        }
+
         // Load profiles
         async function cargarPerfiles() {
-            const response = await fetch('/api/comunidad/perfiles', {
+            const dateFilter = getDateFilterParams();
+            const url = '/api/comunidad/perfiles' + (dateFilter ? '?' + dateFilter : '');
+            const response = await fetch(url, {
                 headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
             });
             const result = await response.json();
@@ -1208,7 +1260,8 @@
 
             showLoading();
             try {
-                const response = await fetch(`/api/comunidad/perfiles/${perfilId}/miembros?limit=50`, {
+                const dateFilter = getDateFilterParams();
+                const response = await fetch(`/api/comunidad/perfiles/${perfilId}/miembros?limit=50${dateFilter ? '&' + dateFilter : ''}`, {
                     headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
                 });
                 const result = await response.json();
