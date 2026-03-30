@@ -24,26 +24,28 @@ router.get('/perfiles', authMiddleware, async (req, res) => {
             dateFilter += ` AND fecha_registro <= $${dateParams.length}`;
         }
 
+        const excludeFilter = ` AND (empresa IS NULL OR empresa != 'SIIGO')`;
+
         // Obtener solo el total de miembros primero (rápido)
-        const totalQuery = await pool.query(`SELECT COUNT(*) as total FROM formularios WHERE 1=1${dateFilter}`, dateParams);
+        const totalQuery = await pool.query(`SELECT COUNT(*) as total FROM formularios WHERE 1=1${dateFilter}${excludeFilter}`, dateParams);
         const total_miembros = parseInt(totalQuery.rows[0].total);
 
         console.log(`✅ Total miembros: ${total_miembros} (${Date.now() - startTime}ms)`);
 
         // Contar cada condición directamente de la BD con filtro de fecha
         const countQueries = {
-            fumadores: `SELECT COUNT(*) as c FROM formularios WHERE fuma = 'SI'${dateFilter}`,
-            hipertension: `SELECT COUNT(*) as c FROM formularios WHERE presion_alta = 'SI'${dateFilter}`,
-            diabetes: `SELECT COUNT(*) as c FROM formularios WHERE problemas_azucar = 'SI'${dateFilter}`,
-            dolor_cabeza: `SELECT COUNT(*) as c FROM formularios WHERE dolor_cabeza = 'SI'${dateFilter}`,
-            dolor_espalda: `SELECT COUNT(*) as c FROM formularios WHERE dolor_espalda = 'SI'${dateFilter}`,
-            problemas_sueno: `SELECT COUNT(*) as c FROM formularios WHERE problemas_sueno = 'SI'${dateFilter}`,
-            salud_mental: `SELECT COUNT(*) as c FROM formularios WHERE trastorno_psicologico = 'SI'${dateFilter}`,
-            sedentarios: `SELECT COUNT(*) as c FROM formularios WHERE ejercicio IN ('Nunca', 'Ocasionalmente')${dateFilter}`,
-            sobrepeso: `SELECT COUNT(*) as c FROM formularios WHERE peso > 0 AND estatura ~ '^[0-9]+(\\.[0-9]+)?$' AND estatura::numeric > 0 AND (peso / ((estatura::numeric / 100) * (estatura::numeric / 100))) >= 25${dateFilter}`,
-            riesgo_hipertension: `SELECT COUNT(*) as c FROM formularios WHERE familia_hipertension = 'SI'${dateFilter}`,
-            riesgo_cancer: `SELECT COUNT(*) as c FROM formularios WHERE familia_cancer = 'SI'${dateFilter}`,
-            riesgo_cardiovascular: `SELECT COUNT(*) as c FROM formularios WHERE familia_infartos = 'SI'${dateFilter}`
+            fumadores: `SELECT COUNT(*) as c FROM formularios WHERE fuma = 'SI'${dateFilter}${excludeFilter}`,
+            hipertension: `SELECT COUNT(*) as c FROM formularios WHERE presion_alta = 'SI'${dateFilter}${excludeFilter}`,
+            diabetes: `SELECT COUNT(*) as c FROM formularios WHERE problemas_azucar = 'SI'${dateFilter}${excludeFilter}`,
+            dolor_cabeza: `SELECT COUNT(*) as c FROM formularios WHERE dolor_cabeza = 'SI'${dateFilter}${excludeFilter}`,
+            dolor_espalda: `SELECT COUNT(*) as c FROM formularios WHERE dolor_espalda = 'SI'${dateFilter}${excludeFilter}`,
+            problemas_sueno: `SELECT COUNT(*) as c FROM formularios WHERE problemas_sueno = 'SI'${dateFilter}${excludeFilter}`,
+            salud_mental: `SELECT COUNT(*) as c FROM formularios WHERE trastorno_psicologico = 'SI'${dateFilter}${excludeFilter}`,
+            sedentarios: `SELECT COUNT(*) as c FROM formularios WHERE ejercicio IN ('Nunca', 'Ocasionalmente')${dateFilter}${excludeFilter}`,
+            sobrepeso: `SELECT COUNT(*) as c FROM formularios WHERE peso > 0 AND estatura ~ '^[0-9]+(\\.[0-9]+)?$' AND estatura::numeric > 0 AND (peso / ((estatura::numeric / 100) * (estatura::numeric / 100))) >= 25${dateFilter}${excludeFilter}`,
+            riesgo_hipertension: `SELECT COUNT(*) as c FROM formularios WHERE familia_hipertension = 'SI'${dateFilter}${excludeFilter}`,
+            riesgo_cancer: `SELECT COUNT(*) as c FROM formularios WHERE familia_cancer = 'SI'${dateFilter}${excludeFilter}`,
+            riesgo_cardiovascular: `SELECT COUNT(*) as c FROM formularios WHERE familia_infartos = 'SI'${dateFilter}${excludeFilter}`
         };
 
         const countResults = await Promise.all(
@@ -362,6 +364,7 @@ router.get('/perfiles/:id/miembros', authMiddleware, async (req, res) => {
                 });
         }
 
+        const excludeFilter = ` AND (empresa IS NULL OR empresa != 'SIIGO')`;
         const limitParamIndex = dateParams.length + 1;
         const offsetParamIndex = dateParams.length + 2;
 
@@ -378,7 +381,7 @@ router.get('/perfiles/:id/miembros', authMiddleware, async (req, res) => {
                 cod_empresa,
                 fecha_registro
             FROM formularios
-            WHERE ${condicion}${dateFilter}
+            WHERE ${condicion}${dateFilter}${excludeFilter}
             ORDER BY fecha_registro DESC
             LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
         `;
@@ -386,7 +389,7 @@ router.get('/perfiles/:id/miembros', authMiddleware, async (req, res) => {
         const countQuery = `
             SELECT COUNT(*) as total
             FROM formularios
-            WHERE ${condicion}${dateFilter}
+            WHERE ${condicion}${dateFilter}${excludeFilter}
         `;
 
         const [miembrosResult, countResult] = await Promise.all([
@@ -487,6 +490,7 @@ router.post('/whatsapp/enviar', authMiddleware, async (req, res) => {
             AND celular IS NOT NULL
             AND celular != ''
             AND LENGTH(celular) >= 10
+            AND (empresa IS NULL OR empresa != 'SIIGO')
             ORDER BY fecha_registro DESC
         `;
 
