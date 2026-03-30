@@ -635,6 +635,40 @@ const initDB = async () => {
             )
         `);
 
+        // Crear tabla voximetrias_virtual si no existe
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS voximetrias_virtual (
+                id SERIAL PRIMARY KEY,
+                orden_id VARCHAR(100) REFERENCES "HistoriaClinica"("_id") ON DELETE CASCADE,
+                numero_id VARCHAR(50),
+                primer_nombre VARCHAR(100),
+                primer_apellido VARCHAR(100),
+                empresa VARCHAR(100),
+                cod_empresa VARCHAR(50),
+
+                -- Resultados acústicos
+                f0_mean NUMERIC(8,2),
+                f0_min NUMERIC(8,2),
+                f0_max NUMERIC(8,2),
+                jitter_percent NUMERIC(8,4),
+                shimmer_percent NUMERIC(8,4),
+                hnr_db NUMERIC(8,2),
+                intensidad_mean_db NUMERIC(8,2),
+                tiempo_maximo_fonacion_s NUMERIC(8,2),
+
+                -- Interpretación IA
+                concepto VARCHAR(50),
+                interpretacion TEXT,
+                recomendaciones TEXT,
+
+                -- Metadatos
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+                CONSTRAINT unique_voximetria_virtual_orden UNIQUE (orden_id)
+            )
+        `);
+
         // Crear tabla laboratorios si no existe
         await pool.query(`
             CREATE TABLE IF NOT EXISTS laboratorios (

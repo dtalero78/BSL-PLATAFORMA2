@@ -158,6 +158,9 @@ app.use('/api', require('./src/routes/consulta-publica'));
 // Visiometría
 app.use('/api', require('./src/routes/visiometria'));
 
+// Voximetría
+app.use('/api', require('./src/routes/voximetria'));
+
 // Laboratorios
 app.use('/api/laboratorios', require('./src/routes/laboratorios'));
 

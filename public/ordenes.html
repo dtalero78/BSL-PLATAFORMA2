@@ -1006,6 +1006,11 @@
             color: #D97706;
         }
 
+        .btn-icon.voximetria:hover {
+            background: #FFF5F0;
+            color: #E85D26;
+        }
+
         .btn-icon.visiometria:hover {
             background: #DBEAFE;
             color: #2563EB;
@@ -3429,6 +3434,13 @@
                                    title="Audiometría"
                                    onclick="event.stopPropagation();">
                                     <i data-feather="headphones"></i>
+                                </a>
+                                <a href="/voximetria-virtual.html?ordenId=${orden._id}"
+                                   target="_blank"
+                                   class="btn-icon voximetria"
+                                   title="Voximetría"
+                                   onclick="event.stopPropagation();">
+                                    <i data-feather="mic"></i>
                                 </a>
                                 <a href="/panel-laboratorios.html?ordenId=${orden._id}"
                                    target="_blank"

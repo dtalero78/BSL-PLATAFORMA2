@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Voximetria Virtual - BSL</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #F2F2F7;
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
+            color: #1C1C1E;
+            -webkit-font-smoothing: antialiased;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 16px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0 16px;
+        }
+
+        .header-logo {
+            height: 50px;
+            width: auto;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1C1C1E;
+            letter-spacing: -0.3px;
+        }
+
+        /* Paciente info card */
+        .patient-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .patient-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 25px;
+            background: linear-gradient(135deg, #E85D26, #FF8A50);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .patient-info {
+            flex: 1;
+        }
+
+        .patient-name {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .patient-id {
+            font-size: 14px;
+            color: #8E8E93;
+        }
+
+        /* Screens */
+        .screen {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-text {
+            font-size: 15px;
+            color: #3C3C43;
+            line-height: 1.5;
+            margin-bottom: 12px;
+        }
+
+        .card-text:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Error card */
+        .error-card {
+            background: #FFF2F2;
+            border: 1px solid #FF3B30;
+            display: none;
+        }
+
+        .error-card .card-title {
+            color: #FF3B30;
+        }
+
+        /* Buttons */
+        .btn-primary {
+            background: #E85D26;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 17px;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            font-family: inherit;
+            transition: opacity 0.2s;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #F2F2F7;
+            color: #E85D26;
+            border: 2px solid #E85D26;
+            border-radius: 12px;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: #FFF5F0;
+        }
+
+        /* Progress bar */
+        .progress-container {
+            margin-bottom: 20px;
+        }
+
+        .progress-label {
+            font-size: 13px;
+            color: #8E8E93;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #E5E5EA;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #E85D26;
+            border-radius: 3px;
+            transition: width 0.4s ease;
+        }
+
+        /* Mic button */
+        .mic-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 0;
+        }
+
+        .mic-btn {
+            width: 120px;
+            height: 120px;
+            border-radius: 60px;
+            border: none;
+            background: linear-gradient(135deg, #E85D26, #FF8A50);
+            color: white;
+            font-size: 48px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            box-shadow: 0 4px 20px rgba(232, 93, 38, 0.3);
+            position: relative;
+        }
+
+        .mic-btn.recording {
+            animation: pulse 1.5s infinite;
+            background: linear-gradient(135deg, #FF3B30, #FF6B6B);
+            box-shadow: 0 4px 30px rgba(255, 59, 48, 0.4);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 4px 20px rgba(255, 59, 48, 0.4); }
+            50% { transform: scale(1.05); box-shadow: 0 4px 40px rgba(255, 59, 48, 0.6); }
+            100% { transform: scale(1); box-shadow: 0 4px 20px rgba(255, 59, 48, 0.4); }
+        }
+
+        .mic-label {
+            margin-top: 16px;
+            font-size: 15px;
+            color: #8E8E93;
+            font-weight: 500;
+        }
+
+        .timer {
+            font-size: 48px;
+            font-weight: 700;
+            color: #1C1C1E;
+            margin-top: 16px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Waveform visualization */
+        .waveform-container {
+            width: 100%;
+            height: 80px;
+            background: #F2F2F7;
+            border-radius: 12px;
+            margin: 16px 0;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            padding: 0 12px;
+        }
+
+        .waveform-bar {
+            width: 3px;
+            min-height: 4px;
+            background: #E85D26;
+            border-radius: 2px;
+            transition: height 0.05s ease;
+        }
+
+        /* Reading text */
+        .reading-text {
+            background: #FFF9F5;
+            border: 1px solid #FFD4BC;
+            border-radius: 12px;
+            padding: 20px;
+            font-size: 18px;
+            line-height: 1.7;
+            color: #1C1C1E;
+            margin-bottom: 16px;
+            text-align: justify;
+        }
+
+        /* Results */
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .result-item {
+            background: #F2F2F7;
+            border-radius: 10px;
+            padding: 14px;
+            text-align: center;
+        }
+
+        .result-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #E85D26;
+            margin-bottom: 4px;
+        }
+
+        .result-label {
+            font-size: 12px;
+            color: #8E8E93;
+            font-weight: 500;
+        }
+
+        .result-item.full-width {
+            grid-column: 1 / -1;
+        }
+
+        /* Concepto badge */
+        .concepto-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .concepto-badge.normal {
+            background: #DCFCE7;
+            color: #166534;
+        }
+
+        .concepto-badge.revision {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+
+        .concepto-badge.alteracion {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        /* Confirmation card */
+        .confirm-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .confirm-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #F2F2F7;
+        }
+
+        .confirm-row:last-child {
+            border-bottom: none;
+        }
+
+        .confirm-label {
+            font-size: 14px;
+            color: #8E8E93;
+        }
+
+        .confirm-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1C1C1E;
+            text-align: right;
+            max-width: 60%;
+        }
+
+        /* Interpretation box */
+        .interpretation-box {
+            background: #FFF9F5;
+            border: 1px solid #FFD4BC;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .interpretation-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #E85D26;
+            margin-bottom: 8px;
+        }
+
+        .interpretation-text {
+            font-size: 14px;
+            color: #3C3C43;
+            line-height: 1.6;
+        }
+
+        /* Instructions list */
+        .instructions-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .instructions-list li {
+            padding: 8px 0;
+            padding-left: 28px;
+            position: relative;
+            font-size: 15px;
+            color: #3C3C43;
+            line-height: 1.4;
+        }
+
+        .instructions-list li::before {
+            content: attr(data-icon);
+            position: absolute;
+            left: 0;
+            top: 8px;
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading-spinner {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            text-align: center;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #E5E5EA;
+            border-top-color: #E85D26;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* WhatsApp button */
+        .whatsapp-btn {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            border-radius: 28px;
+            background: #25D366;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            text-decoration: none;
+            box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4);
+            z-index: 100;
+        }
+
+        /* Test number badge */
+        .test-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 14px;
+            background: #E85D26;
+            color: white;
+            font-size: 14px;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <img src="https://bfrancoi.wixsite.com/bsl/_functions/getLogo" alt="BSL" class="header-logo">
+            <span class="header-title">VOXIMETRIA VIRTUAL</span>
+        </div>
+
+        <!-- Patient card -->
+        <div class="patient-card">
+            <div class="patient-avatar" id="patientAvatar">--</div>
+            <div class="patient-info">
+                <div class="patient-name" id="patientName">Cargando...</div>
+                <div class="patient-id" id="patientId">---</div>
+            </div>
+        </div>
+
+        <!-- Error card -->
+        <div class="card error-card" id="errorCard">
+            <div class="card-title">Error</div>
+            <p class="card-text" id="errorMessage"></p>
+        </div>
+
+        <!-- ========== SCREEN: Welcome ========== -->
+        <div class="screen active" id="welcomeScreen">
+            <div class="card">
+                <div class="card-title">Prueba de Voz</div>
+                <p class="card-text">Esta prueba evalua la calidad y salud de su voz mediante 3 ejercicios sencillos. Es especialmente importante para trabajadores de call center.</p>
+
+                <div class="card-title" style="margin-top: 8px;">Instrucciones</div>
+                <ul class="instructions-list">
+                    <li data-icon="🎤">Ejercicio 1: Sostener la vocal "A" lo mas largo posible</li>
+                    <li data-icon="📖">Ejercicio 2: Leer un texto corto en voz alta</li>
+                    <li data-icon="🔢">Ejercicio 3: Contar del 1 al 20 en una sola respiracion</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Recomendaciones</div>
+                <ul class="instructions-list">
+                    <li data-icon="🔇">Ubicarse en un lugar silencioso</li>
+                    <li data-icon="📱">Mantener el dispositivo a 20-30 cm de la boca</li>
+                    <li data-icon="🗣️">Hablar con volumen natural, sin gritar ni susurrar</li>
+                    <li data-icon="💧">Tener agua a la mano</li>
+                </ul>
+            </div>
+
+            <button class="btn-primary" id="startBtn">Comenzar Prueba</button>
+        </div>
+
+        <!-- ========== SCREEN: Test 1 - Sustained Vowel ========== -->
+        <div class="screen" id="test1Screen">
+            <div class="progress-container">
+                <div class="progress-label">Ejercicio 1 de 3</div>
+                <div class="progress-bar"><div class="progress-fill" style="width: 33%"></div></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><span class="test-badge">1</span> Fonacion Sostenida</div>
+                <p class="card-text">Tome aire profundamente y sostenga la vocal <strong>"AAAAAA..."</strong> de forma continua, lo mas largo que pueda, hasta que se quede sin aire.</p>
+                <p class="card-text" style="font-size: 13px; color: #8E8E93;">Presione el boton para iniciar la grabacion. Se detendra automaticamente a los 20 segundos.</p>
+            </div>
+
+            <div class="mic-container">
+                <button class="mic-btn" id="mic1Btn">🎤</button>
+                <div class="mic-label" id="mic1Label">Toque para grabar</div>
+                <div class="timer" id="timer1">0.0s</div>
+            </div>
+
+            <div class="waveform-container" id="waveform1"></div>
+
+            <button class="btn-primary" id="next1Btn" disabled style="margin-top: auto;">Siguiente Ejercicio</button>
+        </div>
+
+        <!-- ========== SCREEN: Test 2 - Reading ========== -->
+        <div class="screen" id="test2Screen">
+            <div class="progress-container">
+                <div class="progress-label">Ejercicio 2 de 3</div>
+                <div class="progress-bar"><div class="progress-fill" style="width: 66%"></div></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><span class="test-badge">2</span> Lectura en Voz Alta</div>
+                <p class="card-text">Lea el siguiente texto en voz alta, con su tono y velocidad natural.</p>
+            </div>
+
+            <div class="reading-text">
+                Buenos dias, gracias por comunicarse con nosotros. Mi nombre es Ana y estare atendiendo su solicitud el dia de hoy. Por favor, indiqueme su numero de identificacion para verificar sus datos en el sistema. Quedo atenta a cualquier inquietud adicional que pueda tener.
+            </div>
+
+            <div class="mic-container">
+                <button class="mic-btn" id="mic2Btn">🎤</button>
+                <div class="mic-label" id="mic2Label">Toque para grabar</div>
+                <div class="timer" id="timer2">0.0s</div>
+            </div>
+
+            <div class="waveform-container" id="waveform2"></div>
+
+            <button class="btn-primary" id="next2Btn" disabled style="margin-top: auto;">Siguiente Ejercicio</button>
+        </div>
+
+        <!-- ========== SCREEN: Test 3 - Counting ========== -->
+        <div class="screen" id="test3Screen">
+            <div class="progress-container">
+                <div class="progress-label">Ejercicio 3 de 3</div>
+                <div class="progress-bar"><div class="progress-fill" style="width: 100%"></div></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><span class="test-badge">3</span> Conteo en una Respiracion</div>
+                <p class="card-text">Tome una respiracion profunda y cuente del <strong>1 al 20</strong> en una sola respiracion, sin detenerse. Use un ritmo constante.</p>
+                <p class="card-text" style="font-size: 13px; color: #8E8E93;">Este ejercicio evalua su capacidad respiratoria y control vocal.</p>
+            </div>
+
+            <div class="mic-container">
+                <button class="mic-btn" id="mic3Btn">🎤</button>
+                <div class="mic-label" id="mic3Label">Toque para grabar</div>
+                <div class="timer" id="timer3">0.0s</div>
+            </div>
+
+            <div class="waveform-container" id="waveform3"></div>
+
+            <button class="btn-primary" id="next3Btn" disabled style="margin-top: auto;">Ver Resultados</button>
+        </div>
+
+        <!-- ========== SCREEN: Results ========== -->
+        <div class="screen" id="resultsScreen">
+            <div class="card" style="text-align: center;">
+                <div style="font-size: 48px; margin-bottom: 8px;">✅</div>
+                <div class="card-title" style="justify-content: center;">Prueba Completada</div>
+                <div id="conceptoBadge" class="concepto-badge normal">Normal</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Resultados</div>
+                <div class="results-grid">
+                    <div class="result-item">
+                        <div class="result-value" id="resF0">--</div>
+                        <div class="result-label">F0 Media (Hz)</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-value" id="resTMF">--</div>
+                        <div class="result-label">TMF (seg)</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-value" id="resJitter">--</div>
+                        <div class="result-label">Jitter (%)</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-value" id="resShimmer">--</div>
+                        <div class="result-label">Shimmer (%)</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-value" id="resHNR">--</div>
+                        <div class="result-label">HNR (dB)</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-value" id="resIntensidad">--</div>
+                        <div class="result-label">Intensidad (dB)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="interpretation-box" id="interpretacionBox">
+                <div class="interpretation-title">Interpretacion</div>
+                <p class="interpretation-text" id="interpretacionText">--</p>
+            </div>
+
+            <div class="interpretation-box">
+                <div class="interpretation-title">Recomendaciones</div>
+                <p class="interpretation-text" id="recomendacionesText">--</p>
+            </div>
+
+            <div class="confirm-card">
+                <div class="card-title" style="margin-bottom: 8px;">Datos del Paciente</div>
+                <div class="confirm-row">
+                    <span class="confirm-label">Nombre</span>
+                    <span class="confirm-value" id="confirmNombre">-</span>
+                </div>
+                <div class="confirm-row">
+                    <span class="confirm-label">Cedula</span>
+                    <span class="confirm-value" id="confirmCedula">-</span>
+                </div>
+                <div class="confirm-row">
+                    <span class="confirm-label">Empresa</span>
+                    <span class="confirm-value" id="confirmEmpresa">-</span>
+                </div>
+            </div>
+
+            <a href="/" class="btn-primary" style="text-decoration: none; display: block; text-align: center;">Volver al Inicio</a>
+        </div>
+    </div>
+
+    <!-- Loading overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Analizando su voz...</p>
+        </div>
+    </div>
+
+    <!-- WhatsApp button -->
+    <a href="https://api.whatsapp.com/send?phone=573008021701&text=Hola.%20Requiero%20soporte%20con%20la%20voximetria%20virtual"
+       target="_blank"
+       class="whatsapp-btn">
+        💬
+    </a>
+
+    <script>
+        // ==========================================
+        // ESTADO DE LA APLICACION
+        // ==========================================
+        let patientData = null;
+        let ordenId = null;
+
+        // Audio context and recording
+        let audioContext = null;
+        let mediaStream = null;
+        let analyserNode = null;
+
+        // Recordings per test (raw Float32Array samples)
+        const recordings = { test1: null, test2: null, test3: null };
+        let currentRecording = null;
+        let isRecording = false;
+        let recordingStartTime = 0;
+        let timerInterval = null;
+        let animationFrame = null;
+        let scriptProcessor = null;
+        let recordedChunks = [];
+
+        // ==========================================
+        // INICIALIZACION
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            ordenId = urlParams.get('ordenId');
+
+            if (!ordenId) {
+                showError('No se proporciono un ID de orden valido.');
+                return;
+            }
+
+            await loadPatientData();
+            setupWaveformBars();
+            setupEventListeners();
+        });
+
+        async function loadPatientData() {
+            try {
+                const response = await fetch(`/api/historia-clinica/${ordenId}`);
+                if (!response.ok) throw new Error('No se encontro la orden');
+
+                const result = await response.json();
+
+                if (!result.success || !result.data) {
+                    throw new Error('Datos del paciente no disponibles');
+                }
+
+                patientData = result.data;
+
+                const initials = ((patientData.primerNombre || '')[0] || '') + ((patientData.primerApellido || '')[0] || '');
+                document.getElementById('patientAvatar').textContent = initials.toUpperCase();
+                document.getElementById('patientName').textContent = `${patientData.primerNombre || ''} ${patientData.primerApellido || ''}`.trim() || 'Paciente';
+                document.getElementById('patientId').textContent = `CC ${patientData.numeroId || '---'}`;
+
+            } catch (error) {
+                console.error('Error cargando paciente:', error);
+                showError('No se pudo cargar la informacion del paciente. Verifique el enlace.');
+            }
+        }
+
+        function setupWaveformBars() {
+            for (let i = 1; i <= 3; i++) {
+                const container = document.getElementById(`waveform${i}`);
+                for (let j = 0; j < 60; j++) {
+                    const bar = document.createElement('div');
+                    bar.className = 'waveform-bar';
+                    bar.style.height = '4px';
+                    container.appendChild(bar);
+                }
+            }
+        }
+
+        function setupEventListeners() {
+            document.getElementById('startBtn').addEventListener('click', () => showScreen('test1Screen'));
+
+            document.getElementById('mic1Btn').addEventListener('click', () => toggleRecording(1, 20));
+            document.getElementById('mic2Btn').addEventListener('click', () => toggleRecording(2, 30));
+            document.getElementById('mic3Btn').addEventListener('click', () => toggleRecording(3, 25));
+
+            document.getElementById('next1Btn').addEventListener('click', () => showScreen('test2Screen'));
+            document.getElementById('next2Btn').addEventListener('click', () => showScreen('test3Screen'));
+            document.getElementById('next3Btn').addEventListener('click', finishTest);
+        }
+
+        // ==========================================
+        // NAVEGACION
+        // ==========================================
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function showError(message) {
+            document.getElementById('errorCard').style.display = 'block';
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('startBtn').disabled = true;
+        }
+
+        // ==========================================
+        // GRABACION DE AUDIO
+        // ==========================================
+        async function toggleRecording(testNum, maxSeconds) {
+            if (isRecording) {
+                stopRecording(testNum);
+                return;
+            }
+
+            try {
+                mediaStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false,
+                        sampleRate: 44100
+                    }
+                });
+
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
+                const source = audioContext.createMediaStreamSource(mediaStream);
+
+                analyserNode = audioContext.createAnalyser();
+                analyserNode.fftSize = 2048;
+                source.connect(analyserNode);
+
+                // Record raw samples via ScriptProcessor
+                const bufferSize = 4096;
+                scriptProcessor = audioContext.createScriptProcessor(bufferSize, 1, 1);
+                recordedChunks = [];
+
+                scriptProcessor.onaudioprocess = (e) => {
+                    const inputData = e.inputBuffer.getChannelData(0);
+                    recordedChunks.push(new Float32Array(inputData));
+                };
+
+                source.connect(scriptProcessor);
+                scriptProcessor.connect(audioContext.destination);
+
+                isRecording = true;
+                recordingStartTime = Date.now();
+
+                const micBtn = document.getElementById(`mic${testNum}Btn`);
+                const micLabel = document.getElementById(`mic${testNum}Label`);
+                micBtn.classList.add('recording');
+                micBtn.textContent = '⏹';
+                micLabel.textContent = 'Grabando... toque para detener';
+
+                // Start timer
+                updateTimer(testNum);
+                timerInterval = setInterval(() => updateTimer(testNum), 100);
+
+                // Start waveform
+                animateWaveform(testNum);
+
+                // Auto-stop
+                setTimeout(() => {
+                    if (isRecording) stopRecording(testNum);
+                }, maxSeconds * 1000);
+
+            } catch (err) {
+                console.error('Error accediendo al microfono:', err);
+                showError('No se pudo acceder al microfono. Por favor, permita el acceso y recargue la pagina.');
+            }
+        }
+
+        function stopRecording(testNum) {
+            isRecording = false;
+
+            clearInterval(timerInterval);
+            cancelAnimationFrame(animationFrame);
+
+            if (scriptProcessor) {
+                scriptProcessor.disconnect();
+                scriptProcessor = null;
+            }
+
+            // Merge all chunks into single Float32Array
+            const totalLength = recordedChunks.reduce((sum, chunk) => sum + chunk.length, 0);
+            const mergedSamples = new Float32Array(totalLength);
+            let offset = 0;
+            for (const chunk of recordedChunks) {
+                mergedSamples.set(chunk, offset);
+                offset += chunk.length;
+            }
+
+            recordings[`test${testNum}`] = {
+                samples: mergedSamples,
+                sampleRate: audioContext.sampleRate,
+                duration: (Date.now() - recordingStartTime) / 1000
+            };
+
+            // Cleanup
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(t => t.stop());
+                mediaStream = null;
+            }
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+
+            const micBtn = document.getElementById(`mic${testNum}Btn`);
+            const micLabel = document.getElementById(`mic${testNum}Label`);
+            micBtn.classList.remove('recording');
+            micBtn.textContent = '✅';
+            micBtn.disabled = true;
+            micLabel.textContent = 'Grabacion completada';
+
+            document.getElementById(`next${testNum}Btn`).disabled = false;
+
+            // Reset waveform bars
+            const bars = document.getElementById(`waveform${testNum}`).children;
+            for (let bar of bars) bar.style.height = '4px';
+        }
+
+        function updateTimer(testNum) {
+            const elapsed = ((Date.now() - recordingStartTime) / 1000).toFixed(1);
+            document.getElementById(`timer${testNum}`).textContent = `${elapsed}s`;
+        }
+
+        function animateWaveform(testNum) {
+            if (!isRecording || !analyserNode) return;
+
+            const dataArray = new Uint8Array(analyserNode.frequencyBinCount);
+            analyserNode.getByteTimeDomainData(dataArray);
+
+            const bars = document.getElementById(`waveform${testNum}`).children;
+            const step = Math.floor(dataArray.length / bars.length);
+
+            for (let i = 0; i < bars.length; i++) {
+                const value = dataArray[i * step];
+                const height = Math.max(4, ((value - 128) / 128) * 60 + 4);
+                bars[i].style.height = `${Math.abs(height)}px`;
+            }
+
+            animationFrame = requestAnimationFrame(() => animateWaveform(testNum));
+        }
+
+        // ==========================================
+        // DSP: ANALISIS DE VOZ
+        // ==========================================
+
+        function analyzeVoice() {
+            const test1 = recordings.test1;
+            const test2 = recordings.test2;
+
+            if (!test1 || !test2) {
+                return {
+                    f0_mean: 0, f0_min: 0, f0_max: 0,
+                    jitter_percent: 0, shimmer_percent: 0,
+                    hnr_db: 0, intensidad_mean_db: 0,
+                    tiempo_maximo_fonacion_s: 0
+                };
+            }
+
+            // Use test1 (sustained vowel) for F0, jitter, shimmer, HNR, TMF
+            const f0Data = extractF0(test1.samples, test1.sampleRate);
+            const tmf = calculateTMF(test1.samples, test1.sampleRate);
+            const jitter = calculateJitter(f0Data.periods);
+            const shimmer = calculateShimmer(test1.samples, f0Data.periods, test1.sampleRate);
+            const hnr = calculateHNR(test1.samples, test1.sampleRate, f0Data.f0Mean);
+
+            // Use test2 (reading) for intensity
+            const intensity = calculateIntensity(test2.samples);
+
+            return {
+                f0_mean: round2(f0Data.f0Mean),
+                f0_min: round2(f0Data.f0Min),
+                f0_max: round2(f0Data.f0Max),
+                jitter_percent: round4(jitter),
+                shimmer_percent: round4(shimmer),
+                hnr_db: round2(hnr),
+                intensidad_mean_db: round2(intensity),
+                tiempo_maximo_fonacion_s: round2(tmf)
+            };
+        }
+
+        // Extract F0 using autocorrelation
+        function extractF0(samples, sampleRate) {
+            const frameSize = Math.round(sampleRate * 0.03); // 30ms frames
+            const hopSize = Math.round(sampleRate * 0.015);  // 15ms hop
+            const minF0 = 75;
+            const maxF0 = 500;
+            const minLag = Math.round(sampleRate / maxF0);
+            const maxLag = Math.round(sampleRate / minF0);
+
+            const f0Values = [];
+            const periods = [];
+
+            for (let start = 0; start + frameSize < samples.length; start += hopSize) {
+                const frame = samples.slice(start, start + frameSize);
+
+                // Check if frame has sufficient energy
+                let energy = 0;
+                for (let i = 0; i < frame.length; i++) energy += frame[i] * frame[i];
+                energy /= frame.length;
+
+                if (energy < 0.0001) continue; // Skip silent frames
+
+                // Autocorrelation
+                let bestCorr = -1;
+                let bestLag = 0;
+
+                for (let lag = minLag; lag <= maxLag && lag < frame.length; lag++) {
+                    let corr = 0;
+                    let norm1 = 0;
+                    let norm2 = 0;
+
+                    for (let i = 0; i < frame.length - lag; i++) {
+                        corr += frame[i] * frame[i + lag];
+                        norm1 += frame[i] * frame[i];
+                        norm2 += frame[i + lag] * frame[i + lag];
+                    }
+
+                    const normCorr = corr / (Math.sqrt(norm1 * norm2) + 1e-10);
+
+                    if (normCorr > bestCorr) {
+                        bestCorr = normCorr;
+                        bestLag = lag;
+                    }
+                }
+
+                if (bestCorr > 0.3 && bestLag > 0) {
+                    const f0 = sampleRate / bestLag;
+                    f0Values.push(f0);
+                    periods.push(bestLag / sampleRate); // Period in seconds
+                }
+            }
+
+            if (f0Values.length === 0) {
+                return { f0Mean: 0, f0Min: 0, f0Max: 0, periods: [] };
+            }
+
+            // Remove outliers (keep values within 1.5 IQR)
+            f0Values.sort((a, b) => a - b);
+            const q1 = f0Values[Math.floor(f0Values.length * 0.25)];
+            const q3 = f0Values[Math.floor(f0Values.length * 0.75)];
+            const iqr = q3 - q1;
+            const filtered = f0Values.filter(v => v >= q1 - 1.5 * iqr && v <= q3 + 1.5 * iqr);
+
+            const f0Mean = filtered.reduce((a, b) => a + b, 0) / filtered.length;
+            const f0Min = Math.min(...filtered);
+            const f0Max = Math.max(...filtered);
+
+            return { f0Mean, f0Min, f0Max, periods };
+        }
+
+        // Calculate Jitter (period-to-period variation)
+        function calculateJitter(periods) {
+            if (periods.length < 2) return 0;
+
+            let sumDiff = 0;
+            let sumPeriod = 0;
+
+            for (let i = 1; i < periods.length; i++) {
+                sumDiff += Math.abs(periods[i] - periods[i - 1]);
+                sumPeriod += periods[i];
+            }
+
+            const meanDiff = sumDiff / (periods.length - 1);
+            const meanPeriod = sumPeriod / periods.length;
+
+            return (meanDiff / meanPeriod) * 100;
+        }
+
+        // Calculate Shimmer (amplitude variation between cycles)
+        function calculateShimmer(samples, periods, sampleRate) {
+            if (periods.length < 2) return 0;
+
+            // Get peak amplitude per cycle
+            const amplitudes = [];
+            let pos = 0;
+
+            for (const period of periods) {
+                const cycleLength = Math.round(period * sampleRate);
+                if (pos + cycleLength > samples.length) break;
+
+                let maxAmp = 0;
+                for (let i = pos; i < pos + cycleLength; i++) {
+                    maxAmp = Math.max(maxAmp, Math.abs(samples[i]));
+                }
+                amplitudes.push(maxAmp);
+                pos += cycleLength;
+            }
+
+            if (amplitudes.length < 2) return 0;
+
+            let sumDiff = 0;
+            let sumAmp = 0;
+
+            for (let i = 1; i < amplitudes.length; i++) {
+                sumDiff += Math.abs(amplitudes[i] - amplitudes[i - 1]);
+                sumAmp += amplitudes[i];
+            }
+
+            const meanDiff = sumDiff / (amplitudes.length - 1);
+            const meanAmp = sumAmp / amplitudes.length;
+
+            return (meanDiff / (meanAmp + 1e-10)) * 100;
+        }
+
+        // Calculate HNR (Harmonics-to-Noise Ratio)
+        function calculateHNR(samples, sampleRate, f0Mean) {
+            if (f0Mean <= 0) return 0;
+
+            const periodSamples = Math.round(sampleRate / f0Mean);
+            const frameSize = periodSamples * 4; // Use 4 periods
+
+            if (frameSize > samples.length) return 0;
+
+            // Take a frame from the middle of the recording
+            const startIdx = Math.floor((samples.length - frameSize) / 2);
+            const frame = samples.slice(startIdx, startIdx + frameSize);
+
+            // Autocorrelation at the period lag
+            let corr = 0;
+            let energy = 0;
+
+            for (let i = 0; i < frame.length - periodSamples; i++) {
+                corr += frame[i] * frame[i + periodSamples];
+                energy += frame[i] * frame[i];
+            }
+
+            const r = corr / (energy + 1e-10);
+            const clampedR = Math.max(0.01, Math.min(0.99, r));
+
+            return 10 * Math.log10(clampedR / (1 - clampedR));
+        }
+
+        // Calculate TMF (Maximum Phonation Time)
+        function calculateTMF(samples, sampleRate) {
+            const frameSize = Math.round(sampleRate * 0.02); // 20ms frames
+            const threshold = 0.01;
+            let firstVoiced = -1;
+            let lastVoiced = -1;
+
+            for (let start = 0; start + frameSize < samples.length; start += frameSize) {
+                let rms = 0;
+                for (let i = start; i < start + frameSize; i++) {
+                    rms += samples[i] * samples[i];
+                }
+                rms = Math.sqrt(rms / frameSize);
+
+                if (rms > threshold) {
+                    if (firstVoiced === -1) firstVoiced = start;
+                    lastVoiced = start + frameSize;
+                }
+            }
+
+            if (firstVoiced === -1) return 0;
+            return (lastVoiced - firstVoiced) / sampleRate;
+        }
+
+        // Calculate mean intensity in dB (relative)
+        function calculateIntensity(samples) {
+            let sumSquares = 0;
+            for (let i = 0; i < samples.length; i++) {
+                sumSquares += samples[i] * samples[i];
+            }
+            const rms = Math.sqrt(sumSquares / samples.length);
+            const ref = 0.00002; // Reference for dB SPL approximation
+            return 20 * Math.log10(rms / ref + 1e-10);
+        }
+
+        function round2(v) { return Math.round(v * 100) / 100; }
+        function round4(v) { return Math.round(v * 10000) / 10000; }
+
+        // ==========================================
+        // FINALIZAR Y GUARDAR
+        // ==========================================
+        async function finishTest() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+
+            try {
+                // Analyze voice recordings
+                const results = analyzeVoice();
+
+                // Get AI interpretation
+                let aiResult = {
+                    concepto: 'Revision Sugerida',
+                    interpretacion: 'Consulte con un fonoaudiologo para evaluacion completa.',
+                    recomendaciones: 'Realizar pausas vocales cada 45 minutos; Mantener hidratacion constante; Evitar gritar o susurrar'
+                };
+
+                try {
+                    const aiResponse = await fetch('/api/voximetria-virtual/interpretar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            ...results,
+                            sexo: patientData?.sexo || '',
+                            edad: patientData?.edad || ''
+                        })
+                    });
+                    const aiData = await aiResponse.json();
+                    if (aiData.success && aiData.data) {
+                        aiResult = aiData.data;
+                    }
+                } catch (aiErr) {
+                    console.error('Error en interpretacion IA:', aiErr);
+                }
+
+                // Save to database
+                const dataToSave = {
+                    orden_id: ordenId,
+                    numero_id: patientData?.numeroId || '',
+                    primer_nombre: patientData?.primerNombre || '',
+                    primer_apellido: patientData?.primerApellido || '',
+                    empresa: patientData?.empresa || '',
+                    cod_empresa: patientData?.codEmpresa || '',
+                    ...results,
+                    concepto: aiResult.concepto,
+                    interpretacion: aiResult.interpretacion,
+                    recomendaciones: aiResult.recomendaciones
+                };
+
+                const response = await fetch('/api/voximetria-virtual', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dataToSave)
+                });
+
+                const saveResult = await response.json();
+                console.log('Resultados guardados:', saveResult);
+
+                // Show results
+                showResultsScreen(results, aiResult);
+
+            } catch (error) {
+                console.error('Error finalizando prueba:', error);
+                showError('Error al procesar los resultados. Intente nuevamente.');
+            }
+
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        function showResultsScreen(results, aiResult) {
+            // Fill result values
+            document.getElementById('resF0').textContent = results.f0_mean || '--';
+            document.getElementById('resTMF').textContent = results.tiempo_maximo_fonacion_s || '--';
+            document.getElementById('resJitter').textContent = results.jitter_percent || '--';
+            document.getElementById('resShimmer').textContent = results.shimmer_percent || '--';
+            document.getElementById('resHNR').textContent = results.hnr_db || '--';
+            document.getElementById('resIntensidad').textContent = results.intensidad_mean_db || '--';
+
+            // Concepto badge
+            const badge = document.getElementById('conceptoBadge');
+            badge.textContent = aiResult.concepto;
+            badge.className = 'concepto-badge';
+            if (aiResult.concepto === 'Normal') {
+                badge.classList.add('normal');
+            } else if (aiResult.concepto.includes('Alteracion') || aiResult.concepto.includes('Alteración')) {
+                badge.classList.add('alteracion');
+            } else {
+                badge.classList.add('revision');
+            }
+
+            // Interpretation and recommendations
+            document.getElementById('interpretacionText').textContent = aiResult.interpretacion || '--';
+
+            const recomendaciones = (aiResult.recomendaciones || '').split(';').map(r => r.trim()).filter(r => r);
+            document.getElementById('recomendacionesText').innerHTML = recomendaciones.length > 0
+                ? recomendaciones.map(r => `• ${r}`).join('<br>')
+                : '--';
+
+            // Patient confirmation
+            if (patientData) {
+                const nombre = `${patientData.primerNombre || ''} ${patientData.primerApellido || ''}`.trim();
+                document.getElementById('confirmNombre').textContent = nombre || '-';
+                document.getElementById('confirmCedula').textContent = patientData.numeroId || '-';
+                document.getElementById('confirmEmpresa').textContent = patientData.empresa || '-';
+            }
+
+            showScreen('resultsScreen');
+        }
+    </script>
+</body>
+</html>
