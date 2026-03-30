@@ -1134,8 +1134,9 @@
                 // Render profiles
                 renderizarPerfiles(result.data.perfiles);
 
-                // Populate select
+                // Populate select (limpiar opciones previas)
                 const select = document.getElementById('select-perfil');
+                select.innerHTML = '<option value="">Seleccionar perfil...</option>';
                 result.data.perfiles.forEach(perfil => {
                     const option = document.createElement('option');
                     option.value = perfil.id;
