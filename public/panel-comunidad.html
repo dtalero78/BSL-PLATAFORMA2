@@ -744,8 +744,7 @@
         }
 
         function enviarWhatsApp(celular, mensaje) {
-            const url = `https://wa.me/${celular}?text=${encodeURIComponent(mensaje)}`;
-            window.open(url, '_blank');
+            window.location.href = `whatsapp://send?phone=${celular}&text=${encodeURIComponent(mensaje)}`;
             cerrarModal();
         }
 
