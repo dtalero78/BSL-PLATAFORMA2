@@ -269,6 +269,67 @@
             font-size: 14px;
         }
         .data-table tbody tr:hover { background: var(--bg-tertiary); }
+        .data-table tbody tr { cursor: pointer; }
+
+        /* ========== MODAL WHATSAPP ========== */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000;
+        }
+        .modal-card {
+            background: white; border-radius: 14px;
+            width: 420px; max-width: 92vw;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
+        .modal-header {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .modal-header h3 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .modal-close {
+            background: none; border: none; cursor: pointer;
+            color: var(--text-tertiary); font-size: 20px; padding: 4px;
+        }
+        .modal-close:hover { color: var(--text-primary); }
+        .modal-body { padding: 16px 20px; }
+        .modal-patient {
+            background: var(--bg-tertiary); border-radius: 8px;
+            padding: 12px 14px; margin-bottom: 14px;
+            font-size: 14px;
+        }
+        .modal-patient-name { font-weight: 600; font-size: 15px; }
+        .modal-patient-info { color: var(--text-secondary); font-size: 13px; margin-top: 2px; }
+        .modal-messages { display: flex; flex-direction: column; gap: 8px; }
+        .modal-msg-btn {
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px 14px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+            color: var(--text-primary);
+            text-align: left;
+            transition: all 0.15s;
+        }
+        .modal-msg-btn:hover {
+            border-color: #25D366;
+            background: rgba(37, 211, 102, 0.04);
+        }
+        .modal-msg-icon {
+            width: 36px; height: 36px;
+            background: #25D366; color: white;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; flex-shrink: 0;
+        }
+        .modal-msg-label { font-weight: 600; font-size: 13px; }
+        .modal-msg-preview { color: var(--text-secondary); font-size: 12px; margin-top: 2px; line-height: 1.4; }
 
         .empty-state {
             text-align: center;
@@ -421,6 +482,23 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- Modal WhatsApp -->
+    <div class="modal-overlay hidden" id="modal-whatsapp" onclick="if(event.target===this)cerrarModal()">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><span style="font-size:20px;">💬</span> Enviar WhatsApp</h3>
+                <button class="modal-close" onclick="cerrarModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-patient">
+                    <div class="modal-patient-name" id="modal-nombre"></div>
+                    <div class="modal-patient-info" id="modal-info"></div>
+                </div>
+                <div class="modal-messages" id="modal-messages"></div>
+            </div>
+        </div>
     </div>
 
     <!-- Loading Overlay -->
@@ -583,9 +661,9 @@
                 </thead>
                 <tbody>`;
 
-            miembros.forEach(m => {
+            miembros.forEach((m, i) => {
                 const fecha = m.fecha_registro ? new Date(m.fecha_registro).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
-                html += `<tr>
+                html += `<tr onclick='abrirModalWhatsApp(${JSON.stringify(m).replace(/'/g, "&#39;")})'>
                     <td>${m.numero_id || '-'}</td>
                     <td><strong>${m.primer_nombre || ''} ${m.primer_apellido || ''}</strong></td>
                     <td>${m.empresa || '-'}</td>
@@ -602,6 +680,77 @@
             }
 
             contentDiv.innerHTML = html;
+        }
+
+        function formatearFechaConsulta(fechaStr) {
+            if (!fechaStr) return '';
+            const d = new Date(fechaStr);
+            return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'long' });
+        }
+
+        function normalizarCelular(cel) {
+            if (!cel) return '';
+            let num = cel.replace(/\D/g, '');
+            if (num.startsWith('57') && num.length >= 12) return num;
+            if (num.length === 10 && num.startsWith('3')) return '57' + num;
+            return '57' + num;
+        }
+
+        function abrirModalWhatsApp(miembro) {
+            if (!miembro.celular) return alert('Este paciente no tiene celular registrado');
+
+            const nombre = miembro.primer_nombre || '';
+            const celular = normalizarCelular(miembro.celular);
+            const fechaConsulta = formatearFechaConsulta(miembro.fecha_registro);
+
+            document.getElementById('modal-nombre').textContent = `${miembro.primer_nombre || ''} ${miembro.primer_apellido || ''}`;
+            document.getElementById('modal-info').textContent = `${miembro.celular} - ${miembro.empresa || 'Sin empresa'}`;
+
+            const mensajes = [
+                {
+                    label: 'Saludo inicial',
+                    texto: `Hola ${nombre}! Te escribe Claudia Gamboa de BSL. Realizaste un examen ocupacional con nosotros el ${fechaConsulta}. Como estas?`
+                },
+                {
+                    label: 'Recordatorio de resultados',
+                    texto: `Hola ${nombre}! Te escribimos de BSL para recordarte que tus resultados del examen ocupacional ya estan disponibles. Puedes consultarlos en nuestra plataforma.`
+                },
+                {
+                    label: 'Seguimiento de salud',
+                    texto: `Hola ${nombre}! Desde BSL queremos hacer seguimiento a tu estado de salud. Nos gustaria saber como te has sentido. Podemos agendar una cita de control?`
+                }
+            ];
+
+            const container = document.getElementById('modal-messages');
+            container.innerHTML = '';
+
+            mensajes.forEach(msg => {
+                const btn = document.createElement('button');
+                btn.className = 'modal-msg-btn';
+                btn.onclick = () => enviarWhatsApp(celular, msg.texto);
+                btn.innerHTML = `
+                    <div class="modal-msg-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.612.612l4.458-1.495A11.943 11.943 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-2.352 0-4.556-.764-6.343-2.083l-.442-.332-3.29 1.103 1.103-3.29-.332-.442A9.955 9.955 0 012 12C2 6.486 6.486 2 12 2s10 4.486 10 10-4.486 10-10 10z"/></svg>
+                    </div>
+                    <div>
+                        <div class="modal-msg-label">${msg.label}</div>
+                        <div class="modal-msg-preview">${msg.texto.substring(0, 80)}...</div>
+                    </div>
+                `;
+                container.appendChild(btn);
+            });
+
+            document.getElementById('modal-whatsapp').classList.remove('hidden');
+        }
+
+        function enviarWhatsApp(celular, mensaje) {
+            const url = `https://wa.me/${celular}?text=${encodeURIComponent(mensaje)}`;
+            window.open(url, '_blank');
+            cerrarModal();
+        }
+
+        function cerrarModal() {
+            document.getElementById('modal-whatsapp').classList.add('hidden');
         }
 
         function toggleSidebar() {
