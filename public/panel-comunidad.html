@@ -230,39 +230,59 @@
         /* ========== MODAL WHATSAPP ========== */
         .modal-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.4);
+            background: rgba(0, 0, 0, 0.35);
             display: flex; align-items: center; justify-content: center;
             z-index: 1000;
         }
         .modal-card {
-            background: white; border-radius: 14px;
-            width: 420px; max-width: 92vw;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            background: white; border-radius: 16px;
+            width: 780px; max-width: 94vw;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.15);
             overflow: hidden;
         }
         .modal-header {
-            padding: 18px 20px;
+            padding: 18px 24px;
             border-bottom: 1px solid var(--border);
             display: flex; align-items: center; justify-content: space-between;
         }
         .modal-header h3 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
         .modal-close {
             background: none; border: none; cursor: pointer;
-            color: var(--text-tertiary); font-size: 20px; padding: 4px;
+            color: var(--text-tertiary); font-size: 22px; padding: 4px; line-height: 1;
         }
         .modal-close:hover { color: var(--text-primary); }
-        .modal-body { padding: 16px 20px; }
         .modal-patient {
-            background: var(--bg-tertiary); border-radius: 8px;
-            padding: 12px 14px; margin-bottom: 14px;
-            font-size: 14px;
+            padding: 14px 24px;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
         }
         .modal-patient-name { font-weight: 600; font-size: 15px; }
         .modal-patient-info { color: var(--text-secondary); font-size: 13px; margin-top: 2px; }
-        .modal-messages { display: flex; flex-direction: column; gap: 8px; }
+
+        .modal-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            min-height: 320px;
+        }
+        .modal-col-left {
+            padding: 20px 24px;
+            display: flex; flex-direction: column;
+        }
+        .modal-col-right {
+            padding: 20px 24px;
+            border-left: 1px solid var(--border);
+            display: flex; flex-direction: column;
+        }
+        .modal-col-title {
+            font-size: 11px; font-weight: 700; color: var(--text-tertiary);
+            text-transform: uppercase; letter-spacing: 0.8px;
+            margin-bottom: 14px;
+        }
+
+        .modal-messages { display: flex; flex-direction: column; gap: 8px; flex: 1; }
         .modal-msg-btn {
             display: flex; align-items: center; gap: 10px;
-            padding: 12px 14px;
+            padding: 10px 12px;
             border: 1px solid var(--border);
             border-radius: 10px;
             background: white;
@@ -278,44 +298,44 @@
             background: rgba(37, 211, 102, 0.04);
         }
         .modal-msg-icon {
-            width: 36px; height: 36px;
+            width: 32px; height: 32px;
             background: #25D366; color: white;
             border-radius: 8px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 18px; flex-shrink: 0;
+            font-size: 16px; flex-shrink: 0;
         }
-        .modal-msg-label { font-weight: 600; font-size: 13px; }
-        .modal-msg-preview { color: var(--text-secondary); font-size: 12px; margin-top: 2px; line-height: 1.4; }
+        .modal-msg-label { font-weight: 600; font-size: 12px; }
+        .modal-msg-preview { color: var(--text-secondary); font-size: 11px; margin-top: 1px; line-height: 1.3; }
 
-        .modal-obs-section {
-            margin-top: 16px;
-            padding-top: 16px;
-            border-top: 1px solid var(--border);
-        }
-        .modal-obs-section label {
-            font-size: 12px; font-weight: 600; color: var(--text-secondary);
-            text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;
-        }
+        .modal-obs-area { margin-top: auto; padding-top: 12px; }
         .modal-obs-textarea {
             width: 100%; padding: 10px 12px; border: 1px solid var(--border);
             border-radius: 8px; font-size: 13px; font-family: inherit;
-            min-height: 70px; resize: vertical;
+            min-height: 60px; resize: vertical;
         }
         .modal-obs-textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(45, 122, 95, 0.1); }
         .modal-obs-btn {
             margin-top: 8px; padding: 8px 16px; border: none; border-radius: 8px;
             background: var(--primary); color: white; font-size: 13px; font-weight: 600;
-            cursor: pointer; font-family: inherit; transition: all 0.15s;
+            cursor: pointer; font-family: inherit; transition: all 0.15s; width: 100%;
         }
         .modal-obs-btn:hover { background: var(--primary-dark); }
         .modal-obs-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        .modal-historial { margin-top: 12px; max-height: 150px; overflow-y: auto; }
+        .modal-historial-list { flex: 1; overflow-y: auto; max-height: 220px; }
         .modal-historial-item {
-            padding: 8px 10px; background: var(--bg-tertiary); border-radius: 6px;
-            margin-bottom: 6px; font-size: 12px;
+            padding: 10px 12px; background: var(--bg-tertiary); border-radius: 8px;
+            margin-bottom: 8px; font-size: 13px; line-height: 1.4;
         }
-        .modal-historial-meta { color: var(--text-tertiary); font-size: 11px; margin-top: 2px; }
+        .modal-historial-meta { color: var(--text-tertiary); font-size: 11px; margin-top: 4px; }
+        .modal-historial-empty {
+            text-align: center; padding: 32px 16px; color: var(--text-tertiary); font-size: 13px;
+        }
+
+        @media (max-width: 640px) {
+            .modal-columns { grid-template-columns: 1fr; }
+            .modal-col-right { border-left: none; border-top: 1px solid var(--border); }
+        }
 
         .badge-seguimiento {
             display: inline-block; width: 8px; height: 8px;
@@ -440,23 +460,28 @@
     <div class="modal-overlay hidden" id="modal-whatsapp" onclick="if(event.target===this)cerrarModal()">
         <div class="modal-card">
             <div class="modal-header">
-                <h3><span style="font-size:20px;">💬</span> Enviar WhatsApp</h3>
+                <h3><span style="font-size:18px;">💬</span> Contacto WhatsApp</h3>
                 <button class="modal-close" onclick="cerrarModal()">&times;</button>
             </div>
-            <div class="modal-body">
-                <div class="modal-patient">
-                    <div class="modal-patient-name" id="modal-nombre"></div>
-                    <div class="modal-patient-info" id="modal-info"></div>
+            <div class="modal-patient">
+                <div class="modal-patient-name" id="modal-nombre"></div>
+                <div class="modal-patient-info" id="modal-info"></div>
+            </div>
+            <div class="modal-columns">
+                <!-- Columna izquierda: mensajes predeterminados -->
+                <div class="modal-col-left">
+                    <div class="modal-col-title">Mensajes predeterminados</div>
+                    <div class="modal-messages" id="modal-messages"></div>
                 </div>
-                <div class="modal-messages" id="modal-messages"></div>
-
-                <div class="modal-obs-section">
-                    <label>Observaciones del contacto</label>
-                    <textarea class="modal-obs-textarea" id="modal-observacion" placeholder="Ej: No contesto, Dice que dejo de fumar, Agendado control..."></textarea>
-                    <button type="button" class="modal-obs-btn" id="btn-guardar-obs" onclick="guardarObservacion()">Guardar observacion</button>
+                <!-- Columna derecha: historial y observaciones -->
+                <div class="modal-col-right">
+                    <div class="modal-col-title">Historial de contacto</div>
+                    <div class="modal-historial-list" id="modal-historial"></div>
+                    <div class="modal-obs-area">
+                        <textarea class="modal-obs-textarea" id="modal-observacion" placeholder="Anotar observacion..."></textarea>
+                        <button type="button" class="modal-obs-btn" id="btn-guardar-obs" onclick="guardarObservacion()">Guardar observacion</button>
+                    </div>
                 </div>
-
-                <div id="modal-historial"></div>
             </div>
         </div>
     </div>
@@ -672,14 +697,14 @@
 
         async function cargarHistorialSeguimiento(numeroId) {
             const histDiv = document.getElementById('modal-historial');
-            histDiv.innerHTML = '';
+            histDiv.innerHTML = '<div class="modal-historial-empty">Cargando...</div>';
             try {
                 const resp = await fetch(`/api/comunidad/seguimiento/${numeroId}`, {
                     headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
                 });
                 const result = await resp.json();
                 if (result.success && result.data.length > 0) {
-                    let html = '<div style="margin-top:12px;"><label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;">Historial de contacto</label>';
+                    let html = '';
                     result.data.forEach(s => {
                         const fecha = new Date(s.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
                         html += `<div class="modal-historial-item">
@@ -687,10 +712,14 @@
                             <div class="modal-historial-meta">${fecha} - ${s.usuario || 'Sistema'}${s.tipo_mensaje ? ' - ' + s.tipo_mensaje : ''}</div>
                         </div>`;
                     });
-                    html += '</div>';
                     histDiv.innerHTML = html;
+                } else {
+                    histDiv.innerHTML = '<div class="modal-historial-empty">Sin contactos previos</div>';
                 }
-            } catch (e) { console.error('Error cargando historial:', e); }
+            } catch (e) {
+                console.error('Error cargando historial:', e);
+                histDiv.innerHTML = '<div class="modal-historial-empty">Sin contactos previos</div>';
+            }
         }
 
         async function guardarObservacion() {
