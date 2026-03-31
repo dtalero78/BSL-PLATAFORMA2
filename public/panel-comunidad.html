@@ -331,6 +331,42 @@
         .modal-msg-label { font-weight: 600; font-size: 13px; }
         .modal-msg-preview { color: var(--text-secondary); font-size: 12px; margin-top: 2px; line-height: 1.4; }
 
+        .modal-obs-section {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+        .modal-obs-section label {
+            font-size: 12px; font-weight: 600; color: var(--text-secondary);
+            text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;
+        }
+        .modal-obs-textarea {
+            width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+            border-radius: 8px; font-size: 13px; font-family: inherit;
+            min-height: 70px; resize: vertical;
+        }
+        .modal-obs-textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(45, 122, 95, 0.1); }
+        .modal-obs-btn {
+            margin-top: 8px; padding: 8px 16px; border: none; border-radius: 8px;
+            background: var(--primary); color: white; font-size: 13px; font-weight: 600;
+            cursor: pointer; font-family: inherit; transition: all 0.15s;
+        }
+        .modal-obs-btn:hover { background: var(--primary-dark); }
+        .modal-obs-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .modal-historial { margin-top: 12px; max-height: 150px; overflow-y: auto; }
+        .modal-historial-item {
+            padding: 8px 10px; background: var(--bg-tertiary); border-radius: 6px;
+            margin-bottom: 6px; font-size: 12px;
+        }
+        .modal-historial-meta { color: var(--text-tertiary); font-size: 11px; margin-top: 2px; }
+
+        .badge-seguimiento {
+            display: inline-block; width: 8px; height: 8px;
+            background: var(--primary); border-radius: 50%; margin-left: 6px;
+            vertical-align: middle;
+        }
+
         .empty-state {
             text-align: center;
             padding: 48px 32px;
@@ -497,6 +533,14 @@
                     <div class="modal-patient-info" id="modal-info"></div>
                 </div>
                 <div class="modal-messages" id="modal-messages"></div>
+
+                <div class="modal-obs-section">
+                    <label>Observaciones del contacto</label>
+                    <textarea class="modal-obs-textarea" id="modal-observacion" placeholder="Ej: No contesto, Dice que dejo de fumar, Agendado control..."></textarea>
+                    <button type="button" class="modal-obs-btn" id="btn-guardar-obs" onclick="guardarObservacion()">Guardar observacion</button>
+                </div>
+
+                <div id="modal-historial"></div>
             </div>
         </div>
     </div>
@@ -516,6 +560,8 @@
         let usuarioActual = null;
         let perfilesData = null;
         let perfilSeleccionado = null;
+        let miembroActual = null;
+        let idsConSeguimiento = new Set();
 
         window.addEventListener('DOMContentLoaded', async () => {
             usuarioActual = await Auth.protegerPagina(['admin']);
@@ -619,6 +665,15 @@
             const perfil = perfilesData.perfiles.find(p => p.id === perfilId);
             document.getElementById('members-perfil-name').textContent = perfil ? `${perfil.icono} ${perfil.nombre}` : 'Miembros';
 
+            // Load seguimiento IDs
+            try {
+                const segResp = await fetch(`/api/comunidad/seguimiento-ids?perfil=${perfilId}`, {
+                    headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
+                });
+                const segResult = await segResp.json();
+                if (segResult.success) idsConSeguimiento = new Set(segResult.data);
+            } catch (e) { console.error('Error loading seguimiento ids:', e); }
+
             // Load members
             const contentDiv = document.getElementById('members-content');
             contentDiv.innerHTML = '<div style="padding: 32px; text-align: center;"><div class="loading-spinner" style="width:32px;height:32px;margin:0 auto 12px;"></div><div style="color:var(--text-tertiary);">Cargando miembros...</div></div>';
@@ -665,7 +720,7 @@
                 const fecha = m.fecha_consulta ? new Date(m.fecha_consulta).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
                 html += `<tr onclick='abrirModalWhatsApp(${JSON.stringify(m).replace(/'/g, "&#39;")})'>
                     <td>${m.numero_id || '-'}</td>
-                    <td><strong>${m.primer_nombre || ''} ${m.primer_apellido || ''}</strong></td>
+                    <td><strong>${m.primer_nombre || ''} ${m.primer_apellido || ''}</strong>${idsConSeguimiento.has(m.numero_id) ? '<span class="badge-seguimiento" title="Tiene seguimiento"></span>' : ''}</td>
                     <td>${m.empresa || '-'}</td>
                     <td>${m.celular || '-'}</td>
                     <td>${m.email || '-'}</td>
@@ -699,12 +754,18 @@
         function abrirModalWhatsApp(miembro) {
             if (!miembro.celular) return alert('Este paciente no tiene celular registrado');
 
+            miembroActual = miembro;
             const nombre = miembro.primer_nombre || '';
             const celular = normalizarCelular(miembro.celular);
             const fechaConsulta = formatearFechaConsulta(miembro.fecha_consulta);
 
             document.getElementById('modal-nombre').textContent = `${miembro.primer_nombre || ''} ${miembro.primer_apellido || ''}`;
             document.getElementById('modal-info').textContent = `${miembro.celular} - ${miembro.empresa || 'Sin empresa'}`;
+            document.getElementById('modal-observacion').value = '';
+            document.getElementById('btn-guardar-obs').disabled = false;
+            document.getElementById('btn-guardar-obs').textContent = 'Guardar observacion';
+
+            cargarHistorialSeguimiento(miembro.numero_id);
 
             const mensajes = [
                 {
@@ -727,7 +788,7 @@
             mensajes.forEach(msg => {
                 const btn = document.createElement('button');
                 btn.className = 'modal-msg-btn';
-                btn.onclick = () => enviarWhatsApp(celular, msg.texto);
+                btn.onclick = () => { enviarWhatsApp(celular, msg.texto, msg.label); };
                 btn.innerHTML = `
                     <div class="modal-msg-icon">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.612.612l4.458-1.495A11.943 11.943 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-2.352 0-4.556-.764-6.343-2.083l-.442-.332-3.29 1.103 1.103-3.29-.332-.442A9.955 9.955 0 012 12C2 6.486 6.486 2 12 2s10 4.486 10 10-4.486 10-10 10z"/></svg>
@@ -743,7 +804,87 @@
             document.getElementById('modal-whatsapp').classList.remove('hidden');
         }
 
-        function enviarWhatsApp(celular, mensaje) {
+        async function cargarHistorialSeguimiento(numeroId) {
+            const histDiv = document.getElementById('modal-historial');
+            histDiv.innerHTML = '';
+            try {
+                const resp = await fetch(`/api/comunidad/seguimiento/${numeroId}`, {
+                    headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
+                });
+                const result = await resp.json();
+                if (result.success && result.data.length > 0) {
+                    let html = '<div style="margin-top:12px;"><label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;">Historial de contacto</label>';
+                    result.data.forEach(s => {
+                        const fecha = new Date(s.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+                        html += `<div class="modal-historial-item">
+                            <div>${s.observacion}</div>
+                            <div class="modal-historial-meta">${fecha} - ${s.usuario || 'Sistema'}${s.tipo_mensaje ? ' - ' + s.tipo_mensaje : ''}</div>
+                        </div>`;
+                    });
+                    html += '</div>';
+                    histDiv.innerHTML = html;
+                }
+            } catch (e) { console.error('Error cargando historial:', e); }
+        }
+
+        async function guardarObservacion() {
+            const obs = document.getElementById('modal-observacion').value.trim();
+            if (!obs) return alert('Escribe una observacion');
+            if (!miembroActual) return;
+
+            const btn = document.getElementById('btn-guardar-obs');
+            btn.disabled = true;
+            btn.textContent = 'Guardando...';
+
+            try {
+                const resp = await fetch('/api/comunidad/seguimiento', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${Auth.getToken()}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        numero_id: miembroActual.numero_id,
+                        celular: miembroActual.celular,
+                        perfil: perfilSeleccionado,
+                        tipo_mensaje: null,
+                        observacion: obs
+                    })
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    document.getElementById('modal-observacion').value = '';
+                    btn.textContent = 'Guardado!';
+                    idsConSeguimiento.add(miembroActual.numero_id);
+                    await cargarHistorialSeguimiento(miembroActual.numero_id);
+                    setTimeout(() => { btn.textContent = 'Guardar observacion'; btn.disabled = false; }, 1500);
+                } else {
+                    alert(result.message || 'Error al guardar');
+                    btn.textContent = 'Guardar observacion';
+                    btn.disabled = false;
+                }
+            } catch (e) {
+                console.error('Error guardando:', e);
+                alert('Error al guardar');
+                btn.textContent = 'Guardar observacion';
+                btn.disabled = false;
+            }
+        }
+
+        function enviarWhatsApp(celular, mensaje, tipoMensaje) {
+            // Registrar que se envio el mensaje
+            if (miembroActual) {
+                fetch('/api/comunidad/seguimiento', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${Auth.getToken()}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        numero_id: miembroActual.numero_id,
+                        celular: miembroActual.celular,
+                        perfil: perfilSeleccionado,
+                        tipo_mensaje: tipoMensaje,
+                        observacion: `Mensaje enviado: ${tipoMensaje}`
+                    })
+                }).then(() => {
+                    idsConSeguimiento.add(miembroActual.numero_id);
+                }).catch(e => console.error('Error registrando envio:', e));
+            }
             window.location.href = `whatsapp://send?phone=${celular}&text=${encodeURIComponent(mensaje)}`;
             cerrarModal();
         }

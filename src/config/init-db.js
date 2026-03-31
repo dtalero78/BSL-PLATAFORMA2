@@ -1171,6 +1171,25 @@ const initDB = async () => {
             console.error('⚠️ Error al eliminar trigger obsoleto:', err.message);
         }
 
+        // Tabla de seguimiento comunidad de salud
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS seguimiento_comunidad (
+                id SERIAL PRIMARY KEY,
+                historia_clinica_id VARCHAR(255),
+                numero_id VARCHAR(50),
+                celular VARCHAR(20),
+                perfil VARCHAR(50),
+                tipo_mensaje VARCHAR(50),
+                observacion TEXT,
+                usuario_id INTEGER REFERENCES usuarios(id),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        try {
+            await pool.query(`CREATE INDEX IF NOT EXISTS idx_seguimiento_numero_id ON seguimiento_comunidad(numero_id)`);
+            await pool.query(`CREATE INDEX IF NOT EXISTS idx_seguimiento_perfil ON seguimiento_comunidad(perfil)`);
+        } catch (err) { /* indices ya existen */ }
+
         console.log('Base de datos inicializada correctamente');
     } catch (error) {
         console.error('Error al inicializar la base de datos:', error);

@@ -420,6 +420,65 @@ router.get('/perfiles/:id/miembros', authMiddleware, async (req, res) => {
     }
 });
 
+// POST /seguimiento - Guardar observacion de seguimiento
+router.post('/seguimiento', authMiddleware, async (req, res) => {
+    try {
+        const { numero_id, celular, perfil, tipo_mensaje, observacion, historia_clinica_id } = req.body;
+
+        if (!numero_id || !observacion) {
+            return res.status(400).json({ success: false, message: 'Faltan datos requeridos (numero_id, observacion)' });
+        }
+
+        const result = await pool.query(`
+            INSERT INTO seguimiento_comunidad (historia_clinica_id, numero_id, celular, perfil, tipo_mensaje, observacion, usuario_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING id, created_at
+        `, [historia_clinica_id || null, numero_id, celular || null, perfil || null, tipo_mensaje || null, observacion, req.usuario.id]);
+
+        res.json({ success: true, data: result.rows[0] });
+    } catch (error) {
+        console.error('Error guardando seguimiento:', error);
+        res.status(500).json({ success: false, message: 'Error al guardar seguimiento' });
+    }
+});
+
+// GET /seguimiento/:numeroId - Obtener seguimientos de un paciente
+router.get('/seguimiento/:numeroId', authMiddleware, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT s.*, u.nombre_completo as usuario
+            FROM seguimiento_comunidad s
+            LEFT JOIN usuarios u ON s.usuario_id = u.id
+            WHERE s.numero_id = $1
+            ORDER BY s.created_at DESC
+        `, [req.params.numeroId]);
+
+        res.json({ success: true, data: result.rows });
+    } catch (error) {
+        console.error('Error obteniendo seguimientos:', error);
+        res.status(500).json({ success: false, message: 'Error al obtener seguimientos' });
+    }
+});
+
+// GET /seguimiento-ids - Obtener numero_ids que tienen seguimiento (para badges)
+router.get('/seguimiento-ids', authMiddleware, async (req, res) => {
+    try {
+        const { perfil } = req.query;
+        let query = `SELECT DISTINCT numero_id FROM seguimiento_comunidad`;
+        const params = [];
+        if (perfil) {
+            params.push(perfil);
+            query += ` WHERE perfil = $1`;
+        }
+        const result = await pool.query(query, params);
+        const ids = result.rows.map(r => r.numero_id);
+        res.json({ success: true, data: ids });
+    } catch (error) {
+        console.error('Error obteniendo IDs de seguimiento:', error);
+        res.status(500).json({ success: false, message: 'Error' });
+    }
+});
+
 // POST /whatsapp/enviar - Enviar mensaje masivo a perfil de salud
 router.post('/whatsapp/enviar', authMiddleware, async (req, res) => {
     try {
