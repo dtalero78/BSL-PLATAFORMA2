@@ -36,6 +36,7 @@ router.get('/pacientes', authMiddleware, async (req, res) => {
                 f.email,
                 f.empresa,
                 f.cod_empresa,
+                f.foto_url,
                 h."fechaConsulta" as fecha_consulta,
                 ARRAY_REMOVE(ARRAY[
                     CASE WHEN f.fuma = 'SI' THEN 'Fumador' END,

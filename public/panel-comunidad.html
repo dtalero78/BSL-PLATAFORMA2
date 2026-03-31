@@ -255,9 +255,44 @@
             padding: 16px 28px;
             background: var(--bg-tertiary);
             border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .modal-patient-foto {
+            width: 52px; height: 52px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.15s;
+            flex-shrink: 0;
+        }
+        .modal-patient-foto:hover { transform: scale(1.08); }
+        .modal-patient-initials {
+            width: 52px; height: 52px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; font-weight: 700;
+            flex-shrink: 0;
         }
         .modal-patient-name { font-weight: 600; font-size: 17px; }
         .modal-patient-info { color: var(--text-secondary); font-size: 15px; margin-top: 3px; }
+
+        .foto-lightbox {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 2000; cursor: pointer;
+        }
+        .foto-lightbox img {
+            max-width: 90vw; max-height: 90vh;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+        }
 
         .modal-columns {
             display: grid;
@@ -464,8 +499,11 @@
                 <button class="modal-close" onclick="cerrarModal()">&times;</button>
             </div>
             <div class="modal-patient">
-                <div class="modal-patient-name" id="modal-nombre"></div>
-                <div class="modal-patient-info" id="modal-info"></div>
+                <div id="modal-foto-container"></div>
+                <div>
+                    <div class="modal-patient-name" id="modal-nombre"></div>
+                    <div class="modal-patient-info" id="modal-info"></div>
+                </div>
             </div>
             <div class="modal-columns">
                 <!-- Columna izquierda: mensajes predeterminados -->
@@ -648,6 +686,14 @@
 
             document.getElementById('modal-nombre').textContent = `${miembro.primer_nombre || ''} ${miembro.primer_apellido || ''}`;
             document.getElementById('modal-info').textContent = `${miembro.celular} - ${miembro.cod_empresa || 'Sin empresa'}`;
+
+            const fotoContainer = document.getElementById('modal-foto-container');
+            if (miembro.foto_url) {
+                fotoContainer.innerHTML = `<img class="modal-patient-foto" src="${miembro.foto_url}" alt="Foto" onclick="abrirFoto('${miembro.foto_url}')" onerror="this.outerHTML='<div class=\\'modal-patient-initials\\'>${(miembro.primer_nombre||'')[0]||''}${(miembro.primer_apellido||'')[0]||''}</div>'">`;
+            } else {
+                const iniciales = `${(miembro.primer_nombre||'')[0]||''}${(miembro.primer_apellido||'')[0]||''}`;
+                fotoContainer.innerHTML = `<div class="modal-patient-initials">${iniciales.toUpperCase()}</div>`;
+            }
             document.getElementById('modal-observacion').value = '';
             document.getElementById('btn-guardar-obs').disabled = false;
             document.getElementById('btn-guardar-obs').textContent = 'Guardar observacion';
@@ -761,6 +807,14 @@
                 btn.textContent = 'Guardar observacion';
                 btn.disabled = false;
             }
+        }
+
+        function abrirFoto(url) {
+            const lb = document.createElement('div');
+            lb.className = 'foto-lightbox';
+            lb.onclick = () => lb.remove();
+            lb.innerHTML = `<img src="${url}">`;
+            document.body.appendChild(lb);
         }
 
         function enviarWhatsApp(celular, mensaje, tipoMensaje) {
