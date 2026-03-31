@@ -656,13 +656,13 @@
                         <th>Empresa</th>
                         <th>Celular</th>
                         <th>Email</th>
-                        <th>Fecha Registro</th>
+                        <th>Fecha Consulta</th>
                     </tr>
                 </thead>
                 <tbody>`;
 
             miembros.forEach((m, i) => {
-                const fecha = m.fecha_registro ? new Date(m.fecha_registro).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+                const fecha = m.fecha_consulta ? new Date(m.fecha_consulta).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
                 html += `<tr onclick='abrirModalWhatsApp(${JSON.stringify(m).replace(/'/g, "&#39;")})'>
                     <td>${m.numero_id || '-'}</td>
                     <td><strong>${m.primer_nombre || ''} ${m.primer_apellido || ''}</strong></td>
@@ -701,7 +701,7 @@
 
             const nombre = miembro.primer_nombre || '';
             const celular = normalizarCelular(miembro.celular);
-            const fechaConsulta = formatearFechaConsulta(miembro.fecha_registro);
+            const fechaConsulta = formatearFechaConsulta(miembro.fecha_consulta);
 
             document.getElementById('modal-nombre').textContent = `${miembro.primer_nombre || ''} ${miembro.primer_apellido || ''}`;
             document.getElementById('modal-info').textContent = `${miembro.celular} - ${miembro.empresa || 'Sin empresa'}`;

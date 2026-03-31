@@ -17,35 +17,36 @@ router.get('/perfiles', authMiddleware, async (req, res) => {
 
         if (fechaDesde) {
             dateParams.push(fechaDesde);
-            dateFilter += ` AND fecha_registro >= $${dateParams.length}`;
+            dateFilter += ` AND h."fechaConsulta" >= $${dateParams.length}`;
         }
         if (fechaHasta) {
             dateParams.push(fechaHasta + ' 23:59:59');
-            dateFilter += ` AND fecha_registro <= $${dateParams.length}`;
+            dateFilter += ` AND h."fechaConsulta" <= $${dateParams.length}`;
         }
 
-        const excludeFilter = ` AND (empresa IS NULL OR empresa != 'SIIGO')`;
+        const joinClause = `FROM formularios f INNER JOIN "HistoriaClinica" h ON f.wix_id = h."_id"`;
+        const baseFilter = `WHERE h."fechaConsulta" < NOW() AND (f.empresa IS NULL OR f.empresa != 'SIIGO')`;
 
         // Obtener solo el total de miembros primero (rápido)
-        const totalQuery = await pool.query(`SELECT COUNT(*) as total FROM formularios WHERE 1=1${dateFilter}${excludeFilter}`, dateParams);
+        const totalQuery = await pool.query(`SELECT COUNT(*) as total ${joinClause} ${baseFilter}${dateFilter}`, dateParams);
         const total_miembros = parseInt(totalQuery.rows[0].total);
 
         console.log(`✅ Total miembros: ${total_miembros} (${Date.now() - startTime}ms)`);
 
         // Contar cada condición directamente de la BD con filtro de fecha
         const countQueries = {
-            fumadores: `SELECT COUNT(*) as c FROM formularios WHERE fuma = 'SI'${dateFilter}${excludeFilter}`,
-            hipertension: `SELECT COUNT(*) as c FROM formularios WHERE presion_alta = 'SI'${dateFilter}${excludeFilter}`,
-            diabetes: `SELECT COUNT(*) as c FROM formularios WHERE problemas_azucar = 'SI'${dateFilter}${excludeFilter}`,
-            dolor_cabeza: `SELECT COUNT(*) as c FROM formularios WHERE dolor_cabeza = 'SI'${dateFilter}${excludeFilter}`,
-            dolor_espalda: `SELECT COUNT(*) as c FROM formularios WHERE dolor_espalda = 'SI'${dateFilter}${excludeFilter}`,
-            problemas_sueno: `SELECT COUNT(*) as c FROM formularios WHERE problemas_sueno = 'SI'${dateFilter}${excludeFilter}`,
-            salud_mental: `SELECT COUNT(*) as c FROM formularios WHERE trastorno_psicologico = 'SI'${dateFilter}${excludeFilter}`,
-            sedentarios: `SELECT COUNT(*) as c FROM formularios WHERE ejercicio IN ('Nunca', 'Ocasionalmente')${dateFilter}${excludeFilter}`,
-            sobrepeso: `SELECT COUNT(*) as c FROM formularios WHERE peso > 0 AND estatura ~ '^[0-9]+(\\.[0-9]+)?$' AND estatura::numeric > 0 AND (peso / ((estatura::numeric / 100) * (estatura::numeric / 100))) >= 25${dateFilter}${excludeFilter}`,
-            riesgo_hipertension: `SELECT COUNT(*) as c FROM formularios WHERE familia_hipertension = 'SI'${dateFilter}${excludeFilter}`,
-            riesgo_cancer: `SELECT COUNT(*) as c FROM formularios WHERE familia_cancer = 'SI'${dateFilter}${excludeFilter}`,
-            riesgo_cardiovascular: `SELECT COUNT(*) as c FROM formularios WHERE familia_infartos = 'SI'${dateFilter}${excludeFilter}`
+            fumadores: `SELECT COUNT(*) as c ${joinClause} ${baseFilter} AND f.fuma = 'SI'${dateFilter}`,
+            hipertension: `SELECT COUNT(*) as c ${joinClause} ${baseFilter} AND f.presion_alta = 'SI'${dateFilter}`,
+            diabetes: `SELECT COUNT(*) as c ${joinClause} ${baseFilter} AND f.problemas_azucar = 'SI'${dateFilter}`,
+            dolor_cabeza: `SELECT COUNT(*) as c ${joinClause} ${baseFilter} AND f.dolor_cabeza = 'SI'${dateFilter}`,
+            dolor_espalda: `SELECT COUNT(*) as c ${joinClause} ${baseFilter} AND f.dolor_espalda = 'SI'${dateFilter}`,
+            problemas_sueno: `SELECT COUNT(*) as c ${joinClause} ${baseFilter} AND f.problemas_sueno = 'SI'${dateFilter}`,
+            salud_mental: `SELECT COUNT(*) as c ${joinClause} ${baseFilter} AND f.trastorno_psicologico = 'SI'${dateFilter}`,
+            sedentarios: `SELECT COUNT(*) as c ${joinClause} ${baseFilter} AND f.ejercicio IN ('Nunca', 'Ocasionalmente')${dateFilter}`,
+            sobrepeso: `SELECT COUNT(*) as c ${joinClause} ${baseFilter} AND f.peso > 0 AND f.estatura ~ '^[0-9]+(\\.[0-9]+)?$' AND f.estatura::numeric > 0 AND (f.peso / ((f.estatura::numeric / 100) * (f.estatura::numeric / 100))) >= 25${dateFilter}`,
+            riesgo_hipertension: `SELECT COUNT(*) as c ${joinClause} ${baseFilter} AND f.familia_hipertension = 'SI'${dateFilter}`,
+            riesgo_cancer: `SELECT COUNT(*) as c ${joinClause} ${baseFilter} AND f.familia_cancer = 'SI'${dateFilter}`,
+            riesgo_cardiovascular: `SELECT COUNT(*) as c ${joinClause} ${baseFilter} AND f.familia_infartos = 'SI'${dateFilter}`
         };
 
         const countResults = await Promise.all(
@@ -310,11 +311,11 @@ router.get('/perfiles/:id/miembros', authMiddleware, async (req, res) => {
 
         if (fechaDesde) {
             dateParams.push(fechaDesde);
-            dateFilter += ` AND fecha_registro >= $${dateParams.length}`;
+            dateFilter += ` AND h."fechaConsulta" >= $${dateParams.length}`;
         }
         if (fechaHasta) {
             dateParams.push(fechaHasta + ' 23:59:59');
-            dateFilter += ` AND fecha_registro <= $${dateParams.length}`;
+            dateFilter += ` AND h."fechaConsulta" <= $${dateParams.length}`;
         }
 
         let condicion = '';
@@ -322,40 +323,40 @@ router.get('/perfiles/:id/miembros', authMiddleware, async (req, res) => {
         // Mapeo de perfiles a condiciones SQL
         switch(id) {
             case 'fumadores':
-                condicion = "fuma = 'SI'";
+                condicion = "f.fuma = 'SI'";
                 break;
             case 'dolor-espalda':
-                condicion = "dolor_espalda = 'SI'";
+                condicion = "f.dolor_espalda = 'SI'";
                 break;
             case 'dolor-cabeza':
-                condicion = "dolor_cabeza = 'SI'";
+                condicion = "f.dolor_cabeza = 'SI'";
                 break;
             case 'hipertension':
-                condicion = "presion_alta = 'SI'";
+                condicion = "f.presion_alta = 'SI'";
                 break;
             case 'diabetes':
-                condicion = "problemas_azucar = 'SI'";
+                condicion = "f.problemas_azucar = 'SI'";
                 break;
             case 'sedentarios':
-                condicion = "ejercicio IN ('Nunca', 'Ocasionalmente')";
+                condicion = "f.ejercicio IN ('Nunca', 'Ocasionalmente')";
                 break;
             case 'sobrepeso':
-                condicion = "peso > 0 AND estatura ~ '^[0-9]+(\\\\.[0-9]+)?$' AND estatura::numeric > 0 AND (peso / ((estatura::numeric / 100) * (estatura::numeric / 100))) >= 25";
+                condicion = "f.peso > 0 AND f.estatura ~ '^[0-9]+(\\\\.[0-9]+)?$' AND f.estatura::numeric > 0 AND (f.peso / ((f.estatura::numeric / 100) * (f.estatura::numeric / 100))) >= 25";
                 break;
             case 'problemas-sueno':
-                condicion = "problemas_sueno = 'SI'";
+                condicion = "f.problemas_sueno = 'SI'";
                 break;
             case 'salud-mental':
-                condicion = "trastorno_psicologico = 'SI'";
+                condicion = "f.trastorno_psicologico = 'SI'";
                 break;
             case 'riesgo-hipertension':
-                condicion = "familia_hipertension = 'SI'";
+                condicion = "f.familia_hipertension = 'SI'";
                 break;
             case 'riesgo-cancer':
-                condicion = "familia_cancer = 'SI'";
+                condicion = "f.familia_cancer = 'SI'";
                 break;
             case 'riesgo-cardiovascular':
-                condicion = "familia_infartos = 'SI'";
+                condicion = "f.familia_infartos = 'SI'";
                 break;
             default:
                 return res.status(400).json({
@@ -364,32 +365,33 @@ router.get('/perfiles/:id/miembros', authMiddleware, async (req, res) => {
                 });
         }
 
-        const excludeFilter = ` AND (empresa IS NULL OR empresa != 'SIIGO') AND primer_nombre IS NOT NULL AND primer_nombre != '' AND numero_id IS NOT NULL AND numero_id != ''`;
+        const joinClause = `FROM formularios f INNER JOIN "HistoriaClinica" h ON f.wix_id = h."_id"`;
+        const baseFilter = `WHERE h."fechaConsulta" < NOW() AND (f.empresa IS NULL OR f.empresa != 'SIIGO') AND f.primer_nombre IS NOT NULL AND f.primer_nombre != '' AND f.numero_id IS NOT NULL AND f.numero_id != ''`;
         const limitParamIndex = dateParams.length + 1;
         const offsetParamIndex = dateParams.length + 2;
 
         const query = `
             SELECT
-                numero_id,
-                primer_nombre,
-                primer_apellido,
-                genero,
-                edad,
-                celular,
-                email,
-                empresa,
-                cod_empresa,
-                fecha_registro
-            FROM formularios
-            WHERE ${condicion}${dateFilter}${excludeFilter}
-            ORDER BY fecha_registro DESC
+                f.numero_id,
+                f.primer_nombre,
+                f.primer_apellido,
+                f.genero,
+                f.edad,
+                f.celular,
+                f.email,
+                f.empresa,
+                f.cod_empresa,
+                h."fechaConsulta" as fecha_consulta
+            ${joinClause}
+            ${baseFilter} AND ${condicion}${dateFilter}
+            ORDER BY h."fechaConsulta" DESC
             LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
         `;
 
         const countQuery = `
             SELECT COUNT(*) as total
-            FROM formularios
-            WHERE ${condicion}${dateFilter}${excludeFilter}
+            ${joinClause}
+            ${baseFilter} AND ${condicion}${dateFilter}
         `;
 
         const [miembrosResult, countResult] = await Promise.all([
