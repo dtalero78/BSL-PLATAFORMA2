@@ -236,59 +236,59 @@
         }
         .modal-card {
             background: white; border-radius: 16px;
-            width: 780px; max-width: 94vw;
+            width: 920px; max-width: 94vw;
             box-shadow: 0 20px 50px rgba(0,0,0,0.15);
             overflow: hidden;
         }
         .modal-header {
-            padding: 18px 24px;
+            padding: 20px 28px;
             border-bottom: 1px solid var(--border);
             display: flex; align-items: center; justify-content: space-between;
         }
-        .modal-header h3 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .modal-header h3 { font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
         .modal-close {
             background: none; border: none; cursor: pointer;
-            color: var(--text-tertiary); font-size: 22px; padding: 4px; line-height: 1;
+            color: var(--text-tertiary); font-size: 26px; padding: 4px; line-height: 1;
         }
         .modal-close:hover { color: var(--text-primary); }
         .modal-patient {
-            padding: 14px 24px;
+            padding: 16px 28px;
             background: var(--bg-tertiary);
             border-bottom: 1px solid var(--border);
         }
-        .modal-patient-name { font-weight: 600; font-size: 15px; }
-        .modal-patient-info { color: var(--text-secondary); font-size: 13px; margin-top: 2px; }
+        .modal-patient-name { font-weight: 600; font-size: 17px; }
+        .modal-patient-info { color: var(--text-secondary); font-size: 15px; margin-top: 3px; }
 
         .modal-columns {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            min-height: 320px;
+            min-height: 380px;
         }
         .modal-col-left {
-            padding: 20px 24px;
+            padding: 24px 28px;
             display: flex; flex-direction: column;
         }
         .modal-col-right {
-            padding: 20px 24px;
+            padding: 24px 28px;
             border-left: 1px solid var(--border);
             display: flex; flex-direction: column;
         }
         .modal-col-title {
-            font-size: 11px; font-weight: 700; color: var(--text-tertiary);
+            font-size: 13px; font-weight: 700; color: var(--text-tertiary);
             text-transform: uppercase; letter-spacing: 0.8px;
-            margin-bottom: 14px;
+            margin-bottom: 16px;
         }
 
-        .modal-messages { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+        .modal-messages { display: flex; flex-direction: column; gap: 10px; flex: 1; }
         .modal-msg-btn {
-            display: flex; align-items: center; gap: 10px;
-            padding: 10px 12px;
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px 16px;
             border: 1px solid var(--border);
             border-radius: 10px;
             background: white;
             cursor: pointer;
             font-family: inherit;
-            font-size: 13px;
+            font-size: 14px;
             color: var(--text-primary);
             text-align: left;
             transition: all 0.15s;
@@ -298,38 +298,38 @@
             background: rgba(37, 211, 102, 0.04);
         }
         .modal-msg-icon {
-            width: 32px; height: 32px;
+            width: 38px; height: 38px;
             background: #25D366; color: white;
             border-radius: 8px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 16px; flex-shrink: 0;
+            font-size: 18px; flex-shrink: 0;
         }
-        .modal-msg-label { font-weight: 600; font-size: 12px; }
-        .modal-msg-preview { color: var(--text-secondary); font-size: 11px; margin-top: 1px; line-height: 1.3; }
+        .modal-msg-label { font-weight: 600; font-size: 14px; }
+        .modal-msg-preview { color: var(--text-secondary); font-size: 13px; margin-top: 2px; line-height: 1.4; }
 
-        .modal-obs-area { margin-top: auto; padding-top: 12px; }
+        .modal-obs-area { margin-top: auto; padding-top: 14px; }
         .modal-obs-textarea {
-            width: 100%; padding: 10px 12px; border: 1px solid var(--border);
-            border-radius: 8px; font-size: 13px; font-family: inherit;
-            min-height: 60px; resize: vertical;
+            width: 100%; padding: 12px 14px; border: 1px solid var(--border);
+            border-radius: 8px; font-size: 14px; font-family: inherit;
+            min-height: 70px; resize: vertical;
         }
         .modal-obs-textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(45, 122, 95, 0.1); }
         .modal-obs-btn {
-            margin-top: 8px; padding: 8px 16px; border: none; border-radius: 8px;
-            background: var(--primary); color: white; font-size: 13px; font-weight: 600;
+            margin-top: 10px; padding: 10px 20px; border: none; border-radius: 8px;
+            background: var(--primary); color: white; font-size: 14px; font-weight: 600;
             cursor: pointer; font-family: inherit; transition: all 0.15s; width: 100%;
         }
         .modal-obs-btn:hover { background: var(--primary-dark); }
         .modal-obs-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        .modal-historial-list { flex: 1; overflow-y: auto; max-height: 220px; }
+        .modal-historial-list { flex: 1; overflow-y: auto; max-height: 240px; }
         .modal-historial-item {
-            padding: 10px 12px; background: var(--bg-tertiary); border-radius: 8px;
-            margin-bottom: 8px; font-size: 13px; line-height: 1.4;
+            padding: 12px 14px; background: var(--bg-tertiary); border-radius: 8px;
+            margin-bottom: 8px; font-size: 14px; line-height: 1.5;
         }
-        .modal-historial-meta { color: var(--text-tertiary); font-size: 11px; margin-top: 4px; }
+        .modal-historial-meta { color: var(--text-tertiary); font-size: 12px; margin-top: 4px; }
         .modal-historial-empty {
-            text-align: center; padding: 32px 16px; color: var(--text-tertiary); font-size: 13px;
+            text-align: center; padding: 40px 16px; color: var(--text-tertiary); font-size: 14px;
         }
 
         @media (max-width: 640px) {
