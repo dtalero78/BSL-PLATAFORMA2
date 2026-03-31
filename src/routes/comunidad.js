@@ -5,6 +5,86 @@ const { authMiddleware } = require('../middleware/auth');
 
 // ========== COMUNIDAD DE SALUD ==========
 
+// GET /pacientes - Listado de pacientes con sus perfiles de salud
+router.get('/pacientes', authMiddleware, async (req, res) => {
+    try {
+        const { fechaDesde, fechaHasta, limit = 200, offset = 0 } = req.query;
+        const params = [];
+
+        // Default: hoy
+        const hoy = new Date().toISOString().split('T')[0];
+        params.push(fechaDesde || hoy);
+        params.push((fechaHasta || hoy) + ' 23:59:59');
+
+        const baseFilter = `
+            WHERE h."fechaConsulta" >= $1 AND h."fechaConsulta" <= $2
+            AND h."fechaConsulta" < NOW()
+            AND f.cod_empresa IN ('PARTICULAR', 'SANITHELP-JJ')
+            AND f.primer_nombre IS NOT NULL AND f.primer_nombre != ''
+            AND f.numero_id IS NOT NULL AND f.numero_id != ''
+        `;
+
+        const limitIdx = params.length + 1;
+        const offsetIdx = params.length + 2;
+
+        const query = `
+            SELECT
+                f.numero_id,
+                f.primer_nombre,
+                f.primer_apellido,
+                f.celular,
+                f.email,
+                f.empresa,
+                f.cod_empresa,
+                h."fechaConsulta" as fecha_consulta,
+                ARRAY_REMOVE(ARRAY[
+                    CASE WHEN f.fuma = 'SI' THEN 'Fumador' END,
+                    CASE WHEN f.presion_alta = 'SI' THEN 'Hipertension' END,
+                    CASE WHEN f.problemas_azucar = 'SI' THEN 'Diabetes' END,
+                    CASE WHEN f.dolor_cabeza = 'SI' THEN 'Cefaleas' END,
+                    CASE WHEN f.dolor_espalda = 'SI' THEN 'Dolor Espalda' END,
+                    CASE WHEN f.problemas_sueno = 'SI' THEN 'Problemas Sueno' END,
+                    CASE WHEN f.trastorno_psicologico = 'SI' THEN 'Salud Mental' END,
+                    CASE WHEN f.ejercicio IN ('Nunca', 'Ocasionalmente') THEN 'Sedentario' END,
+                    CASE WHEN f.familia_hipertension = 'SI' THEN 'Riesgo HTA Familiar' END,
+                    CASE WHEN f.familia_cancer = 'SI' THEN 'Riesgo Cancer Familiar' END,
+                    CASE WHEN f.familia_infartos = 'SI' THEN 'Riesgo Cardiovascular' END,
+                    CASE WHEN f.peso > 0 AND f.estatura ~ '^[0-9]+(\\.[0-9]+)?$' AND f.estatura::numeric > 0
+                         AND (f.peso / ((f.estatura::numeric / 100) * (f.estatura::numeric / 100))) >= 25
+                         THEN 'Sobrepeso' END
+                ], NULL) as perfiles
+            FROM formularios f
+            INNER JOIN "HistoriaClinica" h ON f.wix_id = h."_id"
+            ${baseFilter}
+            ORDER BY h."fechaConsulta" DESC
+            LIMIT $${limitIdx} OFFSET $${offsetIdx}
+        `;
+
+        const countQuery = `
+            SELECT COUNT(*) as total
+            FROM formularios f
+            INNER JOIN "HistoriaClinica" h ON f.wix_id = h."_id"
+            ${baseFilter}
+        `;
+
+        const [dataResult, countResult] = await Promise.all([
+            pool.query(query, [...params, limit, offset]),
+            pool.query(countQuery, params)
+        ]);
+
+        res.json({
+            success: true,
+            data: {
+                total: parseInt(countResult.rows[0].total),
+                pacientes: dataResult.rows
+            }
+        });
+    } catch (error) {
+        console.error('Error obteniendo pacientes comunidad:', error);
+        res.status(500).json({ success: false, message: 'Error al obtener pacientes', error: error.message });
+    }
+});
+
 // GET /perfiles - Generar perfiles de salud
 router.get('/perfiles', authMiddleware, async (req, res) => {
     try {

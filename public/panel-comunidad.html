@@ -165,64 +165,20 @@
         .stat-label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.3px; }
         .stat-value { font-size: 24px; font-weight: 700; line-height: 1.2; }
 
-        /* ========== PROFILE CHIPS ========== */
-        .profiles-section {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-        .profiles-section-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 14px;
-        }
-        .profiles-chips {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        .profile-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 14px;
-            border: 2px solid var(--border);
-            border-radius: 10px;
-            background: var(--bg-primary);
-            cursor: pointer;
-            transition: all 0.15s;
-            font-size: 13px;
-            font-weight: 500;
-            font-family: inherit;
-            color: var(--text-primary);
-        }
-        .profile-chip:hover {
-            border-color: var(--primary);
-            background: rgba(45, 122, 95, 0.04);
-        }
-        .profile-chip.selected {
-            border-color: var(--primary);
-            background: rgba(45, 122, 95, 0.08);
-            box-shadow: 0 0 0 1px var(--primary);
-        }
-        .profile-chip-icon { font-size: 16px; }
-        .profile-chip-count {
-            background: var(--bg-tertiary);
+        /* ========== PROFILE TAGS ========== */
+        .profile-tag {
+            display: inline-block;
             padding: 2px 8px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: 500;
+            margin: 1px 3px 1px 0;
+            background: var(--bg-tertiary);
             color: var(--text-secondary);
         }
-        .profile-chip.selected .profile-chip-count {
-            background: var(--primary);
-            color: white;
-        }
+        .profile-tag.riesgo { background: rgba(220, 38, 38, 0.08); color: #B91C1C; }
+        .profile-tag.habito { background: rgba(245, 158, 11, 0.08); color: #B45309; }
+        .profile-tag.condicion { background: rgba(59, 130, 246, 0.08); color: #1D4ED8; }
 
         /* ========== MEMBERS TABLE ========== */
         .members-section {
@@ -461,58 +417,18 @@
                     <span class="filter-info" id="filtro-fecha-info"></span>
                 </div>
 
-                <!-- Stats -->
-                <div class="stats-row">
-                    <div class="stat-card">
-                        <div class="stat-icon-sm" style="background: rgba(45, 122, 95, 0.1); color: var(--primary);">
-                            <i data-feather="users"></i>
-                        </div>
-                        <div class="stat-info">
-                            <div class="stat-label">Total Pacientes</div>
-                            <div class="stat-value" id="stat-total-miembros">-</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon-sm" style="background: rgba(59, 130, 246, 0.1); color: var(--info);">
-                            <i data-feather="activity"></i>
-                        </div>
-                        <div class="stat-info">
-                            <div class="stat-label">Perfiles</div>
-                            <div class="stat-value" id="stat-perfiles">-</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon-sm" style="background: rgba(220, 38, 38, 0.1); color: var(--error);">
-                            <i data-feather="alert-circle"></i>
-                        </div>
-                        <div class="stat-info">
-                            <div class="stat-label">Alta Prioridad</div>
-                            <div class="stat-value" id="stat-prioridad">-</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Profile Chips -->
-                <div class="profiles-section">
-                    <div class="profiles-section-title">Selecciona un perfil para ver sus miembros</div>
-                    <div class="profiles-chips" id="profiles-container">
-                        <div style="color: var(--text-tertiary); font-size: 14px;">Cargando perfiles...</div>
-                    </div>
-                </div>
-
                 <!-- Members Table -->
                 <div class="members-section">
                     <div class="members-header">
                         <div class="members-title">
-                            <span id="members-perfil-name">Miembros</span>
+                            <span>Pacientes</span>
                             <span class="members-count" id="members-count">0</span>
                         </div>
                     </div>
                     <div id="members-content">
                         <div class="empty-state">
-                            <div class="empty-state-icon">👆</div>
-                            <div class="empty-state-title">Selecciona un perfil</div>
-                            <div class="empty-state-text">Haz clic en un perfil de salud para ver la lista de pacientes</div>
+                            <div class="empty-state-icon">📋</div>
+                            <div class="empty-state-title">Cargando...</div>
                         </div>
                     </div>
                 </div>
@@ -558,148 +474,89 @@
     <script src="/js/auth.js"></script>
     <script>
         let usuarioActual = null;
-        let perfilesData = null;
-        let perfilSeleccionado = null;
         let miembroActual = null;
         let idsConSeguimiento = new Set();
+
+        const PERFIL_CATEGORIAS = {
+            'Fumador': 'habito', 'Sedentario': 'habito', 'Sobrepeso': 'habito',
+            'Hipertension': 'condicion', 'Diabetes': 'condicion', 'Salud Mental': 'condicion',
+            'Cefaleas': 'condicion', 'Dolor Espalda': 'condicion', 'Problemas Sueno': 'condicion',
+            'Riesgo HTA Familiar': 'riesgo', 'Riesgo Cancer Familiar': 'riesgo', 'Riesgo Cardiovascular': 'riesgo'
+        };
 
         window.addEventListener('DOMContentLoaded', async () => {
             usuarioActual = await Auth.protegerPagina(['admin']);
             if (!usuarioActual) return;
 
             document.getElementById('user-info').textContent = usuarioActual.nombreCompleto || '';
+
+            // Default: hoy
+            const hoy = new Date().toISOString().split('T')[0];
+            document.getElementById('filtro-fecha-desde').value = hoy;
+            document.getElementById('filtro-fecha-hasta').value = hoy;
+
             feather.replace();
-            await cargarDatos();
+            await cargarPacientes();
         });
-
-        async function cargarDatos() {
-            showLoading();
-            try {
-                await cargarPerfiles();
-            } catch (error) {
-                console.error('Error loading data:', error);
-            } finally {
-                hideLoading();
-            }
-        }
-
-        function getDateFilterParams() {
-            const desde = document.getElementById('filtro-fecha-desde').value;
-            const hasta = document.getElementById('filtro-fecha-hasta').value;
-            const params = new URLSearchParams();
-            if (desde) params.set('fechaDesde', desde);
-            if (hasta) params.set('fechaHasta', hasta);
-            return params.toString();
-        }
 
         function aplicarFiltroFecha() {
             const desde = document.getElementById('filtro-fecha-desde').value;
             const hasta = document.getElementById('filtro-fecha-hasta').value;
             if (!desde && !hasta) return;
             const info = document.getElementById('filtro-fecha-info');
-            const parts = [];
-            if (desde) parts.push(desde);
-            if (hasta) parts.push(hasta);
-            info.textContent = parts.join(' - ');
-            cargarDatos().then(() => {
-                if (perfilSeleccionado) seleccionarPerfil(perfilSeleccionado);
-            });
+            if (desde === hasta) {
+                info.textContent = desde;
+            } else {
+                info.textContent = `${desde || '...'} - ${hasta || '...'}`;
+            }
+            cargarPacientes();
         }
 
         function limpiarFiltroFecha() {
-            document.getElementById('filtro-fecha-desde').value = '';
-            document.getElementById('filtro-fecha-hasta').value = '';
+            const hoy = new Date().toISOString().split('T')[0];
+            document.getElementById('filtro-fecha-desde').value = hoy;
+            document.getElementById('filtro-fecha-hasta').value = hoy;
             document.getElementById('filtro-fecha-info').textContent = '';
-            cargarDatos().then(() => {
-                if (perfilSeleccionado) seleccionarPerfil(perfilSeleccionado);
-            });
+            cargarPacientes();
         }
 
-        async function cargarPerfiles() {
-            const dateFilter = getDateFilterParams();
-            const url = '/api/comunidad/perfiles' + (dateFilter ? '?' + dateFilter : '');
-            const response = await fetch(url, {
-                headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
-            });
-            const result = await response.json();
-
-            if (result.success) {
-                perfilesData = result.data;
-
-                document.getElementById('stat-total-miembros').textContent = result.data.total_miembros.toLocaleString();
-                document.getElementById('stat-perfiles').textContent = result.data.total_perfiles;
-
-                const altaPrioridad = result.data.perfiles.filter(p => p.prioridad === 'alta').length;
-                document.getElementById('stat-prioridad').textContent = altaPrioridad;
-
-                renderizarChips(result.data.perfiles);
-            }
-        }
-
-        function renderizarChips(perfiles) {
-            const container = document.getElementById('profiles-container');
-            container.innerHTML = '';
-
-            perfiles.forEach(perfil => {
-                const chip = document.createElement('button');
-                chip.className = 'profile-chip' + (perfilSeleccionado === perfil.id ? ' selected' : '');
-                chip.onclick = () => seleccionarPerfil(perfil.id);
-                chip.innerHTML = `
-                    <span class="profile-chip-icon">${perfil.icono}</span>
-                    <span>${perfil.nombre}</span>
-                    <span class="profile-chip-count">${perfil.miembros.toLocaleString()}</span>
-                `;
-                container.appendChild(chip);
-            });
-        }
-
-        async function seleccionarPerfil(perfilId) {
-            perfilSeleccionado = perfilId;
-
-            // Update chip selection
-            document.querySelectorAll('.profile-chip').forEach((chip, i) => {
-                const perfil = perfilesData.perfiles[i];
-                chip.classList.toggle('selected', perfil && perfil.id === perfilId);
-            });
-
-            const perfil = perfilesData.perfiles.find(p => p.id === perfilId);
-            document.getElementById('members-perfil-name').textContent = perfil ? `${perfil.icono} ${perfil.nombre}` : 'Miembros';
-
-            // Load seguimiento IDs
-            try {
-                const segResp = await fetch(`/api/comunidad/seguimiento-ids?perfil=${perfilId}`, {
-                    headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
-                });
-                const segResult = await segResp.json();
-                if (segResult.success) idsConSeguimiento = new Set(segResult.data);
-            } catch (e) { console.error('Error loading seguimiento ids:', e); }
-
-            // Load members
+        async function cargarPacientes() {
             const contentDiv = document.getElementById('members-content');
-            contentDiv.innerHTML = '<div style="padding: 32px; text-align: center;"><div class="loading-spinner" style="width:32px;height:32px;margin:0 auto 12px;"></div><div style="color:var(--text-tertiary);">Cargando miembros...</div></div>';
+            contentDiv.innerHTML = '<div style="padding: 32px; text-align: center;"><div class="loading-spinner" style="width:32px;height:32px;margin:0 auto 12px;"></div><div style="color:var(--text-tertiary);">Cargando pacientes...</div></div>';
 
             try {
-                const dateFilter = getDateFilterParams();
-                const response = await fetch(`/api/comunidad/perfiles/${perfilId}/miembros?limit=100${dateFilter ? '&' + dateFilter : ''}`, {
-                    headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
-                });
-                const result = await response.json();
+                const desde = document.getElementById('filtro-fecha-desde').value;
+                const hasta = document.getElementById('filtro-fecha-hasta').value;
+                const params = new URLSearchParams();
+                if (desde) params.set('fechaDesde', desde);
+                if (hasta) params.set('fechaHasta', hasta);
 
-                if (result.success) {
-                    document.getElementById('members-count').textContent = result.data.total.toLocaleString() + ' pacientes';
-                    renderizarMiembros(result.data.miembros, result.data.total);
+                // Cargar pacientes y seguimiento IDs en paralelo
+                const [pacResp, segResp] = await Promise.all([
+                    fetch(`/api/comunidad/pacientes?${params}`, { headers: { 'Authorization': `Bearer ${Auth.getToken()}` } }),
+                    fetch('/api/comunidad/seguimiento-ids', { headers: { 'Authorization': `Bearer ${Auth.getToken()}` } })
+                ]);
+
+                const pacResult = await pacResp.json();
+                const segResult = await segResp.json();
+
+                if (segResult.success) idsConSeguimiento = new Set(segResult.data);
+
+                if (pacResult.success) {
+                    document.getElementById('members-count').textContent = pacResult.data.total.toLocaleString() + ' pacientes';
+                    renderizarPacientes(pacResult.data.pacientes, pacResult.data.total);
                 }
             } catch (error) {
-                console.error('Error loading members:', error);
+                console.error('Error cargando pacientes:', error);
                 contentDiv.innerHTML = '<div class="empty-state"><div class="empty-state-title">Error al cargar</div></div>';
             }
         }
 
-        function renderizarMiembros(miembros, total) {
+        function renderizarPacientes(pacientes, total) {
             const contentDiv = document.getElementById('members-content');
 
-            if (miembros.length === 0) {
-                contentDiv.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-title">Sin miembros</div><div class="empty-state-text">No hay pacientes en este perfil con los filtros actuales</div></div>';
+            if (pacientes.length === 0) {
+                contentDiv.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-title">Sin pacientes</div><div class="empty-state-text">No hay pacientes para las fechas seleccionadas</div></div>';
                 return;
             }
 
@@ -709,29 +566,34 @@
                         <th>Identificacion</th>
                         <th>Nombre</th>
                         <th>Empresa</th>
+                        <th>Perfiles</th>
                         <th>Celular</th>
-                        <th>Email</th>
                         <th>Fecha Consulta</th>
                     </tr>
                 </thead>
                 <tbody>`;
 
-            miembros.forEach((m, i) => {
+            pacientes.forEach(m => {
                 const fecha = m.fecha_consulta ? new Date(m.fecha_consulta).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+                const perfilesTags = (m.perfiles || []).map(p => {
+                    const cat = PERFIL_CATEGORIAS[p] || '';
+                    return `<span class="profile-tag ${cat}">${p}</span>`;
+                }).join('');
+
                 html += `<tr onclick='abrirModalWhatsApp(${JSON.stringify(m).replace(/'/g, "&#39;")})'>
                     <td>${m.numero_id || '-'}</td>
                     <td><strong>${m.primer_nombre || ''} ${m.primer_apellido || ''}</strong>${idsConSeguimiento.has(m.numero_id) ? '<span class="badge-seguimiento" title="Tiene seguimiento"></span>' : ''}</td>
-                    <td>${m.empresa || '-'}</td>
+                    <td>${m.cod_empresa || '-'}</td>
+                    <td>${perfilesTags || '<span style="color:var(--text-tertiary);">-</span>'}</td>
                     <td>${m.celular || '-'}</td>
-                    <td>${m.email || '-'}</td>
                     <td style="color: var(--text-secondary); font-size: 13px;">${fecha}</td>
                 </tr>`;
             });
 
             html += '</tbody></table>';
 
-            if (total > miembros.length) {
-                html += `<div style="padding: 12px 16px; text-align: center; color: var(--text-tertiary); font-size: 13px; border-top: 1px solid var(--border);">Mostrando ${miembros.length} de ${total.toLocaleString()} pacientes</div>`;
+            if (total > pacientes.length) {
+                html += `<div style="padding: 12px 16px; text-align: center; color: var(--text-tertiary); font-size: 13px; border-top: 1px solid var(--border);">Mostrando ${pacientes.length} de ${total.toLocaleString()} pacientes</div>`;
             }
 
             contentDiv.innerHTML = html;
@@ -760,7 +622,7 @@
             const fechaConsulta = formatearFechaConsulta(miembro.fecha_consulta);
 
             document.getElementById('modal-nombre').textContent = `${miembro.primer_nombre || ''} ${miembro.primer_apellido || ''}`;
-            document.getElementById('modal-info').textContent = `${miembro.celular} - ${miembro.empresa || 'Sin empresa'}`;
+            document.getElementById('modal-info').textContent = `${miembro.celular} - ${miembro.cod_empresa || 'Sin empresa'}`;
             document.getElementById('modal-observacion').value = '';
             document.getElementById('btn-guardar-obs').disabled = false;
             document.getElementById('btn-guardar-obs').textContent = 'Guardar observacion';
@@ -847,7 +709,7 @@
                     body: JSON.stringify({
                         numero_id: miembroActual.numero_id,
                         celular: miembroActual.celular,
-                        perfil: perfilSeleccionado,
+                        perfil: (miembroActual.perfiles || []).join(', '),
                         tipo_mensaje: null,
                         observacion: obs
                     })
@@ -881,7 +743,7 @@
                     body: JSON.stringify({
                         numero_id: miembroActual.numero_id,
                         celular: miembroActual.celular,
-                        perfil: perfilSeleccionado,
+                        perfil: (miembroActual.perfiles || []).join(', '),
                         tipo_mensaje: tipoMensaje,
                         observacion: `Mensaje enviado: ${tipoMensaje}`
                     })
