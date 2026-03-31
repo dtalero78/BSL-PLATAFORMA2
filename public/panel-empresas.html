@@ -3192,12 +3192,17 @@
                 }
             }
 
-            // SITEL - Ocultar opción virtual al crear orden
+            // SITEL - Ocultar presencial y mostrar solo virtual (temporal)
             if (codEmpresa === 'SITEL') {
+                const btnPresencial = document.querySelector('.modalidad-tab[data-modalidad="presencial"]');
                 const btnVirtual = document.getElementById('btnModalidadVirtual');
-                if (btnVirtual) btnVirtual.style.display = 'none';
+                if (btnPresencial) btnPresencial.style.display = 'none';
+                if (btnVirtual) { btnVirtual.classList.add('active'); cambiarModalidadOrden('virtual'); }
+
+                const btnPresencialExp = document.querySelector('.modalidad-tab-expirado[data-modalidad="presencial"]');
                 const btnVirtualExp = document.getElementById('btnModalidadVirtualExpirado');
-                if (btnVirtualExp) btnVirtualExp.style.display = 'none';
+                if (btnPresencialExp) btnPresencialExp.style.display = 'none';
+                if (btnVirtualExp) { btnVirtualExp.classList.add('active'); btnVirtualExp.style.background = '#10B981'; btnVirtualExp.style.color = 'white'; btnVirtualExp.style.borderColor = '#10B981'; cambiarModalidadExpirado('virtual'); }
             }
 
             // APROBADOR - Mostrar botón "Sin Aprobar" solo para usuarios con permiso APROBADOR
