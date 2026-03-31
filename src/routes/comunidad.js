@@ -25,7 +25,7 @@ router.get('/perfiles', authMiddleware, async (req, res) => {
         }
 
         const joinClause = `FROM formularios f INNER JOIN "HistoriaClinica" h ON f.wix_id = h."_id"`;
-        const baseFilter = `WHERE h."fechaConsulta" < NOW() AND (f.empresa IS NULL OR f.empresa != 'SIIGO')`;
+        const baseFilter = `WHERE h."fechaConsulta" < NOW() AND f.cod_empresa IN ('PARTICULAR', 'SANITHELP-JJ')`;
 
         // Obtener solo el total de miembros primero (rápido)
         const totalQuery = await pool.query(`SELECT COUNT(*) as total ${joinClause} ${baseFilter}${dateFilter}`, dateParams);
@@ -366,7 +366,7 @@ router.get('/perfiles/:id/miembros', authMiddleware, async (req, res) => {
         }
 
         const joinClause = `FROM formularios f INNER JOIN "HistoriaClinica" h ON f.wix_id = h."_id"`;
-        const baseFilter = `WHERE h."fechaConsulta" < NOW() AND (f.empresa IS NULL OR f.empresa != 'SIIGO') AND f.primer_nombre IS NOT NULL AND f.primer_nombre != '' AND f.numero_id IS NOT NULL AND f.numero_id != ''`;
+        const baseFilter = `WHERE h."fechaConsulta" < NOW() AND f.cod_empresa IN ('PARTICULAR', 'SANITHELP-JJ') AND f.primer_nombre IS NOT NULL AND f.primer_nombre != '' AND f.numero_id IS NOT NULL AND f.numero_id != ''`;
         const limitParamIndex = dateParams.length + 1;
         const offsetParamIndex = dateParams.length + 2;
 
