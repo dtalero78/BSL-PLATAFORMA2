@@ -3210,9 +3210,15 @@
                 if (selectCC) {
                     selectCC.addEventListener('change', function() {
                         const valor = this.value.toUpperCase();
-                        const esPresencial = valor.includes('IBERIA') || valor.includes('HARLEY');
-                        if (esPresencial) {
-                            // Mostrar presencial, ocultar virtual
+                        const esIberia = valor.includes('IBERIA');
+                        const esHarley = valor.includes('HARLEY');
+                        if (esIberia) {
+                            // Iberia: ambas opciones, presencial por defecto
+                            if (btnPresencial) btnPresencial.style.display = '';
+                            if (btnVirtual) btnVirtual.style.display = '';
+                            cambiarModalidadOrden('presencial');
+                        } else if (esHarley) {
+                            // Harley: solo presencial
                             if (btnPresencial) btnPresencial.style.display = '';
                             if (btnVirtual) btnVirtual.style.display = 'none';
                             cambiarModalidadOrden('presencial');
