@@ -3209,8 +3209,9 @@
                 const selectCC = document.getElementById('modalCentroCosto');
                 if (selectCC) {
                     selectCC.addEventListener('change', function() {
-                        const esIberia = this.value.toUpperCase().includes('IBERIA');
-                        if (esIberia) {
+                        const valor = this.value.toUpperCase();
+                        const esPresencial = valor.includes('IBERIA') || valor.includes('HARLEY');
+                        if (esPresencial) {
                             // Mostrar presencial, ocultar virtual
                             if (btnPresencial) btnPresencial.style.display = '';
                             if (btnVirtual) btnVirtual.style.display = 'none';
