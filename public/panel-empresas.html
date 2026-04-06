@@ -3192,44 +3192,12 @@
                 }
             }
 
-            // SITEL - Por defecto solo virtual, excepto centro de costo Iberia (presencial)
+            // SITEL - Solo presencial, ocultar opción virtual
             if (codEmpresa === 'SITEL') {
-                // Estado inicial: solo virtual
-                const btnPresencial = document.querySelector('.modalidad-tab[data-modalidad="presencial"]');
                 const btnVirtual = document.getElementById('btnModalidadVirtual');
-                if (btnPresencial) btnPresencial.style.display = 'none';
-                if (btnVirtual) { btnVirtual.classList.add('active'); cambiarModalidadOrden('virtual'); }
-
-                const btnPresencialExp = document.querySelector('.modalidad-tab-expirado[data-modalidad="presencial"]');
+                if (btnVirtual) btnVirtual.style.display = 'none';
                 const btnVirtualExp = document.getElementById('btnModalidadVirtualExpirado');
-                if (btnPresencialExp) btnPresencialExp.style.display = 'none';
-                if (btnVirtualExp) { btnVirtualExp.classList.add('active'); btnVirtualExp.style.background = '#10B981'; btnVirtualExp.style.color = 'white'; btnVirtualExp.style.borderColor = '#10B981'; cambiarModalidadExpirado('virtual'); }
-
-                // Listener: cambiar modalidad según centro de costo
-                const selectCC = document.getElementById('modalCentroCosto');
-                if (selectCC) {
-                    selectCC.addEventListener('change', function() {
-                        const valor = this.value.toUpperCase();
-                        const esIberia = valor.includes('IBERIA');
-                        const esHarley = valor.includes('HARLEY');
-                        if (esIberia) {
-                            // Iberia: ambas opciones, presencial por defecto
-                            if (btnPresencial) btnPresencial.style.display = '';
-                            if (btnVirtual) btnVirtual.style.display = '';
-                            cambiarModalidadOrden('presencial');
-                        } else if (esHarley) {
-                            // Harley: solo presencial
-                            if (btnPresencial) btnPresencial.style.display = '';
-                            if (btnVirtual) btnVirtual.style.display = 'none';
-                            cambiarModalidadOrden('presencial');
-                        } else {
-                            // Mostrar virtual, ocultar presencial
-                            if (btnPresencial) btnPresencial.style.display = 'none';
-                            if (btnVirtual) { btnVirtual.style.display = ''; btnVirtual.classList.add('active'); }
-                            cambiarModalidadOrden('virtual');
-                        }
-                    });
-                }
+                if (btnVirtualExp) btnVirtualExp.style.display = 'none';
             }
 
             // APROBADOR - Mostrar botón "Sin Aprobar" solo para usuarios con permiso APROBADOR
