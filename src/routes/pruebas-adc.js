@@ -47,8 +47,8 @@ router.get('/estadisticas/:codEmpresa', async (req, res) => {
 
         let query = `
             SELECT
-                ansiedad_interpretacion,
-                depresion_interpretacion,
+                CASE WHEN ansiedad_interpretacion LIKE '%No Apto%' THEN 'No Apto' ELSE 'Apto' END as ansiedad_concepto,
+                CASE WHEN depresion_interpretacion LIKE '%No Apto%' THEN 'No Apto' ELSE 'Apto' END as depresion_concepto,
                 COUNT(*) as total
             FROM "pruebasADC"
             WHERE cod_empresa = $1
@@ -66,7 +66,7 @@ router.get('/estadisticas/:codEmpresa', async (req, res) => {
             query += ` AND created_at < ($${params.length}::date + interval '1 day')`;
         }
 
-        query += ` GROUP BY ansiedad_interpretacion, depresion_interpretacion`;
+        query += ` GROUP BY ansiedad_concepto, depresion_concepto`;
 
         const result = await pool.query(query, params);
 
@@ -77,8 +77,8 @@ router.get('/estadisticas/:codEmpresa', async (req, res) => {
         result.rows.forEach(row => {
             const count = parseInt(row.total);
             totalPruebas += count;
-            ansiedad[row.ansiedad_interpretacion] = (ansiedad[row.ansiedad_interpretacion] || 0) + count;
-            depresion[row.depresion_interpretacion] = (depresion[row.depresion_interpretacion] || 0) + count;
+            ansiedad[row.ansiedad_concepto] = (ansiedad[row.ansiedad_concepto] || 0) + count;
+            depresion[row.depresion_concepto] = (depresion[row.depresion_concepto] || 0) + count;
         });
 
         res.json({ success: true, totalPruebas, ansiedad, depresion });

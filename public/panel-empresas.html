@@ -4397,8 +4397,8 @@
                     const total = Object.values(datos).reduce((a, b) => a + b, 0);
                     el.innerHTML = Object.entries(datos).map(([label, count]) => {
                         const pct = Math.round((count / total) * 100);
-                        const shortLabel = label.replace('. Apto', '').replace('. No Apto', '');
-                        const isAlert = label.toLowerCase().includes('alto') || label.toLowerCase().includes('no apto');
+                        const shortLabel = label;
+                        const isAlert = label === 'No Apto';
                         return `
                             <div>
                                 <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px;">
