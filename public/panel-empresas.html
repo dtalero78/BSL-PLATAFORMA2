@@ -3350,10 +3350,12 @@
             document.getElementById('fechaDesde').addEventListener('change', (e) => {
                 fechaDesde = e.target.value;
                 aplicarFiltros();
+                cargarEstadisticasADC();
             });
             document.getElementById('fechaHasta').addEventListener('change', (e) => {
                 fechaHasta = e.target.value;
                 aplicarFiltros();
+                cargarEstadisticasADC();
             });
         });
 
@@ -3363,6 +3365,7 @@
             document.getElementById('fechaDesde').value = '';
             document.getElementById('fechaHasta').value = '';
             aplicarFiltros();
+            cargarEstadisticasADC();
         }
 
         // Función para mostrar el panel (después de verificar autenticación)
@@ -4376,7 +4379,12 @@
         // ========== ESTADÍSTICAS ADC (APROBADOR) ==========
         async function cargarEstadisticasADC() {
             try {
-                const response = await Auth.fetchAuth(`/api/pruebas-adc/estadisticas/${encodeURIComponent(codEmpresa)}`);
+                let url = `/api/pruebas-adc/estadisticas/${encodeURIComponent(codEmpresa)}`;
+                const params = new URLSearchParams();
+                if (fechaDesde) params.set('desde', fechaDesde);
+                if (fechaHasta) params.set('hasta', fechaHasta);
+                if (params.toString()) url += '?' + params.toString();
+                const response = await Auth.fetchAuth(url);
                 if (!response) return;
                 const data = await response.json();
                 if (!data.success || data.totalPruebas === 0) return;

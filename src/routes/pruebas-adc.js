@@ -43,7 +43,9 @@ async function guardarResultadosCalculados(registro) {
 router.get('/estadisticas/:codEmpresa', async (req, res) => {
     try {
         const { codEmpresa } = req.params;
-        const result = await pool.query(`
+        const { desde, hasta } = req.query;
+
+        let query = `
             SELECT
                 ansiedad_interpretacion,
                 depresion_interpretacion,
@@ -52,8 +54,21 @@ router.get('/estadisticas/:codEmpresa', async (req, res) => {
             WHERE cod_empresa = $1
               AND ansiedad_interpretacion IS NOT NULL
               AND depresion_interpretacion IS NOT NULL
-            GROUP BY ansiedad_interpretacion, depresion_interpretacion
-        `, [codEmpresa]);
+        `;
+        const params = [codEmpresa];
+
+        if (desde) {
+            params.push(desde);
+            query += ` AND created_at >= $${params.length}::date`;
+        }
+        if (hasta) {
+            params.push(hasta);
+            query += ` AND created_at < ($${params.length}::date + interval '1 day')`;
+        }
+
+        query += ` GROUP BY ansiedad_interpretacion, depresion_interpretacion`;
+
+        const result = await pool.query(query, params);
 
         const ansiedad = {};
         const depresion = {};
