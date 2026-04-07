@@ -2,6 +2,42 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 const { syncADCToWix } = require('../services/wix-sync');
+const { calcularAnsiedad } = require('../../calcular-ansiedad');
+const { calcularDepresion } = require('../../calcular-depresion');
+const { calcularCongruencia } = require('../../calcular-congruencia');
+
+/**
+ * Calcula y guarda los resultados de las pruebas psicológicas en la tabla pruebasADC
+ */
+async function guardarResultadosCalculados(registro) {
+    const codEmpresa = registro.cod_empresa || '';
+    const ansiedad = calcularAnsiedad(registro, codEmpresa);
+    const depresion = calcularDepresion(registro, codEmpresa);
+    const congruencia = calcularCongruencia(registro);
+
+    await pool.query(`
+        UPDATE "pruebasADC" SET
+            ansiedad_puntaje = $1,
+            ansiedad_interpretacion = $2,
+            depresion_puntaje = $3,
+            depresion_interpretacion = $4,
+            congruencia_familia = $5,
+            congruencia_relacion = $6,
+            congruencia_autocuidado = $7,
+            congruencia_ocupacional = $8
+        WHERE orden_id = $9
+    `, [
+        ansiedad.valor, ansiedad.interpretacion,
+        depresion.valor, depresion.interpretacion,
+        congruencia.CongruenciaFamilia,
+        congruencia.CongruenciaRelacion,
+        congruencia.CongruenciaAutocuidado,
+        congruencia.CongruenciaOcupacional,
+        registro.orden_id
+    ]);
+
+    return { ansiedad, depresion, congruencia };
+}
 
 // Obtener prueba ADC por orden_id
 router.get('/:ordenId', async (req, res) => {
@@ -107,6 +143,9 @@ router.post('/', async (req, res) => {
             const result = await pool.query(updateQuery, values);
             console.log('✅ Prueba ADC actualizada para orden:', datos.orden_id);
 
+            // Calcular y guardar resultados
+            await guardarResultadosCalculados(result.rows[0]);
+
             // Sincronizar con Wix
             await syncADCToWix(datos, 'UPDATE');
 
@@ -134,6 +173,9 @@ router.post('/', async (req, res) => {
 
             const result = await pool.query(insertQuery, values);
             console.log('✅ Prueba ADC creada para orden:', datos.orden_id);
+
+            // Calcular y guardar resultados
+            await guardarResultadosCalculados(result.rows[0]);
 
             // Sincronizar con Wix
             await syncADCToWix(datos, 'INSERT');

@@ -31,13 +31,27 @@ router.get('/pruebas-psicologicas/:numeroId', async (req, res) => {
         const registro = result.rows[0];
         const codEmpresa = registro.cod_empresa || '';
 
-        const { calcularAnsiedad } = require('../../calcular-ansiedad');
-        const { calcularDepresion } = require('../../calcular-depresion');
-        const { calcularCongruencia } = require('../../calcular-congruencia');
+        let ansiedad, depresion, congruencia;
 
-        const ansiedad = calcularAnsiedad(registro, codEmpresa);
-        const depresion = calcularDepresion(registro, codEmpresa);
-        const congruencia = calcularCongruencia(registro);
+        // Usar resultados almacenados si existen, sino calcular al vuelo (registros antiguos)
+        if (registro.ansiedad_puntaje != null) {
+            ansiedad = { valor: registro.ansiedad_puntaje, interpretacion: registro.ansiedad_interpretacion };
+            depresion = { valor: registro.depresion_puntaje, interpretacion: registro.depresion_interpretacion };
+            congruencia = {
+                CongruenciaFamilia: registro.congruencia_familia,
+                CongruenciaRelacion: registro.congruencia_relacion,
+                CongruenciaAutocuidado: registro.congruencia_autocuidado,
+                CongruenciaOcupacional: registro.congruencia_ocupacional
+            };
+        } else {
+            const { calcularAnsiedad } = require('../../calcular-ansiedad');
+            const { calcularDepresion } = require('../../calcular-depresion');
+            const { calcularCongruencia } = require('../../calcular-congruencia');
+
+            ansiedad = calcularAnsiedad(registro, codEmpresa);
+            depresion = calcularDepresion(registro, codEmpresa);
+            congruencia = calcularCongruencia(registro);
+        }
 
         res.json({
             success: true,

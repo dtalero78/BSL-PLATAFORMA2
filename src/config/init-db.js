@@ -538,11 +538,39 @@ const initDB = async () => {
                 corc18 VARCHAR(50),
                 coav25 VARCHAR(50),
 
+                -- Resultados calculados
+                ansiedad_puntaje INTEGER,
+                ansiedad_interpretacion VARCHAR(100),
+                depresion_puntaje INTEGER,
+                depresion_interpretacion VARCHAR(100),
+                congruencia_familia VARCHAR(50),
+                congruencia_relacion VARCHAR(50),
+                congruencia_autocuidado VARCHAR(50),
+                congruencia_ocupacional VARCHAR(50),
+
                 -- Metadatos
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+
+        // Agregar columnas de resultados calculados si no existen (migración)
+        const columnasResultados = [
+            { nombre: 'ansiedad_puntaje', tipo: 'INTEGER' },
+            { nombre: 'ansiedad_interpretacion', tipo: 'VARCHAR(100)' },
+            { nombre: 'depresion_puntaje', tipo: 'INTEGER' },
+            { nombre: 'depresion_interpretacion', tipo: 'VARCHAR(100)' },
+            { nombre: 'congruencia_familia', tipo: 'VARCHAR(50)' },
+            { nombre: 'congruencia_relacion', tipo: 'VARCHAR(50)' },
+            { nombre: 'congruencia_autocuidado', tipo: 'VARCHAR(50)' },
+            { nombre: 'congruencia_ocupacional', tipo: 'VARCHAR(50)' }
+        ];
+
+        for (const col of columnasResultados) {
+            await pool.query(`
+                ALTER TABLE "pruebasADC" ADD COLUMN IF NOT EXISTS ${col.nombre} ${col.tipo}
+            `);
+        }
 
         // Crear tabla scl90 si no existe
         await pool.query(`
