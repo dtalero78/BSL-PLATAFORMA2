@@ -36,7 +36,8 @@ router.get('/buscar', async (req, res) => {
                 "linkEnviado",
                 "atendido",
                 "_createdDate",
-                "codEmpresa"
+                "codEmpresa",
+                "tipoExamen"
             FROM "HistoriaClinica"
             WHERE "numeroId" = $1 OR "celular" LIKE $2
             ORDER BY "_createdDate" DESC
@@ -82,7 +83,8 @@ router.get('/registros', async (req, res) => {
                     "ciudad",
                     "fechaAtencion",
                     "linkEnviado",
-                    "_createdDate"
+                    "_createdDate",
+                    "tipoExamen"
                 FROM "HistoriaClinica"
                 WHERE "codEmpresa" = $1
                 AND ("linkEnviado" IS NULL OR "linkEnviado" = '')
@@ -103,7 +105,8 @@ router.get('/registros', async (req, res) => {
                     "ciudad",
                     "fechaAtencion",
                     "linkEnviado",
-                    "_createdDate"
+                    "_createdDate",
+                    "tipoExamen"
                 FROM "HistoriaClinica"
                 WHERE "codEmpresa" = $1
                 AND "linkEnviado" IS NOT NULL
@@ -129,7 +132,8 @@ router.get('/registros', async (req, res) => {
                     "fechaConsulta",
                     "linkEnviado",
                     "atendido",
-                    "_createdDate"
+                    "_createdDate",
+                    "tipoExamen"
                 FROM "HistoriaClinica"
                 WHERE "codEmpresa" = $1
                 AND ("linkEnviado" = 'ENVIADO' OR "linkEnviado" = 'ENVIADO_WHAPI')
@@ -166,7 +170,8 @@ router.get('/registros', async (req, res) => {
                     "ciudad",
                     "fechaAtencion",
                     "linkEnviado",
-                    "_createdDate"
+                    "_createdDate",
+                    "tipoExamen"
                 FROM "HistoriaClinica"
                 WHERE "codEmpresa" = $1
                 AND "linkEnviado" = 'ENVIADO'

@@ -706,6 +706,7 @@
                                 <input type="checkbox" class="row-checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" title="Seleccionar todos">
                             </th>
                             <th>Datos</th>
+                            <th>Tipo Examen</th>
                             <th>Ciudad</th>
                             <th>Fecha Creación</th>
                             <th>Fecha Atención</th>
@@ -736,6 +737,7 @@
                                         <input type="checkbox" class="row-checkbox" id="checkbox-${index}" onchange="toggleSeleccion(${index})">
                                     </td>
                                     <td>${datos}</td>
+                                    <td>${reg.tipoExamen || '-'}</td>
                                     <td>${reg.ciudad || '-'}</td>
                                     <td>${diaCreacion}/${mesCreacion}</td>
                                     <td>${fechaAtencionStr || '-'}</td>
