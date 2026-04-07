@@ -2370,6 +2370,23 @@
                     </div>
                 </div>
 
+                <!-- Stats ADC para APROBADOR -->
+                <div id="statsAdcContainer" style="display: none; margin-bottom: 20px;">
+                    <h3 style="font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">Estadísticas Pruebas ADC</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <!-- Ansiedad -->
+                        <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
+                            <div style="font-weight: 600; color: #0369A1; margin-bottom: 12px; font-size: 14px;">Ansiedad</div>
+                            <div id="statsAnsiedadContent" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                        </div>
+                        <!-- Depresión -->
+                        <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
+                            <div style="font-weight: 600; color: #7C3AED; margin-bottom: 12px; font-size: 14px;">Depresión</div>
+                            <div id="statsDepresionContent" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Filters Bar -->
                 <div class="filters-bar">
                     <div class="tabs">
@@ -3420,6 +3437,11 @@
                     }
                     document.getElementById('statTotalOrdenes').textContent = totalOrdenes;
 
+                    // Cargar estadísticas ADC para APROBADOR
+                    if (tienePermiso('APROBADOR')) {
+                        cargarEstadisticasADC();
+                    }
+
                     // Si hay más datos, cargarlos en segundo plano
                     if (totalOrdenes > LIMIT_POR_PAGINA) {
                         // Mostrar indicador de carga
@@ -4348,6 +4370,45 @@
             // Cargar pruebas psicológicas para APROBADOR
             if (tienePermiso('APROBADOR') && paciente.numeroId) {
                 cargarPruebasPsicologicas(paciente.numeroId);
+            }
+        }
+
+        // ========== ESTADÍSTICAS ADC (APROBADOR) ==========
+        async function cargarEstadisticasADC() {
+            try {
+                const response = await Auth.fetchAuth(`/api/pruebas-adc/estadisticas/${encodeURIComponent(codEmpresa)}`);
+                if (!response) return;
+                const data = await response.json();
+                if (!data.success || data.totalPruebas === 0) return;
+
+                const container = document.getElementById('statsAdcContainer');
+                container.style.display = 'block';
+
+                const renderBarras = (datos, containerId, color) => {
+                    const el = document.getElementById(containerId);
+                    const total = Object.values(datos).reduce((a, b) => a + b, 0);
+                    el.innerHTML = Object.entries(datos).map(([label, count]) => {
+                        const pct = Math.round((count / total) * 100);
+                        const shortLabel = label.replace('. Apto', '').replace('. No Apto', '');
+                        const isAlert = label.toLowerCase().includes('alto') || label.toLowerCase().includes('no apto');
+                        return `
+                            <div>
+                                <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px;">
+                                    <span style="color: ${isAlert ? '#DC2626' : 'var(--text-secondary)'};  font-weight: ${isAlert ? '600' : '400'};">${shortLabel}</span>
+                                    <span style="font-weight: 600; color: ${isAlert ? '#DC2626' : 'var(--text-primary)'};">${count} (${pct}%)</span>
+                                </div>
+                                <div style="height: 8px; background: #E5E7EB; border-radius: 4px; overflow: hidden;">
+                                    <div style="height: 100%; width: ${pct}%; background: ${isAlert ? '#DC2626' : color}; border-radius: 4px;"></div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                };
+
+                renderBarras(data.ansiedad, 'statsAnsiedadContent', '#0EA5E9');
+                renderBarras(data.depresion, 'statsDepresionContent', '#8B5CF6');
+            } catch (error) {
+                console.error('Error cargando estadísticas ADC:', error);
             }
         }
 

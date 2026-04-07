@@ -39,6 +39,40 @@ async function guardarResultadosCalculados(registro) {
     return { ansiedad, depresion, congruencia };
 }
 
+// Estadísticas de ansiedad y depresión por empresa
+router.get('/estadisticas/:codEmpresa', async (req, res) => {
+    try {
+        const { codEmpresa } = req.params;
+        const result = await pool.query(`
+            SELECT
+                ansiedad_interpretacion,
+                depresion_interpretacion,
+                COUNT(*) as total
+            FROM "pruebasADC"
+            WHERE cod_empresa = $1
+              AND ansiedad_interpretacion IS NOT NULL
+              AND depresion_interpretacion IS NOT NULL
+            GROUP BY ansiedad_interpretacion, depresion_interpretacion
+        `, [codEmpresa]);
+
+        const ansiedad = {};
+        const depresion = {};
+        let totalPruebas = 0;
+
+        result.rows.forEach(row => {
+            const count = parseInt(row.total);
+            totalPruebas += count;
+            ansiedad[row.ansiedad_interpretacion] = (ansiedad[row.ansiedad_interpretacion] || 0) + count;
+            depresion[row.depresion_interpretacion] = (depresion[row.depresion_interpretacion] || 0) + count;
+        });
+
+        res.json({ success: true, totalPruebas, ansiedad, depresion });
+    } catch (error) {
+        console.error('Error estadísticas ADC:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Obtener prueba ADC por orden_id
 router.get('/:ordenId', async (req, res) => {
     try {
