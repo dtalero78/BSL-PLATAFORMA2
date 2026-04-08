@@ -1549,7 +1549,11 @@
             const frameSize = 1024;
             let totalEnergy = 0;
             let voicedFrames = 0;
-            const maxAmp = Math.max(...Array.from(samples).map(Math.abs));
+            let maxAmp = 0;
+            for (let i = 0; i < samples.length; i++) {
+                const abs = Math.abs(samples[i]);
+                if (abs > maxAmp) maxAmp = abs;
+            }
             const threshold = maxAmp * 0.05;
 
             for (let start = 0; start + frameSize < samples.length; start += frameSize) {
