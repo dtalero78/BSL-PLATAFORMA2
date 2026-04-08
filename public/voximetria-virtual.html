@@ -1285,12 +1285,12 @@
             // Apply bandpass filter to sustained vowel for better F0 detection
             const filteredSamples = bandpassFilter(test1.samples, test1.sampleRate);
 
-            // Use filtered test1 (sustained vowel) for F0, jitter, shimmer, HNR
+            // Use filtered signal for ALL acoustic measures (removes noise)
             const f0Data = extractF0(filteredSamples, test1.sampleRate);
             const tmf = calculateTMF(test1.samples, test1.sampleRate); // TMF uses unfiltered
             const jitter = calculateJitter(f0Data.periods);
-            const shimmer = calculateShimmer(test1.samples, f0Data.periods, test1.sampleRate); // Shimmer uses unfiltered amplitudes
-            const hnr = calculateHNR(test1.samples, test1.sampleRate, f0Data.f0Mean);
+            const shimmer = calculateShimmer(filteredSamples, f0Data.periods, test1.sampleRate);
+            const hnr = calculateHNR(filteredSamples, test1.sampleRate, f0Data.f0Mean);
 
             // Use test2 (reading) for intensity - only voiced segments
             const intensity = calculateIntensity(test2.samples);
@@ -1441,13 +1441,22 @@
 
         // Calculate Shimmer (amplitude variation between cycles)
         function calculateShimmer(samples, periods, sampleRate) {
-            if (periods.length < 3) return 0;
+            if (periods.length < 5) return 0;
 
-            // Get RMS amplitude per cycle (more stable than peak)
+            // Use only the middle portion of periods (skip first/last 10%)
+            const startIdx = Math.floor(periods.length * 0.1);
+            const endIdx = Math.floor(periods.length * 0.9);
+            const stablePeriods = periods.slice(startIdx, endIdx);
+
+            // Get RMS amplitude per cycle
             const amplitudes = [];
+            // Start position based on skipped periods
             let pos = 0;
+            for (let i = 0; i < startIdx; i++) {
+                pos += Math.round(periods[i] * sampleRate);
+            }
 
-            for (const period of periods) {
+            for (const period of stablePeriods) {
                 const cycleLength = Math.round(period * sampleRate);
                 if (pos + cycleLength > samples.length) break;
 
@@ -1459,18 +1468,24 @@
                 pos += cycleLength;
             }
 
-            if (amplitudes.length < 3) return 0;
+            if (amplitudes.length < 5) return 0;
+
+            // Apply 3-point moving average to smooth amplitudes
+            const smoothed = [];
+            for (let i = 1; i < amplitudes.length - 1; i++) {
+                smoothed.push((amplitudes[i - 1] + amplitudes[i] + amplitudes[i + 1]) / 3);
+            }
 
             let sumDiff = 0;
             let sumAmp = 0;
 
-            for (let i = 1; i < amplitudes.length; i++) {
-                sumDiff += Math.abs(amplitudes[i] - amplitudes[i - 1]);
-                sumAmp += amplitudes[i];
+            for (let i = 1; i < smoothed.length; i++) {
+                sumDiff += Math.abs(smoothed[i] - smoothed[i - 1]);
+                sumAmp += smoothed[i];
             }
 
-            const meanDiff = sumDiff / (amplitudes.length - 1);
-            const meanAmp = sumAmp / amplitudes.length;
+            const meanDiff = sumDiff / (smoothed.length - 1);
+            const meanAmp = sumAmp / smoothed.length;
 
             return (meanDiff / (meanAmp + 1e-10)) * 100;
         }
@@ -1480,34 +1495,58 @@
             if (f0Mean <= 0) return 0;
 
             const periodSamples = Math.round(sampleRate / f0Mean);
-            const frameSize = periodSamples * 6; // Use 6 periods for stability
+            const frameSize = periodSamples * 8; // Use 8 periods for stability
+            const hopSize = periodSamples * 2;   // Overlap between frames
 
             if (frameSize > samples.length) return 0;
 
-            // Average HNR across multiple frames from the middle portion
+            // Only use the middle 50% of the recording (most stable part)
             const midStart = Math.floor(samples.length * 0.25);
             const midEnd = Math.floor(samples.length * 0.75);
             const hnrValues = [];
 
-            for (let start = midStart; start + frameSize < midEnd; start += frameSize) {
+            for (let start = midStart; start + frameSize < midEnd; start += hopSize) {
                 const frame = samples.slice(start, start + frameSize);
 
-                let corr = 0;
-                let energy = 0;
+                // Check frame has enough energy
+                let frameEnergy = 0;
+                for (let i = 0; i < frame.length; i++) frameEnergy += frame[i] * frame[i];
+                if (frameEnergy / frame.length < 0.00005) continue;
 
-                for (let i = 0; i < frame.length - periodSamples; i++) {
-                    corr += frame[i] * frame[i + periodSamples];
-                    energy += frame[i] * frame[i];
+                // Find best autocorrelation near the expected period
+                // Search around the expected lag for the best match
+                const searchMin = Math.max(1, periodSamples - 5);
+                const searchMax = Math.min(frame.length - 1, periodSamples + 5);
+                let bestR = -1;
+
+                for (let lag = searchMin; lag <= searchMax; lag++) {
+                    let corr = 0;
+                    let e1 = 0;
+                    let e2 = 0;
+
+                    for (let i = 0; i < frame.length - lag; i++) {
+                        corr += frame[i] * frame[i + lag];
+                        e1 += frame[i] * frame[i];
+                        e2 += frame[i + lag] * frame[i + lag];
+                    }
+
+                    const r = corr / (Math.sqrt(e1 * e2) + 1e-10);
+                    if (r > bestR) bestR = r;
                 }
 
-                const r = corr / (energy + 1e-10);
-                if (r > 0.01 && r < 0.99) {
-                    hnrValues.push(10 * Math.log10(r / (1 - r)));
+                // Clamp to valid range and convert to dB
+                if (bestR > 0.1 && bestR < 0.9999) {
+                    hnrValues.push(10 * Math.log10(bestR / (1 - bestR)));
+                } else if (bestR >= 0.9999) {
+                    hnrValues.push(40); // Cap at 40 dB (very clean signal)
                 }
             }
 
-            if (hnrValues.length === 0) return 0;
-            return hnrValues.reduce((a, b) => a + b, 0) / hnrValues.length;
+            if (hnrValues.length === 0) return 10; // Default reasonable value
+
+            // Use median instead of mean (more robust to outliers)
+            hnrValues.sort((a, b) => a - b);
+            return hnrValues[Math.floor(hnrValues.length / 2)];
         }
 
         // Calculate TMF using adaptive threshold
