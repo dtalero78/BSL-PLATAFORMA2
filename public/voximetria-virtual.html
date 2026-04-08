@@ -837,6 +837,8 @@
         let animationFrame = null;
         let scriptProcessor = null;
         let recordedChunks = [];
+        let currentTestNum = null;
+        let autoStopTimeout = null;
 
         // Mic check state
         let micCheckStream = null;
@@ -1067,22 +1069,31 @@
         // GRABACION DE AUDIO
         // ==========================================
         async function toggleRecording(testNum, maxSeconds) {
-            if (isRecording) {
+            // If already recording this test, stop it
+            if (isRecording && currentTestNum === testNum) {
                 stopRecording(testNum);
                 return;
             }
+
+            // If recording another test somehow, stop it first
+            if (isRecording) {
+                stopRecording(currentTestNum);
+            }
+
+            // Disable button while requesting mic permission
+            const micBtn = document.getElementById(`mic${testNum}Btn`);
+            micBtn.disabled = true;
 
             try {
                 mediaStream = await navigator.mediaDevices.getUserMedia({
                     audio: {
                         echoCancellation: false,
                         noiseSuppression: false,
-                        autoGainControl: false,
-                        sampleRate: 44100
+                        autoGainControl: false
                     }
                 });
 
-                audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 const source = audioContext.createMediaStreamSource(mediaStream);
 
                 analyserNode = audioContext.createAnalyser();
@@ -1095,6 +1106,7 @@
                 recordedChunks = [];
 
                 scriptProcessor.onaudioprocess = (e) => {
+                    if (!isRecording) return;
                     const inputData = e.inputBuffer.getChannelData(0);
                     recordedChunks.push(new Float32Array(inputData));
                 };
@@ -1103,12 +1115,13 @@
                 scriptProcessor.connect(audioContext.destination);
 
                 isRecording = true;
+                currentTestNum = testNum;
                 recordingStartTime = Date.now();
 
-                const micBtn = document.getElementById(`mic${testNum}Btn`);
-                const micLabel = document.getElementById(`mic${testNum}Label`);
+                micBtn.disabled = false;
                 micBtn.classList.add('recording');
                 micBtn.textContent = '⏹';
+                const micLabel = document.getElementById(`mic${testNum}Label`);
                 micLabel.textContent = 'Grabando... toque para detener';
 
                 // Start timer
@@ -1118,22 +1131,36 @@
                 // Start waveform
                 animateWaveform(testNum);
 
-                // Auto-stop
-                setTimeout(() => {
-                    if (isRecording) stopRecording(testNum);
+                // Auto-stop with clearable timeout
+                if (autoStopTimeout) clearTimeout(autoStopTimeout);
+                autoStopTimeout = setTimeout(() => {
+                    if (isRecording && currentTestNum === testNum) {
+                        stopRecording(testNum);
+                    }
                 }, maxSeconds * 1000);
 
             } catch (err) {
+                micBtn.disabled = false;
                 console.error('Error accediendo al microfono:', err);
                 showError('No se pudo acceder al microfono. Por favor, permita el acceso y recargue la pagina.');
             }
         }
 
         function stopRecording(testNum) {
+            if (!isRecording) return;
             isRecording = false;
+            currentTestNum = null;
+
+            // Clear auto-stop
+            if (autoStopTimeout) {
+                clearTimeout(autoStopTimeout);
+                autoStopTimeout = null;
+            }
 
             clearInterval(timerInterval);
+            timerInterval = null;
             cancelAnimationFrame(animationFrame);
+            animationFrame = null;
 
             if (scriptProcessor) {
                 scriptProcessor.disconnect();
@@ -1148,14 +1175,17 @@
                 mergedSamples.set(chunk, offset);
                 offset += chunk.length;
             }
+            recordedChunks = [];
+
+            const sampleRate = audioContext ? audioContext.sampleRate : 44100;
 
             recordings[`test${testNum}`] = {
                 samples: mergedSamples,
-                sampleRate: audioContext.sampleRate,
+                sampleRate: sampleRate,
                 duration: (Date.now() - recordingStartTime) / 1000
             };
 
-            // Cleanup
+            // Cleanup audio resources
             if (mediaStream) {
                 mediaStream.getTracks().forEach(t => t.stop());
                 mediaStream = null;
@@ -1164,6 +1194,7 @@
                 audioContext.close();
                 audioContext = null;
             }
+            analyserNode = null;
 
             const micBtn = document.getElementById(`mic${testNum}Btn`);
             const micLabel = document.getElementById(`mic${testNum}Label`);
@@ -1206,6 +1237,38 @@
         // DSP: ANALISIS DE VOZ
         // ==========================================
 
+        // Simple bandpass filter (keeps 70-400 Hz for voice fundamentals)
+        function bandpassFilter(samples, sampleRate) {
+            const lowCut = 70;
+            const highCut = 400;
+            const output = new Float32Array(samples.length);
+
+            // Simple 2nd-order IIR bandpass (Butterworth approximation)
+            const lowW = 2 * Math.PI * lowCut / sampleRate;
+            const highW = 2 * Math.PI * highCut / sampleRate;
+            const bw = highW - lowW;
+            const centerW = (highW + lowW) / 2;
+
+            const R = 1 - 3 * bw;
+            const K = (1 - 2 * R * Math.cos(centerW) + R * R) / (2 - 2 * Math.cos(centerW));
+
+            const a0 = 1 - K;
+            const a1 = 2 * (K - R) * Math.cos(centerW);
+            const a2 = R * R - K;
+            const b1 = 2 * R * Math.cos(centerW);
+            const b2 = -(R * R);
+
+            let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+            for (let i = 0; i < samples.length; i++) {
+                const x = samples[i];
+                output[i] = a0 * x + a1 * x1 + a2 * x2 + b1 * y1 + b2 * y2;
+                x2 = x1; x1 = x;
+                y2 = y1; y1 = output[i];
+            }
+
+            return output;
+        }
+
         function analyzeVoice() {
             const test1 = recordings.test1;
             const test2 = recordings.test2;
@@ -1219,14 +1282,17 @@
                 };
             }
 
-            // Use test1 (sustained vowel) for F0, jitter, shimmer, HNR, TMF
-            const f0Data = extractF0(test1.samples, test1.sampleRate);
-            const tmf = calculateTMF(test1.samples, test1.sampleRate);
+            // Apply bandpass filter to sustained vowel for better F0 detection
+            const filteredSamples = bandpassFilter(test1.samples, test1.sampleRate);
+
+            // Use filtered test1 (sustained vowel) for F0, jitter, shimmer, HNR
+            const f0Data = extractF0(filteredSamples, test1.sampleRate);
+            const tmf = calculateTMF(test1.samples, test1.sampleRate); // TMF uses unfiltered
             const jitter = calculateJitter(f0Data.periods);
-            const shimmer = calculateShimmer(test1.samples, f0Data.periods, test1.sampleRate);
+            const shimmer = calculateShimmer(test1.samples, f0Data.periods, test1.sampleRate); // Shimmer uses unfiltered amplitudes
             const hnr = calculateHNR(test1.samples, test1.sampleRate, f0Data.f0Mean);
 
-            // Use test2 (reading) for intensity
+            // Use test2 (reading) for intensity - only voiced segments
             const intensity = calculateIntensity(test2.samples);
 
             return {
@@ -1241,12 +1307,12 @@
             };
         }
 
-        // Extract F0 using autocorrelation
+        // Extract F0 using autocorrelation with parabolic interpolation
         function extractF0(samples, sampleRate) {
-            const frameSize = Math.round(sampleRate * 0.03); // 30ms frames
-            const hopSize = Math.round(sampleRate * 0.015);  // 15ms hop
-            const minF0 = 75;
-            const maxF0 = 500;
+            const frameSize = Math.round(sampleRate * 0.04); // 40ms frames (longer = more stable)
+            const hopSize = Math.round(sampleRate * 0.01);   // 10ms hop (more overlap)
+            const minF0 = 70;
+            const maxF0 = 350; // Tighter upper bound to avoid harmonics
             const minLag = Math.round(sampleRate / maxF0);
             const maxLag = Math.round(sampleRate / minF0);
 
@@ -1261,24 +1327,40 @@
                 for (let i = 0; i < frame.length; i++) energy += frame[i] * frame[i];
                 energy /= frame.length;
 
-                if (energy < 0.0001) continue; // Skip silent frames
+                if (energy < 0.00005) continue; // Skip silent frames
 
-                // Autocorrelation
+                // Apply Hanning window
+                const windowed = new Float32Array(frame.length);
+                for (let i = 0; i < frame.length; i++) {
+                    windowed[i] = frame[i] * (0.5 - 0.5 * Math.cos(2 * Math.PI * i / (frame.length - 1)));
+                }
+
+                // Normalized autocorrelation
                 let bestCorr = -1;
                 let bestLag = 0;
 
-                for (let lag = minLag; lag <= maxLag && lag < frame.length; lag++) {
-                    let corr = 0;
-                    let norm1 = 0;
-                    let norm2 = 0;
+                // Pre-compute energy for normalization
+                const segEnergies = new Float32Array(maxLag + 1);
+                for (let lag = minLag; lag <= maxLag && lag < windowed.length; lag++) {
+                    let e = 0;
+                    for (let i = 0; i < windowed.length - lag; i++) {
+                        e += windowed[i + lag] * windowed[i + lag];
+                    }
+                    segEnergies[lag] = e;
+                }
 
-                    for (let i = 0; i < frame.length - lag; i++) {
-                        corr += frame[i] * frame[i + lag];
-                        norm1 += frame[i] * frame[i];
-                        norm2 += frame[i + lag] * frame[i + lag];
+                let baseEnergy = 0;
+                for (let i = 0; i < windowed.length - minLag; i++) {
+                    baseEnergy += windowed[i] * windowed[i];
+                }
+
+                for (let lag = minLag; lag <= maxLag && lag < windowed.length; lag++) {
+                    let corr = 0;
+                    for (let i = 0; i < windowed.length - lag; i++) {
+                        corr += windowed[i] * windowed[i + lag];
                     }
 
-                    const normCorr = corr / (Math.sqrt(norm1 * norm2) + 1e-10);
+                    const normCorr = corr / (Math.sqrt(baseEnergy * segEnergies[lag]) + 1e-10);
 
                     if (normCorr > bestCorr) {
                         bestCorr = normCorr;
@@ -1286,10 +1368,27 @@
                     }
                 }
 
-                if (bestCorr > 0.3 && bestLag > 0) {
-                    const f0 = sampleRate / bestLag;
+                // Higher threshold for reliability
+                if (bestCorr > 0.5 && bestLag > 0) {
+                    // Parabolic interpolation for sub-sample accuracy
+                    let refinedLag = bestLag;
+                    if (bestLag > minLag && bestLag < maxLag) {
+                        // Compute neighbors
+                        let corrPrev = 0, corrNext = 0;
+                        for (let i = 0; i < windowed.length - bestLag - 1; i++) {
+                            corrPrev += windowed[i] * windowed[i + bestLag - 1];
+                            corrNext += windowed[i] * windowed[i + bestLag + 1];
+                        }
+                        const normPrev = corrPrev / (Math.sqrt(baseEnergy * segEnergies[bestLag - 1]) + 1e-10);
+                        const normNext = corrNext / (Math.sqrt(baseEnergy * segEnergies[bestLag + 1]) + 1e-10);
+
+                        const shift = 0.5 * (normPrev - normNext) / (normPrev - 2 * bestCorr + normNext + 1e-10);
+                        if (Math.abs(shift) < 1) refinedLag = bestLag + shift;
+                    }
+
+                    const f0 = sampleRate / refinedLag;
                     f0Values.push(f0);
-                    periods.push(bestLag / sampleRate); // Period in seconds
+                    periods.push(refinedLag / sampleRate);
                 }
             }
 
@@ -1297,23 +1396,34 @@
                 return { f0Mean: 0, f0Min: 0, f0Max: 0, periods: [] };
             }
 
-            // Remove outliers (keep values within 1.5 IQR)
-            f0Values.sort((a, b) => a - b);
-            const q1 = f0Values[Math.floor(f0Values.length * 0.25)];
-            const q3 = f0Values[Math.floor(f0Values.length * 0.75)];
-            const iqr = q3 - q1;
-            const filtered = f0Values.filter(v => v >= q1 - 1.5 * iqr && v <= q3 + 1.5 * iqr);
+            // Remove outliers using median-based filtering
+            const sorted = [...f0Values].sort((a, b) => a - b);
+            const median = sorted[Math.floor(sorted.length / 2)];
+            const tolerance = median * 0.3; // Keep within 30% of median
+            const filtered = [];
+            const filteredPeriods = [];
+
+            for (let i = 0; i < f0Values.length; i++) {
+                if (Math.abs(f0Values[i] - median) <= tolerance) {
+                    filtered.push(f0Values[i]);
+                    filteredPeriods.push(periods[i]);
+                }
+            }
+
+            if (filtered.length === 0) {
+                return { f0Mean: median, f0Min: median, f0Max: median, periods };
+            }
 
             const f0Mean = filtered.reduce((a, b) => a + b, 0) / filtered.length;
             const f0Min = Math.min(...filtered);
             const f0Max = Math.max(...filtered);
 
-            return { f0Mean, f0Min, f0Max, periods };
+            return { f0Mean, f0Min, f0Max, periods: filteredPeriods };
         }
 
         // Calculate Jitter (period-to-period variation)
         function calculateJitter(periods) {
-            if (periods.length < 2) return 0;
+            if (periods.length < 3) return 0;
 
             let sumDiff = 0;
             let sumPeriod = 0;
@@ -1331,9 +1441,9 @@
 
         // Calculate Shimmer (amplitude variation between cycles)
         function calculateShimmer(samples, periods, sampleRate) {
-            if (periods.length < 2) return 0;
+            if (periods.length < 3) return 0;
 
-            // Get peak amplitude per cycle
+            // Get RMS amplitude per cycle (more stable than peak)
             const amplitudes = [];
             let pos = 0;
 
@@ -1341,15 +1451,15 @@
                 const cycleLength = Math.round(period * sampleRate);
                 if (pos + cycleLength > samples.length) break;
 
-                let maxAmp = 0;
+                let sumSq = 0;
                 for (let i = pos; i < pos + cycleLength; i++) {
-                    maxAmp = Math.max(maxAmp, Math.abs(samples[i]));
+                    sumSq += samples[i] * samples[i];
                 }
-                amplitudes.push(maxAmp);
+                amplitudes.push(Math.sqrt(sumSq / cycleLength));
                 pos += cycleLength;
             }
 
-            if (amplitudes.length < 2) return 0;
+            if (amplitudes.length < 3) return 0;
 
             let sumDiff = 0;
             let sumAmp = 0;
@@ -1365,67 +1475,99 @@
             return (meanDiff / (meanAmp + 1e-10)) * 100;
         }
 
-        // Calculate HNR (Harmonics-to-Noise Ratio)
+        // Calculate HNR (Harmonics-to-Noise Ratio) using multiple windows
         function calculateHNR(samples, sampleRate, f0Mean) {
             if (f0Mean <= 0) return 0;
 
             const periodSamples = Math.round(sampleRate / f0Mean);
-            const frameSize = periodSamples * 4; // Use 4 periods
+            const frameSize = periodSamples * 6; // Use 6 periods for stability
 
             if (frameSize > samples.length) return 0;
 
-            // Take a frame from the middle of the recording
-            const startIdx = Math.floor((samples.length - frameSize) / 2);
-            const frame = samples.slice(startIdx, startIdx + frameSize);
+            // Average HNR across multiple frames from the middle portion
+            const midStart = Math.floor(samples.length * 0.25);
+            const midEnd = Math.floor(samples.length * 0.75);
+            const hnrValues = [];
 
-            // Autocorrelation at the period lag
-            let corr = 0;
-            let energy = 0;
+            for (let start = midStart; start + frameSize < midEnd; start += frameSize) {
+                const frame = samples.slice(start, start + frameSize);
 
-            for (let i = 0; i < frame.length - periodSamples; i++) {
-                corr += frame[i] * frame[i + periodSamples];
-                energy += frame[i] * frame[i];
+                let corr = 0;
+                let energy = 0;
+
+                for (let i = 0; i < frame.length - periodSamples; i++) {
+                    corr += frame[i] * frame[i + periodSamples];
+                    energy += frame[i] * frame[i];
+                }
+
+                const r = corr / (energy + 1e-10);
+                if (r > 0.01 && r < 0.99) {
+                    hnrValues.push(10 * Math.log10(r / (1 - r)));
+                }
             }
 
-            const r = corr / (energy + 1e-10);
-            const clampedR = Math.max(0.01, Math.min(0.99, r));
-
-            return 10 * Math.log10(clampedR / (1 - clampedR));
+            if (hnrValues.length === 0) return 0;
+            return hnrValues.reduce((a, b) => a + b, 0) / hnrValues.length;
         }
 
-        // Calculate TMF (Maximum Phonation Time)
+        // Calculate TMF using adaptive threshold
         function calculateTMF(samples, sampleRate) {
             const frameSize = Math.round(sampleRate * 0.02); // 20ms frames
-            const threshold = 0.01;
+            const rmsValues = [];
+
+            for (let start = 0; start + frameSize < samples.length; start += frameSize) {
+                let sum = 0;
+                for (let i = start; i < start + frameSize; i++) {
+                    sum += samples[i] * samples[i];
+                }
+                rmsValues.push(Math.sqrt(sum / frameSize));
+            }
+
+            if (rmsValues.length === 0) return 0;
+
+            // Adaptive threshold: 10% of the max RMS
+            const maxRms = Math.max(...rmsValues);
+            const threshold = maxRms * 0.1;
+
             let firstVoiced = -1;
             let lastVoiced = -1;
 
-            for (let start = 0; start + frameSize < samples.length; start += frameSize) {
-                let rms = 0;
-                for (let i = start; i < start + frameSize; i++) {
-                    rms += samples[i] * samples[i];
-                }
-                rms = Math.sqrt(rms / frameSize);
-
-                if (rms > threshold) {
-                    if (firstVoiced === -1) firstVoiced = start;
-                    lastVoiced = start + frameSize;
+            for (let i = 0; i < rmsValues.length; i++) {
+                if (rmsValues[i] > threshold) {
+                    if (firstVoiced === -1) firstVoiced = i;
+                    lastVoiced = i;
                 }
             }
 
             if (firstVoiced === -1) return 0;
-            return (lastVoiced - firstVoiced) / sampleRate;
+            return (lastVoiced - firstVoiced) * (frameSize / sampleRate);
         }
 
-        // Calculate mean intensity in dB (relative)
+        // Calculate mean intensity in dB (only voiced segments)
         function calculateIntensity(samples) {
-            let sumSquares = 0;
-            for (let i = 0; i < samples.length; i++) {
-                sumSquares += samples[i] * samples[i];
+            // Only measure voiced segments for realistic intensity
+            const frameSize = 1024;
+            let totalEnergy = 0;
+            let voicedFrames = 0;
+            const maxAmp = Math.max(...Array.from(samples).map(Math.abs));
+            const threshold = maxAmp * 0.05;
+
+            for (let start = 0; start + frameSize < samples.length; start += frameSize) {
+                let sum = 0;
+                for (let i = start; i < start + frameSize; i++) {
+                    sum += samples[i] * samples[i];
+                }
+                const rms = Math.sqrt(sum / frameSize);
+                if (rms > threshold) {
+                    totalEnergy += sum / frameSize;
+                    voicedFrames++;
+                }
             }
-            const rms = Math.sqrt(sumSquares / samples.length);
-            const ref = 0.00002; // Reference for dB SPL approximation
-            return 20 * Math.log10(rms / ref + 1e-10);
+
+            if (voicedFrames === 0) return 0;
+            const meanRms = Math.sqrt(totalEnergy / voicedFrames);
+            const ref = 0.00002;
+            return 20 * Math.log10(meanRms / ref + 1e-10);
         }
 
         function round2(v) { return Math.round(v * 100) / 100; }
