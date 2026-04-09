@@ -3,7 +3,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
 const { hashToken, generarToken, hashPassword, verificarPassword, obtenerPermisosUsuario, authMiddleware, JWT_SECRET } = require('../middleware/auth');
-const { sendWhatsAppMessage } = require('../services/whatsapp');
+const { sendWhapiMessage } = require('../services/whapi');
 
 // POST /registro - Registro de nuevo usuario
 router.post('/registro', async (req, res) => {
@@ -75,7 +75,7 @@ router.post('/registro', async (req, res) => {
 - Celular: ${celularWhatsapp}`;
 
         try {
-            sendWhatsAppMessage(celularFormateado, mensajeWhatsApp);
+            sendWhapiMessage(celularFormateado, mensajeWhatsApp);
             console.log(`📱 WhatsApp de confirmación enviado a ${celularFormateado}`);
         } catch (whatsappError) {
             console.error('Error enviando WhatsApp de registro:', whatsappError);
