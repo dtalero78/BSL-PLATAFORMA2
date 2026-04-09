@@ -1234,387 +1234,50 @@
         }
 
         // ==========================================
-        // DSP: ANALISIS DE VOZ
+        // CONVERTIR AUDIO A WAV BASE64
         // ==========================================
+        function samplesToWavBase64(samples, sampleRate) {
+            const numChannels = 1;
+            const bitsPerSample = 16;
+            const byteRate = sampleRate * numChannels * bitsPerSample / 8;
+            const blockAlign = numChannels * bitsPerSample / 8;
+            const dataSize = samples.length * blockAlign;
+            const bufferSize = 44 + dataSize;
 
-        // Simple bandpass filter (keeps 70-400 Hz for voice fundamentals)
-        function bandpassFilter(samples, sampleRate) {
-            const lowCut = 70;
-            const highCut = 400;
-            const output = new Float32Array(samples.length);
+            const buffer = new ArrayBuffer(bufferSize);
+            const view = new DataView(buffer);
 
-            // Simple 2nd-order IIR bandpass (Butterworth approximation)
-            const lowW = 2 * Math.PI * lowCut / sampleRate;
-            const highW = 2 * Math.PI * highCut / sampleRate;
-            const bw = highW - lowW;
-            const centerW = (highW + lowW) / 2;
+            // WAV header
+            const writeString = (offset, str) => { for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i)); };
+            writeString(0, 'RIFF');
+            view.setUint32(4, bufferSize - 8, true);
+            writeString(8, 'WAVE');
+            writeString(12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true); // PCM
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, byteRate, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, bitsPerSample, true);
+            writeString(36, 'data');
+            view.setUint32(40, dataSize, true);
 
-            const R = 1 - 3 * bw;
-            const K = (1 - 2 * R * Math.cos(centerW) + R * R) / (2 - 2 * Math.cos(centerW));
-
-            const a0 = 1 - K;
-            const a1 = 2 * (K - R) * Math.cos(centerW);
-            const a2 = R * R - K;
-            const b1 = 2 * R * Math.cos(centerW);
-            const b2 = -(R * R);
-
-            let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+            // Convert float samples to 16-bit PCM
             for (let i = 0; i < samples.length; i++) {
-                const x = samples[i];
-                output[i] = a0 * x + a1 * x1 + a2 * x2 + b1 * y1 + b2 * y2;
-                x2 = x1; x1 = x;
-                y2 = y1; y1 = output[i];
+                const s = Math.max(-1, Math.min(1, samples[i]));
+                view.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
             }
 
-            return output;
+            // Convert to base64
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            const chunkSize = 8192;
+            for (let i = 0; i < bytes.length; i += chunkSize) {
+                binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+            }
+            return btoa(binary);
         }
-
-        function analyzeVoice() {
-            const test1 = recordings.test1;
-            const test2 = recordings.test2;
-
-            if (!test1 || !test2) {
-                return {
-                    f0_mean: 0, f0_min: 0, f0_max: 0,
-                    jitter_percent: 0, shimmer_percent: 0,
-                    hnr_db: 0, intensidad_mean_db: 0,
-                    tiempo_maximo_fonacion_s: 0
-                };
-            }
-
-            // Apply bandpass filter to sustained vowel for better F0 detection
-            const filteredSamples = bandpassFilter(test1.samples, test1.sampleRate);
-
-            // Use filtered signal for ALL acoustic measures (removes noise)
-            const f0Data = extractF0(filteredSamples, test1.sampleRate);
-            const tmf = calculateTMF(test1.samples, test1.sampleRate); // TMF uses unfiltered
-            const jitter = calculateJitter(f0Data.periods);
-            const shimmer = calculateShimmer(filteredSamples, f0Data.periods, test1.sampleRate);
-            const hnr = calculateHNR(filteredSamples, test1.sampleRate, f0Data.f0Mean);
-
-            // Use test2 (reading) for intensity - only voiced segments
-            const intensity = calculateIntensity(test2.samples);
-
-            return {
-                f0_mean: round2(f0Data.f0Mean),
-                f0_min: round2(f0Data.f0Min),
-                f0_max: round2(f0Data.f0Max),
-                jitter_percent: round4(jitter),
-                shimmer_percent: round4(shimmer),
-                hnr_db: round2(hnr),
-                intensidad_mean_db: round2(intensity),
-                tiempo_maximo_fonacion_s: round2(tmf)
-            };
-        }
-
-        // Extract F0 using autocorrelation with parabolic interpolation
-        function extractF0(samples, sampleRate) {
-            const frameSize = Math.round(sampleRate * 0.04); // 40ms frames (longer = more stable)
-            const hopSize = Math.round(sampleRate * 0.01);   // 10ms hop (more overlap)
-            const minF0 = 70;
-            const maxF0 = 350; // Tighter upper bound to avoid harmonics
-            const minLag = Math.round(sampleRate / maxF0);
-            const maxLag = Math.round(sampleRate / minF0);
-
-            const f0Values = [];
-            const periods = [];
-
-            for (let start = 0; start + frameSize < samples.length; start += hopSize) {
-                const frame = samples.slice(start, start + frameSize);
-
-                // Check if frame has sufficient energy
-                let energy = 0;
-                for (let i = 0; i < frame.length; i++) energy += frame[i] * frame[i];
-                energy /= frame.length;
-
-                if (energy < 0.00005) continue; // Skip silent frames
-
-                // Apply Hanning window
-                const windowed = new Float32Array(frame.length);
-                for (let i = 0; i < frame.length; i++) {
-                    windowed[i] = frame[i] * (0.5 - 0.5 * Math.cos(2 * Math.PI * i / (frame.length - 1)));
-                }
-
-                // Normalized autocorrelation
-                let bestCorr = -1;
-                let bestLag = 0;
-
-                // Pre-compute energy for normalization
-                const segEnergies = new Float32Array(maxLag + 1);
-                for (let lag = minLag; lag <= maxLag && lag < windowed.length; lag++) {
-                    let e = 0;
-                    for (let i = 0; i < windowed.length - lag; i++) {
-                        e += windowed[i + lag] * windowed[i + lag];
-                    }
-                    segEnergies[lag] = e;
-                }
-
-                let baseEnergy = 0;
-                for (let i = 0; i < windowed.length - minLag; i++) {
-                    baseEnergy += windowed[i] * windowed[i];
-                }
-
-                for (let lag = minLag; lag <= maxLag && lag < windowed.length; lag++) {
-                    let corr = 0;
-                    for (let i = 0; i < windowed.length - lag; i++) {
-                        corr += windowed[i] * windowed[i + lag];
-                    }
-
-                    const normCorr = corr / (Math.sqrt(baseEnergy * segEnergies[lag]) + 1e-10);
-
-                    if (normCorr > bestCorr) {
-                        bestCorr = normCorr;
-                        bestLag = lag;
-                    }
-                }
-
-                // Higher threshold for reliability
-                if (bestCorr > 0.5 && bestLag > 0) {
-                    // Parabolic interpolation for sub-sample accuracy
-                    let refinedLag = bestLag;
-                    if (bestLag > minLag && bestLag < maxLag) {
-                        // Compute neighbors
-                        let corrPrev = 0, corrNext = 0;
-                        for (let i = 0; i < windowed.length - bestLag - 1; i++) {
-                            corrPrev += windowed[i] * windowed[i + bestLag - 1];
-                            corrNext += windowed[i] * windowed[i + bestLag + 1];
-                        }
-                        const normPrev = corrPrev / (Math.sqrt(baseEnergy * segEnergies[bestLag - 1]) + 1e-10);
-                        const normNext = corrNext / (Math.sqrt(baseEnergy * segEnergies[bestLag + 1]) + 1e-10);
-
-                        const shift = 0.5 * (normPrev - normNext) / (normPrev - 2 * bestCorr + normNext + 1e-10);
-                        if (Math.abs(shift) < 1) refinedLag = bestLag + shift;
-                    }
-
-                    const f0 = sampleRate / refinedLag;
-                    f0Values.push(f0);
-                    periods.push(refinedLag / sampleRate);
-                }
-            }
-
-            if (f0Values.length === 0) {
-                return { f0Mean: 0, f0Min: 0, f0Max: 0, periods: [] };
-            }
-
-            // Remove outliers using median-based filtering
-            const sorted = [...f0Values].sort((a, b) => a - b);
-            const median = sorted[Math.floor(sorted.length / 2)];
-            const tolerance = median * 0.3; // Keep within 30% of median
-            const filtered = [];
-            const filteredPeriods = [];
-
-            for (let i = 0; i < f0Values.length; i++) {
-                if (Math.abs(f0Values[i] - median) <= tolerance) {
-                    filtered.push(f0Values[i]);
-                    filteredPeriods.push(periods[i]);
-                }
-            }
-
-            if (filtered.length === 0) {
-                return { f0Mean: median, f0Min: median, f0Max: median, periods };
-            }
-
-            const f0Mean = filtered.reduce((a, b) => a + b, 0) / filtered.length;
-            const f0Min = Math.min(...filtered);
-            const f0Max = Math.max(...filtered);
-
-            return { f0Mean, f0Min, f0Max, periods: filteredPeriods };
-        }
-
-        // Calculate Jitter (period-to-period variation)
-        function calculateJitter(periods) {
-            if (periods.length < 3) return 0;
-
-            let sumDiff = 0;
-            let sumPeriod = 0;
-
-            for (let i = 1; i < periods.length; i++) {
-                sumDiff += Math.abs(periods[i] - periods[i - 1]);
-                sumPeriod += periods[i];
-            }
-
-            const meanDiff = sumDiff / (periods.length - 1);
-            const meanPeriod = sumPeriod / periods.length;
-
-            return (meanDiff / meanPeriod) * 100;
-        }
-
-        // Calculate Shimmer (amplitude variation between cycles)
-        function calculateShimmer(samples, periods, sampleRate) {
-            if (periods.length < 5) return 0;
-
-            // Use only the middle portion of periods (skip first/last 10%)
-            const startIdx = Math.floor(periods.length * 0.1);
-            const endIdx = Math.floor(periods.length * 0.9);
-            const stablePeriods = periods.slice(startIdx, endIdx);
-
-            // Get RMS amplitude per cycle
-            const amplitudes = [];
-            // Start position based on skipped periods
-            let pos = 0;
-            for (let i = 0; i < startIdx; i++) {
-                pos += Math.round(periods[i] * sampleRate);
-            }
-
-            for (const period of stablePeriods) {
-                const cycleLength = Math.round(period * sampleRate);
-                if (pos + cycleLength > samples.length) break;
-
-                let sumSq = 0;
-                for (let i = pos; i < pos + cycleLength; i++) {
-                    sumSq += samples[i] * samples[i];
-                }
-                amplitudes.push(Math.sqrt(sumSq / cycleLength));
-                pos += cycleLength;
-            }
-
-            if (amplitudes.length < 5) return 0;
-
-            // Apply 3-point moving average to smooth amplitudes
-            const smoothed = [];
-            for (let i = 1; i < amplitudes.length - 1; i++) {
-                smoothed.push((amplitudes[i - 1] + amplitudes[i] + amplitudes[i + 1]) / 3);
-            }
-
-            let sumDiff = 0;
-            let sumAmp = 0;
-
-            for (let i = 1; i < smoothed.length; i++) {
-                sumDiff += Math.abs(smoothed[i] - smoothed[i - 1]);
-                sumAmp += smoothed[i];
-            }
-
-            const meanDiff = sumDiff / (smoothed.length - 1);
-            const meanAmp = sumAmp / smoothed.length;
-
-            return (meanDiff / (meanAmp + 1e-10)) * 100;
-        }
-
-        // Calculate HNR (Harmonics-to-Noise Ratio) using multiple windows
-        function calculateHNR(samples, sampleRate, f0Mean) {
-            if (f0Mean <= 0) return 0;
-
-            const periodSamples = Math.round(sampleRate / f0Mean);
-            const frameSize = periodSamples * 8; // Use 8 periods for stability
-            const hopSize = periodSamples * 2;   // Overlap between frames
-
-            if (frameSize > samples.length) return 0;
-
-            // Only use the middle 50% of the recording (most stable part)
-            const midStart = Math.floor(samples.length * 0.25);
-            const midEnd = Math.floor(samples.length * 0.75);
-            const hnrValues = [];
-
-            for (let start = midStart; start + frameSize < midEnd; start += hopSize) {
-                const frame = samples.slice(start, start + frameSize);
-
-                // Check frame has enough energy
-                let frameEnergy = 0;
-                for (let i = 0; i < frame.length; i++) frameEnergy += frame[i] * frame[i];
-                if (frameEnergy / frame.length < 0.00005) continue;
-
-                // Find best autocorrelation near the expected period
-                // Search around the expected lag for the best match
-                const searchMin = Math.max(1, periodSamples - 5);
-                const searchMax = Math.min(frame.length - 1, periodSamples + 5);
-                let bestR = -1;
-
-                for (let lag = searchMin; lag <= searchMax; lag++) {
-                    let corr = 0;
-                    let e1 = 0;
-                    let e2 = 0;
-
-                    for (let i = 0; i < frame.length - lag; i++) {
-                        corr += frame[i] * frame[i + lag];
-                        e1 += frame[i] * frame[i];
-                        e2 += frame[i + lag] * frame[i + lag];
-                    }
-
-                    const r = corr / (Math.sqrt(e1 * e2) + 1e-10);
-                    if (r > bestR) bestR = r;
-                }
-
-                // Clamp to valid range and convert to dB
-                if (bestR > 0.1 && bestR < 0.9999) {
-                    hnrValues.push(10 * Math.log10(bestR / (1 - bestR)));
-                } else if (bestR >= 0.9999) {
-                    hnrValues.push(40); // Cap at 40 dB (very clean signal)
-                }
-            }
-
-            if (hnrValues.length === 0) return 10; // Default reasonable value
-
-            // Use median instead of mean (more robust to outliers)
-            hnrValues.sort((a, b) => a - b);
-            return hnrValues[Math.floor(hnrValues.length / 2)];
-        }
-
-        // Calculate TMF using adaptive threshold
-        function calculateTMF(samples, sampleRate) {
-            const frameSize = Math.round(sampleRate * 0.02); // 20ms frames
-            const rmsValues = [];
-
-            for (let start = 0; start + frameSize < samples.length; start += frameSize) {
-                let sum = 0;
-                for (let i = start; i < start + frameSize; i++) {
-                    sum += samples[i] * samples[i];
-                }
-                rmsValues.push(Math.sqrt(sum / frameSize));
-            }
-
-            if (rmsValues.length === 0) return 0;
-
-            // Adaptive threshold: 10% of the max RMS
-            const maxRms = Math.max(...rmsValues);
-            const threshold = maxRms * 0.1;
-
-            let firstVoiced = -1;
-            let lastVoiced = -1;
-
-            for (let i = 0; i < rmsValues.length; i++) {
-                if (rmsValues[i] > threshold) {
-                    if (firstVoiced === -1) firstVoiced = i;
-                    lastVoiced = i;
-                }
-            }
-
-            if (firstVoiced === -1) return 0;
-            return (lastVoiced - firstVoiced) * (frameSize / sampleRate);
-        }
-
-        // Calculate mean intensity in dB (only voiced segments)
-        function calculateIntensity(samples) {
-            // Only measure voiced segments for realistic intensity
-            const frameSize = 1024;
-            let totalEnergy = 0;
-            let voicedFrames = 0;
-            let maxAmp = 0;
-            for (let i = 0; i < samples.length; i++) {
-                const abs = Math.abs(samples[i]);
-                if (abs > maxAmp) maxAmp = abs;
-            }
-            const threshold = maxAmp * 0.05;
-
-            for (let start = 0; start + frameSize < samples.length; start += frameSize) {
-                let sum = 0;
-                for (let i = start; i < start + frameSize; i++) {
-                    sum += samples[i] * samples[i];
-                }
-                const rms = Math.sqrt(sum / frameSize);
-                if (rms > threshold) {
-                    totalEnergy += sum / frameSize;
-                    voicedFrames++;
-                }
-            }
-
-            if (voicedFrames === 0) return 0;
-            const meanRms = Math.sqrt(totalEnergy / voicedFrames);
-            const ref = 0.00002;
-            return 20 * Math.log10(meanRms / ref + 1e-10);
-        }
-
-        function round2(v) { return Math.round(v * 100) / 100; }
-        function round4(v) { return Math.round(v * 10000) / 10000; }
 
         // ==========================================
         // FINALIZAR Y GUARDAR
@@ -1623,59 +1286,49 @@
             document.getElementById('loadingOverlay').style.display = 'flex';
 
             try {
-                // Analyze voice recordings
-                const results = analyzeVoice();
+                // Convert recordings to WAV base64
+                const test1 = recordings.test1;
+                const test2 = recordings.test2;
+                const test3 = recordings.test3;
 
-                // Get AI interpretation
-                let aiResult = {
-                    concepto: 'Revision Sugerida',
-                    interpretacion: 'Consulte con un fonoaudiologo para evaluacion completa.',
-                    recomendaciones: 'Realizar pausas vocales cada 45 minutos; Mantener hidratacion constante; Evitar gritar o susurrar'
-                };
-
-                try {
-                    const aiResponse = await fetch('/api/voximetria-virtual/interpretar', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            ...results,
-                            sexo: patientData?.sexo || '',
-                            edad: patientData?.edad || ''
-                        })
-                    });
-                    const aiData = await aiResponse.json();
-                    if (aiData.success && aiData.data) {
-                        aiResult = aiData.data;
-                    }
-                } catch (aiErr) {
-                    console.error('Error en interpretacion IA:', aiErr);
+                if (!test1) {
+                    throw new Error('No se completo el ejercicio 1');
                 }
 
-                // Save to database
-                const dataToSave = {
-                    orden_id: ordenId,
-                    numero_id: patientData?.numeroId || '',
-                    primer_nombre: patientData?.primerNombre || '',
-                    primer_apellido: patientData?.primerApellido || '',
-                    empresa: patientData?.empresa || '',
-                    cod_empresa: patientData?.codEmpresa || '',
-                    ...results,
-                    concepto: aiResult.concepto,
-                    interpretacion: aiResult.interpretacion,
-                    recomendaciones: aiResult.recomendaciones
+                const audios = {
+                    fonacion_sostenida: test1 ? samplesToWavBase64(test1.samples, test1.sampleRate) : null,
+                    lectura: test2 ? samplesToWavBase64(test2.samples, test2.sampleRate) : null,
+                    conteo: test3 ? samplesToWavBase64(test3.samples, test3.sampleRate) : null,
+                    duracion_fonacion: test1 ? test1.duration : 0,
+                    duracion_lectura: test2 ? test2.duration : 0,
+                    duracion_conteo: test3 ? test3.duration : 0
                 };
 
-                const response = await fetch('/api/voximetria-virtual', {
+                // Send audio to backend for GPT-4o analysis
+                const response = await fetch('/api/voximetria-virtual/analizar', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(dataToSave)
+                    body: JSON.stringify({
+                        orden_id: ordenId,
+                        numero_id: patientData?.numeroId || '',
+                        primer_nombre: patientData?.primerNombre || '',
+                        primer_apellido: patientData?.primerApellido || '',
+                        empresa: patientData?.empresa || '',
+                        cod_empresa: patientData?.codEmpresa || '',
+                        sexo: patientData?.sexo || '',
+                        edad: patientData?.edad || '',
+                        audios
+                    })
                 });
 
-                const saveResult = await response.json();
-                console.log('Resultados guardados:', saveResult);
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Error al analizar audio');
+                }
 
                 // Show results
-                showResultsScreen(results, aiResult);
+                showResultsScreen(result.data);
 
             } catch (error) {
                 console.error('Error finalizando prueba:', error);
@@ -1685,31 +1338,32 @@
             document.getElementById('loadingOverlay').style.display = 'none';
         }
 
-        function showResultsScreen(results, aiResult) {
+        function showResultsScreen(data) {
             // Fill result values
-            document.getElementById('resF0').textContent = results.f0_mean || '--';
-            document.getElementById('resTMF').textContent = results.tiempo_maximo_fonacion_s || '--';
-            document.getElementById('resJitter').textContent = results.jitter_percent || '--';
-            document.getElementById('resShimmer').textContent = results.shimmer_percent || '--';
-            document.getElementById('resHNR').textContent = results.hnr_db || '--';
-            document.getElementById('resIntensidad').textContent = results.intensidad_mean_db || '--';
+            document.getElementById('resF0').textContent = data.f0_mean || '--';
+            document.getElementById('resTMF').textContent = data.tiempo_maximo_fonacion_s || '--';
+            document.getElementById('resJitter').textContent = data.jitter_percent || '--';
+            document.getElementById('resShimmer').textContent = data.shimmer_percent || '--';
+            document.getElementById('resHNR').textContent = data.hnr_db || '--';
+            document.getElementById('resIntensidad').textContent = data.intensidad_mean_db || '--';
 
             // Concepto badge
             const badge = document.getElementById('conceptoBadge');
-            badge.textContent = aiResult.concepto;
+            const concepto = data.concepto || 'Revision Sugerida';
+            badge.textContent = concepto;
             badge.className = 'concepto-badge';
-            if (aiResult.concepto === 'Normal') {
+            if (concepto === 'Normal') {
                 badge.classList.add('normal');
-            } else if (aiResult.concepto.includes('Alteracion') || aiResult.concepto.includes('Alteración')) {
+            } else if (concepto.includes('Alteracion') || concepto.includes('Alteración')) {
                 badge.classList.add('alteracion');
             } else {
                 badge.classList.add('revision');
             }
 
             // Interpretation and recommendations
-            document.getElementById('interpretacionText').textContent = aiResult.interpretacion || '--';
+            document.getElementById('interpretacionText').textContent = data.interpretacion || '--';
 
-            const recomendaciones = (aiResult.recomendaciones || '').split(';').map(r => r.trim()).filter(r => r);
+            const recomendaciones = (data.recomendaciones || '').split(';').map(r => r.trim()).filter(r => r);
             document.getElementById('recomendacionesText').innerHTML = recomendaciones.length > 0
                 ? recomendaciones.map(r => `• ${r}`).join('<br>')
                 : '--';

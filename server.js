@@ -36,8 +36,8 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use(bodyParser.json({ limit: '10mb' }));
-app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
+app.use(bodyParser.json({ limit: '25mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '25mb' }));
 app.use(express.static('public'));
 
 // ========== SSE (Server-Sent Events) ==========
