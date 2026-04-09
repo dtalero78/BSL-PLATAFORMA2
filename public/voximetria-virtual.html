@@ -833,13 +833,13 @@
         let ordenId = null;
         let selectedGender = null;
 
-        // Audio recording (MediaRecorder)
+        // Audio recording (MediaRecorder + WAV conversion)
         let audioContext = null;
         let mediaStream = null;
         let analyserNode = null;
         let mediaRecorder = null;
 
-        // Recordings per test (base64 strings)
+        // Recordings per test (WAV base64 strings)
         const recordings = { test1: null, test2: null, test3: null };
         let isRecording = false;
         let recordingStartTime = 0;
@@ -1134,30 +1134,39 @@
                     if (e.data.size > 0) mediaChunks.push(e.data);
                 };
 
-                mediaRecorder.onstop = () => {
+                mediaRecorder.onstop = async () => {
                     const blob = new Blob(mediaChunks, { type: mimeType });
                     const duration = (Date.now() - recordingStartTime) / 1000;
 
-                    // Convert blob to base64
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                        // reader.result = "data:audio/webm;codecs=opus;base64,XXXX"
-                        const base64 = reader.result.split(',')[1];
-                        recordings[`test${testNum}`] = { base64, duration, mimeType };
+                    // Decode webm → PCM → WAV base64 (GPT-4o only accepts wav/mp3)
+                    try {
+                        const arrayBuffer = await blob.arrayBuffer();
+                        const decodeCtx = new (window.AudioContext || window.webkitAudioContext)();
+                        const audioBuffer = await decodeCtx.decodeAudioData(arrayBuffer);
+                        const samples = audioBuffer.getChannelData(0);
+                        const wavBase64 = samplesToWavBase64(samples, audioBuffer.sampleRate);
+                        decodeCtx.close();
 
-                        // Update UI
-                        const btn = document.getElementById(`mic${testNum}Btn`);
-                        const label = document.getElementById(`mic${testNum}Label`);
-                        btn.classList.remove('recording');
-                        btn.textContent = '✅';
-                        btn.disabled = true;
-                        label.textContent = 'Grabacion completada';
-                        document.getElementById(`next${testNum}Btn`).disabled = false;
+                        recordings[`test${testNum}`] = { base64: wavBase64, duration };
+                    } catch (decodeErr) {
+                        console.error('Error decodificando audio:', decodeErr);
+                        // Fallback: send raw webm (will fail at GPT-4o but at least we tried)
+                        const reader = new FileReader();
+                        const b64 = await new Promise(r => { reader.onloadend = () => r(reader.result.split(',')[1]); reader.readAsDataURL(blob); });
+                        recordings[`test${testNum}`] = { base64: b64, duration, format: 'webm' };
+                    }
 
-                        const bars = document.getElementById(`waveform${testNum}`).children;
-                        for (let bar of bars) bar.style.height = '4px';
-                    };
-                    reader.readAsDataURL(blob);
+                    // Update UI
+                    const btn = document.getElementById(`mic${testNum}Btn`);
+                    const label = document.getElementById(`mic${testNum}Label`);
+                    btn.classList.remove('recording');
+                    btn.textContent = '✅';
+                    btn.disabled = true;
+                    label.textContent = 'Grabacion completada';
+                    document.getElementById(`next${testNum}Btn`).disabled = false;
+
+                    const bars = document.getElementById(`waveform${testNum}`).children;
+                    for (let bar of bars) bar.style.height = '4px';
 
                     // Cleanup
                     if (mediaStream) {
@@ -1244,6 +1253,49 @@
         }
 
         // ==========================================
+        // CONVERTIR PCM A WAV BASE64
+        // ==========================================
+        function samplesToWavBase64(samples, sampleRate) {
+            const numChannels = 1;
+            const bitsPerSample = 16;
+            const byteRate = sampleRate * numChannels * bitsPerSample / 8;
+            const blockAlign = numChannels * bitsPerSample / 8;
+            const dataSize = samples.length * blockAlign;
+            const bufferSize = 44 + dataSize;
+
+            const buffer = new ArrayBuffer(bufferSize);
+            const view = new DataView(buffer);
+
+            const writeStr = (off, str) => { for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i)); };
+            writeStr(0, 'RIFF');
+            view.setUint32(4, bufferSize - 8, true);
+            writeStr(8, 'WAVE');
+            writeStr(12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, byteRate, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, bitsPerSample, true);
+            writeStr(36, 'data');
+            view.setUint32(40, dataSize, true);
+
+            for (let i = 0; i < samples.length; i++) {
+                const s = Math.max(-1, Math.min(1, samples[i]));
+                view.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+            }
+
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            const chunk = 8192;
+            for (let i = 0; i < bytes.length; i += chunk) {
+                binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+            }
+            return btoa(binary);
+        }
+
+        // ==========================================
         // FINALIZAR Y GUARDAR
         // ==========================================
         async function finishTest() {
@@ -1258,9 +1310,6 @@
                     throw new Error('No se completo el ejercicio 1');
                 }
 
-                // Determine audio format from MIME type
-                const audioFormat = (test1.mimeType || '').includes('webm') ? 'webm' : 'wav';
-
                 const audios = {
                     fonacion_sostenida: test1 ? test1.base64 : null,
                     lectura: test2 ? test2.base64 : null,
@@ -1268,7 +1317,7 @@
                     duracion_fonacion: test1 ? test1.duration : 0,
                     duracion_lectura: test2 ? test2.duration : 0,
                     duracion_conteo: test3 ? test3.duration : 0,
-                    formato: audioFormat
+                    formato: 'wav'
                 };
 
                 const response = await fetch('/api/voximetria-virtual/analizar', {
