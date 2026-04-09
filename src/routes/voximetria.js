@@ -51,6 +51,7 @@ router.post('/voximetria-virtual/analizar', async (req, res) => {
         }
 
         // Build audio content parts for GPT-4o
+        const audioFormat = audios.formato || 'wav';
         const audioParts = [];
 
         if (audios.fonacion_sostenida) {
@@ -58,7 +59,7 @@ router.post('/voximetria-virtual/analizar', async (req, res) => {
                 type: 'input_audio',
                 input_audio: {
                     data: audios.fonacion_sostenida,
-                    format: 'wav'
+                    format: audioFormat
                 }
             });
         }
@@ -68,7 +69,7 @@ router.post('/voximetria-virtual/analizar', async (req, res) => {
                 type: 'input_audio',
                 input_audio: {
                     data: audios.lectura,
-                    format: 'wav'
+                    format: audioFormat
                 }
             });
         }
@@ -78,7 +79,7 @@ router.post('/voximetria-virtual/analizar', async (req, res) => {
                 type: 'input_audio',
                 input_audio: {
                     data: audios.conteo,
-                    format: 'wav'
+                    format: audioFormat
                 }
             });
         }

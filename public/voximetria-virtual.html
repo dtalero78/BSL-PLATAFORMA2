@@ -622,7 +622,16 @@
                 </ul>
             </div>
 
-            <button class="btn-primary" id="startBtn">Comenzar Prueba</button>
+            <div class="card">
+                <div class="card-title">Datos del paciente</div>
+                <p class="card-text" style="margin-bottom: 12px;">Seleccione su sexo biologico (necesario para interpretar los resultados):</p>
+                <div style="display: flex; gap: 12px;">
+                    <button class="btn-secondary gender-btn" data-value="Masculino" id="genderM" style="flex: 1;">Masculino</button>
+                    <button class="btn-secondary gender-btn" data-value="Femenino" id="genderF" style="flex: 1;">Femenino</button>
+                </div>
+            </div>
+
+            <button class="btn-primary" id="startBtn" disabled>Comenzar Prueba</button>
         </div>
 
         <!-- ========== SCREEN: Mic Check ========== -->
@@ -822,21 +831,21 @@
         // ==========================================
         let patientData = null;
         let ordenId = null;
+        let selectedGender = null;
 
-        // Audio context and recording
+        // Audio recording (MediaRecorder)
         let audioContext = null;
         let mediaStream = null;
         let analyserNode = null;
+        let mediaRecorder = null;
 
-        // Recordings per test (raw Float32Array samples)
+        // Recordings per test (base64 strings)
         const recordings = { test1: null, test2: null, test3: null };
-        let currentRecording = null;
         let isRecording = false;
         let recordingStartTime = 0;
         let timerInterval = null;
         let animationFrame = null;
-        let scriptProcessor = null;
-        let recordedChunks = [];
+        let mediaChunks = [];
         let currentTestNum = null;
         let autoStopTimeout = null;
 
@@ -912,6 +921,22 @@
         }
 
         function setupEventListeners() {
+            // Gender selection
+            document.querySelectorAll('.gender-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.gender-btn').forEach(b => {
+                        b.style.borderColor = '#E85D26';
+                        b.style.background = 'white';
+                        b.style.color = '#E85D26';
+                    });
+                    this.style.borderColor = '#E85D26';
+                    this.style.background = '#E85D26';
+                    this.style.color = 'white';
+                    selectedGender = this.dataset.value;
+                    document.getElementById('startBtn').disabled = false;
+                });
+            });
+
             document.getElementById('startBtn').addEventListener('click', () => showScreen('micCheckScreen'));
             document.getElementById('micCheckBtn').addEventListener('click', toggleMicCheck);
             document.getElementById('micCheckOkBtn').addEventListener('click', () => {
@@ -1066,21 +1091,18 @@
         }
 
         // ==========================================
-        // GRABACION DE AUDIO
+        // GRABACION DE AUDIO (MediaRecorder)
         // ==========================================
         async function toggleRecording(testNum, maxSeconds) {
-            // If already recording this test, stop it
             if (isRecording && currentTestNum === testNum) {
                 stopRecording(testNum);
                 return;
             }
 
-            // If recording another test somehow, stop it first
             if (isRecording) {
                 stopRecording(currentTestNum);
             }
 
-            // Disable button while requesting mic permission
             const micBtn = document.getElementById(`mic${testNum}Btn`);
             micBtn.disabled = true;
 
@@ -1093,27 +1115,63 @@
                     }
                 });
 
+                // AudioContext only for waveform visualization
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 const source = audioContext.createMediaStreamSource(mediaStream);
-
                 analyserNode = audioContext.createAnalyser();
                 analyserNode.fftSize = 2048;
                 source.connect(analyserNode);
 
-                // Record raw samples via ScriptProcessor
-                const bufferSize = 4096;
-                scriptProcessor = audioContext.createScriptProcessor(bufferSize, 1, 1);
-                recordedChunks = [];
+                // Use MediaRecorder for actual recording
+                mediaChunks = [];
+                const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+                    ? 'audio/webm;codecs=opus'
+                    : 'audio/webm';
 
-                scriptProcessor.onaudioprocess = (e) => {
-                    if (!isRecording) return;
-                    const inputData = e.inputBuffer.getChannelData(0);
-                    recordedChunks.push(new Float32Array(inputData));
+                mediaRecorder = new MediaRecorder(mediaStream, { mimeType });
+
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) mediaChunks.push(e.data);
                 };
 
-                source.connect(scriptProcessor);
-                scriptProcessor.connect(audioContext.destination);
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(mediaChunks, { type: mimeType });
+                    const duration = (Date.now() - recordingStartTime) / 1000;
 
+                    // Convert blob to base64
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        // reader.result = "data:audio/webm;codecs=opus;base64,XXXX"
+                        const base64 = reader.result.split(',')[1];
+                        recordings[`test${testNum}`] = { base64, duration, mimeType };
+
+                        // Update UI
+                        const btn = document.getElementById(`mic${testNum}Btn`);
+                        const label = document.getElementById(`mic${testNum}Label`);
+                        btn.classList.remove('recording');
+                        btn.textContent = '✅';
+                        btn.disabled = true;
+                        label.textContent = 'Grabacion completada';
+                        document.getElementById(`next${testNum}Btn`).disabled = false;
+
+                        const bars = document.getElementById(`waveform${testNum}`).children;
+                        for (let bar of bars) bar.style.height = '4px';
+                    };
+                    reader.readAsDataURL(blob);
+
+                    // Cleanup
+                    if (mediaStream) {
+                        mediaStream.getTracks().forEach(t => t.stop());
+                        mediaStream = null;
+                    }
+                    if (audioContext) {
+                        audioContext.close();
+                        audioContext = null;
+                    }
+                    analyserNode = null;
+                };
+
+                mediaRecorder.start(100); // Collect data every 100ms
                 isRecording = true;
                 currentTestNum = testNum;
                 recordingStartTime = Date.now();
@@ -1121,17 +1179,12 @@
                 micBtn.disabled = false;
                 micBtn.classList.add('recording');
                 micBtn.textContent = '⏹';
-                const micLabel = document.getElementById(`mic${testNum}Label`);
-                micLabel.textContent = 'Grabando... toque para detener';
+                document.getElementById(`mic${testNum}Label`).textContent = 'Grabando... toque para detener';
 
-                // Start timer
                 updateTimer(testNum);
                 timerInterval = setInterval(() => updateTimer(testNum), 100);
-
-                // Start waveform
                 animateWaveform(testNum);
 
-                // Auto-stop with clearable timeout
                 if (autoStopTimeout) clearTimeout(autoStopTimeout);
                 autoStopTimeout = setTimeout(() => {
                     if (isRecording && currentTestNum === testNum) {
@@ -1151,7 +1204,6 @@
             isRecording = false;
             currentTestNum = null;
 
-            // Clear auto-stop
             if (autoStopTimeout) {
                 clearTimeout(autoStopTimeout);
                 autoStopTimeout = null;
@@ -1162,52 +1214,10 @@
             cancelAnimationFrame(animationFrame);
             animationFrame = null;
 
-            if (scriptProcessor) {
-                scriptProcessor.disconnect();
-                scriptProcessor = null;
+            // Stop MediaRecorder (triggers onstop which handles cleanup + UI)
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
             }
-
-            // Merge all chunks into single Float32Array
-            const totalLength = recordedChunks.reduce((sum, chunk) => sum + chunk.length, 0);
-            const mergedSamples = new Float32Array(totalLength);
-            let offset = 0;
-            for (const chunk of recordedChunks) {
-                mergedSamples.set(chunk, offset);
-                offset += chunk.length;
-            }
-            recordedChunks = [];
-
-            const sampleRate = audioContext ? audioContext.sampleRate : 44100;
-
-            recordings[`test${testNum}`] = {
-                samples: mergedSamples,
-                sampleRate: sampleRate,
-                duration: (Date.now() - recordingStartTime) / 1000
-            };
-
-            // Cleanup audio resources
-            if (mediaStream) {
-                mediaStream.getTracks().forEach(t => t.stop());
-                mediaStream = null;
-            }
-            if (audioContext) {
-                audioContext.close();
-                audioContext = null;
-            }
-            analyserNode = null;
-
-            const micBtn = document.getElementById(`mic${testNum}Btn`);
-            const micLabel = document.getElementById(`mic${testNum}Label`);
-            micBtn.classList.remove('recording');
-            micBtn.textContent = '✅';
-            micBtn.disabled = true;
-            micLabel.textContent = 'Grabacion completada';
-
-            document.getElementById(`next${testNum}Btn`).disabled = false;
-
-            // Reset waveform bars
-            const bars = document.getElementById(`waveform${testNum}`).children;
-            for (let bar of bars) bar.style.height = '4px';
         }
 
         function updateTimer(testNum) {
@@ -1234,59 +1244,12 @@
         }
 
         // ==========================================
-        // CONVERTIR AUDIO A WAV BASE64
-        // ==========================================
-        function samplesToWavBase64(samples, sampleRate) {
-            const numChannels = 1;
-            const bitsPerSample = 16;
-            const byteRate = sampleRate * numChannels * bitsPerSample / 8;
-            const blockAlign = numChannels * bitsPerSample / 8;
-            const dataSize = samples.length * blockAlign;
-            const bufferSize = 44 + dataSize;
-
-            const buffer = new ArrayBuffer(bufferSize);
-            const view = new DataView(buffer);
-
-            // WAV header
-            const writeString = (offset, str) => { for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i)); };
-            writeString(0, 'RIFF');
-            view.setUint32(4, bufferSize - 8, true);
-            writeString(8, 'WAVE');
-            writeString(12, 'fmt ');
-            view.setUint32(16, 16, true);
-            view.setUint16(20, 1, true); // PCM
-            view.setUint16(22, numChannels, true);
-            view.setUint32(24, sampleRate, true);
-            view.setUint32(28, byteRate, true);
-            view.setUint16(32, blockAlign, true);
-            view.setUint16(34, bitsPerSample, true);
-            writeString(36, 'data');
-            view.setUint32(40, dataSize, true);
-
-            // Convert float samples to 16-bit PCM
-            for (let i = 0; i < samples.length; i++) {
-                const s = Math.max(-1, Math.min(1, samples[i]));
-                view.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-            }
-
-            // Convert to base64
-            const bytes = new Uint8Array(buffer);
-            let binary = '';
-            const chunkSize = 8192;
-            for (let i = 0; i < bytes.length; i += chunkSize) {
-                binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
-            }
-            return btoa(binary);
-        }
-
-        // ==========================================
         // FINALIZAR Y GUARDAR
         // ==========================================
         async function finishTest() {
             document.getElementById('loadingOverlay').style.display = 'flex';
 
             try {
-                // Convert recordings to WAV base64
                 const test1 = recordings.test1;
                 const test2 = recordings.test2;
                 const test3 = recordings.test3;
@@ -1295,16 +1258,19 @@
                     throw new Error('No se completo el ejercicio 1');
                 }
 
+                // Determine audio format from MIME type
+                const audioFormat = (test1.mimeType || '').includes('webm') ? 'webm' : 'wav';
+
                 const audios = {
-                    fonacion_sostenida: test1 ? samplesToWavBase64(test1.samples, test1.sampleRate) : null,
-                    lectura: test2 ? samplesToWavBase64(test2.samples, test2.sampleRate) : null,
-                    conteo: test3 ? samplesToWavBase64(test3.samples, test3.sampleRate) : null,
+                    fonacion_sostenida: test1 ? test1.base64 : null,
+                    lectura: test2 ? test2.base64 : null,
+                    conteo: test3 ? test3.base64 : null,
                     duracion_fonacion: test1 ? test1.duration : 0,
                     duracion_lectura: test2 ? test2.duration : 0,
-                    duracion_conteo: test3 ? test3.duration : 0
+                    duracion_conteo: test3 ? test3.duration : 0,
+                    formato: audioFormat
                 };
 
-                // Send audio to backend for GPT-4o analysis
                 const response = await fetch('/api/voximetria-virtual/analizar', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1315,7 +1281,7 @@
                         primer_apellido: patientData?.primerApellido || '',
                         empresa: patientData?.empresa || '',
                         cod_empresa: patientData?.codEmpresa || '',
-                        sexo: patientData?.sexo || '',
+                        sexo: selectedGender || '',
                         edad: patientData?.edad || '',
                         audios
                     })
