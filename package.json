@@ -33,7 +33,8 @@
     "pg": "^8.11.3",
     "puppeteer": "^24.34.0",
     "socket.io": "^4.8.3",
-    "twilio": "^5.11.2"
+    "twilio": "^5.11.2",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

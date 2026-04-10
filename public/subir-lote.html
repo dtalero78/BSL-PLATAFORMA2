@@ -345,25 +345,160 @@
             border: 1px solid #FDE68A;
             color: #92400E;
         }
+
+        .cod-empresa-fallback {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 12px 16px;
+            background: #FFF7ED;
+            border: 1px solid #FED7AA;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #9A3412;
+        }
+
+        .ai-mapping-info {
+            background: #EFF6FF;
+            border: 1px solid #BFDBFE;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            color: #1E40AF;
+        }
+
+        .ai-mapping-info .mapping-title {
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .ai-mapping-info .mapping-item {
+            display: inline-block;
+            background: #DBEAFE;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin: 2px 4px 2px 0;
+            font-size: 12px;
+        }
+
+        .ai-mapping-info .confidence-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-left: 8px;
+        }
+
+        .confidence-high { background: #D1FAE5; color: #065F46; }
+        .confidence-medium { background: #FEF3C7; color: #92400E; }
+        .confidence-low { background: #FEE2E2; color: #991B1B; }
+
+        .medicos-panel {
+            background: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .medicos-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .medicos-panel-title {
+            font-weight: 600;
+            font-size: 15px;
+            color: #1F2937;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .medicos-config {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            font-size: 13px;
+            color: #374151;
+        }
+
+        .medicos-config label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .medicos-config input {
+            padding: 4px 8px;
+            border: 1px solid #D1D5DB;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .medicos-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .medico-chip {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border: 2px solid #E5E7EB;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.15s;
+            background: white;
+            user-select: none;
+        }
+
+        .medico-chip:hover {
+            border-color: #93C5FD;
+        }
+
+        .medico-chip.selected {
+            border-color: #0176D3;
+            background: #EFF6FF;
+            color: #0176D3;
+            font-weight: 500;
+        }
+
+        .medico-chip input[type="checkbox"] {
+            margin: 0;
+            accent-color: #0176D3;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Subir Lote de Órdenes</h1>
-        <p class="subtitle">Importa múltiples órdenes desde un archivo CSV</p>
+        <p class="subtitle">Importa múltiples órdenes desde un archivo CSV. La IA detecta automáticamente las columnas sin importar el formato.</p>
 
         <div id="uploadSection">
             <div class="format-info">
-                <div class="format-title">Formato del CSV</div>
+                <div class="format-title">Detección inteligente de columnas</div>
                 <div class="format-fields">
-                    <span class="required">numeroId*</span>,
-                    <span class="required">primerNombre*</span> o "nombres" o "NOMBRE",
-                    segundoNombre,
-                    <span class="required">primerApellido*</span> o "apellidos" o "APELLIDOS",
-                    segundoApellido,
-                    celular, cargo, ciudad, fechaAtencion o "FECHA" (YYYY-MM-DD, DD/MM/YYYY o MM/DD/YYYY), horaAtencion o "HORA" (HH:MM), empresa, tipoExamen, medico,
-                    <span class="required">codEmpresa*</span>, examenes o "OBSERVACION"
+                    Sube cualquier archivo CSV con datos de pacientes. La IA identificará automáticamente las columnas como documento, nombre, apellido, teléfono, cargo, ciudad, fecha, empresa, exámenes, etc. — sin importar cómo se llamen las columnas.
+                    <br><br>
+                    <strong>Campos requeridos:</strong> <span class="required">Número de documento</span>, <span class="required">Nombre</span>, <span class="required">Apellido</span>, <span class="required">Código de empresa</span> (puede ingresarse abajo si no está en el archivo)
                 </div>
+            </div>
+
+            <div class="cod-empresa-fallback" id="codEmpresaSection">
+                <label for="codEmpresaInput">Código de empresa (si no está en el archivo):</label>
+                <input type="text" id="codEmpresaInput" placeholder="Ej: SITEL, OMEGA, MARES..." style="padding: 8px 12px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 14px; width: 250px; margin-left: 8px; text-transform: uppercase;">
             </div>
 
             <div class="upload-zone" id="uploadZone">
@@ -372,11 +507,11 @@
                     <polyline points="17 8 12 3 7 8"/>
                     <line x1="12" y1="3" x2="12" y2="15"/>
                 </svg>
-                <div class="upload-text">Haz clic o arrastra tu archivo CSV aquí</div>
-                <div class="upload-hint">Solo archivos .csv</div>
+                <div class="upload-text">Haz clic o arrastra tu archivo aquí</div>
+                <div class="upload-hint">Archivos .csv, .xlsx o .xls</div>
             </div>
 
-            <input type="file" id="fileInput" class="file-input" accept=".csv">
+            <input type="file" id="fileInput" class="file-input" accept=".csv,.xlsx,.xls">
 
             <div class="selected-file" id="selectedFile" style="display: none;">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -397,15 +532,25 @@
                 <span>Procesando archivo...</span>
             </div>
 
-            <button class="btn btn-primary" id="previewBtn" disabled>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                    <circle cx="12" cy="12" r="3"></circle>
-                </svg>
-                Previsualizar Datos
-            </button>
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                <button class="btn btn-primary" id="previewBtn" disabled>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    Analizar con IA y Previsualizar
+                </button>
 
-            <a href="/ordenes.html" class="btn btn-secondary">
+                <button class="btn btn-secondary" id="previewBtnManual" disabled>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                    Previsualizar sin IA
+                </button>
+            </div>
+
+            <a href="/ordenes.html" class="btn btn-secondary" style="margin-top: 12px;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="19" y1="12" x2="5" y2="12"/>
                     <polyline points="12 19 5 12 12 5"/>
@@ -432,6 +577,34 @@
             </div>
 
             <div id="alertContainer"></div>
+
+            <!-- Panel de asignación de médicos -->
+            <div class="medicos-panel" id="medicosPanel">
+                <div class="medicos-panel-header">
+                    <div class="medicos-panel-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="8.5" cy="7" r="4"></circle>
+                            <line x1="20" y1="8" x2="20" y2="14"></line>
+                            <line x1="23" y1="11" x2="17" y2="11"></line>
+                        </svg>
+                        Asignar Médicos
+                    </div>
+                    <div class="medicos-config">
+                        <label>Hora inicio: <input type="time" id="horaBaseInput" value="08:00"></label>
+                        <label>Intervalo: <input type="number" id="intervaloInput" value="10" min="5" max="60" style="width:55px"> min</label>
+                    </div>
+                </div>
+                <div class="medicos-list" id="medicosList">
+                    <span style="color:#9CA3AF; font-size:13px">Cargando médicos...</span>
+                </div>
+                <button class="btn btn-primary" id="asignarMedicosBtn" disabled>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    Asignar Médicos Automáticamente
+                </button>
+            </div>
 
             <div class="table-container">
                 <table id="previewTable">
@@ -482,6 +655,7 @@
         const fileName = document.getElementById('fileName');
         const removeFile = document.getElementById('removeFile');
         const previewBtn = document.getElementById('previewBtn');
+        const previewBtnManual = document.getElementById('previewBtnManual');
         const loading = document.getElementById('loading');
         const uploadSection = document.getElementById('uploadSection');
         const previewSection = document.getElementById('previewSection');
@@ -493,6 +667,92 @@
 
         let currentFile = null;
         let registrosData = [];
+        let medicosDisponibles = [];
+
+        // Cargar médicos al iniciar
+        async function cargarMedicos() {
+            try {
+                const resp = await fetch('/api/medicos');
+                const data = await resp.json();
+                if (data.success && data.data) {
+                    medicosDisponibles = data.data;
+                    renderMedicos();
+                }
+            } catch (e) {
+                document.getElementById('medicosList').innerHTML = '<span style="color:#DC2626; font-size:13px">Error cargando médicos</span>';
+            }
+        }
+
+        function renderMedicos() {
+            const container = document.getElementById('medicosList');
+            container.innerHTML = '';
+            medicosDisponibles.forEach(m => {
+                const nombre = m.alias || `${m.primer_nombre} ${m.primer_apellido}`;
+                const chip = document.createElement('label');
+                chip.className = 'medico-chip';
+                chip.innerHTML = `<input type="checkbox" value="${m.id}" data-nombre="${nombre}"> ${nombre}`;
+                chip.querySelector('input').addEventListener('change', function() {
+                    chip.classList.toggle('selected', this.checked);
+                    updateAsignarBtn();
+                });
+                container.appendChild(chip);
+            });
+        }
+
+        function updateAsignarBtn() {
+            const checked = document.querySelectorAll('.medico-chip input:checked');
+            document.getElementById('asignarMedicosBtn').disabled = checked.length === 0 || registrosData.length === 0;
+        }
+
+        // Asignar médicos automáticamente
+        document.getElementById('asignarMedicosBtn').addEventListener('click', async () => {
+            const medicosIds = [...document.querySelectorAll('.medico-chip input:checked')].map(cb => parseInt(cb.value));
+            if (medicosIds.length === 0) return alert('Selecciona al menos un médico');
+
+            const horaBase = document.getElementById('horaBaseInput').value || '08:00';
+            const intervalo = parseInt(document.getElementById('intervaloInput').value) || 10;
+
+            const btn = document.getElementById('asignarMedicosBtn');
+            btn.disabled = true;
+            btn.textContent = 'Asignando...';
+
+            try {
+                const resp = await fetch('/api/ordenes/asignar-medicos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        registros: registrosData,
+                        medicosIds,
+                        horaBase,
+                        minutosIntervalo: intervalo
+                    })
+                });
+                const data = await resp.json();
+
+                if (data.success) {
+                    registrosData = data.registros;
+                    renderPreviewTable(registrosData);
+                    document.getElementById('countRegistros').textContent = registrosData.length;
+
+                    const resumen = data.resumen;
+                    const medicosStr = resumen.medicos.join(', ');
+                    const horasMsg = resumen.horasDelArchivo
+                        ? 'Se respetaron las horas del archivo.'
+                        : `Horas asignadas desde ${horaBase}, cada ${intervalo} min.`;
+                    showAlert('success', `Médicos asignados: ${medicosStr}. ${resumen.totalPresencial} presencial, ${resumen.totalVirtual} virtual. ${horasMsg}`);
+                } else {
+                    showAlert('error', 'Error: ' + data.message);
+                }
+            } catch (e) {
+                showAlert('error', 'Error de conexión: ' + e.message);
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Asignar Médicos Automáticamente`;
+            updateAsignarBtn();
+        });
+
+        cargarMedicos();
 
         // Click en zona de upload
         uploadZone.addEventListener('click', () => fileInput.click());
@@ -511,10 +771,10 @@
             e.preventDefault();
             uploadZone.classList.remove('dragover');
             const file = e.dataTransfer.files[0];
-            if (file && file.name.endsWith('.csv')) {
+            if (file && (file.name.endsWith('.csv') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
                 handleFile(file);
             } else {
-                alert('Solo se permiten archivos CSV');
+                alert('Solo se permiten archivos CSV o Excel (.csv, .xlsx, .xls)');
             }
         });
 
@@ -531,6 +791,7 @@
             uploadZone.style.display = 'none';
             selectedFile.style.display = 'flex';
             previewBtn.disabled = false;
+            previewBtnManual.disabled = false;
         }
 
         // Remover archivo
@@ -540,14 +801,77 @@
             uploadZone.style.display = 'block';
             selectedFile.style.display = 'none';
             previewBtn.disabled = true;
+            previewBtnManual.disabled = true;
         });
 
-        // Previsualizar archivo
+        // Previsualizar archivo con IA
         previewBtn.addEventListener('click', async () => {
             if (!currentFile) return;
 
             previewBtn.disabled = true;
             loading.classList.add('active');
+            loading.querySelector('span').textContent = 'Analizando archivo con IA...';
+
+            try {
+                const formData = new FormData();
+                formData.append('archivo', currentFile);
+                const codEmpresa = document.getElementById('codEmpresaInput').value.trim().toUpperCase();
+                if (codEmpresa) formData.append('codEmpresa', codEmpresa);
+
+                const response = await fetch('/api/ordenes/previsualizar-ai', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                loading.classList.remove('active');
+                loading.querySelector('span').textContent = 'Procesando archivo...';
+
+                if (data.success) {
+                    registrosData = data.registros;
+                    renderPreviewTable(data.registros);
+                    showPreviewSection(data);
+
+                    // Mostrar info del mapeo de IA
+                    if (data.aiMapping) {
+                        const mappingDiv = document.createElement('div');
+                        mappingDiv.className = 'ai-mapping-info';
+                        const confClass = `confidence-${data.aiMapping.confidence || 'medium'}`;
+                        let mappingHtml = `<div class="mapping-title">Mapeo detectado por IA <span class="confidence-badge ${confClass}">${data.aiMapping.confidence || 'medium'}</span></div>`;
+                        const mapping = data.aiMapping.mapping || {};
+                        for (const [original, campo] of Object.entries(mapping)) {
+                            if (campo) {
+                                mappingHtml += `<span class="mapping-item">${original} → ${campo}</span>`;
+                            }
+                        }
+                        if (data.aiMapping.notes) {
+                            mappingHtml += `<div style="margin-top: 6px; font-style: italic; font-size: 12px;">${data.aiMapping.notes}</div>`;
+                        }
+                        mappingDiv.innerHTML = mappingHtml;
+                        document.getElementById('alertContainer').prepend(mappingDiv);
+                    }
+                } else {
+                    alert('Error: ' + data.message);
+                    previewBtn.disabled = false;
+                }
+
+            } catch (error) {
+                loading.classList.remove('active');
+                loading.querySelector('span').textContent = 'Procesando archivo...';
+                alert('Error de conexión: ' + error.message);
+                previewBtn.disabled = false;
+            }
+        });
+
+        // Previsualizar sin IA (endpoint original)
+        previewBtnManual.addEventListener('click', async () => {
+            if (!currentFile) return;
+
+            previewBtnManual.disabled = true;
+            previewBtn.disabled = true;
+            loading.classList.add('active');
+            loading.querySelector('span').textContent = 'Procesando archivo...';
 
             try {
                 const formData = new FormData();
@@ -561,6 +885,7 @@
                 const data = await response.json();
 
                 loading.classList.remove('active');
+                loading.querySelector('span').textContent = 'Procesando archivo...';
 
                 if (data.success) {
                     registrosData = data.registros;
@@ -568,12 +893,15 @@
                     showPreviewSection(data);
                 } else {
                     alert('Error: ' + data.message);
+                    previewBtnManual.disabled = false;
                     previewBtn.disabled = false;
                 }
 
             } catch (error) {
                 loading.classList.remove('active');
+                loading.querySelector('span').textContent = 'Procesando archivo...';
                 alert('Error de conexión: ' + error.message);
+                previewBtnManual.disabled = false;
                 previewBtn.disabled = false;
             }
         });
@@ -716,6 +1044,7 @@
             uploadZone.style.display = 'block';
             selectedFile.style.display = 'none';
             previewBtn.disabled = true;
+            previewBtnManual.disabled = true;
             registrosData = [];
             alertContainer.innerHTML = '';
         });

@@ -808,6 +808,499 @@ router.post('/', async (req, res) => {
     }
 });
 
+// POST /api/ordenes/previsualizar-ai - Previsualizar órdenes usando IA para detectar columnas automáticamente
+router.post('/previsualizar-ai', upload.single('archivo'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No se ha subido ningún archivo' });
+        }
+
+        console.log('');
+        console.log('===================================================================');
+        console.log('PREVISUALIZACION CON IA - DETECCION AUTOMATICA DE COLUMNAS');
+        console.log('===================================================================');
+
+        // Detectar tipo de archivo y parsear a filas
+        const originalName = (req.file.originalname || '').toLowerCase();
+        const isExcel = originalName.endsWith('.xlsx') || originalName.endsWith('.xls');
+        let allRows;
+
+        if (isExcel) {
+            // Parsear Excel con xlsx
+            const XLSX = require('xlsx');
+            const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+            // Convertir a array de arrays, valores como string
+            const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false });
+            allRows = rawRows.map(row => row.map(cell => String(cell || '').trim()));
+            console.log('Archivo Excel detectado, hoja:', sheetName, 'filas:', allRows.length);
+        } else {
+            // Parser CSV robusto que maneja campos con comillas, newlines internos y delimitadores
+            function parseCSV(text, delimiter = ',') {
+                const rows = [];
+                let currentRow = [];
+                let currentField = '';
+                let inQuotes = false;
+
+                for (let i = 0; i < text.length; i++) {
+                    const char = text[i];
+                    const nextChar = text[i + 1];
+
+                    if (inQuotes) {
+                        if (char === '"' && nextChar === '"') {
+                            currentField += '"';
+                            i++;
+                        } else if (char === '"') {
+                            inQuotes = false;
+                        } else {
+                            currentField += char;
+                        }
+                    } else {
+                        if (char === '"') {
+                            inQuotes = true;
+                        } else if (char === delimiter) {
+                            currentRow.push(currentField.trim());
+                            currentField = '';
+                        } else if (char === '\r' && nextChar === '\n') {
+                            currentRow.push(currentField.trim());
+                            currentField = '';
+                            if (currentRow.some(v => v !== '')) rows.push(currentRow);
+                            currentRow = [];
+                            i++;
+                        } else if (char === '\n') {
+                            currentRow.push(currentField.trim());
+                            currentField = '';
+                            if (currentRow.some(v => v !== '')) rows.push(currentRow);
+                            currentRow = [];
+                        } else {
+                            currentField += char;
+                        }
+                    }
+                }
+                currentRow.push(currentField.trim());
+                if (currentRow.some(v => v !== '')) rows.push(currentRow);
+                return rows;
+            }
+
+            let csvContent = req.file.buffer.toString('utf-8');
+            if (csvContent.charCodeAt(0) === 0xFEFF) csvContent = csvContent.slice(1);
+
+            const firstLine = csvContent.split('\n')[0];
+            const semicolonCount = (firstLine.match(/;/g) || []).length;
+            const commaCount = (firstLine.match(/,/g) || []).length;
+            const tabCount = (firstLine.match(/\t/g) || []).length;
+            let delimiter = ',';
+            if (semicolonCount > commaCount && semicolonCount > tabCount) delimiter = ';';
+            else if (tabCount > commaCount && tabCount > semicolonCount) delimiter = '\t';
+
+            allRows = parseCSV(csvContent, delimiter);
+        }
+
+        if (allRows.length < 2) {
+            return res.status(400).json({ success: false, message: 'El archivo está vacío o solo tiene encabezados' });
+        }
+
+        const headersRaw = allRows[0].map(h => h.replace(/"/g, ''));
+        // Filtrar filas donde la mayoría de campos son vacíos (filas de plantilla/decoración)
+        const dataRows = allRows.slice(1).filter(row => {
+            const nonEmpty = row.filter(v => v && v.trim() !== '');
+            return nonEmpty.length >= 3;
+        });
+
+        // Filas de muestra para la IA
+        const sampleRows = dataRows.slice(0, 5);
+
+        // Construir tabla de muestra para la IA
+        let sampleTable = headersRaw.join(' | ') + '\n';
+        sampleTable += headersRaw.map(() => '---').join(' | ') + '\n';
+        sampleRows.forEach(row => {
+            sampleTable += row.map(v => v.replace(/\n/g, ' ').replace(/\r/g, '')).join(' | ') + '\n';
+        });
+
+        console.log('Headers detectados:', headersRaw);
+        console.log('Filas de muestra:', sampleRows.length);
+        console.log('Muestra fila 1:', sampleRows[0]?.map(v => v.replace(/\n/g, ' ').substring(0, 30)));
+        console.log('codEmpresa del body:', req.body?.codEmpresa || 'no proporcionado');
+
+        // Enviar a OpenAI para identificar columnas
+        const { OpenAI } = require('openai');
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+        const aiResponse = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            temperature: 0,
+            response_format: { type: 'json_object' },
+            messages: [
+                {
+                    role: 'system',
+                    content: `Eres un experto en mapeo de datos para un sistema de salud ocupacional en Colombia.
+Tu tarea: analizar los encabezados y datos de muestra de un archivo CSV y mapear cada columna a los campos estándar del sistema.
+
+Campos estándar disponibles (usa EXACTAMENTE estos nombres):
+- numeroId: Número de documento/cédula del paciente (REQUERIDO)
+- primerNombre: Primer nombre (REQUERIDO)
+- segundoNombre: Segundo nombre
+- primerApellido: Primer apellido (REQUERIDO)
+- segundoApellido: Segundo apellido
+- celular: Teléfono/celular
+- correo: Email
+- direccion: Dirección
+- cargo: Cargo/rol/puesto
+- ciudad: Ciudad
+- fechaAtencion: Fecha de atención/consulta
+- horaAtencion: Hora de atención
+- empresa: Nombre de la empresa
+- tipoExamen: Tipo de examen (ej: "EXAMEN PERIODICO", "PRE INGRESO", "EGRESO")
+- medico: Nombre del médico
+- codEmpresa: Código de empresa (REQUERIDO)
+- examenes: Exámenes/observaciones/pruebas a realizar
+
+REGLAS IMPORTANTES:
+1. Si una columna contiene nombre completo (ej: "Jorge David Ochoa Sánchez"), mapéala como "nombreCompleto" - el sistema lo separará después.
+2. Si una columna contiene nombre + apellido juntos (ej: "NOMBRES APELLIDOS Y"), mapéala como "nombreCompleto".
+3. Si hay columna "Tipo de documento" (CC, TI, etc.), ignórala (mapéala a null).
+4. Si no puedes identificar una columna, mapéala a null.
+5. El campo codEmpresa puede no estar en el archivo - en ese caso devuélvelo como null y se usará el valor proporcionado por el usuario.
+6. Responde SOLO con JSON válido.
+
+Formato de respuesta:
+{
+  "mapping": {
+    "0": "campo_estandar_o_null",
+    "1": "campo_estandar_o_null",
+    ...
+  },
+  "confidence": "high|medium|low",
+  "notes": "observaciones sobre el mapeo"
+}`
+                },
+                {
+                    role: 'user',
+                    content: `Archivo CSV con ${dataRows.length} filas. Aquí están los encabezados y primeras filas:\n\n${sampleTable}`
+                }
+            ]
+        });
+
+        const aiResult = JSON.parse(aiResponse.choices[0].message.content);
+        console.log('Mapeo IA:', JSON.stringify(aiResult.mapping));
+        console.log('Confianza:', aiResult.confidence);
+        if (aiResult.notes) console.log('Notas IA:', aiResult.notes);
+
+        // Aplicar el mapeo de la IA a todas las filas
+        const mapping = aiResult.mapping;
+        const registros = [];
+        const errores = [];
+
+        // codEmpresa puede venir del body si la IA no lo detectó
+        const codEmpresaDefault = req.body?.codEmpresa || null;
+
+        // Helper: convertir hora AM/PM a formato 24h
+        const convertirHora24 = (hora) => {
+            if (!hora) return null;
+            hora = hora.trim();
+            const match = hora.match(/^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm|a\.?\s*m\.?|p\.?\s*m\.?)$/i);
+            if (match) {
+                let h = parseInt(match[1]);
+                const m = match[2];
+                const period = match[3].replace(/[\.\s]/g, '').toUpperCase();
+                if (period === 'PM' && h < 12) h += 12;
+                if (period === 'AM' && h === 12) h = 0;
+                return `${h.toString().padStart(2, '0')}:${m}`;
+            }
+            return hora;
+        };
+
+        // Helper: normalizar fecha en cualquier formato
+        const normalizarFecha = (fecha) => {
+            if (!fecha) return null;
+            fecha = fecha.trim();
+
+            // Formato con nombre de mes: "ABRIL13-2026", "13 ABRIL 2026", "ABRIL 13, 2026", etc.
+            const meses = {
+                'enero': '01', 'febrero': '02', 'marzo': '03', 'abril': '04',
+                'mayo': '05', 'junio': '06', 'julio': '07', 'agosto': '08',
+                'septiembre': '09', 'octubre': '10', 'noviembre': '11', 'diciembre': '12',
+                'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04',
+                'may': '05', 'jun': '06', 'jul': '07', 'aug': '08',
+                'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'
+            };
+            const mesRegex = new RegExp(`(${Object.keys(meses).join('|')})[\\s\\-./]*(\\d{1,2})[\\s\\-.,/]*(\\d{2,4})`, 'i');
+            const mesMatch = fecha.match(mesRegex);
+            if (mesMatch) {
+                const mes = meses[mesMatch[1].toLowerCase()];
+                const dia = mesMatch[2].padStart(2, '0');
+                let anio = mesMatch[3];
+                if (anio.length === 2) anio = (parseInt(anio) > 50 ? '19' : '20') + anio;
+                return `${anio}-${mes}-${dia}`;
+            }
+
+            // Formato día-mes-texto: "13-ABRIL-2026", "13 de abril de 2026"
+            const diaMesRegex = new RegExp(`(\\d{1,2})[\\s\\-./]*(?:de\\s+)?(${Object.keys(meses).join('|')})[\\s\\-./]*(?:de\\s+)?(\\d{2,4})`, 'i');
+            const diaMesMatch = fecha.match(diaMesRegex);
+            if (diaMesMatch) {
+                const dia = diaMesMatch[1].padStart(2, '0');
+                const mes = meses[diaMesMatch[2].toLowerCase()];
+                let anio = diaMesMatch[3];
+                if (anio.length === 2) anio = (parseInt(anio) > 50 ? '19' : '20') + anio;
+                return `${anio}-${mes}-${dia}`;
+            }
+
+            // Formato numérico: DD/MM/YYYY, MM-DD-YYYY, etc.
+            const separadorMatch = fecha.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/);
+            if (separadorMatch) {
+                const primero = parseInt(separadorMatch[1]);
+                const segundo = parseInt(separadorMatch[2]);
+                let anio = separadorMatch[3];
+                if (anio.length === 2) anio = (parseInt(anio) > 50 ? '19' : '20') + anio;
+                if (segundo > 12) return `${anio}-${separadorMatch[1].padStart(2, '0')}-${separadorMatch[2].padStart(2, '0')}`;
+                if (primero > 12) return `${anio}-${separadorMatch[2].padStart(2, '0')}-${separadorMatch[1].padStart(2, '0')}`;
+                return `${anio}-${separadorMatch[1].padStart(2, '0')}-${separadorMatch[2].padStart(2, '0')}`;
+            }
+
+            // Ya en formato YYYY-MM-DD
+            if (/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return fecha;
+
+            return fecha;
+        };
+
+        // Helper: separar nombre completo en partes
+        const separarNombreCompleto = (nombreCompleto) => {
+            if (!nombreCompleto) return {};
+            const partes = nombreCompleto.trim().split(/\s+/);
+            if (partes.length === 1) return { primerNombre: partes[0] };
+            if (partes.length === 2) return { primerNombre: partes[0], primerApellido: partes[1] };
+            if (partes.length === 3) return { primerNombre: partes[0], primerApellido: partes[1], segundoApellido: partes[2] };
+            // 4+ partes: 2 nombres + 2 apellidos
+            return {
+                primerNombre: partes[0],
+                segundoNombre: partes[1],
+                primerApellido: partes[2],
+                segundoApellido: partes.slice(3).join(' ')
+            };
+        };
+
+        for (let i = 0; i < dataRows.length; i++) {
+            const values = dataRows[i].map(v => v.replace(/\n/g, ' ').replace(/\r/g, '').trim());
+
+            try {
+                const valoresNoVacios = values.filter(v => v && v.trim() !== '' && v.trim() !== 'CC');
+                if (valoresNoVacios.length === 0) continue;
+
+                // Aplicar mapeo de IA
+                const row = {};
+                for (const [colIndex, fieldName] of Object.entries(mapping)) {
+                    if (fieldName && values[parseInt(colIndex)] !== undefined) {
+                        const val = values[parseInt(colIndex)];
+                        if (val && val.trim() !== '') {
+                            row[fieldName] = val.trim();
+                        }
+                    }
+                }
+
+                // Si la IA detectó nombreCompleto, separarlo
+                if (row.nombreCompleto) {
+                    const partes = separarNombreCompleto(row.nombreCompleto);
+                    if (!row.primerNombre && partes.primerNombre) row.primerNombre = partes.primerNombre;
+                    if (!row.segundoNombre && partes.segundoNombre) row.segundoNombre = partes.segundoNombre;
+                    if (!row.primerApellido && partes.primerApellido) row.primerApellido = partes.primerApellido;
+                    if (!row.segundoApellido && partes.segundoApellido) row.segundoApellido = partes.segundoApellido;
+                    delete row.nombreCompleto;
+                }
+
+                // Aplicar codEmpresa por defecto si no vino en el CSV
+                if (!row.codEmpresa && codEmpresaDefault) {
+                    row.codEmpresa = codEmpresaDefault;
+                }
+
+                // Validar campos mínimos
+                if (!row.numeroId || !row.primerNombre || (!row.primerApellido && !row.segundoApellido) || !row.codEmpresa) {
+                    errores.push({
+                        fila: i + 2,
+                        error: `Falta información requerida (${!row.numeroId ? 'numeroId' : ''} ${!row.primerNombre ? 'primerNombre' : ''} ${!row.primerApellido ? 'primerApellido' : ''} ${!row.codEmpresa ? 'codEmpresa' : ''})`.replace(/\s+/g, ' ').trim(),
+                        datos: row
+                    });
+                    continue;
+                }
+
+                // Si solo tenemos segundoApellido pero no primerApellido, usarlo como primer apellido
+                if (!row.primerApellido && row.segundoApellido) {
+                    row.primerApellido = row.segundoApellido;
+                    row.segundoApellido = null;
+                }
+
+                registros.push({
+                    fila: i + 2,
+                    numeroId: row.numeroId,
+                    primerNombre: row.primerNombre,
+                    segundoNombre: row.segundoNombre || null,
+                    primerApellido: row.primerApellido,
+                    segundoApellido: row.segundoApellido || null,
+                    celular: row.celular || null,
+                    correo: row.correo || null,
+                    direccion: row.direccion || null,
+                    cargo: row.cargo || null,
+                    ciudad: row.ciudad || null,
+                    fechaAtencion: normalizarFecha(row.fechaAtencion),
+                    horaAtencion: convertirHora24(row.horaAtencion) || '08:00',
+                    empresa: row.empresa || row.codEmpresa,
+                    tipoExamen: row.tipoExamen || null,
+                    medico: row.medico || null,
+                    codEmpresa: row.codEmpresa,
+                    examenes: (() => {
+                        if (!row.examenes) return null;
+                        let ex = row.examenes.trim();
+                        // Si viene como JSON array string, convertir a lista separada por comas
+                        try {
+                            if (ex.startsWith('[')) {
+                                const arr = JSON.parse(ex);
+                                return arr.join(', ');
+                            }
+                        } catch (e) { /* no es JSON válido, dejarlo como está */ }
+                        return ex;
+                    })()
+                });
+            } catch (error) {
+                errores.push({ fila: i + 2, error: error.message });
+            }
+        }
+
+        console.log(`Previsualizacion IA completada: ${registros.length} registros validos, ${errores.length} errores`);
+
+        res.json({
+            success: true,
+            total: registros.length,
+            registros,
+            errores,
+            aiMapping: {
+                mapping: Object.fromEntries(
+                    Object.entries(mapping).map(([idx, field]) => [headersRaw[parseInt(idx)] || `col_${idx}`, field])
+                ),
+                confidence: aiResult.confidence,
+                notes: aiResult.notes
+            }
+        });
+
+    } catch (error) {
+        console.error('Error en previsualizacion IA:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error procesando el archivo con IA',
+            error: error.message
+        });
+    }
+});
+
+// POST /api/ordenes/asignar-medicos - Asignar médicos round-robin y horarios a registros del lote
+router.post('/asignar-medicos', async (req, res) => {
+    try {
+        const { registros, medicosIds, horaBase = '08:00', minutosIntervalo = 10, ciudadPresencial = 'BOGOTA' } = req.body;
+
+        if (!registros || !Array.isArray(registros) || registros.length === 0) {
+            return res.status(400).json({ success: false, message: 'No se recibieron registros' });
+        }
+        if (!medicosIds || !Array.isArray(medicosIds) || medicosIds.length === 0) {
+            return res.status(400).json({ success: false, message: 'No se seleccionaron médicos' });
+        }
+
+        // Obtener datos de los médicos seleccionados
+        const medicosResult = await pool.query(`
+            SELECT id, primer_nombre, segundo_nombre, primer_apellido, alias,
+                   COALESCE(tiempo_consulta, 10) as tiempo_consulta
+            FROM medicos WHERE id = ANY($1) AND activo = true
+            ORDER BY primer_apellido, primer_nombre
+        `, [medicosIds]);
+
+        const medicos = medicosResult.rows;
+        if (medicos.length === 0) {
+            return res.status(400).json({ success: false, message: 'No se encontraron médicos activos con los IDs proporcionados' });
+        }
+
+        // Nombre display del médico (alias o nombre completo)
+        const nombreMedico = (m) => m.alias || `${m.primer_nombre} ${m.primer_apellido}`;
+
+        // Detectar si el archivo ya trae horas válidas (no vacías, no "08:00" default para todos)
+        const horasDelArchivo = registros.map(r => r.horaAtencion).filter(h => h && h !== '08:00');
+        const archivoTraeHoras = horasDelArchivo.length > 0;
+        console.log(`Archivo trae horas: ${archivoTraeHoras} (${horasDelArchivo.length} horas distintas de 08:00)`);
+
+        // Separar registros: presencial (BOGOTA) vs virtuales (otras ciudades)
+        const presenciales = [];
+        const virtuales = [];
+
+        registros.forEach((reg, idx) => {
+            const esBogota = reg.ciudad && reg.ciudad.toUpperCase().includes('BOGOT');
+            if (esBogota) {
+                presenciales.push({ ...reg, _originalIdx: idx });
+            } else {
+                virtuales.push({ ...reg, _originalIdx: idx });
+            }
+        });
+
+        // Asignar médicos round-robin a virtuales
+        let contadorVirtual = 0;
+
+        if (archivoTraeHoras) {
+            // El archivo ya tiene horas: solo asignar médicos, respetar horas originales
+            virtuales.forEach(reg => {
+                const medicoIdx = contadorVirtual % medicos.length;
+                reg.medico = nombreMedico(medicos[medicoIdx]);
+                // No tocar horaAtencion, se respeta la del archivo
+                contadorVirtual++;
+            });
+        } else {
+            // El archivo NO tiene horas: asignar médicos + horarios incrementales
+            const [baseH, baseM] = horaBase.split(':').map(Number);
+            virtuales.forEach(reg => {
+                const medicoIdx = contadorVirtual % medicos.length;
+                const minutosTotales = baseH * 60 + baseM + (contadorVirtual * minutosIntervalo);
+                const hora = Math.floor(minutosTotales / 60);
+                const minuto = minutosTotales % 60;
+
+                reg.medico = nombreMedico(medicos[medicoIdx]);
+                reg.horaAtencion = `${hora.toString().padStart(2, '0')}:${minuto.toString().padStart(2, '0')}`;
+                contadorVirtual++;
+            });
+        }
+
+        // Presenciales: "PRESENCIAL", hora solo si el archivo no trae horas
+        presenciales.forEach(reg => {
+            reg.medico = 'PRESENCIAL';
+            if (!archivoTraeHoras) {
+                reg.horaAtencion = '07:00';
+            }
+        });
+
+        // Recombinar y ordenar: presenciales primero, luego por hora
+        const resultado = [...presenciales, ...virtuales]
+            .sort((a, b) => {
+                const aBogota = a.ciudad && a.ciudad.toUpperCase().includes('BOGOT');
+                const bBogota = b.ciudad && b.ciudad.toUpperCase().includes('BOGOT');
+                if (aBogota && !bBogota) return -1;
+                if (!aBogota && bBogota) return 1;
+                return (a.horaAtencion || '').localeCompare(b.horaAtencion || '');
+            })
+            .map(({ _originalIdx, ...reg }) => reg);
+
+        console.log(`Asignacion medicos: ${presenciales.length} presenciales, ${virtuales.length} virtuales, ${medicos.length} medicos, horas del archivo: ${archivoTraeHoras}`);
+
+        res.json({
+            success: true,
+            registros: resultado,
+            resumen: {
+                totalPresencial: presenciales.length,
+                totalVirtual: virtuales.length,
+                medicos: medicos.map(m => nombreMedico(m)),
+                horasDelArchivo: archivoTraeHoras
+            }
+        });
+
+    } catch (error) {
+        console.error('Error en asignacion de medicos:', error);
+        res.status(500).json({ success: false, message: 'Error asignando médicos', error: error.message });
+    }
+});
+
 // POST /api/ordenes/previsualizar-csv - Previsualizar órdenes desde CSV antes de importar
 router.post('/previsualizar-csv', upload.single('archivo'), async (req, res) => {
     try {
