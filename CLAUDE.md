@@ -104,11 +104,12 @@ src/
     calendario.js       - /api/calendario/*, /api/examenes/* - Scheduling
     nubia.js            - /api/nubia/* - Virtual appointments
     audiometria.js      - /api/audiometrias/* - Hearing tests
-    pruebas-adc.js      - /api/pruebas-adc/* - ADC tests
+    pruebas-adc.js      - /api/pruebas-adc/* - ADC tests + /api/pruebas-adc/estadisticas/:codEmpresa (ADC stats by Apto/No Apto, date range)
     scl90.js            - /api/scl90/* - SCL-90 psychological test
     estado-pruebas.js   - /api/estado-pruebas/* - Test status
     consulta-publica.js - /api/consulta-ordenes - Public lookups
     visiometria.js      - /api/visiometrias/* - Vision tests
+    voximetria.js       - /api/voximetria-virtual/* - Virtual voximetry (voice analysis with GPT-4o audio)
     laboratorios.js     - /api/laboratorios/* - Lab results
     certificados.js     - /preview-certificado/*, /api/certificado-pdf/*, /descarga-empresas/:codEmpresa, /api/descarga-empresas/*
     rips.js             - /api/rips/* - Colombian health reports
@@ -149,8 +150,9 @@ Multiple HTML pages with vanilla JavaScript (no framework):
 - `login.html` / `registro.html` - Authentication and registration pages
 - `audiometria.html`, `audiometria-virtual.html` - Audiometry exam interfaces
 - `visiometria.html`, `visiometria-virtual.html` - Vision exam interfaces
+- `voximetria-virtual.html` - Virtual voximetry exam for call center workers (gender selection → mic calibration → 3 voice exercises → GPT-4o audio analysis)
 - `scl90.html` - SCL-90 psychological symptom test (SIIGO only)
-- `pruebas-adc.html` - ADC test interface
+- `pruebas-adc.html` - ADC test interface (includes estadísticas tab with anxiety/depression charts, filterable by date range, grouped by Apto/No Apto)
 - `medicos.html` - Medical staff management
 - `calendario.html` - Appointment scheduling interface
 - `nubia.html` - NUBIA virtual appointments interface
@@ -169,7 +171,7 @@ Multiple HTML pages with vanilla JavaScript (no framework):
 - `informe-audiometrias.html` - Audiometry report by company with CSV export (standalone, no sidebar/topbar)
 - `panel-laboratorios.html` - Laboratory results panel
 - `panel-rips.html` - RIPS Colombian health reports panel
-- `panel-comunidad.html` - Community features panel
+- `panel-comunidad.html` - Community features panel (WhatsApp modal with two-column layout, patient seguimiento/observaciones, date range filtering by fechaConsulta, profile chips, patient photo with lightbox, filtered to PARTICULAR and SANITHELP-JJ only)
 - `twilio-chat.html` - WhatsApp agent chat interface
 - `subir-lote.html` - Batch upload interface
 - `actualizar-foto.html` - Photo upload interface
@@ -193,7 +195,7 @@ Frontend architecture:
 - Socket.io for real-time updates (appointments, notifications)
 - Shared sidebar/topbar loaded dynamically via `load-sidebar.js` and `load-topbar.js`
 - All internal pages MUST use the shared sidebar/topbar pattern (see ordenes.html as reference)
-- Exceptions: `twilio-chat.html` (custom chat UI), `validar-certificado.html` (public page), `index.html` (patient form), `movimiento.html` (standalone stats), `descarga-empresas.html` (public company downloads), `enviar-empresas.html` (standalone notifications), `planilla-sitel.html` (standalone report)
+- Exceptions: `twilio-chat.html` (custom chat UI), `validar-certificado.html` (public page), `index.html` (patient form), `movimiento.html` (standalone stats), `descarga-empresas.html` (public company downloads), `enviar-empresas.html` (standalone notifications), `planilla-sitel.html` (standalone report), `voximetria-virtual.html` (patient voice test)
 
 ### Wix Integration (WIX/)
 
@@ -217,7 +219,25 @@ These files use Wix SDK (`wix-data`, `wix-fetch`) and must be deployed to Wix se
 - **CHATBOT Collection** (Wix): Stores chatbot conversations and automated scheduling requests
 - **Appointment Scheduling**: Integrated with external "Alonso" appointment system
 - **AI-Powered Assistance**: OpenAI integration for intelligent form filling and patient queries
-- **Virtual Exams**: Support for remote audiometry and psychological testing
+- **Virtual Exams**: Support for remote audiometry, visiometry, voximetry, and psychological testing
+
+### Voximetry Virtual (Voice Analysis for Call Center Workers)
+Voice quality screening test using GPT-4o audio analysis:
+
+**Flow**: Gender selection → Mic calibration check → 3 exercises → GPT-4o analysis → Results
+
+**Exercises**:
+1. Sustained vowel "A" (max 20s) — measures F0, jitter, shimmer, HNR, TMF
+2. Read call center script aloud (max 30s) — measures intensity, stability
+3. Count 1-20 in one breath (max 25s) — respiratory capacity
+
+**Technical architecture**:
+- Frontend records via `MediaRecorder` (webm/opus), decodes to PCM via `decodeAudioData()`, converts to WAV base64 via `samplesToWavBase64()`
+- Backend `POST /api/voximetria-virtual/analizar` sends WAV audio to `gpt-4o-audio-preview` model
+- GPT-4o estimates acoustic parameters (F0, jitter, shimmer, HNR, intensity) + generates concepto/interpretacion/recomendaciones
+- Results saved to `voximetrias_virtual` table (upsert on orden_id)
+- Body limit is 25mb to support 3 WAV audio files in base64
+- Mic calibration screen validates volume level before tests begin (requires ~3s of good level)
 
 ### WhatsApp Chat Platform (Multi-Agent System)
 The platform includes a full WhatsApp-based customer service system:
@@ -306,6 +326,7 @@ All tables are created automatically on server startup with `CREATE TABLE IF NOT
 - **audiometrias**: Audiometry test results
 - **visiometrias**: Vision test results
 - **visiometrias_virtual**: Virtual vision test results
+- **voximetrias_virtual**: Virtual voximetry results. Columns: f0_mean/min/max, jitter_percent, shimmer_percent, hnr_db, intensidad_mean_db, tiempo_maximo_fonacion_s, concepto, interpretacion, recomendaciones. Audio analyzed by GPT-4o-audio-preview. UNIQUE on orden_id.
 - **pruebasADC**: ADC (Atención Domiciliaria Continuada) test data
 - **scl90**: SCL-90 psychological symptom test (items 1-90, resultado/interpretacion/baremos as JSONB). Required for SIIGO instead of ADC. Auto-scored with Colombian baremos by gender.
 - **laboratorios**: Laboratory test results
@@ -424,13 +445,16 @@ node migracion-historia-clinica.js [--skip=N] [--dry-run] [--desde=YYYY-MM-DD]
 # Daily sync of medical data for today's consultations
 node sincronizar-datos-medicos.js [--dry-run] [--fecha=YYYY-MM-DD]
 
-# Migrate FORMULARIO collection
-node migracion-formulario.js
+# Migrate FORMULARIO collection from Wix to PostgreSQL formularios table
+# Links formularios to HistoriaClinica via wix_id = idGeneral
+# Only inserts for HC records that don't already have a formulario (never overwrites/deletes)
+# Converts Wix encuestaSalud/antecedentesFamiliares tag arrays to individual Sí/No columns
+node migracion-formulario.js [--skip=N] [--dry-run] [--desde=YYYY-MM-DD]
 ```
 
 Use `--dry-run` to preview changes without modifying database.
 
-**Note**: These scripts are excluded from git (in .gitignore) as they may contain credentials or sensitive configuration.
+**Note**: `migracion-historia-clinica.js` and `sincronizar-datos-medicos.js` are excluded from git (in .gitignore). `migracion-formulario.js` is committed to the repository.
 
 ## Automated Tasks (Cron Jobs)
 
@@ -464,6 +488,11 @@ Location: [server.js:13369-13383](server.js#L13369-L13383)
 - OMEGA also displays approval badge as `APROBADO` in the table when `mdConceptoFinal === 'APTO'`
 - **SITEL APROBADOR exception**: users with `APROBADOR` permission on SITEL can always download certificates without approval restriction
 - Other SITEL users (non-APROBADOR) strictly require `aprobacion === 'APROBADO'`
+
+### SITEL Modalidad (Presencial/Virtual)
+- SITEL currently operates in **presencial only** mode (virtual hidden)
+- This has changed multiple times — check current state in the order creation flow
+- Specific centros de costo may have special rules (e.g., Iberia, Harley Davidson)
 
 ### Wix Sync Failures
 - Wix sync failures are logged but **do not block** the user response
