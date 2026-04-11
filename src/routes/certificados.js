@@ -4,16 +4,22 @@ const pool = require('../config/database');
 const { generarHTMLCertificado, generarPDFConPuppeteer, generarPDFDesdeURL } = require('../helpers/certificate');
 const { generarHTMLHistoriaClinica } = require('../helpers/historia-clinica-html');
 
+// Multi-tenant helper (ver CLAUDE.md)
+function tenantId(req) {
+    return (req.tenant && req.tenant.id) || 'bsl';
+}
+
 // GET /preview-certificado/:id - Preview HTML del certificado médico
 router.get('/preview-certificado/:id', async (req, res) => {
     try {
         const { id } = req.params;
         console.log(`📄 Generando preview de certificado para orden: ${id}`);
 
-        // 1. Obtener datos de HistoriaClinica
+        // 1. Obtener datos de HistoriaClinica (scoped por tenant)
+        const tId = tenantId(req);
         const historiaResult = await pool.query(
-            'SELECT * FROM "HistoriaClinica" WHERE "_id" = $1',
-            [id]
+            'SELECT * FROM "HistoriaClinica" WHERE "_id" = $1 AND tenant_id = $2',
+            [id, tId]
         );
 
         if (historiaResult.rows.length === 0) {
@@ -33,8 +39,9 @@ router.get('/preview-certificado/:id', async (req, res) => {
                    pensiones, nivel_educativo
             FROM formularios
             WHERE (wix_id = $1 OR numero_id = $2)
+              AND tenant_id = $3
             ORDER BY fecha_registro DESC LIMIT 1
-        `, [id, historia.numeroId]);
+        `, [id, historia.numeroId, tId]);
 
         if (formularioResult.rows.length > 0) {
             const formData = formularioResult.rows[0];
@@ -48,10 +55,11 @@ router.get('/preview-certificado/:id', async (req, res) => {
         if (historia.medico) {
             const medicoResult = await pool.query(`
                 SELECT * FROM medicos
-                WHERE CONCAT(primer_nombre, ' ', primer_apellido) ILIKE $1
-                   OR CONCAT(primer_nombre, ' ', segundo_nombre, ' ', primer_apellido) ILIKE $1
+                WHERE (CONCAT(primer_nombre, ' ', primer_apellido) ILIKE $1
+                   OR CONCAT(primer_nombre, ' ', segundo_nombre, ' ', primer_apellido) ILIKE $1)
+                  AND tenant_id = $2
                 LIMIT 1
-            `, [`%${historia.medico}%`]);
+            `, [`%${historia.medico}%`, tId]);
 
             if (medicoResult.rows.length > 0) {
                 medico = medicoResult.rows[0];
@@ -78,8 +86,8 @@ router.get('/api/certificado-pdf/:id', async (req, res) => {
 
         // 1. Verificar que la orden existe y obtener numeroId para el nombre del archivo
         const historiaResult = await pool.query(
-            'SELECT "numeroId" FROM "HistoriaClinica" WHERE "_id" = $1',
-            [id]
+            'SELECT "numeroId" FROM "HistoriaClinica" WHERE "_id" = $1 AND tenant_id = $2',
+            [id, tenantId(req)]
         );
 
         if (historiaResult.rows.length === 0) {
@@ -135,8 +143,8 @@ router.get('/api/descarga-empresas/pdf/:id', async (req, res) => {
         console.log(`📄 Descarga directa de certificado para orden: ${id}`);
 
         const historiaResult = await pool.query(
-            'SELECT "numeroId", "atendido" FROM "HistoriaClinica" WHERE "_id" = $1',
-            [id]
+            'SELECT "numeroId", "atendido" FROM "HistoriaClinica" WHERE "_id" = $1 AND tenant_id = $2',
+            [id, tenantId(req)]
         );
 
         if (historiaResult.rows.length === 0) {
@@ -183,11 +191,12 @@ router.get('/api/descarga-empresas/:codEmpresa', async (req, res) => {
             FROM "HistoriaClinica"
             WHERE "codEmpresa" = $1
               AND "fechaConsulta" IS NOT NULL
+              AND tenant_id = $2
         `;
-        const params = [codEmpresa];
+        const params = [codEmpresa, tenantId(req)];
 
         if (documento) {
-            query += ` AND "numeroId" = $2`;
+            query += ` AND "numeroId" = $3`;
             params.push(documento);
         }
 
@@ -221,7 +230,7 @@ router.get('/api/validar-certificado/:numeroId', async (req, res) => {
         const { numeroId } = req.params;
         console.log(`🔍 Validando certificado para documento: ${numeroId}`);
 
-        // Buscar el último registro ATENDIDO para este número de documento
+        // Buscar el último registro ATENDIDO para este número de documento (scoped por tenant/hostname)
         const query = `
             SELECT "_id", "numeroId", "primerNombre", "segundoNombre",
                    "primerApellido", "segundoApellido", "fechaConsulta",
@@ -231,11 +240,12 @@ router.get('/api/validar-certificado/:numeroId', async (req, res) => {
               AND "atendido" = 'ATENDIDO'
               AND "mdConceptoFinal" IS NOT NULL
               AND "mdConceptoFinal" != ''
+              AND tenant_id = $2
             ORDER BY "fechaConsulta" DESC NULLS LAST, "_createdDate" DESC
             LIMIT 1
         `;
 
-        const result = await pool.query(query, [numeroId]);
+        const result = await pool.query(query, [numeroId, tenantId(req)]);
 
         if (result.rows.length === 0) {
             return res.json({
@@ -301,10 +311,11 @@ router.get('/preview-historia-clinica/:id', async (req, res) => {
         const { id } = req.params;
         console.log(`📋 Generando preview de historia clínica para: ${id}`);
 
-        // 1. Historia Clínica
+        // 1. Historia Clínica (scoped por tenant)
+        const tId = tenantId(req);
         const hcResult = await pool.query(
-            'SELECT * FROM "HistoriaClinica" WHERE "_id" = $1',
-            [id]
+            'SELECT * FROM "HistoriaClinica" WHERE "_id" = $1 AND tenant_id = $2',
+            [id, tId]
         );
         if (hcResult.rows.length === 0) {
             return res.status(404).send('<h1>Historia clínica no encontrada</h1>');
@@ -315,28 +326,29 @@ router.get('/preview-historia-clinica/:id', async (req, res) => {
         let formulario = null;
         const fResult = await pool.query(`
             SELECT * FROM formularios
-            WHERE wix_id = $1 OR numero_id = $2
+            WHERE (wix_id = $1 OR numero_id = $2)
+              AND tenant_id = $3
             ORDER BY fecha_registro DESC LIMIT 1
-        `, [id, historia.numeroId]);
+        `, [id, historia.numeroId, tId]);
         if (fResult.rows.length > 0) formulario = fResult.rows[0];
 
         // 3. Audiometría
         let audiometria = null;
         const audioResult = await pool.query(
-            'SELECT * FROM audiometrias WHERE orden_id = $1 LIMIT 1', [id]
+            'SELECT * FROM audiometrias WHERE orden_id = $1 AND tenant_id = $2 LIMIT 1', [id, tId]
         );
         if (audioResult.rows.length > 0) audiometria = audioResult.rows[0];
 
         // 4. Visiometría (presencial primero, luego virtual)
         let visiometria = null;
         const visioResult = await pool.query(
-            'SELECT * FROM visiometrias WHERE orden_id = $1 LIMIT 1', [id]
+            'SELECT * FROM visiometrias WHERE orden_id = $1 AND tenant_id = $2 LIMIT 1', [id, tId]
         );
         if (visioResult.rows.length > 0) {
             visiometria = visioResult.rows[0];
         } else {
             const visioVirtResult = await pool.query(
-                'SELECT * FROM visiometrias_virtual WHERE orden_id = $1 LIMIT 1', [id]
+                'SELECT * FROM visiometrias_virtual WHERE orden_id = $1 AND tenant_id = $2 LIMIT 1', [id, tId]
             );
             if (visioVirtResult.rows.length > 0) visiometria = visioVirtResult.rows[0];
         }
@@ -344,21 +356,21 @@ router.get('/preview-historia-clinica/:id', async (req, res) => {
         // 5. Laboratorios
         let laboratorios = [];
         const labResult = await pool.query(
-            'SELECT * FROM laboratorios WHERE orden_id = $1 ORDER BY created_at ASC', [id]
+            'SELECT * FROM laboratorios WHERE orden_id = $1 AND tenant_id = $2 ORDER BY created_at ASC', [id, tId]
         );
         if (labResult.rows.length > 0) laboratorios = labResult.rows;
 
         // 6. Prueba ADC
         let adc = null;
         const adcResult = await pool.query(
-            'SELECT * FROM "pruebasADC" WHERE orden_id = $1 LIMIT 1', [id]
+            'SELECT * FROM "pruebasADC" WHERE orden_id = $1 AND tenant_id = $2 LIMIT 1', [id, tId]
         );
         if (adcResult.rows.length > 0) adc = adcResult.rows[0];
 
         // 7. SCL-90
         let scl90 = null;
         const sclResult = await pool.query(
-            'SELECT * FROM scl90 WHERE orden_id = $1 LIMIT 1', [id]
+            'SELECT * FROM scl90 WHERE orden_id = $1 AND tenant_id = $2 LIMIT 1', [id, tId]
         );
         if (sclResult.rows.length > 0) scl90 = sclResult.rows[0];
 
@@ -389,7 +401,7 @@ router.get('/api/historia-clinica-pdf/:id', async (req, res) => {
 
         // Verificar que la orden existe
         const hcCheck = await pool.query(
-            'SELECT "numeroId" FROM "HistoriaClinica" WHERE "_id" = $1', [id]
+            'SELECT "numeroId" FROM "HistoriaClinica" WHERE "_id" = $1 AND tenant_id = $2', [id, tenantId(req)]
         );
         if (hcCheck.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Historia clínica no encontrada' });

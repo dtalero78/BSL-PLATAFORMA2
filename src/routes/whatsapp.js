@@ -22,12 +22,20 @@ const { procesarFlujoPagos } = require('../services/payment');
 // WhatsApp service: Twilio message sending
 const { sendWhatsAppFreeText } = require('../services/whatsapp');
 
+// Multi-tenant helper (ver CLAUDE.md).
+// Para los webhooks de Twilio, el tenant se resuelve por hostname del webhook URL.
+// Cada IPS configura su Twilio para apuntar a su propio dominio.
+function tenantId(req) {
+    return (req.tenant && req.tenant.id) || 'bsl';
+}
+
 // ============================================================
 // POST /webhook - Twilio WhatsApp incoming message webhook
 // ============================================================
 router.post('/webhook', async (req, res) => {
     try {
         const { From, Body, MessageSid, ProfileName, NumMedia } = req.body;
+        const tId = tenantId(req);
 
         // Normalizar número de teléfono usando helper (formato: 57XXXXXXXXXX sin +)
         const numeroCliente = normalizarTelefonoConPrefijo57(From);
@@ -51,32 +59,36 @@ router.post('/webhook', async (req, res) => {
             body: Body,
             sid: MessageSid,
             name: ProfileName,
+            tenant: tId,
             numMedia,
             mediaUrls,
             mediaTypes
         });
 
-        // Buscar conversacion - primero con formato normalizado (+), luego sin + (conversaciones viejas)
+        // Buscar conversacion (scoped por tenant)
         let conversacion = await pool.query(`
-            SELECT id FROM conversaciones_whatsapp WHERE celular = $1
-        `, [numeroCliente]);
+            SELECT id FROM conversaciones_whatsapp WHERE celular = $1 AND tenant_id = $2
+        `, [numeroCliente, tId]);
 
         // Si no se encuentra con +, buscar sin + (conversaciones antiguas) y migrar formato
         if (conversacion.rows.length === 0 && numeroCliente.startsWith('+')) {
             const numeroSinMas = numeroCliente.substring(1);
             conversacion = await pool.query(`
-                SELECT id FROM conversaciones_whatsapp WHERE celular = $1
-            `, [numeroSinMas]);
+                SELECT id FROM conversaciones_whatsapp WHERE celular = $1 AND tenant_id = $2
+            `, [numeroSinMas, tId]);
             if (conversacion.rows.length > 0) {
-                await pool.query(`UPDATE conversaciones_whatsapp SET celular = $1 WHERE id = $2`, [numeroCliente, conversacion.rows[0].id]);
+                await pool.query(
+                    `UPDATE conversaciones_whatsapp SET celular = $1 WHERE id = $2 AND tenant_id = $3`,
+                    [numeroCliente, conversacion.rows[0].id, tId]
+                );
             }
         }
 
         let conversacionId;
 
         if (conversacion.rows.length === 0) {
-            // Crear nueva conversacion
-            console.log(`🔥🔥🔥 [WEBHOOK-V3] CREANDO NUEVA CONVERSACIÓN - numeroCliente="${numeroCliente}" tieneSignoMas=${numeroCliente.startsWith('+')}`);
+            // Crear nueva conversacion (con tenant_id)
+            console.log(`🔥🔥🔥 [WEBHOOK-V3] CREANDO NUEVA CONVERSACIÓN - numeroCliente="${numeroCliente}" tenant=${tId}`);
             const nuevaConv = await pool.query(`
                 INSERT INTO conversaciones_whatsapp (
                     celular,
@@ -84,23 +96,24 @@ router.post('/webhook', async (req, res) => {
                     estado_actual,
                     fecha_inicio,
                     fecha_ultima_actividad,
-                    bot_activo
+                    bot_activo,
+                    tenant_id
                 )
-                VALUES ($1, $2, 'activa', NOW(), NOW(), true)
+                VALUES ($1, $2, 'activa', NOW(), NOW(), true, $3)
                 RETURNING id
-            `, [numeroCliente, ProfileName || 'Usuario WhatsApp']);
+            `, [numeroCliente, ProfileName || 'Usuario WhatsApp', tId]);
 
             conversacionId = nuevaConv.rows[0].id;
             console.log(`🔥🔥🔥 [WEBHOOK-V3] Conversación creada ID=${conversacionId} con celular="${numeroCliente}"`);
         } else {
             conversacionId = conversacion.rows[0].id;
 
-            // Actualizar ultima actividad
+            // Actualizar ultima actividad (scoped por tenant)
             await pool.query(`
                 UPDATE conversaciones_whatsapp
                 SET fecha_ultima_actividad = NOW()
-                WHERE id = $1
-            `, [conversacionId]);
+                WHERE id = $1 AND tenant_id = $2
+            `, [conversacionId, tId]);
         }
 
         // PROCESAR FLUJO DE VALIDACION DE PAGOS SI HAY IMAGENES
@@ -138,7 +151,7 @@ router.post('/webhook', async (req, res) => {
             }
         }
 
-        // Guardar mensaje entrante
+        // Guardar mensaje entrante (con tenant_id)
         await pool.query(`
             INSERT INTO mensajes_whatsapp (
                 conversacion_id,
@@ -148,16 +161,18 @@ router.post('/webhook', async (req, res) => {
                 tipo_mensaje,
                 media_url,
                 media_type,
-                timestamp
+                timestamp,
+                tenant_id
             )
-            VALUES ($1, $2, 'entrante', $3, $4, $5, $6, NOW())
+            VALUES ($1, $2, 'entrante', $3, $4, $5, $6, NOW(), $7)
         `, [
             conversacionId,
             Body || '📎 Archivo adjunto',
             MessageSid,
             tipoMensaje,
             mediaUrls.length > 0 ? JSON.stringify(mediaUrls) : null,
-            mediaTypes.length > 0 ? JSON.stringify(mediaTypes) : null
+            mediaTypes.length > 0 ? JSON.stringify(mediaTypes) : null,
+            tId
         ]);
 
         console.log('✅ Mensaje guardado en conversación:', conversacionId);
@@ -174,7 +189,8 @@ router.post('/webhook', async (req, res) => {
                 nombre_cliente: ProfileName || 'Usuario WhatsApp',
                 tipo_mensaje: tipoMensaje,
                 media_url: mediaUrls.length > 0 ? JSON.stringify(mediaUrls) : null,
-                media_type: mediaTypes.length > 0 ? JSON.stringify(mediaTypes) : null
+                media_type: mediaTypes.length > 0 ? JSON.stringify(mediaTypes) : null,
+                tenant_id: tId
             });
         }
 
@@ -216,11 +232,11 @@ router.post('/webhook', async (req, res) => {
 
                 console.log(`🤖 Bot check para ${numeroCliente}: modo=${modoActual}`);
 
-                // Verificar si el bot debe responder
+                // Verificar si el bot debe responder (scoped por tenant)
                 const convData = await pool.query(`
                     SELECT "stopBot", bot_activo FROM conversaciones_whatsapp
-                    WHERE id = $1
-                `, [conversacionId]);
+                    WHERE id = $1 AND tenant_id = $2
+                `, [conversacionId, tId]);
 
                 const stopBot = convData.rows[0]?.stopBot || false;
 
@@ -232,28 +248,28 @@ router.post('/webhook', async (req, res) => {
 
                 // REGLA 2: Solo si esta en MODO_BOT, responder con IA
                 if (modoActual === MODO_BOT && !stopBot) {
-                    // Verificar si el paciente pertenece a una empresa diferente a SANITHELP-JJ
+                    // Verificar si el paciente pertenece a una empresa diferente a SANITHELP-JJ (BSL-only)
                     const celularLimpio = numeroCliente.replace(/\D/g, '').replace(/^57/, '');
                     const celularCon57 = '57' + celularLimpio;
                     const celularConPlus = '+57' + celularLimpio;
 
                     const empresaCheck = await pool.query(`
                         SELECT "codEmpresa" FROM "HistoriaClinica"
-                        WHERE "celular" IN ($1, $2, $3)
+                        WHERE "celular" IN ($1, $2, $3) AND tenant_id = $4
                         ORDER BY "_createdDate" DESC
                         LIMIT 1
-                    `, [celularLimpio, celularCon57, celularConPlus]);
+                    `, [celularLimpio, celularCon57, celularConPlus, tId]);
 
                     if (empresaCheck.rows.length > 0) {
                         const codEmpresa = empresaCheck.rows[0].codEmpresa;
                         if (codEmpresa && codEmpresa !== 'SANITHELP-JJ') {
                             console.log(`🚫 Bot NO responde a ${numeroCliente} - Empresa: ${codEmpresa} (solo SANITHELP-JJ)`);
-                            // Detener el bot para esta conversacion
+                            // Detener el bot para esta conversacion (scoped)
                             await pool.query(`
                                 UPDATE conversaciones_whatsapp
                                 SET "stopBot" = true
-                                WHERE id = $1
-                            `, [conversacionId]);
+                                WHERE id = $1 AND tenant_id = $2
+                            `, [conversacionId, tId]);
                             return res.status(200).send('OK');
                         }
                     }
@@ -279,8 +295,8 @@ router.post('/webhook', async (req, res) => {
                         await pool.query(`
                             UPDATE conversaciones_whatsapp
                             SET "stopBot" = true, bot_activo = false
-                            WHERE id = $1
-                        `, [conversacionId]);
+                            WHERE id = $1 AND tenant_id = $2
+                        `, [conversacionId, tId]);
                         console.log(`🛑 Bot auto-detenido para ${numeroCliente} (transferencia a asesor) - MODO_HUMANO activado`);
                     }
 
@@ -298,7 +314,8 @@ router.post('/webhook', async (req, res) => {
                             direccion: 'saliente',
                             fecha_envio: new Date().toISOString(),
                             tipo_mensaje: 'text',
-                            es_bot: true
+                            es_bot: true,
+                            tenant_id: tId
                         });
                     }
 
@@ -337,6 +354,7 @@ router.post('/webhook', async (req, res) => {
 router.post('/status', async (req, res) => {
     try {
         const { MessageSid, MessageStatus, To, From, Body, NumMedia } = req.body;
+        const tId = tenantId(req);
 
         console.log('🔔 ===== STATUS CALLBACK RECIBIDO =====');
         console.log('📊 Status callback de Twilio:', {
@@ -346,6 +364,7 @@ router.post('/status', async (req, res) => {
             from: From,
             body: Body,
             numMedia: NumMedia,
+            tenant: tId,
             timestamp: new Date().toISOString()
         });
         console.log('🔔 =====================================');
@@ -355,10 +374,10 @@ router.post('/status', async (req, res) => {
             // Normalizar número usando helper
             const numeroCliente = normalizarTelefonoConPrefijo57(To);
 
-            // Verificar si el mensaje ya existe en la base de datos
+            // Verificar si el mensaje ya existe en la base de datos (scoped por tenant)
             const mensajeExistente = await pool.query(`
-                SELECT id FROM mensajes_whatsapp WHERE sid_twilio = $1
-            `, [MessageSid]);
+                SELECT id FROM mensajes_whatsapp WHERE sid_twilio = $1 AND tenant_id = $2
+            `, [MessageSid, tId]);
 
             // Si el mensaje ya existe, no hacer nada (ya fue guardado al enviarlo)
             if (mensajeExistente.rows.length > 0) {
@@ -371,26 +390,29 @@ router.post('/status', async (req, res) => {
             console.log('📝 Registrando mensaje enviado desde plataforma externa');
             console.log(`📱 [DEBUG-STATUS] To original: "${To}", numeroCliente normalizado: "${numeroCliente}"`);
 
-            // Buscar conversación - primero con formato normalizado (+), luego sin + (conversaciones viejas)
+            // Buscar conversación (scoped por tenant)
             let conversacion = await pool.query(`
-                SELECT id FROM conversaciones_whatsapp WHERE celular = $1
-            `, [numeroCliente]);
+                SELECT id FROM conversaciones_whatsapp WHERE celular = $1 AND tenant_id = $2
+            `, [numeroCliente, tId]);
 
             // Si no se encuentra con +, buscar sin + (conversaciones antiguas) y migrar formato
             if (conversacion.rows.length === 0 && numeroCliente.startsWith('+')) {
                 const numeroSinMas = numeroCliente.substring(1);
                 conversacion = await pool.query(`
-                    SELECT id FROM conversaciones_whatsapp WHERE celular = $1
-                `, [numeroSinMas]);
+                    SELECT id FROM conversaciones_whatsapp WHERE celular = $1 AND tenant_id = $2
+                `, [numeroSinMas, tId]);
                 if (conversacion.rows.length > 0) {
-                    await pool.query(`UPDATE conversaciones_whatsapp SET celular = $1 WHERE id = $2`, [numeroCliente, conversacion.rows[0].id]);
+                    await pool.query(
+                        `UPDATE conversaciones_whatsapp SET celular = $1 WHERE id = $2 AND tenant_id = $3`,
+                        [numeroCliente, conversacion.rows[0].id, tId]
+                    );
                 }
             }
 
             let conversacionId;
 
             if (conversacion.rows.length === 0) {
-                // Crear nueva conversacion
+                // Crear nueva conversacion (con tenant_id)
                 try {
                     const nuevaConv = await pool.query(`
                         INSERT INTO conversaciones_whatsapp (
@@ -399,21 +421,22 @@ router.post('/status', async (req, res) => {
                             estado_actual,
                             fecha_inicio,
                             fecha_ultima_actividad,
-                            bot_activo
+                            bot_activo,
+                            tenant_id
                         )
-                        VALUES ($1, $2, 'activa', NOW(), NOW(), true)
+                        VALUES ($1, $2, 'activa', NOW(), NOW(), true, $3)
                         RETURNING id
-                    `, [numeroCliente, 'Usuario WhatsApp']);
+                    `, [numeroCliente, 'Usuario WhatsApp', tId]);
 
                     conversacionId = nuevaConv.rows[0].id;
                 } catch (insertError) {
                     // Si falla por constraint único (race condition), buscar la conversación que se creó
                     if (insertError.code === '23505') {
                         console.log('⚠️ Conversación ya existe (race condition), buscando nuevamente...');
-                        // Buscar con ambos formatos
+                        // Buscar con ambos formatos (scoped por tenant)
                         const recuperacion = await pool.query(`
-                            SELECT id FROM conversaciones_whatsapp WHERE celular = $1 OR celular = $2
-                        `, [numeroCliente, numeroCliente.replace(/^\+/, '')]);
+                            SELECT id FROM conversaciones_whatsapp WHERE (celular = $1 OR celular = $2) AND tenant_id = $3
+                        `, [numeroCliente, numeroCliente.replace(/^\+/, ''), tId]);
 
                         if (recuperacion.rows.length > 0) {
                             conversacionId = recuperacion.rows[0].id;
@@ -428,12 +451,12 @@ router.post('/status', async (req, res) => {
             } else {
                 conversacionId = conversacion.rows[0].id;
 
-                // Actualizar ultima actividad
+                // Actualizar ultima actividad (scoped)
                 await pool.query(`
                     UPDATE conversaciones_whatsapp
                     SET fecha_ultima_actividad = NOW()
-                    WHERE id = $1
-                `, [conversacionId]);
+                    WHERE id = $1 AND tenant_id = $2
+                `, [conversacionId, tId]);
             }
 
             // Capturar multimedia si existe
@@ -481,7 +504,7 @@ router.post('/status', async (req, res) => {
                 }
             }
 
-            // Guardar mensaje saliente desde plataforma externa
+            // Guardar mensaje saliente desde plataforma externa (con tenant_id)
             const mensajeResult = await pool.query(`
                 INSERT INTO mensajes_whatsapp (
                     conversacion_id,
@@ -491,9 +514,10 @@ router.post('/status', async (req, res) => {
                     tipo_mensaje,
                     media_url,
                     media_type,
-                    timestamp
+                    timestamp,
+                    tenant_id
                 )
-                VALUES ($1, $2, 'saliente', $3, $4, $5, $6, NOW())
+                VALUES ($1, $2, 'saliente', $3, $4, $5, $6, NOW(), $7)
                 RETURNING *
             `, [
                 conversacionId,
@@ -501,7 +525,8 @@ router.post('/status', async (req, res) => {
                 MessageSid,
                 tipoMensaje,
                 mediaUrls.length > 0 ? JSON.stringify(mediaUrls) : null,
-                mediaTypes.length > 0 ? JSON.stringify(mediaTypes) : null
+                mediaTypes.length > 0 ? JSON.stringify(mediaTypes) : null,
+                tId
             ]);
 
             console.log('✅ Mensaje externo guardado en conversación:', conversacionId);
@@ -517,7 +542,8 @@ router.post('/status', async (req, res) => {
                     sid_twilio: MessageSid,
                     tipo_mensaje: tipoMensaje,
                     media_url: mediaUrls.length > 0 ? JSON.stringify(mediaUrls) : null,
-                    media_type: mediaTypes.length > 0 ? JSON.stringify(mediaTypes) : null
+                    media_type: mediaTypes.length > 0 ? JSON.stringify(mediaTypes) : null,
+                    tenant_id: tId
                 });
             }
         }
@@ -537,6 +563,7 @@ const { sendWhatsAppMessage } = require('../services/whatsapp');
 router.post('/enviar-manual', async (req, res) => {
     try {
         const { celular } = req.body;
+        const tId = tenantId(req);
 
         if (!celular) {
             return res.status(400).json({
@@ -575,21 +602,24 @@ router.post('/enviar-manual', async (req, res) => {
         }
 
         try {
-            // Buscar conversación - primero con +, luego sin + (conversaciones antiguas)
+            // Buscar conversación (scoped por tenant)
             let conversacionExistente = await pool.query(
-                'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1',
-                [telefonoNormalizado]
+                'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1 AND tenant_id = $2',
+                [telefonoNormalizado, tId]
             );
 
             // Si no se encuentra con +, buscar sin + (conversaciones antiguas) y migrar formato
             if (conversacionExistente.rows.length === 0 && telefonoNormalizado.startsWith('+')) {
                 const numeroSinMas = telefonoNormalizado.substring(1);
                 conversacionExistente = await pool.query(
-                    'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1',
-                    [numeroSinMas]
+                    'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1 AND tenant_id = $2',
+                    [numeroSinMas, tId]
                 );
                 if (conversacionExistente.rows.length > 0) {
-                    await pool.query(`UPDATE conversaciones_whatsapp SET celular = $1 WHERE id = $2`, [telefonoNormalizado, conversacionExistente.rows[0].id]);
+                    await pool.query(
+                        `UPDATE conversaciones_whatsapp SET celular = $1 WHERE id = $2 AND tenant_id = $3`,
+                        [telefonoNormalizado, conversacionExistente.rows[0].id, tId]
+                    );
                 }
             }
 
@@ -599,8 +629,8 @@ router.post('/enviar-manual', async (req, res) => {
                     UPDATE conversaciones_whatsapp
                     SET "stopBot" = true,
                         fecha_ultima_actividad = NOW()
-                    WHERE celular = $1
-                `, [celularEnBD]);
+                    WHERE celular = $1 AND tenant_id = $2
+                `, [celularEnBD, tId]);
             } else {
                 await pool.query(`
                     INSERT INTO conversaciones_whatsapp (
@@ -610,9 +640,10 @@ router.post('/enviar-manual', async (req, res) => {
                         estado,
                         bot_activo,
                         fecha_inicio,
-                        fecha_ultima_actividad
-                    ) VALUES ($1, true, 'MANUAL', 'nueva', false, NOW(), NOW())
-                `, [telefonoNormalizado]);
+                        fecha_ultima_actividad,
+                        tenant_id
+                    ) VALUES ($1, true, 'MANUAL', 'nueva', false, NOW(), NOW(), $2)
+                `, [telefonoNormalizado, tId]);
             }
         } catch (dbError) {
             console.error('⚠️ Error al guardar en conversaciones_whatsapp:', dbError.message);

@@ -5,6 +5,12 @@ const { normalizarTelefonoConPrefijo57 } = require('../helpers/phone');
 const { sendWhatsAppMessage, sendWhatsAppFreeText, guardarMensajeSaliente } = require('../services/whatsapp');
 const { authMiddleware, requireAdmin } = require('../middleware/auth');
 
+// Multi-tenant helper (ver CLAUDE.md)
+// Para endpoints públicos, el tenant se resuelve por hostname (ej. bsl.com.co → bsl)
+function tenantId(req) {
+    return (req.tenant && req.tenant.id) || 'bsl';
+}
+
 // ========== CONSULTA PÚBLICA DE ÓRDENES ==========
 // POST /api/consulta-ordenes - Buscar órdenes por número de documento y celular
 router.post('/consulta-ordenes', async (req, res) => {
@@ -18,7 +24,8 @@ router.post('/consulta-ordenes', async (req, res) => {
             });
         }
 
-        // Buscar órdenes en HistoriaClinica
+        // Buscar órdenes en HistoriaClinica (scoped por tenant/hostname)
+        const tId = tenantId(req);
         const ordenesResult = await pool.query(`
             SELECT
                 "_id",
@@ -38,9 +45,9 @@ router.post('/consulta-ordenes', async (req, res) => {
                 "mdConceptoFinal",
                 "_createdDate"
             FROM "HistoriaClinica"
-            WHERE "numeroId" = $1 AND "celular" = $2
+            WHERE "numeroId" = $1 AND "celular" = $2 AND tenant_id = $3
             ORDER BY "_createdDate" DESC
-        `, [numeroDocumento, celular]);
+        `, [numeroDocumento, celular, tId]);
 
         if (ordenesResult.rows.length === 0) {
             return res.status(404).json({
@@ -55,41 +62,41 @@ router.post('/consulta-ordenes', async (req, res) => {
                 const examenesRequeridos = orden.examenes || '';
                 const examLower = examenesRequeridos.toLowerCase();
 
-                // Verificar formulario
+                // Verificar formulario (scoped por tenant)
                 let formularioResult = await pool.query(
-                    'SELECT id FROM formularios WHERE wix_id = $1',
-                    [orden._id]
+                    'SELECT id FROM formularios WHERE wix_id = $1 AND tenant_id = $2',
+                    [orden._id, tId]
                 );
                 if (formularioResult.rows.length === 0 && orden.numeroId) {
                     formularioResult = await pool.query(
-                        'SELECT id FROM formularios WHERE numero_id = $1',
-                        [orden.numeroId]
+                        'SELECT id FROM formularios WHERE numero_id = $1 AND tenant_id = $2',
+                        [orden.numeroId, tId]
                     );
                 }
                 const tieneFormulario = formularioResult.rows.length > 0;
 
                 // Verificar audiometría
                 const audioResult = await pool.query(
-                    'SELECT id FROM audiometrias WHERE orden_id = $1',
-                    [orden._id]
+                    'SELECT id FROM audiometrias WHERE orden_id = $1 AND tenant_id = $2',
+                    [orden._id, tId]
                 );
                 const tieneAudiometria = audioResult.rows.length > 0;
 
                 // Verificar pruebas ADC
                 const adcResult = await pool.query(
-                    'SELECT id FROM "pruebasADC" WHERE orden_id = $1',
-                    [orden._id]
+                    'SELECT id FROM "pruebasADC" WHERE orden_id = $1 AND tenant_id = $2',
+                    [orden._id, tId]
                 );
                 const tieneADC = adcResult.rows.length > 0;
 
                 // Verificar visiometría
                 const visioResult = await pool.query(
-                    'SELECT id FROM visiometrias WHERE orden_id = $1',
-                    [orden._id]
+                    'SELECT id FROM visiometrias WHERE orden_id = $1 AND tenant_id = $2',
+                    [orden._id, tId]
                 );
                 const visioVirtualResult = await pool.query(
-                    'SELECT id FROM visiometrias_virtual WHERE orden_id = $1',
-                    [orden._id]
+                    'SELECT id FROM visiometrias_virtual WHERE orden_id = $1 AND tenant_id = $2',
+                    [orden._id, tId]
                 );
                 const tieneVisiometria = visioResult.rows.length > 0 || visioVirtualResult.rows.length > 0;
 
@@ -162,10 +169,10 @@ router.post('/enviar-link-prueba', async (req, res) => {
             return res.status(400).json({ success: false, message: 'ordenId y tipoPrueba son requeridos' });
         }
 
-        // Obtener datos del paciente incluyendo empresa
+        // Obtener datos del paciente incluyendo empresa (scoped por tenant)
         const ordenResult = await pool.query(
-            'SELECT "primerNombre", "primerApellido", "celular", "numeroId", "empresa", "codEmpresa" FROM "HistoriaClinica" WHERE "_id" = $1',
-            [ordenId]
+            'SELECT "primerNombre", "primerApellido", "celular", "numeroId", "empresa", "codEmpresa" FROM "HistoriaClinica" WHERE "_id" = $1 AND tenant_id = $2',
+            [ordenId, tenantId(req)]
         );
 
         if (ordenResult.rows.length === 0) {
@@ -295,10 +302,11 @@ router.post('/enviar-certificado-whatsapp', authMiddleware, requireAdmin, async 
             return res.status(400).json({ success: false, message: 'conversacionId es requerido' });
         }
 
-        // Obtener número de teléfono de la conversación
+        // Obtener número de teléfono de la conversación (scoped por tenant)
+        const tIdCert = tenantId(req);
         const convResult = await pool.query(
-            'SELECT celular FROM conversaciones_whatsapp WHERE id = $1',
-            [conversacionId]
+            'SELECT celular FROM conversaciones_whatsapp WHERE id = $1 AND tenant_id = $2',
+            [conversacionId, tIdCert]
         );
 
         if (convResult.rows.length === 0) {
@@ -317,11 +325,12 @@ router.post('/enviar-certificado-whatsapp', authMiddleware, requireAdmin, async 
 
         const pacienteResult = await pool.query(
             `SELECT "_id", "primerNombre" FROM "HistoriaClinica"
-             WHERE REPLACE(REPLACE("celular", ' ', ''), '+57', '') = $1
-             OR REPLACE(REPLACE("celular", ' ', ''), '+', '') = $2
+             WHERE (REPLACE(REPLACE("celular", ' ', ''), '+57', '') = $1
+             OR REPLACE(REPLACE("celular", ' ', ''), '+', '') = $2)
+             AND tenant_id = $3
              ORDER BY "_createdDate" DESC
              LIMIT 1`,
-            [numeroSin57, numeroLimpio]
+            [numeroSin57, numeroLimpio, tIdCert]
         );
 
         if (pacienteResult.rows.length === 0) {

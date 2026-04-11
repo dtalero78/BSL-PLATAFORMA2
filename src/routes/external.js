@@ -6,6 +6,13 @@ const { notificarNuevaOrden } = require('../helpers/sse');
 const { authMiddleware } = require('../middleware/auth');
 const { isBsl } = require('../helpers/tenant');
 
+// Multi-tenant helper (ver CLAUDE.md).
+// Nota: /api/external/* es actualmente BSL-only (SIIGO). Las queries incluyen
+// tenant_id igualmente por consistencia + safety.
+function tenantId(req) {
+    return (req.tenant && req.tenant.id) || 'bsl';
+}
+
 const API_KEY = process.env.EXTERNAL_API_KEY;
 
 function apiKeyAuth(req, res, next) {
@@ -59,14 +66,15 @@ router.post('/ordenes', apiKeyAuth, async (req, res) => {
         }
 
         const codEmpresa = 'SIIGO';
+        const tId = tenantId(req);
 
-        // Verificar duplicado pendiente
+        // Verificar duplicado pendiente (scoped por tenant)
         const duplicado = await pool.query(`
             SELECT "_id", "primerNombre", "primerApellido", "atendido"
             FROM "HistoriaClinica"
-            WHERE "numeroId" = $1 AND "codEmpresa" = $2 AND "atendido" = 'PENDIENTE'
+            WHERE "numeroId" = $1 AND "codEmpresa" = $2 AND "atendido" = 'PENDIENTE' AND tenant_id = $3
             ORDER BY "_createdDate" DESC LIMIT 1
-        `, [numeroId, codEmpresa]);
+        `, [numeroId, codEmpresa, tId]);
 
         if (duplicado.rows.length > 0) {
             return res.status(409).json({
@@ -82,9 +90,9 @@ router.post('/ordenes', apiKeyAuth, async (req, res) => {
             INSERT INTO "HistoriaClinica" (
                 "_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
                 "celular", "codEmpresa", "empresa", "cargo", "ciudad", "email",
-                "atendido", "_createdDate", "_updatedDate"
+                "atendido", tenant_id, "_createdDate", "_updatedDate"
             ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'PENDIENTE', NOW(), NOW()
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'PENDIENTE', $13, NOW(), NOW()
             )
             RETURNING "_id", "numeroId", "primerNombre", "primerApellido"
         `;
@@ -101,7 +109,8 @@ router.post('/ordenes', apiKeyAuth, async (req, res) => {
             empresaNormalizada,
             (cargo || '').trim().toUpperCase() || null,
             ciudad.trim().toUpperCase(),
-            (email || '').trim().toLowerCase() || null
+            (email || '').trim().toLowerCase() || null,
+            tId
         ]);
 
         console.log(`[EXTERNAL] Orden creada: ${wixId} | ${primerNombre} ${primerApellido} | ${numeroId} | ${empresaNormalizada}`);
@@ -112,17 +121,20 @@ router.post('/ordenes', apiKeyAuth, async (req, res) => {
             const celularSinMas = celularConPrefijo ? celularConPrefijo.replace(/^\+/, '') : null;
 
             let conversacionExistente = await pool.query(
-                `SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1`,
-                [celularConPrefijo]
+                `SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1 AND tenant_id = $2`,
+                [celularConPrefijo, tId]
             );
 
             if (conversacionExistente.rows.length === 0 && celularSinMas) {
                 conversacionExistente = await pool.query(
-                    `SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1`,
-                    [celularSinMas]
+                    `SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1 AND tenant_id = $2`,
+                    [celularSinMas, tId]
                 );
                 if (conversacionExistente.rows.length > 0) {
-                    await pool.query(`UPDATE conversaciones_whatsapp SET celular = $1 WHERE id = $2`, [celularConPrefijo, conversacionExistente.rows[0].id]);
+                    await pool.query(
+                        `UPDATE conversaciones_whatsapp SET celular = $1 WHERE id = $2 AND tenant_id = $3`,
+                        [celularConPrefijo, conversacionExistente.rows[0].id, tId]
+                    );
                 }
             }
 
@@ -131,15 +143,15 @@ router.post('/ordenes', apiKeyAuth, async (req, res) => {
                     UPDATE conversaciones_whatsapp
                     SET "stopBot" = true, bot_activo = false, paciente_id = $2,
                         nombre_paciente = $3, fecha_ultima_actividad = NOW()
-                    WHERE celular = $1
-                `, [celularConPrefijo, numeroId, `${primerNombre} ${primerApellido}`]);
+                    WHERE celular = $1 AND tenant_id = $4
+                `, [celularConPrefijo, numeroId, `${primerNombre} ${primerApellido}`, tId]);
             } else {
                 await pool.query(`
                     INSERT INTO conversaciones_whatsapp (
                         celular, paciente_id, nombre_paciente, "stopBot", origen, estado, bot_activo,
-                        fecha_inicio, fecha_ultima_actividad
-                    ) VALUES ($1, $2, $3, true, 'EXTERNAL', 'nueva', false, NOW(), NOW())
-                `, [celularConPrefijo, numeroId, `${primerNombre} ${primerApellido}`]);
+                        fecha_inicio, fecha_ultima_actividad, tenant_id
+                    ) VALUES ($1, $2, $3, true, 'EXTERNAL', 'nueva', false, NOW(), NOW(), $4)
+                `, [celularConPrefijo, numeroId, `${primerNombre} ${primerApellido}`, tId]);
             }
         } catch (whatsappError) {
             console.error('[EXTERNAL] Error WhatsApp:', whatsappError.message);
@@ -221,11 +233,12 @@ router.post('/aprobar', authMiddleware, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Faltan campos: ordenId, mdConceptoFinal' });
         }
 
-        // Verificar que la orden existe y es SIIGO
+        // Verificar que la orden existe y es SIIGO (scoped por tenant)
+        const tIdAprobar = tenantId(req);
         const orden = await pool.query(`
             SELECT "_id", "codEmpresa", "atendido", "aprobacion_externa"
-            FROM "HistoriaClinica" WHERE "_id" = $1
-        `, [ordenId]);
+            FROM "HistoriaClinica" WHERE "_id" = $1 AND tenant_id = $2
+        `, [ordenId, tIdAprobar]);
 
         if (orden.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Orden no encontrada' });
@@ -242,14 +255,14 @@ router.post('/aprobar', authMiddleware, async (req, res) => {
         // TODO: Enviar a plataforma externa de SIIGO
         // const response = await fetch('https://api-siigo-externa.com/aprobar', { ... });
 
-        // Marcar como aprobada en nuestra BD
+        // Marcar como aprobada en nuestra BD (scoped por tenant)
         await pool.query(`
             UPDATE "HistoriaClinica"
             SET "aprobacion_externa" = 'APROBADO',
                 "fecha_aprobacion_externa" = NOW(),
                 "concepto_aprobado" = $2
-            WHERE "_id" = $1
-        `, [ordenId, mdConceptoFinal]);
+            WHERE "_id" = $1 AND tenant_id = $3
+        `, [ordenId, mdConceptoFinal, tIdAprobar]);
 
         console.log(`[EXTERNAL] Orden aprobada: ${ordenId} | ${primerNombre} ${primerApellido} | Concepto: ${mdConceptoFinal}`);
 
