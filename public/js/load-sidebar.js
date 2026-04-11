@@ -39,13 +39,15 @@ window.aplicarFiltroYFavicon = function(t) {
 
     // Ocultar items del sidebar según modulos_activos del tenant.
     // BSL ve todo; los demás tenants solo ven lo habilitado por super-admin.
-    // Los items sin data-modulo son "universales" y siempre se muestran.
+    // Cada botón del sidebar tiene data-sidebar-key con un identificador único.
+    // Items sin data-sidebar-key (y sin super-admin-only) siguen visibles para todos.
     if (t.id !== 'bsl' && Array.isArray(t.modulos_activos)) {
-        const modulosPermitidos = new Set(t.modulos_activos);
+        const itemsPermitidos = new Set(t.modulos_activos);
 
-        document.querySelectorAll('.nav-item[data-modulo]').forEach(item => {
-            const modulo = item.getAttribute('data-modulo');
-            if (!modulosPermitidos.has(modulo)) {
+        // Filtrar nav-items individuales
+        document.querySelectorAll('[data-sidebar-key]').forEach(item => {
+            const key = item.getAttribute('data-sidebar-key');
+            if (!itemsPermitidos.has(key)) {
                 item.style.display = 'none';
             }
         });
@@ -55,7 +57,12 @@ window.aplicarFiltroYFavicon = function(t) {
             let hayVisible = false;
             let sibling = titulo.nextElementSibling;
             while (sibling && !sibling.classList.contains('nav-section-title')) {
-                if (sibling.classList.contains('nav-item') && sibling.style.display !== 'none') {
+                // Puede ser un nav-item directo o un nav-group (submenu)
+                const esItem = sibling.classList && (
+                    sibling.classList.contains('nav-item') ||
+                    sibling.classList.contains('nav-group')
+                );
+                if (esItem) {
                     const computed = window.getComputedStyle(sibling);
                     if (computed.display !== 'none') {
                         hayVisible = true;

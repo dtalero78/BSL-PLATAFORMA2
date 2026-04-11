@@ -454,107 +454,100 @@
                     </div>
                 </div>
 
-                <!-- Módulos activos -->
+                <!-- Botones del sidebar visibles -->
                 <div class="card">
-                    <h3 class="card-title">Módulos habilitados (botones del sidebar)</h3>
-                    <div class="card-subtitle">Desmarca un módulo para ocultar sus botones del sidebar en esta IPS. BSL siempre ve todo.</div>
+                    <h3 class="card-title">Botones del sidebar visibles</h3>
+                    <div class="card-subtitle">Marca los botones que esta IPS puede ver en su sidebar. Los botones desmarcados quedan ocultos para todos los usuarios del tenant. "Crear IPS" es exclusivo del super-admin BSL y nunca aparece para otros tenants.</div>
                     <div class="modulos-grid">
                         <label class="modulo-check">
-                            <input type="checkbox" name="modulos" value="ordenes" checked />
+                            <input type="checkbox" name="modulos" value="ordenes_lista" checked />
                             <div class="modulo-texto">
                                 <span class="modulo-nombre">Órdenes</span>
-                                <span class="modulo-items">Órdenes · Nueva Orden · Subir Lote</span>
+                                <span class="modulo-items">Sección ORDENES</span>
                             </div>
                         </label>
                         <label class="modulo-check">
-                            <input type="checkbox" name="modulos" value="medicos" checked />
+                            <input type="checkbox" name="modulos" value="nueva_orden" checked />
                             <div class="modulo-texto">
-                                <span class="modulo-nombre">Médicos</span>
-                                <span class="modulo-items">Turnos de Médicos · Fijar Disponibilidad</span>
+                                <span class="modulo-nombre">Nueva Orden</span>
+                                <span class="modulo-items">Sección ORDENES</span>
+                            </div>
+                        </label>
+                        <label class="modulo-check">
+                            <input type="checkbox" name="modulos" value="subir_lote" checked />
+                            <div class="modulo-texto">
+                                <span class="modulo-nombre">Subir Lote</span>
+                                <span class="modulo-items">Sección ORDENES</span>
                             </div>
                         </label>
                         <label class="modulo-check">
                             <input type="checkbox" name="modulos" value="calendario" checked />
                             <div class="modulo-texto">
-                                <span class="modulo-nombre">Calendario</span>
-                                <span class="modulo-items">Calendario Atención</span>
+                                <span class="modulo-nombre">Calendario Atención</span>
+                                <span class="modulo-items">Sección CONSULTAS</span>
                             </div>
                         </label>
                         <label class="modulo-check">
-                            <input type="checkbox" name="modulos" value="empresas" checked />
+                            <input type="checkbox" name="modulos" value="turnos_medicos" checked />
                             <div class="modulo-texto">
-                                <span class="modulo-nombre">Empresas</span>
-                                <span class="modulo-items">Crear Empresa</span>
+                                <span class="modulo-nombre">Turnos de Médicos</span>
+                                <span class="modulo-items">Sección CONSULTAS</span>
                             </div>
                         </label>
                         <label class="modulo-check">
-                            <input type="checkbox" name="modulos" value="examenes" checked />
+                            <input type="checkbox" name="modulos" value="disponibilidad_medicos" checked />
                             <div class="modulo-texto">
-                                <span class="modulo-nombre">Exámenes</span>
-                                <span class="modulo-items">Crear Examen</span>
+                                <span class="modulo-nombre">Fijar Disponibilidad</span>
+                                <span class="modulo-items">Sección CONSULTAS</span>
                             </div>
                         </label>
                         <label class="modulo-check">
-                            <input type="checkbox" name="modulos" value="formularios" checked />
+                            <input type="checkbox" name="modulos" value="crear_examen" checked />
                             <div class="modulo-texto">
-                                <span class="modulo-nombre">Formularios</span>
-                                <span class="modulo-items">API de intake (sin botón)</span>
+                                <span class="modulo-nombre">Crear Examen</span>
+                                <span class="modulo-items">Sección ACCIONES</span>
                             </div>
                         </label>
                         <label class="modulo-check">
-                            <input type="checkbox" name="modulos" value="historia_clinica" checked />
+                            <input type="checkbox" name="modulos" value="crear_empresa" checked />
                             <div class="modulo-texto">
-                                <span class="modulo-nombre">Historia Clínica</span>
-                                <span class="modulo-items">CRUD desde Órdenes</span>
+                                <span class="modulo-nombre">Crear Empresa</span>
+                                <span class="modulo-items">Sección ACCIONES</span>
                             </div>
                         </label>
                         <label class="modulo-check">
-                            <input type="checkbox" name="modulos" value="audiometria" />
+                            <input type="checkbox" name="modulos" value="informe_condiciones" />
                             <div class="modulo-texto">
-                                <span class="modulo-nombre">Audiometría</span>
-                                <span class="modulo-items">Examen de audición (sin botón)</span>
+                                <span class="modulo-nombre">Informe Condiciones</span>
+                                <span class="modulo-items">Sección RECURSOS · BSL-específico</span>
                             </div>
                         </label>
                         <label class="modulo-check">
-                            <input type="checkbox" name="modulos" value="visiometria" />
+                            <input type="checkbox" name="modulos" value="panel_empresa" />
                             <div class="modulo-texto">
-                                <span class="modulo-nombre">Visiometría</span>
-                                <span class="modulo-items">Examen de visión (sin botón)</span>
+                                <span class="modulo-nombre">Ir a panel de empresa</span>
+                                <span class="modulo-items">Sección RECURSOS · BSL-específico</span>
                             </div>
                         </label>
                         <label class="modulo-check">
-                            <input type="checkbox" name="modulos" value="voximetria" />
+                            <input type="checkbox" name="modulos" value="generar_factura" />
                             <div class="modulo-texto">
-                                <span class="modulo-nombre">Voximetría</span>
-                                <span class="modulo-items">Análisis de voz GPT-4o (sin botón)</span>
+                                <span class="modulo-nombre">Generar factura</span>
+                                <span class="modulo-items">Sección RECURSOS · Alegra (BSL)</span>
                             </div>
                         </label>
                         <label class="modulo-check">
-                            <input type="checkbox" name="modulos" value="pruebas_adc" />
+                            <input type="checkbox" name="modulos" value="envio_agendamiento" />
                             <div class="modulo-texto">
-                                <span class="modulo-nombre">Pruebas ADC</span>
-                                <span class="modulo-items">Ansiedad/Depresión (sin botón)</span>
+                                <span class="modulo-nombre">Envío Agendamiento</span>
+                                <span class="modulo-items">Sección ADMIN · SIIGO (BSL)</span>
                             </div>
                         </label>
                         <label class="modulo-check">
-                            <input type="checkbox" name="modulos" value="scl90" />
+                            <input type="checkbox" name="modulos" value="planilla_sitel" />
                             <div class="modulo-texto">
-                                <span class="modulo-nombre">SCL-90</span>
-                                <span class="modulo-items">Test psicológico (sin botón)</span>
-                            </div>
-                        </label>
-                        <label class="modulo-check">
-                            <input type="checkbox" name="modulos" value="laboratorios" />
-                            <div class="modulo-texto">
-                                <span class="modulo-nombre">Laboratorios</span>
-                                <span class="modulo-items">Resultados de laboratorio (sin botón)</span>
-                            </div>
-                        </label>
-                        <label class="modulo-check">
-                            <input type="checkbox" name="modulos" value="whatsapp" />
-                            <div class="modulo-texto">
-                                <span class="modulo-nombre">WhatsApp Chat</span>
-                                <span class="modulo-items">Chat multi-agente Twilio (sin botón)</span>
+                                <span class="modulo-nombre">Planilla SITEL</span>
+                                <span class="modulo-items">Sección ADMIN · SITEL (BSL)</span>
                             </div>
                         </label>
                     </div>

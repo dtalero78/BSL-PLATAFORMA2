@@ -10,41 +10,41 @@
     <nav class="sidebar-nav">
         <!-- Sección 1: Ordenes -->
         <div class="nav-section-title" data-section="ordenes">Ordenes</div>
-        <a href="/ordenes.html" class="nav-item" data-tooltip="Ordenes" data-page="ordenes" data-modulo="ordenes">
+        <a href="/ordenes.html" class="nav-item" data-tooltip="Ordenes" data-page="ordenes" data-sidebar-key="ordenes_lista">
             <i data-feather="clipboard"></i>
             <span>Ordenes</span>
         </a>
-        <a href="/nueva-orden.html" class="nav-item" data-tooltip="Nueva Orden" data-page="nueva-orden" data-modulo="ordenes">
+        <a href="/nueva-orden.html" class="nav-item" data-tooltip="Nueva Orden" data-page="nueva-orden" data-sidebar-key="nueva_orden">
             <i data-feather="plus-circle"></i>
             <span>Nueva Orden</span>
         </a>
-        <a href="/subir-lote.html" target="_blank" class="nav-item" data-tooltip="Subir Lote" data-modulo="ordenes">
+        <a href="/subir-lote.html" target="_blank" class="nav-item" data-tooltip="Subir Lote" data-sidebar-key="subir_lote">
             <i data-feather="upload"></i>
             <span>Subir Lote</span>
         </a>
 
         <!-- Sección 2: Consultas -->
         <div class="nav-section-title" data-section="consultas">Consultas</div>
-        <a href="/calendario.html" class="nav-item" data-tooltip="Calendario Atención" data-page="calendario" data-modulo="calendario">
+        <a href="/calendario.html" class="nav-item" data-tooltip="Calendario Atención" data-page="calendario" data-sidebar-key="calendario">
             <i data-feather="calendar"></i>
             <span>Calendario Atención</span>
         </a>
-        <a href="/medicos.html" class="nav-item" data-tooltip="Turnos de Médicos" data-page="medicos" data-modulo="medicos">
+        <a href="/medicos.html" class="nav-item" data-tooltip="Turnos de Médicos" data-page="medicos" data-sidebar-key="turnos_medicos">
             <i data-feather="users"></i>
             <span>Turnos de Médicos</span>
         </a>
-        <a href="#" class="nav-item" data-tooltip="Fijar Disponibilidad" id="btnFijarTiempoConsulta" data-modulo="medicos">
+        <a href="#" class="nav-item" data-tooltip="Fijar Disponibilidad" id="btnFijarTiempoConsulta" data-sidebar-key="disponibilidad_medicos">
             <i data-feather="clock"></i>
             <span>Fijar Disponibilidad</span>
         </a>
 
         <!-- Sección 3: Acciones -->
         <div class="nav-section-title" data-section="acciones">Acciones</div>
-        <a href="/examenes.html" class="nav-item" data-tooltip="Crear Examen" data-page="examenes" data-modulo="examenes">
+        <a href="/examenes.html" class="nav-item" data-tooltip="Crear Examen" data-page="examenes" data-sidebar-key="crear_examen">
             <i data-feather="activity"></i>
             <span>Crear Examen</span>
         </a>
-        <a href="/empresas.html" class="nav-item" data-tooltip="Crear Empresa" data-page="empresas" data-modulo="empresas">
+        <a href="/empresas.html" class="nav-item" data-tooltip="Crear Empresa" data-page="empresas" data-sidebar-key="crear_empresa">
             <i data-feather="briefcase"></i>
             <span>Crear Empresa</span>
         </a>
@@ -53,24 +53,24 @@
             <span>Crear IPS</span>
         </a>
 
-        <!-- Sección 4: Recursos (BSL-only: herramientas externas y facturación Alegra) -->
-        <div class="nav-section-title super-admin-only" style="display: none;">Recursos</div>
-        <a href="https://bsl-utilidades-yp78a.ondigitalocean.app/informes.html" class="nav-item super-admin-only" style="display: none;" target="_blank" data-tooltip="Informe Condiciones">
+        <!-- Sección 4: Recursos -->
+        <div class="nav-section-title" data-section="recursos">Recursos</div>
+        <a href="https://bsl-utilidades-yp78a.ondigitalocean.app/informes.html" class="nav-item" target="_blank" data-tooltip="Informe Condiciones" data-sidebar-key="informe_condiciones">
             <i data-feather="bar-chart-2"></i>
             <span>Informe Condiciones</span>
         </a>
-        <a href="https://bsl-plataforma.com/panel-empresas.html" class="nav-item super-admin-only" style="display: none;" target="_blank" data-tooltip="Ir a panel de empresa">
+        <a href="https://bsl-plataforma.com/panel-empresas.html" class="nav-item" target="_blank" data-tooltip="Ir a panel de empresa" data-sidebar-key="panel_empresa">
             <i data-feather="grid"></i>
             <span>Ir a panel de empresa</span>
         </a>
-        <div class="nav-item super-admin-only" style="display: none;" onclick="abrirModalFacturacion()" data-tooltip="Generar factura" style="cursor: pointer;">
+        <div class="nav-item" onclick="abrirModalFacturacion()" data-tooltip="Generar factura" data-sidebar-key="generar_factura" style="cursor: pointer;">
             <i data-feather="dollar-sign"></i>
             <span>Generar factura</span>
         </div>
 
-        <!-- Sección 5: Admin (BSL-only: NUBIA/SIIGO/SITEL son BSL-exclusivos) -->
-        <div class="nav-section-title super-admin-only" style="display: none;">Admin</div>
-        <div class="nav-group super-admin-only" style="display: none;">
+        <!-- Sección 5: Admin -->
+        <div class="nav-section-title" data-section="admin">Admin</div>
+        <div class="nav-group" data-sidebar-key="envio_agendamiento">
             <div class="nav-item has-submenu" data-tooltip="Envío Agendamiento" onclick="toggleNavGroup(this)">
                 <i data-feather="send"></i>
                 <span>Envío Agendamiento</span>
@@ -86,7 +86,7 @@
                 </a>
             </div>
         </div>
-        <a href="/planilla-sitel.html" target="_blank" class="nav-item super-admin-only" style="display: none;" data-tooltip="Planilla SITEL">
+        <a href="/planilla-sitel.html" target="_blank" class="nav-item" data-tooltip="Planilla SITEL" data-sidebar-key="planilla_sitel">
             <i data-feather="file-text"></i>
             <span>Planilla SITEL</span>
         </a>
