@@ -76,10 +76,18 @@ function mapearCiudadWebhook(ciudad) {
     return mapaCiudades[ciudad] || limpiarStringWebhook(ciudad).toUpperCase();
 }
 
-// Disparar webhook a Make.com
-async function dispararWebhookMake(orden) {
+// Disparar webhook a Make.com.
+// Multi-tenant: SOLO BSL usa Make.com. La URL del webhook es una cuenta específica
+// de BSL, así que disparar desde otro tenant haría leak de datos. El guard es
+// defensivo — los callers también deben filtrar por tenant antes de invocar.
+async function dispararWebhookMake(orden, tenantId = 'bsl') {
     try {
-        // No enviar webhook para SANITHELP-JJ
+        if (tenantId !== 'bsl') {
+            console.log(`⏭️  Webhook Make.com omitido para tenant ${tenantId} (BSL-only):`, orden._id);
+            return;
+        }
+
+        // No enviar webhook para SANITHELP-JJ (excluido por diseño dentro de BSL)
         if (orden.codEmpresa === 'SANITHELP-JJ') {
             console.log('⏭️  Webhook Make.com omitido para SANITHELP-JJ:', orden._id);
             return;

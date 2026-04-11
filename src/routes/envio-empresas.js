@@ -4,6 +4,7 @@ const pool = require('../config/database');
 const { sendWhatsAppMessage } = require('../services/whatsapp');
 const { enviarEmailLinkFormulario } = require('../services/email');
 const { normalizarTelefonoConPrefijo57 } = require('../helpers/phone');
+const { requireBslTenant } = require('../helpers/tenant');
 
 // ========== ENDPOINTS ENVÍO AGENDAMIENTO EMPRESAS ==========
 
@@ -467,8 +468,8 @@ router.post('/enviar-masivo', async (req, res) => {
     }
 });
 
-// POST - Envío masivo mediante Make.com webhook
-router.post('/enviar-make', async (req, res) => {
+// POST - Envío masivo mediante Make.com webhook (BSL-only, Make.com es cuenta BSL)
+router.post('/enviar-make', requireBslTenant, async (req, res) => {
     try {
         const { registros } = req.body;
 

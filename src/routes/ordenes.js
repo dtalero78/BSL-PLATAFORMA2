@@ -674,7 +674,8 @@ router.post('/', async (req, res) => {
             }
         }
 
-        // Disparar webhook a Make.com (async, no bloquea) para enviar WhatsApp al paciente
+        // Disparar webhook a Make.com (async, no bloquea) para enviar WhatsApp al paciente.
+        // Multi-tenant: Make.com es BSL-only. El helper hace early-return si tenant !== 'bsl'.
         if (!esSoloEmail) dispararWebhookMake({
             _id: wixId,
             celular,
@@ -687,7 +688,7 @@ router.post('/', async (req, res) => {
             horaAtencion,
             medico,
             modalidad
-        });
+        }, tenantId(req));
 
         // Notificar ingreso SITEL por WHAPI (async, no bloquea)
         const ciudadNorm = (ciudad || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();

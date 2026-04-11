@@ -61,7 +61,13 @@ Estas rutas devuelven 404 para tenants que no sean BSL:
 - `/api/envio-siigo`, `/api/asistencia-siigo` (SIIGO integration)
 - `/api/external` (x-api-key, SIIGO orders)
 - `/api/wix/:id` (Wix proxy)
+- `/api/envio-empresas/enviar-make` (Make.com webhook — cuenta BSL)
 - Endpoints de comunidad con perfiles PARTICULAR/SANITHELP-JJ
+
+**Integraciones BSL-only a nivel de helper (no de ruta)**: además del guard de ruta, algunos helpers hacen early-return si el tenant no es BSL. Ejemplos:
+
+- `dispararWebhookMake(orden, tenantId)` en `src/helpers/webhook.js` — Make.com es cuenta específica de BSL, disparar desde otro tenant leakearía datos. Los callers deben pasar `tenantId`, y el helper hace early-return con log si no es `'bsl'`.
+- Toda función que hable con Wix debe envolverse con `isBsl(req)` en el caller.
 
 ### Estado actual (sprints históricos)
 
