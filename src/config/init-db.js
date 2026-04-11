@@ -1314,6 +1314,77 @@ const initDB = async () => {
             }
         }
 
+        // 5. Convertir UNIQUE constraints globales en compuestos con tenant_id.
+        //    Motivación: un mismo cod_empresa (ej: "PARTICULAR") debe poder coexistir
+        //    entre tenants. Lo mismo para email/numero_documento de usuarios, nombre
+        //    de examenes, celular de conversaciones, orden_id de pruebas virtuales.
+        //    Se preserva el constraint viejo si aún no se migró (via DROP IF EXISTS).
+        //
+        //    Caso especial: empresas.cod_empresa tiene FKs dependientes en
+        //    configuracion_facturacion_empresa y facturas. Hay que tumbarlas y
+        //    recrearlas como compuestas, agregando tenant_id a facturas si no existe.
+        const uniqueMigrations = [
+            { table: 'examenes', oldName: 'examenes_nombre_key', newName: 'examenes_nombre_tenant_key', cols: '(nombre, tenant_id)' },
+            { table: 'usuarios', oldName: 'usuarios_email_key', newName: 'usuarios_email_tenant_key', cols: '(email, tenant_id)' },
+            { table: 'usuarios', oldName: 'usuarios_numero_documento_key', newName: 'usuarios_numero_documento_tenant_key', cols: '(numero_documento, tenant_id)' },
+            { table: 'conversaciones_whatsapp', oldName: 'conversaciones_whatsapp_celular_key', newName: 'conversaciones_whatsapp_celular_tenant_key', cols: '(celular, tenant_id)' },
+            { table: 'visiometrias_virtual', oldName: 'unique_visiometria_virtual_orden', newName: 'unique_visiometria_virtual_orden_tenant', cols: '(orden_id, tenant_id)' },
+            { table: 'voximetrias_virtual', oldName: 'unique_voximetria_virtual_orden', newName: 'unique_voximetria_virtual_orden_tenant', cols: '(orden_id, tenant_id)' },
+            { table: 'configuracion_facturacion_empresa', oldName: 'configuracion_facturacion_empresa_cod_empresa_key', newName: 'configuracion_facturacion_empresa_cod_empresa_tenant_key', cols: '(cod_empresa, tenant_id)' }
+        ];
+        for (const m of uniqueMigrations) {
+            try {
+                const check = await pool.query(
+                    `SELECT 1 FROM pg_constraint WHERE conname = $1`,
+                    [m.newName]
+                );
+                if (check.rows.length > 0) continue;
+
+                await pool.query(`ALTER TABLE ${m.table} DROP CONSTRAINT IF EXISTS ${m.oldName}`);
+                await pool.query(`ALTER TABLE ${m.table} ADD CONSTRAINT ${m.newName} UNIQUE ${m.cols}`);
+                console.log(`   ✅ UNIQUE migrado: ${m.table} → ${m.newName}`);
+            } catch (err) {
+                console.error(`   ⚠️  No se pudo migrar UNIQUE en ${m.table}:`, err.message);
+            }
+        }
+
+        // 5b. Migración especial de empresas.cod_empresa (con FKs dependientes).
+        try {
+            const check = await pool.query(
+                `SELECT 1 FROM pg_constraint WHERE conname = 'empresas_cod_empresa_tenant_key'`
+            );
+            if (check.rows.length === 0) {
+                // facturas no está en tenantScopedTables arriba, agregamos tenant_id acá.
+                await pool.query(`ALTER TABLE facturas ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(50) NOT NULL DEFAULT 'bsl'`);
+
+                // Tumbar FKs que dependen del UNIQUE viejo.
+                await pool.query(`ALTER TABLE configuracion_facturacion_empresa DROP CONSTRAINT IF EXISTS fk_empresa`);
+                await pool.query(`ALTER TABLE facturas DROP CONSTRAINT IF EXISTS fk_empresa_factura`);
+
+                // Migrar UNIQUE.
+                await pool.query(`ALTER TABLE empresas DROP CONSTRAINT IF EXISTS empresas_cod_empresa_key`);
+                await pool.query(`ALTER TABLE empresas ADD CONSTRAINT empresas_cod_empresa_tenant_key UNIQUE (cod_empresa, tenant_id)`);
+
+                // Recrear FKs como compuestas.
+                await pool.query(`
+                    ALTER TABLE configuracion_facturacion_empresa
+                    ADD CONSTRAINT fk_empresa
+                    FOREIGN KEY (cod_empresa, tenant_id)
+                    REFERENCES empresas(cod_empresa, tenant_id)
+                    ON DELETE CASCADE
+                `);
+                await pool.query(`
+                    ALTER TABLE facturas
+                    ADD CONSTRAINT fk_empresa_factura
+                    FOREIGN KEY (cod_empresa, tenant_id)
+                    REFERENCES empresas(cod_empresa, tenant_id)
+                `);
+                console.log(`   ✅ UNIQUE migrado (con FKs): empresas → empresas_cod_empresa_tenant_key`);
+            }
+        } catch (err) {
+            console.error(`   ⚠️  No se pudo migrar UNIQUE en empresas:`, err.message);
+        }
+
         console.log('✅ Multi-tenant: tabla tenants + columnas tenant_id inicializadas (default: bsl)');
 
         console.log('Base de datos inicializada correctamente');

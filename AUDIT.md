@@ -91,6 +91,19 @@ El script cubre ~70% del espacio de bugs. El resto requiere juicio:
 - [ ] `INTERVAL '${N} days'` → validar con `parseInt` antes.
 - [ ] Nombres de tabla dinámicos: solo en endpoints `requireSuperAdmin` y validados contra `information_schema`.
 
+### G. Constraints de BD (schema-level)
+
+Los `UNIQUE` sobre columnas que representan identificadores de dominio (cod_empresa, email, numero_documento, celular, nombre de examen, orden_id) DEBEN ser compuestos con `tenant_id`. Un UNIQUE simple bloquea que dos tenants tengan el mismo valor, lo cual es normal (ej: todos los tenants tienen una empresa "PARTICULAR"). Para detectar:
+
+```sql
+SELECT t.relname, c.conname, pg_get_constraintdef(c.oid)
+FROM pg_constraint c JOIN pg_class t ON c.conrelid = t.oid
+WHERE c.contype = 'u'
+  AND t.relname IN (/* lista de tablas tenant-scoped */);
+```
+
+Cualquier constraint cuyo `def` sea `UNIQUE (x)` donde `x` no sea un valor globalmente único (UUID, hash random, alegra_invoice_id) debe migrarse a `UNIQUE (x, tenant_id)`. Cuidado con las FKs dependientes: hay que tumbarlas, migrar el UNIQUE, y recrearlas como compuestas — ver `empresas` + `configuracion_facturacion_empresa` + `facturas` como ejemplo en `src/config/init-db.js`.
+
 ### F. Integraciones externas (Wix, Twilio, WHAPI, SIIGO, Alegra)
 
 - [ ] Wix: todo código Wix envuelto con `if (isBsl(req))` o `requireBslTenant`.
@@ -130,6 +143,14 @@ El script cubre ~70% del espacio de bugs. El resto requiere juicio:
 - `spaces-upload.js` path con prefijo de tenant (BSL conserva legacy)
 
 **Lección que motivó este AUDIT.md**: la revisión ad-hoc no es reproducible. Siguiente ronda debe correr el script primero.
+
+### Ronda 3 — UNIQUE constraints
+- Bug reportado: crear empresa `PARTICULAR` en vip-mediconecta devolvía "ya existe" porque `empresas_cod_empresa_key` era `UNIQUE (cod_empresa)` global.
+- Migrados a compuesto `(col, tenant_id)`: `empresas.cod_empresa`, `examenes.nombre`, `usuarios.email`, `usuarios.numero_documento`, `conversaciones_whatsapp.celular`, `visiometrias_virtual.orden_id`, `voximetrias_virtual.orden_id`, `configuracion_facturacion_empresa.cod_empresa`.
+- Caso especial `empresas`: FKs dependientes en `configuracion_facturacion_empresa` y `facturas` hubo que tumbarlas y recrearlas como compuestas. `facturas` ganó columna `tenant_id`.
+- Preservados como UNIQUE simples (valores globalmente únicos): `sesiones.token_hash`, `facturas.alegra_invoice_id`, `permisos_usuario (usuario_id, permiso)`.
+
+**Lección**: el script `audit-multitenant.js` solo cubre lógica de app, no schema. Agregué categoría G al checklist. Para detectar este tipo de bugs no basta con leer código — hay que inspeccionar `pg_constraint` directamente.
 
 ---
 
