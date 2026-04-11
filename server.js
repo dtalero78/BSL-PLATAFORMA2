@@ -82,6 +82,12 @@ app.get('/api/events', (req, res) => {
 // ========== BASIC ROUTES ==========
 
 app.get('/', (req, res) => {
+    // Si trae ?_id=... es un paciente abriendo su formulario desde el link
+    // enviado por WhatsApp/Wix → servir index.html (formulario).
+    // Sin query param → login.
+    if (req.query._id) {
+        return res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    }
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
