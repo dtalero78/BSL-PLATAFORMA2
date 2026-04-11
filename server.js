@@ -171,8 +171,12 @@ app.use('/api/facturacion', requireBslTenant, require('./src/routes/facturacion'
 app.use('/api/facturacion-empresas', requireBslTenant, require('./src/routes/facturacion-empresas'));
 app.use('/api/planilla-sitel', requireBslTenant, require('./src/routes/planilla-sitel'));
 
-// NUBIA (BSL-only: telemedicina SANITHELP-JJ)
-app.use('/api', requireBslTenant, require('./src/routes/nubia'));
+// NUBIA (BSL-only: telemedicina SANITHELP-JJ).
+// El guard requireBslTenant va a nivel del router con path específico (/nubia, /barrido-nubia)
+// porque el router mezcla rutas /nubia/... con /barrido-nubia y está montado en /api.
+// Si el guard estuviera aquí como middleware, bloquearía TODAS las rutas /api/* para
+// tenants no-BSL (ver nubia.js router.use).
+app.use('/api', require('./src/routes/nubia'));
 
 // Audiometría
 app.use('/api', require('./src/routes/audiometria'));

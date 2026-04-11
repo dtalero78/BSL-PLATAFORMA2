@@ -6,6 +6,14 @@ const { enviarEmailConfirmacionCita } = require('../services/email');
 const { generarLinkGoogleCalendar } = require('../helpers/google-calendar');
 const { HistoriaClinicaRepository } = require('../repositories');
 const { normalizarTelefonoConPrefijo57 } = require('../helpers/phone');
+const { requireBslTenant } = require('../helpers/tenant');
+
+// Multi-tenant: NUBIA es BSL-only. El guard va a nivel de router con path específico
+// para que NO intercepte otras rutas que también están montadas en /api (estado-pruebas,
+// audiometrias, etc.). Antes estaba en server.js como app.use('/api', requireBslTenant,
+// nubiaRouter) lo que bloqueaba TODO /api/* desde tenants no-BSL.
+router.use('/nubia', requireBslTenant);
+router.use('/barrido-nubia', requireBslTenant);
 
 // ==========================================
 // BARRIDO NUBIA - Enviar link médico virtual (a la hora exacta de la cita)
