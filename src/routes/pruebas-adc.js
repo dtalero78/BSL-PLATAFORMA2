@@ -6,10 +6,15 @@ const { calcularAnsiedad } = require('../../calcular-ansiedad');
 const { calcularDepresion } = require('../../calcular-depresion');
 const { calcularCongruencia } = require('../../calcular-congruencia');
 
+// Multi-tenant helper (ver CLAUDE.md)
+function tenantId(req) {
+    return (req.tenant && req.tenant.id) || 'bsl';
+}
+
 /**
  * Calcula y guarda los resultados de las pruebas psicológicas en la tabla pruebasADC
  */
-async function guardarResultadosCalculados(registro) {
+async function guardarResultadosCalculados(registro, tenantIdArg = 'bsl') {
     const codEmpresa = registro.cod_empresa || '';
     const ansiedad = calcularAnsiedad(registro, codEmpresa);
     const depresion = calcularDepresion(registro, codEmpresa);
@@ -25,7 +30,7 @@ async function guardarResultadosCalculados(registro) {
             congruencia_relacion = $6,
             congruencia_autocuidado = $7,
             congruencia_ocupacional = $8
-        WHERE orden_id = $9
+        WHERE orden_id = $9 AND tenant_id = $10
     `, [
         ansiedad.valor, ansiedad.interpretacion,
         depresion.valor, depresion.interpretacion,
@@ -33,7 +38,8 @@ async function guardarResultadosCalculados(registro) {
         congruencia.CongruenciaRelacion,
         congruencia.CongruenciaAutocuidado,
         congruencia.CongruenciaOcupacional,
-        registro.orden_id
+        registro.orden_id,
+        tenantIdArg
     ]);
 
     return { ansiedad, depresion, congruencia };
@@ -54,8 +60,9 @@ router.get('/estadisticas/:codEmpresa', async (req, res) => {
             WHERE cod_empresa = $1
               AND ansiedad_interpretacion IS NOT NULL
               AND depresion_interpretacion IS NOT NULL
+              AND tenant_id = $2
         `;
-        const params = [codEmpresa];
+        const params = [codEmpresa, tenantId(req)];
 
         if (desde) {
             params.push(desde);
@@ -93,16 +100,17 @@ router.get('/:ordenId', async (req, res) => {
     try {
         const { ordenId } = req.params;
 
+        const tId = tenantId(req);
         const result = await pool.query(
-            'SELECT * FROM "pruebasADC" WHERE orden_id = $1',
-            [ordenId]
+            'SELECT * FROM "pruebasADC" WHERE orden_id = $1 AND tenant_id = $2',
+            [ordenId, tId]
         );
 
         if (result.rows.length === 0) {
             // No existe, devolver datos vacíos con info del paciente
             const ordenResult = await pool.query(
-                'SELECT "numeroId", "primerNombre", "primerApellido", "empresa", "codEmpresa" FROM "HistoriaClinica" WHERE "_id" = $1',
-                [ordenId]
+                'SELECT "numeroId", "primerNombre", "primerApellido", "empresa", "codEmpresa" FROM "HistoriaClinica" WHERE "_id" = $1 AND tenant_id = $2',
+                [ordenId, tId]
             );
 
             if (ordenResult.rows.length === 0) {
@@ -139,10 +147,11 @@ router.post('/', async (req, res) => {
             return res.status(400).json({ success: false, message: 'orden_id es requerido' });
         }
 
-        // Verificar si ya existe
+        // Verificar si ya existe (scoped por tenant)
+        const tId = tenantId(req);
         const existeResult = await pool.query(
-            'SELECT id FROM "pruebasADC" WHERE orden_id = $1',
-            [datos.orden_id]
+            'SELECT id FROM "pruebasADC" WHERE orden_id = $1 AND tenant_id = $2',
+            [datos.orden_id, tId]
         );
 
         // Lista de campos de preguntas
@@ -183,25 +192,29 @@ router.post('/', async (req, res) => {
                 paramIndex++;
             });
 
+            // Agregar tenant al final para el WHERE
+            values.push(tId);
+            const tenantParamIndex = paramIndex;
+
             const updateQuery = `
                 UPDATE "pruebasADC" SET ${setClauses.join(', ')}
-                WHERE orden_id = $1
+                WHERE orden_id = $1 AND tenant_id = $${tenantParamIndex}
                 RETURNING *
             `;
 
             const result = await pool.query(updateQuery, values);
             console.log('✅ Prueba ADC actualizada para orden:', datos.orden_id);
 
-            // Calcular y guardar resultados
-            await guardarResultadosCalculados(result.rows[0]);
+            // Calcular y guardar resultados (scoped por tenant)
+            await guardarResultadosCalculados(result.rows[0], tId);
 
             // Sincronizar con Wix (BSL-only, ver CLAUDE.md Multi-Tenant)
             await syncADCToWix(datos, 'UPDATE', req.tenant?.id);
 
             return res.json({ success: true, data: result.rows[0], operacion: 'UPDATE' });
         } else {
-            // Insertar nuevo
-            const columns = ['orden_id', 'numero_id', 'primer_nombre', 'primer_apellido', 'empresa', 'cod_empresa', ...camposPreguntas];
+            // Insertar nuevo (con tenant_id)
+            const columns = ['orden_id', 'numero_id', 'primer_nombre', 'primer_apellido', 'empresa', 'cod_empresa', ...camposPreguntas, 'tenant_id'];
             const placeholders = columns.map((_, i) => `$${i + 1}`);
 
             const values = [
@@ -211,7 +224,8 @@ router.post('/', async (req, res) => {
                 datos.primer_apellido,
                 datos.empresa,
                 datos.cod_empresa,
-                ...camposPreguntas.map(campo => datos[campo] || null)
+                ...camposPreguntas.map(campo => datos[campo] || null),
+                tId
             ];
 
             const insertQuery = `
@@ -223,8 +237,8 @@ router.post('/', async (req, res) => {
             const result = await pool.query(insertQuery, values);
             console.log('✅ Prueba ADC creada para orden:', datos.orden_id);
 
-            // Calcular y guardar resultados
-            await guardarResultadosCalculados(result.rows[0]);
+            // Calcular y guardar resultados (scoped por tenant)
+            await guardarResultadosCalculados(result.rows[0], tId);
 
             // Sincronizar con Wix (BSL-only, ver CLAUDE.md Multi-Tenant)
             await syncADCToWix(datos, 'INSERT', req.tenant?.id);

@@ -2,21 +2,27 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 
+// Multi-tenant helper (ver CLAUDE.md)
+function tenantId(req) {
+    return (req.tenant && req.tenant.id) || 'bsl';
+}
+
 // Obtener laboratorio por orden_id
 router.get('/:ordenId', async (req, res) => {
     try {
         const { ordenId } = req.params;
 
+        const tId = tenantId(req);
         const result = await pool.query(
-            'SELECT * FROM laboratorios WHERE orden_id = $1 ORDER BY created_at DESC',
-            [ordenId]
+            'SELECT * FROM laboratorios WHERE orden_id = $1 AND tenant_id = $2 ORDER BY created_at DESC',
+            [ordenId, tId]
         );
 
         if (result.rows.length === 0) {
             // No existe, devolver datos vacíos con info del paciente
             const ordenResult = await pool.query(
-                'SELECT "numeroId", "primerNombre", "primerApellido", "empresa", "codEmpresa" FROM "HistoriaClinica" WHERE "_id" = $1',
-                [ordenId]
+                'SELECT "numeroId", "primerNombre", "primerApellido", "empresa", "codEmpresa" FROM "HistoriaClinica" WHERE "_id" = $1 AND tenant_id = $2',
+                [ordenId, tId]
             );
 
             if (ordenResult.rows.length === 0) {
@@ -39,8 +45,8 @@ router.get('/:ordenId', async (req, res) => {
 
         // Also fetch patient info when lab records exist
         const ordenResult = await pool.query(
-            'SELECT "numeroId", "primerNombre", "primerApellido", "empresa", "codEmpresa" FROM "HistoriaClinica" WHERE "_id" = $1',
-            [ordenId]
+            'SELECT "numeroId", "primerNombre", "primerApellido", "empresa", "codEmpresa" FROM "HistoriaClinica" WHERE "_id" = $1 AND tenant_id = $2',
+            [ordenId, tId]
         );
         const orden = ordenResult.rows[0];
 
@@ -67,8 +73,8 @@ router.get('/detalle/:id', async (req, res) => {
         const { id } = req.params;
 
         const result = await pool.query(
-            'SELECT * FROM laboratorios WHERE id = $1',
-            [id]
+            'SELECT * FROM laboratorios WHERE id = $1 AND tenant_id = $2',
+            [id, tenantId(req)]
         );
 
         if (result.rows.length === 0) {
@@ -88,11 +94,11 @@ router.get('/historial/:numeroId', async (req, res) => {
         const { numeroId } = req.params;
         const { tipoPrueba } = req.query;
 
-        let query = 'SELECT * FROM laboratorios WHERE numero_id = $1';
-        const params = [numeroId];
+        let query = 'SELECT * FROM laboratorios WHERE numero_id = $1 AND tenant_id = $2';
+        const params = [numeroId, tenantId(req)];
 
         if (tipoPrueba) {
-            query += ' AND tipo_prueba = $2';
+            query += ' AND tipo_prueba = $3';
             params.push(tipoPrueba);
         }
 
@@ -150,15 +156,16 @@ router.post('/', async (req, res) => {
             ];
 
             const setClauses = campos.map((campo, i) => `${campo} = $${i + 2}`).join(', ');
+            const tenantParamIdx = campos.length + 2;
             const updateQuery = `
                 UPDATE laboratorios SET
                     ${setClauses},
                     updated_at = CURRENT_TIMESTAMP
-                WHERE id = $1
+                WHERE id = $1 AND tenant_id = $${tenantParamIdx}
                 RETURNING *
             `;
 
-            const values = [datos.id, ...campos.map(c => datos[c] || null)];
+            const values = [datos.id, ...campos.map(c => datos[c] || null), tenantId(req)];
             const result = await pool.query(updateQuery, values);
             console.log('✅ Laboratorio actualizado, ID:', datos.id);
             return res.json({ success: true, data: result.rows[0], operacion: 'UPDATE' });
@@ -191,14 +198,16 @@ router.post('/', async (req, res) => {
                 'created_by'
             ];
 
-            const insertPlaceholders = campos.map((_, i) => `$${i + 1}`).join(', ');
+            // Agregar tenant_id al INSERT
+            const camposConTenant = [...campos, 'tenant_id'];
+            const insertPlaceholders = camposConTenant.map((_, i) => `$${i + 1}`).join(', ');
             const insertQuery = `
-                INSERT INTO laboratorios (${campos.join(', ')})
+                INSERT INTO laboratorios (${camposConTenant.join(', ')})
                 VALUES (${insertPlaceholders})
                 RETURNING *
             `;
 
-            const values = campos.map(c => datos[c] || null);
+            const values = [...campos.map(c => datos[c] || null), tenantId(req)];
             const result = await pool.query(insertQuery, values);
             console.log('✅ Laboratorio creado para orden:', datos.orden_id);
             return res.json({ success: true, data: result.rows[0], operacion: 'INSERT' });
@@ -215,8 +224,8 @@ router.delete('/:id', async (req, res) => {
         const { id } = req.params;
 
         const result = await pool.query(
-            'DELETE FROM laboratorios WHERE id = $1 RETURNING *',
-            [id]
+            'DELETE FROM laboratorios WHERE id = $1 AND tenant_id = $2 RETURNING *',
+            [id, tenantId(req)]
         );
 
         if (result.rows.length === 0) {

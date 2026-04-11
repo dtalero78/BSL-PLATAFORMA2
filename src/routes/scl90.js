@@ -2,6 +2,11 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 
+// Multi-tenant helper (ver CLAUDE.md)
+function tenantId(req) {
+    return (req.tenant && req.tenant.id) || 'bsl';
+}
+
 // Campos de preguntas SCL-90 (item1 a item90)
 const camposPreguntas = Array.from({ length: 90 }, (_, i) => `item${i + 1}`);
 
@@ -54,24 +59,27 @@ function interpretarDimension(valor, pc50, pc85) {
 }
 
 // Calcular e interpretar resultados SCL-90
-async function calcularEInterpretar(ordenId) {
+async function calcularEInterpretar(ordenId, tenantIdArg = 'bsl') {
     // Obtener respuestas guardadas
-    const scl90Result = await pool.query('SELECT * FROM scl90 WHERE orden_id = $1', [ordenId]);
+    const scl90Result = await pool.query(
+        'SELECT * FROM scl90 WHERE orden_id = $1 AND tenant_id = $2',
+        [ordenId, tenantIdArg]
+    );
     if (scl90Result.rows.length === 0) return null;
 
     const registro = scl90Result.rows[0];
 
     // Obtener género del paciente desde formularios
     const formResult = await pool.query(
-        'SELECT genero FROM formularios WHERE wix_id = $1',
-        [ordenId]
+        'SELECT genero FROM formularios WHERE wix_id = $1 AND tenant_id = $2',
+        [ordenId, tenantIdArg]
     );
     // Fallback: buscar por numero_id
     let genero = formResult.rows.length > 0 ? formResult.rows[0].genero : null;
     if (!genero && registro.numero_id) {
         const formResult2 = await pool.query(
-            'SELECT genero FROM formularios WHERE numero_id = $1 ORDER BY created_at DESC LIMIT 1',
-            [registro.numero_id]
+            'SELECT genero FROM formularios WHERE numero_id = $1 AND tenant_id = $2 ORDER BY created_at DESC LIMIT 1',
+            [registro.numero_id, tenantIdArg]
         );
         genero = formResult2.rows.length > 0 ? formResult2.rows[0].genero : null;
     }
@@ -127,10 +135,10 @@ async function calcularEInterpretar(ordenId) {
         baremosAplicados[dim] = { Pc50, Pc85 };
     }
 
-    // 4. Guardar resultados en la tabla
+    // 4. Guardar resultados en la tabla (scoped por tenant)
     await pool.query(
-        `UPDATE scl90 SET genero = $1, resultado = $2, interpretacion = $3, baremos = $4, updated_at = CURRENT_TIMESTAMP WHERE orden_id = $5`,
-        [grupoGenero, JSON.stringify(resultado), JSON.stringify(interpretacion), JSON.stringify(baremosAplicados), ordenId]
+        `UPDATE scl90 SET genero = $1, resultado = $2, interpretacion = $3, baremos = $4, updated_at = CURRENT_TIMESTAMP WHERE orden_id = $5 AND tenant_id = $6`,
+        [grupoGenero, JSON.stringify(resultado), JSON.stringify(interpretacion), JSON.stringify(baremosAplicados), ordenId, tenantIdArg]
     );
 
     console.log('✅ SCL-90 calificado para orden:', ordenId, '| GSI:', resultado.GSI, '| PST:', resultado.PST);
@@ -143,16 +151,17 @@ router.get('/:ordenId', async (req, res) => {
     try {
         const { ordenId } = req.params;
 
+        const tId = tenantId(req);
         const result = await pool.query(
-            'SELECT * FROM scl90 WHERE orden_id = $1',
-            [ordenId]
+            'SELECT * FROM scl90 WHERE orden_id = $1 AND tenant_id = $2',
+            [ordenId, tId]
         );
 
         if (result.rows.length === 0) {
             // No existe, devolver datos vacíos con info del paciente
             const ordenResult = await pool.query(
-                'SELECT "numeroId", "primerNombre", "primerApellido", "empresa", "codEmpresa" FROM "HistoriaClinica" WHERE "_id" = $1',
-                [ordenId]
+                'SELECT "numeroId", "primerNombre", "primerApellido", "empresa", "codEmpresa" FROM "HistoriaClinica" WHERE "_id" = $1 AND tenant_id = $2',
+                [ordenId, tId]
             );
 
             if (ordenResult.rows.length === 0) {
@@ -189,10 +198,11 @@ router.post('/', async (req, res) => {
             return res.status(400).json({ success: false, message: 'orden_id es requerido' });
         }
 
-        // Verificar si ya existe
+        // Verificar si ya existe (scoped por tenant)
+        const tId = tenantId(req);
         const existeResult = await pool.query(
-            'SELECT id FROM scl90 WHERE orden_id = $1',
-            [datos.orden_id]
+            'SELECT id FROM scl90 WHERE orden_id = $1 AND tenant_id = $2',
+            [datos.orden_id, tId]
         );
 
         let operacion;
@@ -224,9 +234,12 @@ router.post('/', async (req, res) => {
                 paramIndex++;
             });
 
+            values.push(tId);
+            const tenantParamIndex = paramIndex;
+
             const updateQuery = `
                 UPDATE scl90 SET ${setClauses.join(', ')}
-                WHERE orden_id = $1
+                WHERE orden_id = $1 AND tenant_id = $${tenantParamIndex}
                 RETURNING *
             `;
 
@@ -234,8 +247,8 @@ router.post('/', async (req, res) => {
             operacion = 'UPDATE';
             console.log('✅ Prueba SCL-90 actualizada para orden:', datos.orden_id);
         } else {
-            // Insertar nuevo
-            const columns = ['orden_id', 'numero_id', 'primer_nombre', 'primer_apellido', 'empresa', 'cod_empresa', ...camposPreguntas];
+            // Insertar nuevo (con tenant_id)
+            const columns = ['orden_id', 'numero_id', 'primer_nombre', 'primer_apellido', 'empresa', 'cod_empresa', ...camposPreguntas, 'tenant_id'];
             const placeholders = columns.map((_, i) => `$${i + 1}`);
 
             const values = [
@@ -245,7 +258,8 @@ router.post('/', async (req, res) => {
                 datos.primer_apellido,
                 datos.empresa,
                 datos.cod_empresa,
-                ...camposPreguntas.map(campo => datos[campo] != null ? String(datos[campo]) : null)
+                ...camposPreguntas.map(campo => datos[campo] != null ? String(datos[campo]) : null),
+                tId
             ];
 
             const insertQuery = `
@@ -259,11 +273,14 @@ router.post('/', async (req, res) => {
             console.log('✅ Prueba SCL-90 creada para orden:', datos.orden_id);
         }
 
-        // Calcular e interpretar resultados automáticamente
-        const calificacion = await calcularEInterpretar(datos.orden_id);
+        // Calcular e interpretar resultados automáticamente (scoped)
+        const calificacion = await calcularEInterpretar(datos.orden_id, tId);
 
         // Obtener registro completo con resultados
-        const finalResult = await pool.query('SELECT * FROM scl90 WHERE orden_id = $1', [datos.orden_id]);
+        const finalResult = await pool.query(
+            'SELECT * FROM scl90 WHERE orden_id = $1 AND tenant_id = $2',
+            [datos.orden_id, tId]
+        );
 
         return res.json({
             success: true,

@@ -3,6 +3,11 @@ const router = express.Router();
 const pool = require('../config/database');
 const { syncAudiometriaToWix } = require('../services/wix-sync');
 
+// Multi-tenant helper (ver CLAUDE.md)
+function tenantId(req) {
+    return (req.tenant && req.tenant.id) || 'bsl';
+}
+
 // ==========================================
 // ENDPOINTS AUDIOMETRIA
 // ==========================================
@@ -28,10 +33,10 @@ router.get('/audiometrias/informe/:codEmpresa', async (req, res) => {
                 h."primerNombre", h."segundoNombre", h."primerApellido", h."segundoApellido",
                 COALESCE(h."fechaAtencion", a.created_at) as fecha
             FROM audiometrias a
-            LEFT JOIN "HistoriaClinica" h ON a.orden_id = h."_id"
-            WHERE a.cod_empresa = $1
+            LEFT JOIN "HistoriaClinica" h ON a.orden_id = h."_id" AND h.tenant_id = a.tenant_id
+            WHERE a.cod_empresa = $1 AND a.tenant_id = $2
         `;
-        const params = [codEmpresa];
+        const params = [codEmpresa, tenantId(req)];
 
         if (desde) {
             params.push(desde);
@@ -57,16 +62,17 @@ router.get('/audiometrias/:ordenId', async (req, res) => {
     try {
         const { ordenId } = req.params;
 
+        const tIdAudio = tenantId(req);
         const result = await pool.query(
-            'SELECT * FROM audiometrias WHERE orden_id = $1',
-            [ordenId]
+            'SELECT * FROM audiometrias WHERE orden_id = $1 AND tenant_id = $2',
+            [ordenId, tIdAudio]
         );
 
         if (result.rows.length === 0) {
             // No existe, devolver datos vacios con info del paciente
             const ordenResult = await pool.query(
-                'SELECT "numeroId", "primerNombre", "primerApellido", "empresa", "codEmpresa" FROM "HistoriaClinica" WHERE "_id" = $1',
-                [ordenId]
+                'SELECT "numeroId", "primerNombre", "primerApellido", "empresa", "codEmpresa" FROM "HistoriaClinica" WHERE "_id" = $1 AND tenant_id = $2',
+                [ordenId, tIdAudio]
             );
 
             if (ordenResult.rows.length === 0) {
@@ -103,10 +109,11 @@ router.post('/audiometrias', async (req, res) => {
             return res.status(400).json({ success: false, message: 'orden_id es requerido' });
         }
 
-        // Verificar si ya existe
+        // Verificar si ya existe (scoped por tenant)
+        const tIdSave = tenantId(req);
         const existeResult = await pool.query(
-            'SELECT id FROM audiometrias WHERE orden_id = $1',
-            [datos.orden_id]
+            'SELECT id FROM audiometrias WHERE orden_id = $1 AND tenant_id = $2',
+            [datos.orden_id, tIdSave]
         );
 
         if (existeResult.rows.length > 0) {
@@ -164,7 +171,7 @@ router.post('/audiometrias', async (req, res) => {
                     recomendaciones = $50,
                     remision = $51,
                     updated_at = CURRENT_TIMESTAMP
-                WHERE orden_id = $1
+                WHERE orden_id = $1 AND tenant_id = $52
                 RETURNING *
             `;
 
@@ -219,7 +226,8 @@ router.post('/audiometrias', async (req, res) => {
                 datos.diagnostico_od,
                 datos.interpretacion,
                 datos.recomendaciones,
-                datos.remision
+                datos.remision,
+                tIdSave
             ];
 
             const result = await pool.query(updateQuery, values);
@@ -241,13 +249,13 @@ router.post('/audiometrias', async (req, res) => {
                     aereo_oi_250, aereo_oi_500, aereo_oi_1000, aereo_oi_2000, aereo_oi_3000, aereo_oi_4000, aereo_oi_6000, aereo_oi_8000,
                     oseo_od_250, oseo_od_500, oseo_od_1000, oseo_od_2000, oseo_od_3000, oseo_od_4000,
                     oseo_oi_250, oseo_oi_500, oseo_oi_1000, oseo_oi_2000, oseo_oi_3000, oseo_oi_4000,
-                    cabina, equipo, diagnostico_oi, diagnostico_od, interpretacion, recomendaciones, remision
+                    cabina, equipo, diagnostico_oi, diagnostico_od, interpretacion, recomendaciones, remision, tenant_id
                 ) VALUES (
                     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
                     $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
                     $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
                     $31, $32, $33, $34, $35, $36, $37, $38, $39, $40,
-                    $41, $42, $43, $44, $45, $46, $47, $48, $49, $50, $51
+                    $41, $42, $43, $44, $45, $46, $47, $48, $49, $50, $51, $52
                 )
                 RETURNING *
             `;
@@ -303,7 +311,8 @@ router.post('/audiometrias', async (req, res) => {
                 datos.diagnostico_od,
                 datos.interpretacion,
                 datos.recomendaciones,
-                datos.remision
+                datos.remision,
+                tIdSave
             ];
 
             const result = await pool.query(insertQuery, values);

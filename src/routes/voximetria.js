@@ -3,6 +3,11 @@ const router = express.Router();
 const pool = require('../config/database');
 const { OpenAI } = require('openai');
 
+// Multi-tenant helper (ver CLAUDE.md)
+function tenantId(req) {
+    return (req.tenant && req.tenant.id) || 'bsl';
+}
+
 // Lazy init OpenAI
 let _openai;
 function getOpenAI() {
@@ -22,8 +27,8 @@ router.get('/voximetria-virtual/:ordenId', async (req, res) => {
         const { ordenId } = req.params;
 
         const result = await pool.query(
-            'SELECT * FROM voximetrias_virtual WHERE orden_id = $1',
-            [ordenId]
+            'SELECT * FROM voximetrias_virtual WHERE orden_id = $1 AND tenant_id = $2',
+            [ordenId, tenantId(req)]
         );
 
         if (result.rows.length === 0) {
@@ -179,10 +184,11 @@ Por favor analiza la calidad vocal, estabilidad, presencia de ronquera o disfonÃ
             ...parsed
         };
 
-        // Upsert
+        // Upsert (scoped por tenant)
+        const tId = tenantId(req);
         const existeResult = await pool.query(
-            'SELECT id FROM voximetrias_virtual WHERE orden_id = $1',
-            [orden_id]
+            'SELECT id FROM voximetrias_virtual WHERE orden_id = $1 AND tenant_id = $2',
+            [orden_id, tId]
         );
 
         let dbResult;
@@ -196,7 +202,7 @@ Por favor analiza la calidad vocal, estabilidad, presencia de ronquera o disfonÃ
                     intensidad_mean_db = $13, tiempo_maximo_fonacion_s = $14,
                     concepto = $15, interpretacion = $16, recomendaciones = $17,
                     updated_at = CURRENT_TIMESTAMP
-                WHERE orden_id = $1
+                WHERE orden_id = $1 AND tenant_id = $18
                 RETURNING *
             `;
             dbResult = await pool.query(updateQuery, [
@@ -204,7 +210,8 @@ Por favor analiza la calidad vocal, estabilidad, presencia de ronquera o disfonÃ
                 parsed.f0_mean, parsed.f0_min, parsed.f0_max,
                 parsed.jitter_percent, parsed.shimmer_percent, parsed.hnr_db,
                 parsed.intensidad_mean_db, parsed.tiempo_maximo_fonacion_s,
-                parsed.concepto, parsed.interpretacion, parsed.recomendaciones
+                parsed.concepto, parsed.interpretacion, parsed.recomendaciones,
+                tId
             ]);
             console.log('Voximetria virtual actualizada (IA) para orden:', orden_id);
         } else {
@@ -213,8 +220,8 @@ Por favor analiza la calidad vocal, estabilidad, presencia de ronquera o disfonÃ
                     orden_id, numero_id, primer_nombre, primer_apellido, empresa, cod_empresa,
                     f0_mean, f0_min, f0_max, jitter_percent, shimmer_percent, hnr_db,
                     intensidad_mean_db, tiempo_maximo_fonacion_s,
-                    concepto, interpretacion, recomendaciones
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+                    concepto, interpretacion, recomendaciones, tenant_id
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
                 RETURNING *
             `;
             dbResult = await pool.query(insertQuery, [
@@ -222,7 +229,8 @@ Por favor analiza la calidad vocal, estabilidad, presencia de ronquera o disfonÃ
                 parsed.f0_mean, parsed.f0_min, parsed.f0_max,
                 parsed.jitter_percent, parsed.shimmer_percent, parsed.hnr_db,
                 parsed.intensidad_mean_db, parsed.tiempo_maximo_fonacion_s,
-                parsed.concepto, parsed.interpretacion, parsed.recomendaciones
+                parsed.concepto, parsed.interpretacion, parsed.recomendaciones,
+                tId
             ]);
             console.log('Voximetria virtual creada (IA) para orden:', orden_id);
         }
@@ -244,9 +252,10 @@ router.post('/voximetria-virtual', async (req, res) => {
             return res.status(400).json({ success: false, message: 'orden_id es requerido' });
         }
 
+        const tId = tenantId(req);
         const existeResult = await pool.query(
-            'SELECT id FROM voximetrias_virtual WHERE orden_id = $1',
-            [datos.orden_id]
+            'SELECT id FROM voximetrias_virtual WHERE orden_id = $1 AND tenant_id = $2',
+            [datos.orden_id, tId]
         );
 
         if (existeResult.rows.length > 0) {
@@ -259,7 +268,7 @@ router.post('/voximetria-virtual', async (req, res) => {
                     intensidad_mean_db = $13, tiempo_maximo_fonacion_s = $14,
                     concepto = $15, interpretacion = $16, recomendaciones = $17,
                     updated_at = CURRENT_TIMESTAMP
-                WHERE orden_id = $1
+                WHERE orden_id = $1 AND tenant_id = $18
                 RETURNING *
             `;
             const values = [
@@ -268,7 +277,8 @@ router.post('/voximetria-virtual', async (req, res) => {
                 datos.f0_mean, datos.f0_min, datos.f0_max,
                 datos.jitter_percent, datos.shimmer_percent, datos.hnr_db,
                 datos.intensidad_mean_db, datos.tiempo_maximo_fonacion_s,
-                datos.concepto, datos.interpretacion, datos.recomendaciones
+                datos.concepto, datos.interpretacion, datos.recomendaciones,
+                tId
             ];
             const result = await pool.query(updateQuery, values);
             return res.json({ success: true, data: result.rows[0], operacion: 'UPDATE' });
@@ -278,8 +288,8 @@ router.post('/voximetria-virtual', async (req, res) => {
                     orden_id, numero_id, primer_nombre, primer_apellido, empresa, cod_empresa,
                     f0_mean, f0_min, f0_max, jitter_percent, shimmer_percent, hnr_db,
                     intensidad_mean_db, tiempo_maximo_fonacion_s,
-                    concepto, interpretacion, recomendaciones
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+                    concepto, interpretacion, recomendaciones, tenant_id
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
                 RETURNING *
             `;
             const values = [
@@ -288,7 +298,8 @@ router.post('/voximetria-virtual', async (req, res) => {
                 datos.f0_mean, datos.f0_min, datos.f0_max,
                 datos.jitter_percent, datos.shimmer_percent, datos.hnr_db,
                 datos.intensidad_mean_db, datos.tiempo_maximo_fonacion_s,
-                datos.concepto, datos.interpretacion, datos.recomendaciones
+                datos.concepto, datos.interpretacion, datos.recomendaciones,
+                tId
             ];
             const result = await pool.query(insertQuery, values);
             return res.json({ success: true, data: result.rows[0], operacion: 'INSERT' });
