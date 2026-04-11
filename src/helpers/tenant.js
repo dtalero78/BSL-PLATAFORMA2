@@ -30,8 +30,25 @@ function isBslTenantId(tenantId) {
     return tenantId === BSL_TENANT_ID;
 }
 
+/**
+ * Middleware Express que bloquea la request si el tenant actual no es BSL.
+ * Usar en rutas que son exclusivas de BSL (NUBIA, SIIGO, Alegra, SITEL, RIPS):
+ *
+ *   app.use('/api/nubia', requireBslTenant, nubiaRouter);
+ */
+function requireBslTenant(req, res, next) {
+    if (!isBsl(req)) {
+        return res.status(404).json({
+            success: false,
+            message: 'Recurso no disponible para este tenant'
+        });
+    }
+    next();
+}
+
 module.exports = {
     BSL_TENANT_ID,
     isBsl,
-    isBslTenantId
+    isBslTenantId,
+    requireBslTenant
 };

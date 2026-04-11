@@ -155,13 +155,16 @@ app.use('/api/medicos', require('./src/routes/medicos'));
 // Empresas
 app.use('/api/empresas', require('./src/routes/empresas'));
 
-// Facturación
-app.use('/api/facturacion', require('./src/routes/facturacion'));
-app.use('/api/facturacion-empresas', require('./src/routes/facturacion-empresas'));
-app.use('/api/planilla-sitel', require('./src/routes/planilla-sitel'));
+// Multi-tenant: middleware que bloquea rutas BSL-only con 404 si el tenant no es bsl
+const { requireBslTenant } = require('./src/helpers/tenant');
 
-// NUBIA
-app.use('/api', require('./src/routes/nubia'));
+// Facturación (BSL-only: Alegra + SITEL)
+app.use('/api/facturacion', requireBslTenant, require('./src/routes/facturacion'));
+app.use('/api/facturacion-empresas', requireBslTenant, require('./src/routes/facturacion-empresas'));
+app.use('/api/planilla-sitel', requireBslTenant, require('./src/routes/planilla-sitel'));
+
+// NUBIA (BSL-only: telemedicina SANITHELP-JJ)
+app.use('/api', requireBslTenant, require('./src/routes/nubia'));
 
 // Audiometría
 app.use('/api', require('./src/routes/audiometria'));
@@ -190,17 +193,17 @@ app.use('/api/laboratorios', require('./src/routes/laboratorios'));
 // Certificados (montado en raíz porque tiene /preview-certificado y /api/certificado-pdf)
 app.use('/', require('./src/routes/certificados'));
 
-// RIPS
-app.use('/api/rips', require('./src/routes/rips'));
+// RIPS (BSL-only: reportes colombianos salud)
+app.use('/api/rips', requireBslTenant, require('./src/routes/rips'));
 
 // Comunidad de Salud
 app.use('/api/comunidad', require('./src/routes/comunidad'));
 
-// Envío SIIGO
-app.use('/api/envio-siigo', require('./src/routes/siigo'));
+// Envío SIIGO (BSL-only: integración SIIGO)
+app.use('/api/envio-siigo', requireBslTenant, require('./src/routes/siigo'));
 
-// Asistencia SIIGO
-app.use('/api/asistencia-siigo', require('./src/routes/asistencia-siigo'));
+// Asistencia SIIGO (BSL-only)
+app.use('/api/asistencia-siigo', requireBslTenant, require('./src/routes/asistencia-siigo'));
 
 // Envío Agendamiento Empresas
 app.use('/api/envio-empresas', require('./src/routes/envio-empresas'));
@@ -212,10 +215,15 @@ app.use('/api/external', require('./src/routes/external'));
 
 // ========== CRON JOBS ==========
 
-// Barrido NUBIA cada 5 minutos
+// Barrido NUBIA cada 5 minutos (BSL-only por diseño: telemedicina SANITHELP-JJ).
+// Las funciones internas usan queries directas contra HistoriaClinica sin filtro
+// explícito de tenant, pero en la práctica solo afectan registros de BSL porque
+// ningún otro tenant tiene pacientes SANITHELP-JJ ni NUBIA. Si algún día otro
+// tenant necesita telemedicina, habría que refactorizar nubia.js para iterar
+// por tenant activo.
 const nubiaRouter = require('./src/routes/nubia');
 cron.schedule('*/5 * * * *', async () => {
-    console.log('⏰ [CRON] Ejecutando barrido NUBIA automático...');
+    console.log('⏰ [CRON] Ejecutando barrido NUBIA automático (BSL-only)...');
     try {
         await nubiaRouter.barridoNubiaEnviarLink();
         await nubiaRouter.barridoNubiaMarcarAtendido();
@@ -227,30 +235,45 @@ cron.schedule('*/5 * * * *', async () => {
 });
 console.log('✅ Cron job configurado: Barrido NUBIA + recordatorios cada 5 minutos');
 
-// Crear reglas de enrutamiento por defecto
+// Crear reglas de enrutamiento por defecto para cada tenant activo.
+// Multi-tenant: cada tenant necesita sus propias reglas porque el filtro de
+// reglas_enrutamiento es por tenant_id. Al arrancar, garantizamos que todos
+// los tenants activos tengan las 3 reglas básicas.
 async function crearReglasEnrutamientoPorDefecto() {
     try {
-        await pool.query(`
-            INSERT INTO reglas_enrutamiento (nombre, prioridad, condiciones, asignar_a, activo)
-            VALUES ('Fuera de horario laboral', 10,
-                    '{"horario": {"desde": "08:00", "hasta": "18:00"}}'::jsonb, 'bot', true)
-            ON CONFLICT DO NOTHING
-        `);
-        await pool.query(`
-            INSERT INTO reglas_enrutamiento (nombre, prioridad, condiciones, asignar_a, etiqueta_auto, activo)
-            VALUES ('Emergencias', 20,
-                    '{"keywords": ["urgente", "emergencia", "ayuda", "problema grave"]}'::jsonb,
-                    'agente_disponible', 'URGENTE', true)
-            ON CONFLICT DO NOTHING
-        `);
-        await pool.query(`
-            INSERT INTO reglas_enrutamiento (nombre, prioridad, condiciones, asignar_a, activo)
-            VALUES ('Solicitar humano', 15,
-                    '{"keywords": ["hablar con persona", "asesor", "operador", "humano", "agente"]}'::jsonb,
-                    'agente_disponible', true)
-            ON CONFLICT DO NOTHING
-        `);
-        console.log('✅ Reglas de enrutamiento por defecto creadas');
+        // Obtener lista de tenants activos
+        const tenantsResult = await pool.query(`SELECT id FROM tenants WHERE activo = TRUE`);
+        const tenantIds = tenantsResult.rows.map(r => r.id);
+
+        if (tenantIds.length === 0) {
+            // Fallback: si la tabla tenants aún no existe o está vacía, crear para bsl
+            tenantIds.push('bsl');
+        }
+
+        for (const tId of tenantIds) {
+            await pool.query(`
+                INSERT INTO reglas_enrutamiento (nombre, prioridad, condiciones, asignar_a, activo, tenant_id)
+                VALUES ('Fuera de horario laboral', 10,
+                        '{"horario": {"desde": "08:00", "hasta": "18:00"}}'::jsonb, 'bot', true, $1)
+                ON CONFLICT DO NOTHING
+            `, [tId]);
+            await pool.query(`
+                INSERT INTO reglas_enrutamiento (nombre, prioridad, condiciones, asignar_a, etiqueta_auto, activo, tenant_id)
+                VALUES ('Emergencias', 20,
+                        '{"keywords": ["urgente", "emergencia", "ayuda", "problema grave"]}'::jsonb,
+                        'agente_disponible', 'URGENTE', true, $1)
+                ON CONFLICT DO NOTHING
+            `, [tId]);
+            await pool.query(`
+                INSERT INTO reglas_enrutamiento (nombre, prioridad, condiciones, asignar_a, activo, tenant_id)
+                VALUES ('Solicitar humano', 15,
+                        '{"keywords": ["hablar con persona", "asesor", "operador", "humano", "agente"]}'::jsonb,
+                        'agente_disponible', true, $1)
+                ON CONFLICT DO NOTHING
+            `, [tId]);
+        }
+
+        console.log(`✅ Reglas de enrutamiento por defecto creadas para ${tenantIds.length} tenant(s): ${tenantIds.join(', ')}`);
     } catch (error) {
         console.error('❌ Error creando reglas de enrutamiento:', error);
     }

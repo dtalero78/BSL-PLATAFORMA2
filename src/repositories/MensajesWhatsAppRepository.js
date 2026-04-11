@@ -2,126 +2,92 @@ const BaseRepository = require('./BaseRepository');
 
 /**
  * Repository para la tabla mensajes_whatsapp
- * Métodos específicos para gestión de mensajes de WhatsApp
+ * Multi-tenant (ver CLAUDE.md): todos los métodos aceptan tenantId opcional (default 'bsl').
  */
 class MensajesWhatsAppRepository extends BaseRepository {
     constructor() {
         super('mensajes_whatsapp');
     }
 
-    /**
-     * Busca mensajes por ID de conversación
-     * @param {string|number} conversacionId
-     * @param {Object} options - {limit, offset, orderDir}
-     * @returns {Promise<Array>}
-     */
     async findByConversacion(conversacionId, options = {}) {
-        const { limit = 100, offset = 0, orderDir = 'ASC' } = options;
+        const { limit = 100, offset = 0, orderDir = 'ASC', tenantId = 'bsl' } = options;
+
+        // Validar orderDir para prevenir SQL injection (no es parameterizable directamente)
+        const orderDirSafe = orderDir === 'DESC' ? 'DESC' : 'ASC';
 
         const query = `
             SELECT *
             FROM ${this.tableName}
-            WHERE "conversacion_id" = $1
-            ORDER BY "fecha_envio" ${orderDir}
-            LIMIT $2 OFFSET $3
+            WHERE "conversacion_id" = $1 AND tenant_id = $2
+            ORDER BY "fecha_envio" ${orderDirSafe}
+            LIMIT $3 OFFSET $4
         `;
 
-        const result = await this.query(query, [conversacionId, limit, offset]);
+        const result = await this.query(query, [conversacionId, tenantId, limit, offset]);
         return result.rows;
     }
 
-    /**
-     * Busca mensajes recientes de una conversación
-     * @param {string|number} conversacionId
-     * @param {number} limit - Número de mensajes a recuperar
-     * @returns {Promise<Array>}
-     */
-    async findRecientes(conversacionId, limit = 50) {
+    async findRecientes(conversacionId, limit = 50, tenantId = 'bsl') {
         const query = `
             SELECT *
             FROM ${this.tableName}
-            WHERE "conversacion_id" = $1
+            WHERE "conversacion_id" = $1 AND tenant_id = $2
             ORDER BY "fecha_envio" DESC
-            LIMIT $2
+            LIMIT $3
         `;
 
-        const result = await this.query(query, [conversacionId, limit]);
-        // Invertir el orden para mostrar cronológicamente
+        const result = await this.query(query, [conversacionId, tenantId, limit]);
         return result.rows.reverse();
     }
 
-    /**
-     * Crea un nuevo mensaje en una conversación
-     * @param {string|number} conversacionId
-     * @param {Object} data - Datos del mensaje (contenido, remitente, tipo_mensaje, etc.)
-     * @returns {Promise<Object>}
-     */
-    async createMensaje(conversacionId, data) {
+    async createMensaje(conversacionId, data, tenantId = 'bsl') {
         const mensajeData = {
             conversacion_id: conversacionId,
             fecha_envio: new Date(),
             ...data
         };
 
-        return await this.create(mensajeData);
+        return await this.create(mensajeData, { tenantId });
     }
 
-    /**
-     * Busca mensajes por remitente (CLIENTE o AGENTE)
-     * @param {string|number} conversacionId
-     * @param {string} remitente - CLIENTE o AGENTE
-     * @param {Object} options - {limit, offset}
-     * @returns {Promise<Array>}
-     */
     async findByRemitente(conversacionId, remitente, options = {}) {
-        const { limit = 100, offset = 0 } = options;
+        const { limit = 100, offset = 0, tenantId = 'bsl' } = options;
 
         const query = `
             SELECT *
             FROM ${this.tableName}
-            WHERE "conversacion_id" = $1 AND "remitente" = $2
+            WHERE "conversacion_id" = $1 AND "remitente" = $2 AND tenant_id = $3
             ORDER BY "fecha_envio" ASC
-            LIMIT $3 OFFSET $4
+            LIMIT $4 OFFSET $5
         `;
 
-        const result = await this.query(query, [conversacionId, remitente, limit, offset]);
+        const result = await this.query(query, [conversacionId, remitente, tenantId, limit, offset]);
         return result.rows;
     }
 
-    /**
-     * Busca mensajes no leídos de una conversación
-     * @param {string|number} conversacionId
-     * @returns {Promise<Array>}
-     */
-    async findNoLeidos(conversacionId) {
+    async findNoLeidos(conversacionId, tenantId = 'bsl') {
         const query = `
             SELECT *
             FROM ${this.tableName}
-            WHERE "conversacion_id" = $1 AND "leido" = false
+            WHERE "conversacion_id" = $1 AND "leido" = false AND tenant_id = $2
             ORDER BY "fecha_envio" ASC
         `;
 
-        const result = await this.query(query, [conversacionId]);
+        const result = await this.query(query, [conversacionId, tenantId]);
         return result.rows;
     }
 
-    /**
-     * Marca mensajes como leídos
-     * @param {string|number} conversacionId
-     * @param {Array<number>} mensajeIds - IDs de mensajes a marcar (opcional, marca todos si no se proporciona)
-     * @returns {Promise<number>} - Número de mensajes actualizados
-     */
-    async marcarComoLeidos(conversacionId, mensajeIds = null) {
+    async marcarComoLeidos(conversacionId, mensajeIds = null, tenantId = 'bsl') {
         let query = `
             UPDATE ${this.tableName}
             SET "leido" = true, "fecha_lectura" = NOW()
-            WHERE "conversacion_id" = $1 AND "leido" = false
+            WHERE "conversacion_id" = $1 AND "leido" = false AND tenant_id = $2
         `;
 
-        const params = [conversacionId];
+        const params = [conversacionId, tenantId];
 
         if (mensajeIds && mensajeIds.length > 0) {
-            query += ` AND "id" = ANY($2)`;
+            query += ` AND "id" = ANY($3)`;
             params.push(mensajeIds);
         }
 
@@ -129,150 +95,113 @@ class MensajesWhatsAppRepository extends BaseRepository {
         return result.rowCount;
     }
 
-    /**
-     * Cuenta mensajes por conversación
-     * @param {string|number} conversacionId
-     * @returns {Promise<number>}
-     */
-    async countByConversacion(conversacionId) {
-        return await this.count({ conversacion_id: conversacionId });
+    async countByConversacion(conversacionId, tenantId = 'bsl') {
+        return await this.count({ conversacion_id: conversacionId }, { tenantId });
     }
 
-    /**
-     * Cuenta mensajes no leídos por conversación
-     * @param {string|number} conversacionId
-     * @returns {Promise<number>}
-     */
-    async countNoLeidos(conversacionId) {
+    async countNoLeidos(conversacionId, tenantId = 'bsl') {
         const query = `
             SELECT COUNT(*) FROM ${this.tableName}
-            WHERE "conversacion_id" = $1 AND "leido" = false
+            WHERE "conversacion_id" = $1 AND "leido" = false AND tenant_id = $2
         `;
-        const result = await this.query(query, [conversacionId]);
+        const result = await this.query(query, [conversacionId, tenantId]);
         return parseInt(result.rows[0].count);
     }
 
-    /**
-     * Busca mensajes por tipo (texto, imagen, documento, etc.)
-     * @param {string|number} conversacionId
-     * @param {string} tipoMensaje
-     * @param {Object} options - {limit, offset}
-     * @returns {Promise<Array>}
-     */
     async findByTipo(conversacionId, tipoMensaje, options = {}) {
-        const { limit = 100, offset = 0 } = options;
+        const { limit = 100, offset = 0, tenantId = 'bsl' } = options;
 
         const query = `
             SELECT *
             FROM ${this.tableName}
-            WHERE "conversacion_id" = $1 AND "tipo_mensaje" = $2
+            WHERE "conversacion_id" = $1 AND "tipo_mensaje" = $2 AND tenant_id = $3
             ORDER BY "fecha_envio" DESC
-            LIMIT $3 OFFSET $4
+            LIMIT $4 OFFSET $5
         `;
 
-        const result = await this.query(query, [conversacionId, tipoMensaje, limit, offset]);
+        const result = await this.query(query, [conversacionId, tipoMensaje, tenantId, limit, offset]);
         return result.rows;
     }
 
-    /**
-     * Busca el último mensaje de una conversación
-     * @param {string|number} conversacionId
-     * @returns {Promise<Object|null>}
-     */
-    async findUltimo(conversacionId) {
+    async findUltimo(conversacionId, tenantId = 'bsl') {
         const query = `
             SELECT *
             FROM ${this.tableName}
-            WHERE "conversacion_id" = $1
+            WHERE "conversacion_id" = $1 AND tenant_id = $2
             ORDER BY "fecha_envio" DESC
             LIMIT 1
         `;
 
-        const result = await this.query(query, [conversacionId]);
+        const result = await this.query(query, [conversacionId, tenantId]);
         return result.rows[0] || null;
     }
 
-    /**
-     * Busca mensajes en un rango de fechas
-     * @param {string|number} conversacionId
-     * @param {Date|string} fechaInicio
-     * @param {Date|string} fechaFin
-     * @returns {Promise<Array>}
-     */
-    async findByRangoFechas(conversacionId, fechaInicio, fechaFin) {
+    async findByRangoFechas(conversacionId, fechaInicio, fechaFin, tenantId = 'bsl') {
         const query = `
             SELECT *
             FROM ${this.tableName}
             WHERE "conversacion_id" = $1
-            AND "fecha_envio" >= $2
-            AND "fecha_envio" <= $3
+              AND "fecha_envio" >= $2
+              AND "fecha_envio" <= $3
+              AND tenant_id = $4
             ORDER BY "fecha_envio" ASC
         `;
 
         const result = await this.query(query, [
             conversacionId,
             new Date(fechaInicio),
-            new Date(fechaFin)
+            new Date(fechaFin),
+            tenantId
         ]);
         return result.rows;
     }
 
-    /**
-     * Busca mensajes con adjuntos (media_url no null)
-     * @param {string|number} conversacionId
-     * @param {Object} options - {limit, offset}
-     * @returns {Promise<Array>}
-     */
     async findConAdjuntos(conversacionId, options = {}) {
-        const { limit = 100, offset = 0 } = options;
+        const { limit = 100, offset = 0, tenantId = 'bsl' } = options;
 
         const query = `
             SELECT *
             FROM ${this.tableName}
-            WHERE "conversacion_id" = $1 AND "media_url" IS NOT NULL
+            WHERE "conversacion_id" = $1 AND "media_url" IS NOT NULL AND tenant_id = $2
             ORDER BY "fecha_envio" DESC
-            LIMIT $2 OFFSET $3
+            LIMIT $3 OFFSET $4
         `;
 
-        const result = await this.query(query, [conversacionId, limit, offset]);
+        const result = await this.query(query, [conversacionId, tenantId, limit, offset]);
         return result.rows;
     }
 
-    /**
-     * Elimina mensajes antiguos (limpieza de datos)
-     * @param {number} dias - Días de antigüedad
-     * @returns {Promise<number>} - Número de mensajes eliminados
-     */
-    async eliminarAntiguos(dias = 90) {
+    async eliminarAntiguos(dias = 90, tenantId = 'bsl') {
+        // Validación: dias debe ser número para prevenir SQL injection en INTERVAL
+        const diasInt = parseInt(dias);
+        if (isNaN(diasInt) || diasInt < 0) {
+            throw new Error('dias debe ser un número positivo');
+        }
+
         const query = `
             DELETE FROM ${this.tableName}
-            WHERE "fecha_envio" < NOW() - INTERVAL '${dias} days'
+            WHERE "fecha_envio" < NOW() - INTERVAL '${diasInt} days'
+              AND tenant_id = $1
             RETURNING id
         `;
-        const result = await this.query(query);
+        const result = await this.query(query, [tenantId]);
         return result.rowCount;
     }
 
-    /**
-     * Busca mensajes con búsqueda de texto en contenido
-     * @param {string|number} conversacionId
-     * @param {string} buscar - Término de búsqueda
-     * @param {Object} options - {limit, offset}
-     * @returns {Promise<Array>}
-     */
     async buscarEnContenido(conversacionId, buscar, options = {}) {
-        const { limit = 100, offset = 0 } = options;
+        const { limit = 100, offset = 0, tenantId = 'bsl' } = options;
 
         const query = `
             SELECT *
             FROM ${this.tableName}
             WHERE "conversacion_id" = $1
-            AND "contenido" ILIKE $2
+              AND "contenido" ILIKE $2
+              AND tenant_id = $3
             ORDER BY "fecha_envio" DESC
-            LIMIT $3 OFFSET $4
+            LIMIT $4 OFFSET $5
         `;
 
-        const result = await this.query(query, [conversacionId, `%${buscar}%`, limit, offset]);
+        const result = await this.query(query, [conversacionId, `%${buscar}%`, tenantId, limit, offset]);
         return result.rows;
     }
 }

@@ -78,9 +78,13 @@ const authMiddleware = async (req, res, next) => {
             });
         }
 
-        // Verificar que la sesión siga activa en la base de datos
+        // Verificar que la sesión siga activa en la base de datos.
+        // Multi-tenant: traemos u.tenant_id como fuente de verdad (la BD es autoritativa,
+        // no el JWT). Filtrar por tenant en la query también previene que un token de un
+        // tenant resuelva sesión cruzada si por alguna razón el hashToken colisionara.
+        const reqTenantId = (req.tenant && req.tenant.id) || null;
         const sesionResult = await pool.query(`
-            SELECT s.*, u.estado, u.rol, u.cod_empresa, u.nombre_completo, u.email, u.numero_documento, u.empresas_excluidas
+            SELECT s.*, u.estado, u.rol, u.cod_empresa, u.nombre_completo, u.email, u.numero_documento, u.empresas_excluidas, u.tenant_id AS user_tenant_id
             FROM sesiones s
             JOIN usuarios u ON s.usuario_id = u.id
             WHERE s.token_hash = $1
@@ -107,9 +111,29 @@ const authMiddleware = async (req, res, next) => {
             });
         }
 
-        // Adjuntar usuario al request
-        // Multi-tenant: el token puede traer tenant_id explícito; si no (tokens legacy), default 'bsl'.
-        const tokenTenantId = decoded.tenant_id || 'bsl';
+        // Multi-tenant: la BD es la fuente de verdad para tenant_id (no el JWT).
+        // Esto previene escalación si alguien manipulara el claim del token o si tokens
+        // legacy sin claim cayeran en el fallback débil 'bsl'.
+        const dbTenantId = sesion.user_tenant_id || 'bsl';
+
+        // Si el JWT trae tenant_id explícito y NO coincide con la BD → token corrupto/stale.
+        if (decoded.tenant_id && decoded.tenant_id !== dbTenantId) {
+            return res.status(403).json({
+                success: false,
+                message: 'Token no válido para este usuario',
+                code: 'TENANT_MISMATCH'
+            });
+        }
+
+        // Si el hostname resolvió un tenant y NO coincide con el del usuario → cross-domain.
+        // (Evita que un usuario de tenant A use su token en el dominio de tenant B.)
+        if (reqTenantId && reqTenantId !== dbTenantId) {
+            return res.status(403).json({
+                success: false,
+                message: 'Token no válido para este dominio',
+                code: 'TENANT_MISMATCH'
+            });
+        }
 
         req.usuario = {
             id: decoded.userId,
@@ -120,19 +144,8 @@ const authMiddleware = async (req, res, next) => {
             numeroDocumento: sesion.numero_documento,
             sesionId: sesion.id,
             empresas_excluidas: sesion.empresas_excluidas || [],
-            tenant_id: tokenTenantId
+            tenant_id: dbTenantId
         };
-
-        // Consistencia: si el tenantMiddleware ya montó req.tenant y no coincide con el del token,
-        // se rechaza (evita que un token emitido para tenant A se use en el dominio de tenant B).
-        // Durante Sprint 1 ambos son 'bsl' por default, así que este check es no-op para BSL.
-        if (req.tenant && req.tenant.id && req.tenant.id !== tokenTenantId) {
-            return res.status(403).json({
-                success: false,
-                message: 'Token no válido para este dominio',
-                code: 'TENANT_MISMATCH'
-            });
-        }
 
         next();
 
@@ -176,8 +189,9 @@ const requireSuperAdmin = (req, res, next) => {
             message: 'Acceso denegado: se requiere rol de administrador'
         });
     }
-    // Solo admins del tenant 'bsl' pueden ser super-admin
-    if ((req.usuario.tenant_id || 'bsl') !== 'bsl') {
+    // Solo admins del tenant 'bsl' pueden ser super-admin.
+    // tenant_id viene de la BD (authMiddleware), nunca del JWT — sin fallback laxo.
+    if (req.usuario.tenant_id !== 'bsl') {
         return res.status(403).json({
             success: false,
             message: 'Acceso denegado: se requiere super-administrador (BSL)'
