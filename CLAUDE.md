@@ -32,29 +32,49 @@ The application is deployed to **DigitalOcean App Platform** using Docker.
 ### Environment Variables in DigitalOcean
 All required environment variables must be configured in App Platform settings before deployment. Build will fail if critical variables (DB_HOST, DB_PASSWORD, JWT_SECRET) are missing.
 
-## Multi-Tenant Architecture (In Progress)
+## Multi-Tenant Architecture (Active)
 
-The platform is being migrated to **multi-tenant** so that additional IPS (other than BSL) can use the same deployment. A single app + single DB + single deploy serves all tenants; each tenant is isolated at the row level via a `tenant_id` column on every tenant-scoped table.
+The platform runs multi-tenant in production with two live tenants:
+- **bsl** — `bsl-plataforma.com` (tenant raíz, legacy, usa todos los módulos BSL-only)
+- **ipsVip** — `vip-mediconecta.app` (IPS VIP Mediconecta, administrada por Diego Barragán)
+
+Single app + single DB + single deploy serves all tenants; row-level isolation via `tenant_id` column on every tenant-scoped table. DigitalOcean App Platform maneja multi-domain + SSL nativamente.
 
 ### Core principles
 
-1. **BSL must keep working exactly as today** — zero-regression. During the migration, any code path that doesn't explicitly pass a tenant defaults to `'bsl'`. The existing behavior is preserved until a second tenant is activated.
-2. **Wix is BSL-only.** No other IPS will use Wix. All Wix-related code (`src/services/wix-sync.js`, `/api/wix/*` endpoints, migration/sync scripts) must be wrapped with `if (req.tenant.id === 'bsl')` or equivalent checks. Wix files in `WIX/` stay untouched.
-3. **One row belongs to exactly one tenant.** Every tenant-scoped table carries a `tenant_id` column (default `'bsl'`). Queries MUST filter by `tenant_id` once multi-tenant is active. Until then, the default makes this invisible for BSL.
-4. **Tenant is resolved from hostname** via `src/middleware/tenant.js`. The resolved tenant is available as `req.tenant`. Unknown hostnames fall back to `'bsl'` during the transition phase.
-5. **No Kubernetes.** DigitalOcean App Platform handles multi-domain + SSL natively. One deploy updates all tenants at once — that's the whole point.
+1. **BSL debe seguir funcionando exactamente igual** — zero-regression. El default de `tenant_id` es `'bsl'` a nivel de schema y código, así cualquier path legacy sigue apuntando a BSL.
+2. **Wix es BSL-only.** Todo código Wix (`src/services/wix-sync.js`, `/api/wix/*`, scripts de migración) va envuelto con `requireBslTenant` o `isBsl(req)`.
+3. **Una fila pertenece a un solo tenant.** Las queries DEBEN filtrar por `tenant_id`. El `DEFAULT 'bsl'` del schema es red de seguridad, no sustituto del filtro explícito.
+4. **El tenant se resuelve por hostname** vía `src/middleware/tenant.js`, disponible como `req.tenant`. Hostname desconocido → fallback a `'bsl'`.
+5. **La BD es la fuente de verdad para `tenant_id`, NO el JWT.** El middleware `authMiddleware` lee `usuarios.tenant_id` de la BD y lo monta en `req.usuario.tenant_id`. Si el JWT trae un claim que no coincide con la BD → 403 TENANT_MISMATCH.
+6. **Super-admin = admin del tenant bsl.** Solo BSL admins pueden crear tenants, editarlos, o usar herramientas globales (`/api/admin/tablas/*`). Enforced via `requireSuperAdmin` middleware.
+7. **No Kubernetes.** DO App Platform cubre el caso. Revisar solo con 20+ tenants, regionalización, o DevOps dedicado.
 
-### Current state (tracked via Sprint progress)
+### Módulos BSL-only (wrapped con `requireBslTenant`)
 
-| Sprint | Description | Status |
+Estas rutas devuelven 404 para tenants que no sean BSL:
+
+- `/api/facturacion`, `/api/facturacion-empresas` (Alegra)
+- `/api/planilla-sitel` (SITEL payroll)
+- `/api/nubia` + barrido cron NUBIA (SANITHELP-JJ telemedicine)
+- `/api/rips` (Colombia health reports)
+- `/api/envio-siigo`, `/api/asistencia-siigo` (SIIGO integration)
+- `/api/external` (x-api-key, SIIGO orders)
+- `/api/wix/:id` (Wix proxy)
+- Endpoints de comunidad con perfiles PARTICULAR/SANITHELP-JJ
+
+### Estado actual (sprints históricos)
+
+| Sprint | Descripción | Status |
 |---|---|---|
-| 1 | `tenants` table + `tenant_id` columns + middleware + JWT claim | In progress |
-| 2 | `BaseRepository` accepts `tenantId` (optional, defaults to `'bsl'`) | Pending |
-| 3 | Wix wrapped with `if (tenant.id === 'bsl')` | Pending |
-| 4 | Refactor 450 `pool.query()` calls to filter by `tenant_id` | Pending |
-| 5 | Socket.io rooms + SSE scoped by tenant | Pending |
-| 6 | Frontend branding dynamic via `/api/tenant-config` | Pending |
-| 7 | Safety gate + onboarding of first new tenant | Pending |
+| 1 | `tenants` table + `tenant_id` columns + middleware + JWT claim | ✅ Done |
+| 2 | `BaseRepository` + repos aceptan `tenantId` param | ✅ Done (Empresas, WhatsApp, HistoriaClinica) |
+| 3 | Wix envuelto con `requireBslTenant` / `isBsl` | ✅ Done |
+| 4 | `pool.query()` filtrados por `tenant_id` | 🟡 70% — ver audit script |
+| 5 | Socket.io rooms + SSE scoped por tenant | ✅ Done |
+| 6 | Frontend branding dinámico vía `/api/tenants/config` | ✅ Done |
+| 7 | Primer tenant nuevo onboarded (ipsVip) | ✅ Done |
+| 8 | UNIQUE constraints compuestos con `tenant_id` | ✅ Done (ronda 3 de bug hunt) |
 
 ### `tenants` table schema
 
@@ -76,39 +96,100 @@ BSL is inserted as the first tenant on startup with `id = 'bsl'` and its current
 
 All tenant-scoped tables receive `tenant_id VARCHAR(50) NOT NULL DEFAULT 'bsl'` via `ALTER TABLE ADD COLUMN IF NOT EXISTS` in `src/config/init-db.js`:
 
-- `formularios`, `HistoriaClinica`, `empresas`, `usuarios`
+- `formularios`, `HistoriaClinica`, `empresas`, `usuarios`, `medicos`, `examenes`
 - `audiometrias`, `visiometrias`, `visiometrias_virtual`, `voximetrias_virtual`, `pruebasADC`, `scl90`, `laboratorios`
 - `medicos_disponibilidad`
 - `conversaciones_whatsapp`, `mensajes_whatsapp`, `agentes_estado`, `transferencias_conversacion`, `reglas_enrutamiento`
 - `sesiones`, `permisos_usuario`, `seguimiento_comunidad`
+- `certificado_envio_logs`, `configuracion_facturacion_empresa`, `contenido_educativo`, `sistema_asignacion`
+- `facturas` (agregado en ronda 3 para soportar FK compuesta con empresas)
+
+### UNIQUE constraints compuestos con `tenant_id`
+
+Los siguientes UNIQUEs son compuestos `(col, tenant_id)` para permitir que cada tenant tenga sus propios valores (ej: cada tenant puede tener una empresa "PARTICULAR"):
+
+| Tabla | Constraint | Columnas |
+|---|---|---|
+| `empresas` | `empresas_cod_empresa_tenant_key` | `(cod_empresa, tenant_id)` |
+| `examenes` | `examenes_nombre_tenant_key` | `(nombre, tenant_id)` |
+| `usuarios` | `usuarios_email_tenant_key` | `(email, tenant_id)` |
+| `usuarios` | `usuarios_numero_documento_tenant_key` | `(numero_documento, tenant_id)` |
+| `conversaciones_whatsapp` | `..._celular_tenant_key` | `(celular, tenant_id)` |
+| `visiometrias_virtual` | `..._orden_tenant` | `(orden_id, tenant_id)` |
+| `voximetrias_virtual` | `..._orden_tenant` | `(orden_id, tenant_id)` |
+| `configuracion_facturacion_empresa` | `..._cod_empresa_tenant_key` | `(cod_empresa, tenant_id)` |
+
+FKs a `empresas(cod_empresa, tenant_id)` en `configuracion_facturacion_empresa.fk_empresa` y `facturas.fk_empresa_factura` son compuestas.
+
+**Preservados como UNIQUE simple** (valores globalmente únicos): `sesiones.token_hash`, `facturas.alegra_invoice_id`, `permisos_usuario(usuario_id, permiso)`.
+
+Cuando agregues una tabla nueva con un UNIQUE sobre columna de dominio, **hazlo compuesto con `tenant_id` desde el inicio**. La migración del constraint viejo está en `src/config/init-db.js` en el bloque `uniqueMigrations`.
 
 ### Writing multi-tenant-safe code
 
-**When writing new queries**: always include `tenant_id` in WHERE/INSERT. Get it from `req.tenant.id` (for HTTP handlers) or pass it explicitly (for services/crons).
+**1. Queries nuevas** — siempre incluir `tenant_id`:
 
 ```javascript
-// ✅ Correct
 const result = await pool.query(
   `SELECT * FROM "HistoriaClinica" WHERE "numeroId" = $1 AND tenant_id = $2`,
   [numeroId, req.tenant.id]
 );
-
-// ❌ Wrong — works today because DEFAULT 'bsl' hides the bug, but leaks data once a second tenant exists
-const result = await pool.query(
-  `SELECT * FROM "HistoriaClinica" WHERE "numeroId" = $1`,
-  [numeroId]
-);
 ```
 
-**When using repositories**: once Sprint 2 is done, `BaseRepository` methods will accept `tenantId` as a parameter. During Sprint 1 the methods still default to `'bsl'` internally.
+Usa `req.tenant.id` en rutas HTTP, o `req.usuario.tenant_id` (ya viene de BD) cuando estés dentro de `authMiddleware`. En services/crons pásalo explícito.
 
-**For Wix-specific code**: always guard with an explicit BSL check:
+**2. Repositories** — los métodos aceptan `tenantId` como parámetro opcional. Pásalo siempre en código nuevo, aunque el default a `'bsl'` funcione:
 
 ```javascript
-if (req.tenant.id === 'bsl') {
-  await wixSync.syncHistoriaClinica(data);  // Only runs for BSL
+await EmpresasRepository.findByCodigo('PARTICULAR', req.tenant.id);
+```
+
+**3. Rutas BSL-only** — envolver con `requireBslTenant` a nivel de router en `server.js`:
+
+```javascript
+app.use('/api/facturacion', requireBslTenant, require('./src/routes/facturacion'));
+```
+
+**4. Código Wix** — guard explícito con `isBsl(req)`:
+
+```javascript
+if (isBsl(req)) {
+  await wixSync.syncHistoriaClinica(data);
 }
 ```
+
+**5. Socket.io / SSE** — emitir por room, nunca global:
+
+```javascript
+// ✅ Socket.io
+io.to('tenant:' + tenantId).emit('nuevo-mensaje', data);
+
+// ✅ SSE — usar helpers/sse que ya filtran por tenantId
+notificarNuevaOrden(orden, req.tenant.id);
+```
+
+**6. Uploads a DO Spaces** — incluir tenant en el path (BSL conserva path legacy para zero-regression):
+
+```javascript
+await subirFotoASpaces(base64, numeroId, formId, req.tenant.id);
+// Path: 'ipsVip/fotos/123_456_789.jpg' para no-BSL, 'fotos/123_456_789.jpg' para BSL
+```
+
+**7. Super-admin vs admin del tenant** — herramientas de plataforma van con `requireSuperAdmin`:
+
+```javascript
+router.get('/tablas/:nombre/datos', authMiddleware, requireSuperAdmin, handler);
+```
+
+### Reglas antes de agregar authMiddleware a un endpoint existente
+
+Cuando agregues `authMiddleware` a una ruta que antes era pública, **DEBES** correr:
+
+```bash
+grep -rn "fetch.*'/api/RUTA'" public/
+```
+
+y verificar que todas las páginas que la consumen envían `Auth.getAuthHeaders()`. Si alguna no lo hace, o la actualizas o dejas el endpoint público. Ejemplo aprendido: `GET /api/examenes` es consumido por 6 páginas (ordenes, nueva-orden, empresas, calendario, panel-empresas, examenes) y debe ser público. Las mutaciones (`POST/PUT/DELETE`) sí llevan auth.
 
 ### Why no Kubernetes
 
@@ -604,9 +685,24 @@ Location: [server.js:13369-13383](server.js#L13369-L13383)
 
 ### Authentication Flow
 - JWT tokens stored in localStorage
-- Middleware: `authMiddleware` (validates token), `requireAdmin` (checks role)
+- Middleware hierarchy:
+  - `authMiddleware` — valida token, monta `req.usuario` con `tenant_id` **desde la BD** (no del JWT). Rechaza con 403 TENANT_MISMATCH si JWT y BD no coinciden, o si hostname y BD no coinciden.
+  - `requireAdmin` — requiere `rol === 'admin'` del tenant del request
+  - `requireSuperAdmin` — requiere admin **del tenant `bsl`** específicamente. Usar para herramientas globales de plataforma (gestión de tenants, inspección de tablas, etc.)
 - Permissions checked via `hasPermission()` function
 - Token expiration: 24 hours
+- Registro/login filtran por `tenant_id` (hostname del request) — mismo email puede existir en múltiples tenants
+
+### Home route (`GET /`) behavior
+- Sin query params → sirve `login.html`
+- Con `?_id=...` → sirve `index.html` (formulario del paciente, usado por links de Wix/WhatsApp)
+- `express.static('public')` tiene `{ index: false }` para que no auto-sirva `public/index.html` en `/`
+
+### Patient photos en DO Spaces
+- Path legacy BSL: `fotos/${numeroId}_${formId}_${timestamp}.ext`
+- Path tenant no-BSL: `${tenantId}/fotos/${numeroId}_${formId}_${timestamp}.ext`
+- Ver `src/services/spaces-upload.js` → `subirFotoASpaces(base64, numeroId, formId, tenantId)`
+- BSL conserva el path legacy (sin prefijo) para zero-regression con URLs ya guardadas en BD
 
 ## Code References
 
@@ -652,6 +748,25 @@ When modifying code, use these patterns for file references:
 - Check WHAPI_TOKEN is valid and active
 - Review message template IDs (TWILIO_TEMPLATE_*)
 - Check server logs for API errors from Twilio/WHAPI
+
+**Multi-tenant: "ya existe" al crear empresa/examen en tenant nuevo:**
+- Probablemente un UNIQUE constraint global (no compuesto con `tenant_id`)
+- Verificar con: `SELECT conname, pg_get_constraintdef(c.oid) FROM pg_constraint c JOIN pg_class t ON c.conrelid = t.oid WHERE t.relname = 'TABLA' AND c.contype = 'u';`
+- Debería ser `UNIQUE (col, tenant_id)`, no `UNIQUE (col)`. Si no lo es, agregarlo a `uniqueMigrations` en `src/config/init-db.js`.
+
+**Multi-tenant: ruta devuelve 401 tras agregar authMiddleware:**
+- El frontend no envía `Authorization` header. Buscar todas las páginas que llaman al endpoint: `grep -rn "fetch.*'/api/RUTA'" public/`
+- O arreglar cada página para usar `Auth.getAuthHeaders()`, o hacer el endpoint público (lectura de catálogo)
+- Ver sección "Reglas antes de agregar authMiddleware" arriba
+
+**Multi-tenant: 403 TENANT_MISMATCH en login o navegación:**
+- JWT trae `tenant_id` que no coincide con `usuarios.tenant_id` en BD, o hostname del request no coincide con el del usuario
+- Casos típicos: usuario BSL intentando usar su token en vip-mediconecta.app (o viceversa), token viejo emitido antes de la migración multi-tenant
+- Arreglar: logout + login desde el hostname correcto
+
+**Patient link `/?_id=xxx` redirige al panel en vez de al formulario:**
+- Verificar que `GET /` en `server.js` tiene el check `if (req.query._id)` → `sendFile(index.html)`
+- Verificar que `express.static('public')` tiene `{ index: false }` (si no, sirve `public/index.html` como formulario por default, pero eso rompe `/` → login)
 
 ## Repository Pattern Guide
 
