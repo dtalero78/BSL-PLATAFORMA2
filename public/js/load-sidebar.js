@@ -11,6 +11,53 @@ window.toggleSidebar = function() {
     localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
 };
 
+// Aplica branding del tenant (logo + nombre) al sidebar
+// Público: no requiere autenticación, resuelve tenant por hostname
+window.aplicarBrandingTenant = async function() {
+    try {
+        const response = await fetch('/api/tenants/config', { cache: 'no-store' });
+        if (!response.ok) return;
+        const result = await response.json();
+        if (!result.success || !result.tenant) return;
+
+        const t = result.tenant;
+        const sidebarLogo = document.querySelector('.sidebar-logo img');
+        const sidebarSubtitle = document.querySelector('.sidebar-logo div');
+
+        if (sidebarLogo && t.logo_url) {
+            // Cache bust para que tome el logo nuevo al actualizar en UI
+            const sep = t.logo_url.includes('?') ? '&' : '?';
+            sidebarLogo.src = t.logo_url + sep + 'v=' + Date.now();
+            sidebarLogo.alt = t.nombre;
+        }
+        if (sidebarSubtitle) {
+            sidebarSubtitle.textContent = t.nombre;
+        }
+
+        // Actualiza también el título del documento
+        if (t.id !== 'bsl' && document.title) {
+            const separator = ' - ';
+            if (document.title.includes(separator)) {
+                const partes = document.title.split(separator);
+                document.title = partes[0] + separator + t.nombre;
+            }
+        }
+
+        // Cambia favicon si el tenant tiene logo
+        if (t.logo_url) {
+            let favicon = document.querySelector('link[rel="icon"]');
+            if (!favicon) {
+                favicon = document.createElement('link');
+                favicon.rel = 'icon';
+                document.head.appendChild(favicon);
+            }
+            favicon.href = t.logo_url;
+        }
+    } catch (err) {
+        console.warn('No se pudo cargar branding del tenant:', err.message);
+    }
+};
+
 // Luego cargar el HTML del sidebar
 (function() {
     fetch('/components/sidebar.html')
@@ -84,6 +131,11 @@ window.toggleSidebar = function() {
                         });
                     }
                 }
+
+                // Branding dinámico por tenant (ver CLAUDE.md Multi-Tenant Architecture)
+                // Consulta el endpoint público /api/tenants/config y reemplaza el logo
+                // y el subtítulo según el tenant resuelto por hostname.
+                aplicarBrandingTenant();
             }
         })
         .catch(error => {

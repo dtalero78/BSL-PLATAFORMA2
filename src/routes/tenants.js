@@ -19,6 +19,27 @@ function validarTenantId(id) {
 }
 
 // ============================================================
+// GET /api/tenants/config - Config pública del tenant actual (sin auth)
+// Usado por el frontend (sidebar, login) para branding dinámico según hostname.
+// Devuelve SOLO datos públicos (nombre, logo, módulos); nunca credenciales.
+// ============================================================
+router.get('/config', (req, res) => {
+    const t = req.tenant;
+    if (!t) {
+        return res.json({ success: true, tenant: null });
+    }
+    res.json({
+        success: true,
+        tenant: {
+            id: t.id,
+            nombre: t.nombre,
+            logo_url: t.config?.logo_url || null,
+            modulos_activos: t.config?.modulos_activos || []
+        }
+    });
+});
+
+// ============================================================
 // GET /api/tenants - Listar todos los tenants (super-admin only)
 // ============================================================
 router.get('/', authMiddleware, requireSuperAdmin, async (req, res) => {

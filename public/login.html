@@ -248,9 +248,9 @@
     <div class="login-container">
         <div class="login-card">
             <div class="login-logo">
-                <img src="/bsl-logo.png" alt="BSL">
+                <img id="tenantLogo" src="/bsl-logo.png" alt="BSL">
             </div>
-            <h1 class="login-title">Iniciar Sesion</h1>
+            <h1 class="login-title" id="loginTitle">Iniciar Sesion</h1>
             <p class="login-subtitle">Ingresa tus credenciales para continuar</p>
 
             <div class="alert" id="alertMsg"></div>
@@ -297,8 +297,44 @@
 
     <script src="/js/auth.js"></script>
     <script>
+        // Branding dinámico por tenant: reemplaza logo + título según hostname
+        async function aplicarBrandingLogin() {
+            try {
+                const response = await fetch('/api/tenants/config', { cache: 'no-store' });
+                if (!response.ok) return;
+                const result = await response.json();
+                if (!result.success || !result.tenant) return;
+
+                const t = result.tenant;
+                const logo = document.getElementById('tenantLogo');
+                if (logo && t.logo_url) {
+                    const sep = t.logo_url.includes('?') ? '&' : '?';
+                    logo.src = t.logo_url + sep + 'v=' + Date.now();
+                    logo.alt = t.nombre;
+                }
+
+                if (t.id !== 'bsl' && document.title && document.title.includes(' - ')) {
+                    document.title = document.title.split(' - ')[0] + ' - ' + t.nombre;
+                }
+
+                if (t.logo_url) {
+                    let favicon = document.querySelector('link[rel="icon"]');
+                    if (!favicon) {
+                        favicon = document.createElement('link');
+                        favicon.rel = 'icon';
+                        document.head.appendChild(favicon);
+                    }
+                    favicon.href = t.logo_url;
+                }
+            } catch (err) {
+                console.warn('No se pudo cargar branding:', err.message);
+            }
+        }
+
         // Verificar si ya esta autenticado
         document.addEventListener('DOMContentLoaded', async () => {
+            aplicarBrandingLogin();
+
             // Verificar si viene de token expirado
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('expired') === '1') {
