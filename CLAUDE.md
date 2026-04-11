@@ -156,6 +156,22 @@ await EmpresasRepository.findByCodigo('PARTICULAR', req.tenant.id);
 app.use('/api/facturacion', requireBslTenant, require('./src/routes/facturacion'));
 ```
 
+⚠️ **Gotcha crítico**: `app.use(path, middleware, router)` aplica el middleware a **todo** lo que matchee `path`, no solo a las rutas que el router matchee después. Si el router define rutas con prefijos mixtos (ej: nubia tiene `/nubia/pacientes` y `/barrido-nubia`) y por eso lo montás en `/api`, el guard bloqueará **todos** los `/api/*` de tenants no-BSL, incluyendo rutas de otros routers que Express evalúa después. Fix: mover el guard al router con path-específico:
+
+```javascript
+// ❌ MAL — requireBslTenant intercepta TODO /api/*
+app.use('/api', requireBslTenant, require('./src/routes/nubia'));
+
+// ✅ BIEN — guard dentro del router con path específico
+// src/routes/nubia.js
+router.use('/nubia', requireBslTenant);
+router.use('/barrido-nubia', requireBslTenant);
+// server.js
+app.use('/api', require('./src/routes/nubia'));
+```
+
+Síntoma: requests a `/api/estado-pruebas` (u otro router /api/*) devuelven 404 "Recurso no disponible para este tenant" desde un tenant no-BSL.
+
 **4. Código Wix** — guard explícito con `isBsl(req)`:
 
 ```javascript
@@ -196,6 +212,20 @@ grep -rn "fetch.*'/api/RUTA'" public/
 ```
 
 y verificar que todas las páginas que la consumen envían `Auth.getAuthHeaders()`. Si alguna no lo hace, o la actualizas o dejas el endpoint público. Ejemplo aprendido: `GET /api/examenes` es consumido por 6 páginas (ordenes, nueva-orden, empresas, calendario, panel-empresas, examenes) y debe ser público. Las mutaciones (`POST/PUT/DELETE`) sí llevan auth.
+
+### Branding dinámico del logo (sidebar vs patient-facing)
+
+Hay DOS helpers de branding según el tipo de página:
+
+**1. Páginas con sidebar** — usan [public/js/load-sidebar.js](public/js/load-sidebar.js). El helper carga el HTML del sidebar con `fetch('/components/sidebar.html')`, y parcha el logo + nombre en el string **antes de inyectarlo al DOM** (zero FOUC). Aplica filtro de `modulos_activos`, favicon, título, super-admin-only visibility.
+
+**2. Páginas patient-facing** (sin sidebar) — usan [public/js/load-logo.js](public/js/load-logo.js). Incluido en `<head>` de: `index.html`, `audiometria-virtual.html`, `visiometria-virtual.html`, `voximetria-virtual.html`, `pruebas-adc.html`, `scl90.html`, `consulta-orden.html`, `login.html`, `registro.html`, `descarga-empresas.html`, `validar-certificado.html`, `actualizar-foto.html`. El helper:
+- Lee cache síncrono de `sessionStorage.bsl_tenant_config` (mismo key que load-sidebar) — navegaciones posteriores sin FOUC.
+- Fetch async a `/api/tenants/config` y re-aplica si cambió.
+- Reemplaza `src` en cualquier `<img>` que contenga `bsl-logo` en su src. Auto-detección, no requiere data attributes.
+- Parcha `<title>` y favicon.
+
+Cuando agregues una página patient-facing nueva, incluir `<script src="/js/load-logo.js"></script>` en el `<head>` lo antes posible. Para páginas internas con sidebar, ya está cubierto por `load-sidebar.js`.
 
 ### Why no Kubernetes
 
@@ -710,6 +740,13 @@ Location: [server.js:13369-13383](server.js#L13369-L13383)
 - Ver `src/services/spaces-upload.js` → `subirFotoASpaces(base64, numeroId, formId, tenantId)`
 - BSL conserva el path legacy (sin prefijo) para zero-regression con URLs ya guardadas en BD
 
+### Performance baseline
+- App corre en DO App Platform NYC3. Usuarios típicos en Colombia → RTT ~100-200ms + TLS.
+- `/health` baseline medido: ~370ms avg desde Colombia. Ese es el piso inamovible sin CDN regional del backend.
+- `/api/ordenes` medido: ~500ms avg (delta real del backend = ~130ms). BSL y vip-mediconecta con latencia similar.
+- Cuando un endpoint con múltiples queries (main + count + stats) tenga que ser rápido, usar `Promise.all` para paralelizarlas en Postgres. Ver `GET /api/ordenes` como ejemplo.
+- Para recortar más allá de eso se necesitaría CDN regional o mover la app a LATAM — cambio de infra.
+
 ## Code References
 
 When modifying code, use these patterns for file references:
@@ -773,6 +810,16 @@ When modifying code, use these patterns for file references:
 **Patient link `/?_id=xxx` redirige al panel en vez de al formulario:**
 - Verificar que `GET /` en `server.js` tiene el check `if (req.query._id)` → `sendFile(index.html)`
 - Verificar que `express.static('public')` tiene `{ index: false }` (si no, sirve `public/index.html` como formulario por default, pero eso rompe `/` → login)
+
+**Multi-tenant: 404 "Recurso no disponible para este tenant" en endpoint que NO es BSL-only:**
+- Síntoma típico: `/api/estado-pruebas`, `/api/audiometrias`, etc. fallan desde vip-mediconecta con ese mensaje.
+- Causa probable: hay un `app.use('/api', requireBslTenant, someRouter)` en `server.js` que intercepta TODO `/api/*` antes de llegar al router correcto. Express aplica el middleware al path del `app.use`, no al path de las rutas del router.
+- Fix: mover `requireBslTenant` al router con `router.use('/subpath', requireBslTenant)`. Ver sección "Gotcha crítico" arriba.
+
+**Logo de BSL aparece en páginas patient-facing de vip-mediconecta:**
+- Verificar que la página incluye `<script src="/js/load-logo.js"></script>` en `<head>`
+- Verificar en DevTools que `/api/tenants/config` devuelve `logo_url` para ese hostname
+- El cache de sessionStorage es `bsl_tenant_config`; borrar y recargar si hay inconsistencia
 
 ## Repository Pattern Guide
 
