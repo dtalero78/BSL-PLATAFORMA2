@@ -53,6 +53,41 @@ window.aplicarBrandingTenant = async function() {
             }
             favicon.href = t.logo_url;
         }
+
+        // Ocultar items del sidebar según modulos_activos del tenant.
+        // BSL ve todo; los demás tenants solo ven lo habilitado por super-admin.
+        // Los items sin data-modulo son "universales" (recursos externos) y siempre se muestran.
+        if (t.id !== 'bsl' && Array.isArray(t.modulos_activos)) {
+            const modulosPermitidos = new Set(t.modulos_activos);
+
+            document.querySelectorAll('.nav-item[data-modulo]').forEach(item => {
+                const modulo = item.getAttribute('data-modulo');
+                if (!modulosPermitidos.has(modulo)) {
+                    item.style.display = 'none';
+                }
+            });
+
+            // Ocultar secciones cuyos items estén todos ocultos.
+            // Recorro cada título de sección y verifico si hay al menos un nav-item visible después.
+            document.querySelectorAll('.nav-section-title').forEach(titulo => {
+                let hayVisible = false;
+                let sibling = titulo.nextElementSibling;
+                while (sibling && !sibling.classList.contains('nav-section-title')) {
+                    if (sibling.classList.contains('nav-item') && sibling.style.display !== 'none') {
+                        // Considerar también que no esté oculto por admin-only
+                        const computed = window.getComputedStyle(sibling);
+                        if (computed.display !== 'none') {
+                            hayVisible = true;
+                            break;
+                        }
+                    }
+                    sibling = sibling.nextElementSibling;
+                }
+                if (!hayVisible) {
+                    titulo.style.display = 'none';
+                }
+            });
+        }
     } catch (err) {
         console.warn('No se pudo cargar branding del tenant:', err.message);
     }
