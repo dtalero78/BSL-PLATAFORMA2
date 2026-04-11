@@ -17,11 +17,118 @@
             min-height: 100vh;
         }
         .app-container { display: flex; min-height: 100vh; }
+
+        /* Sidebar */
+        .sidebar {
+            width: 240px;
+            background: white;
+            border-right: 1px solid #E5E7EB;
+            padding: 24px 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 50;
+        }
+        .sidebar.collapsed { width: 64px; }
+        .sidebar.collapsed .sidebar-logo img { max-width: 40px; }
+        .sidebar.collapsed .sidebar-logo div,
+        .sidebar.collapsed .nav-item span,
+        .sidebar.collapsed .nav-section-title { display: none; }
+        .sidebar-toggle {
+            position: absolute;
+            top: 12px;
+            right: -12px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border: 1px solid #E5E7EB;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        .sidebar-logo {
+            padding: 0 24px 24px;
+            border-bottom: 1px solid #E5E7EB;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        .sidebar-logo img { max-width: 140px; height: auto; }
+        .sidebar-logo div {
+            font-size: 11px;
+            color: #6B7280;
+            margin-top: 8px;
+        }
+        .sidebar-nav { padding: 0 12px; }
+        .nav-section-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #9CA3AF;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 16px 16px 8px;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            color: #4B5563;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 2px;
+            transition: all 0.15s;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .nav-item:hover { background: #F3F4F6; color: #111827; }
+        .nav-item.active {
+            background: #EFF6FF;
+            color: #2563EB;
+            font-weight: 500;
+        }
+        .nav-item i { width: 18px; height: 18px; stroke-width: 2; }
+        .nav-group .nav-submenu {
+            padding-left: 16px;
+            display: none;
+        }
+        .nav-group.open .nav-submenu { display: block; }
+
+        /* Top Bar */
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 240px;
+            right: 0;
+            height: 64px;
+            background: white;
+            border-bottom: 1px solid #E5E7EB;
+            display: flex;
+            align-items: center;
+            padding: 0 32px;
+            z-index: 40;
+        }
+        .top-bar-search {
+            position: relative;
+            width: 400px;
+        }
+        .top-bar-search input {
+            width: 100%;
+            padding: 10px 16px 10px 42px;
+            border: 1px solid #E5E7EB;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            background: #F9FAFB;
+        }
+
         .main-content {
             flex: 1;
             margin-left: 240px;
             padding: 32px;
-            padding-top: 88px;
+            padding-top: 96px;
         }
         .page-header {
             display: flex;
@@ -469,7 +576,7 @@
                     formData.append('logo', logoInput.files[0]);
                 }
 
-                const token = localStorage.getItem('token');
+                const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('bsl_auth_token');
                 const response = await fetch('/api/tenants', {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` },
@@ -497,7 +604,7 @@
 
         async function cargarTenants() {
             try {
-                const token = localStorage.getItem('token');
+                const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('bsl_auth_token');
                 const response = await fetch('/api/tenants', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
