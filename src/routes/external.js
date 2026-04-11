@@ -4,6 +4,7 @@ const pool = require('../config/database');
 const { normalizarTelefonoConPrefijo57 } = require('../helpers/phone');
 const { notificarNuevaOrden } = require('../helpers/sse');
 const { authMiddleware } = require('../middleware/auth');
+const { isBsl } = require('../helpers/tenant');
 
 const API_KEY = process.env.EXTERNAL_API_KEY;
 
@@ -161,16 +162,19 @@ router.post('/ordenes', apiKeyAuth, async (req, res) => {
                 atendido: 'PENDIENTE'
             };
 
-            const wixResponse = await fetch('https://www.bsl.com.co/_functions/crearHistoriaClinica', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(wixPayload)
-            });
+            // Multi-tenant: Wix es BSL-only (ver CLAUDE.md)
+            if (isBsl(req)) {
+                const wixResponse = await fetch('https://www.bsl.com.co/_functions/crearHistoriaClinica', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(wixPayload)
+                });
 
-            if (wixResponse.ok) {
-                console.log(`[EXTERNAL] Wix sincronizado para ${wixId}`);
-            } else {
-                console.error(`[EXTERNAL] Wix error: ${wixResponse.status}`);
+                if (wixResponse.ok) {
+                    console.log(`[EXTERNAL] Wix sincronizado para ${wixId}`);
+                } else {
+                    console.error(`[EXTERNAL] Wix error: ${wixResponse.status}`);
+                }
             }
         } catch (wixError) {
             console.error('[EXTERNAL] Wix excepcion:', wixError.message);

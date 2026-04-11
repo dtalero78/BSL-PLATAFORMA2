@@ -32,6 +32,88 @@ The application is deployed to **DigitalOcean App Platform** using Docker.
 ### Environment Variables in DigitalOcean
 All required environment variables must be configured in App Platform settings before deployment. Build will fail if critical variables (DB_HOST, DB_PASSWORD, JWT_SECRET) are missing.
 
+## Multi-Tenant Architecture (In Progress)
+
+The platform is being migrated to **multi-tenant** so that additional IPS (other than BSL) can use the same deployment. A single app + single DB + single deploy serves all tenants; each tenant is isolated at the row level via a `tenant_id` column on every tenant-scoped table.
+
+### Core principles
+
+1. **BSL must keep working exactly as today** — zero-regression. During the migration, any code path that doesn't explicitly pass a tenant defaults to `'bsl'`. The existing behavior is preserved until a second tenant is activated.
+2. **Wix is BSL-only.** No other IPS will use Wix. All Wix-related code (`src/services/wix-sync.js`, `/api/wix/*` endpoints, migration/sync scripts) must be wrapped with `if (req.tenant.id === 'bsl')` or equivalent checks. Wix files in `WIX/` stay untouched.
+3. **One row belongs to exactly one tenant.** Every tenant-scoped table carries a `tenant_id` column (default `'bsl'`). Queries MUST filter by `tenant_id` once multi-tenant is active. Until then, the default makes this invisible for BSL.
+4. **Tenant is resolved from hostname** via `src/middleware/tenant.js`. The resolved tenant is available as `req.tenant`. Unknown hostnames fall back to `'bsl'` during the transition phase.
+5. **No Kubernetes.** DigitalOcean App Platform handles multi-domain + SSL natively. One deploy updates all tenants at once — that's the whole point.
+
+### Current state (tracked via Sprint progress)
+
+| Sprint | Description | Status |
+|---|---|---|
+| 1 | `tenants` table + `tenant_id` columns + middleware + JWT claim | In progress |
+| 2 | `BaseRepository` accepts `tenantId` (optional, defaults to `'bsl'`) | Pending |
+| 3 | Wix wrapped with `if (tenant.id === 'bsl')` | Pending |
+| 4 | Refactor 450 `pool.query()` calls to filter by `tenant_id` | Pending |
+| 5 | Socket.io rooms + SSE scoped by tenant | Pending |
+| 6 | Frontend branding dynamic via `/api/tenant-config` | Pending |
+| 7 | Safety gate + onboarding of first new tenant | Pending |
+
+### `tenants` table schema
+
+```sql
+CREATE TABLE tenants (
+  id           VARCHAR(50)  PRIMARY KEY,     -- 'bsl', 'clinicax', etc.
+  nombre       VARCHAR(200) NOT NULL,
+  hostnames    TEXT[]       NOT NULL,         -- ['bsl.com.co', 'www.bsl.com.co']
+  config       JSONB        NOT NULL DEFAULT '{}'::jsonb,  -- modulos_activos, logo_url, colores, etc.
+  credenciales JSONB        NOT NULL DEFAULT '{}'::jsonb,  -- Twilio, OpenAI, etc. (optional, encrypted)
+  activo       BOOLEAN      NOT NULL DEFAULT TRUE,
+  created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+```
+
+BSL is inserted as the first tenant on startup with `id = 'bsl'` and its current hostname(s).
+
+### Tables with `tenant_id` column
+
+All tenant-scoped tables receive `tenant_id VARCHAR(50) NOT NULL DEFAULT 'bsl'` via `ALTER TABLE ADD COLUMN IF NOT EXISTS` in `src/config/init-db.js`:
+
+- `formularios`, `HistoriaClinica`, `empresas`, `usuarios`
+- `audiometrias`, `visiometrias`, `visiometrias_virtual`, `voximetrias_virtual`, `pruebasADC`, `scl90`, `laboratorios`
+- `medicos_disponibilidad`
+- `conversaciones_whatsapp`, `mensajes_whatsapp`, `agentes_estado`, `transferencias_conversacion`, `reglas_enrutamiento`
+- `sesiones`, `permisos_usuario`, `seguimiento_comunidad`
+
+### Writing multi-tenant-safe code
+
+**When writing new queries**: always include `tenant_id` in WHERE/INSERT. Get it from `req.tenant.id` (for HTTP handlers) or pass it explicitly (for services/crons).
+
+```javascript
+// ✅ Correct
+const result = await pool.query(
+  `SELECT * FROM "HistoriaClinica" WHERE "numeroId" = $1 AND tenant_id = $2`,
+  [numeroId, req.tenant.id]
+);
+
+// ❌ Wrong — works today because DEFAULT 'bsl' hides the bug, but leaks data once a second tenant exists
+const result = await pool.query(
+  `SELECT * FROM "HistoriaClinica" WHERE "numeroId" = $1`,
+  [numeroId]
+);
+```
+
+**When using repositories**: once Sprint 2 is done, `BaseRepository` methods will accept `tenantId` as a parameter. During Sprint 1 the methods still default to `'bsl'` internally.
+
+**For Wix-specific code**: always guard with an explicit BSL check:
+
+```javascript
+if (req.tenant.id === 'bsl') {
+  await wixSync.syncHistoriaClinica(data);  // Only runs for BSL
+}
+```
+
+### Why no Kubernetes
+
+Kubernetes was evaluated and rejected: DO App Platform already provides multi-domain SSL, auto-deploy, rollback, and scaling. K8s would strip those away in exchange for flexibility we don't need. Revisit only if: (a) 20+ tenants with physical DB isolation required, (b) regionalization, or (c) dedicated DevOps team.
+
 ## Architecture Overview
 
 ### Dual-Database System

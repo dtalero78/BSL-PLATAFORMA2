@@ -1218,6 +1218,93 @@ const initDB = async () => {
             await pool.query(`CREATE INDEX IF NOT EXISTS idx_seguimiento_perfil ON seguimiento_comunidad(perfil)`);
         } catch (err) { /* indices ya existen */ }
 
+        // ==================== MULTI-TENANT (Sprint 1) ====================
+        // Ver CLAUDE.md sección "Multi-Tenant Architecture".
+        // BSL sigue funcionando igual porque todas las filas existentes se marcan como tenant_id = 'bsl'
+        // vía DEFAULT, y el middleware de resolución hace fallback a 'bsl' si el hostname no está mapeado.
+
+        // 1. Tabla maestra de tenants
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS tenants (
+                id VARCHAR(50) PRIMARY KEY,
+                nombre VARCHAR(200) NOT NULL,
+                hostnames TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+                config JSONB NOT NULL DEFAULT '{}'::jsonb,
+                credenciales JSONB NOT NULL DEFAULT '{}'::jsonb,
+                activo BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+        `);
+
+        // 2. Insertar BSL como primer tenant (idempotente)
+        await pool.query(`
+            INSERT INTO tenants (id, nombre, hostnames, config, activo)
+            VALUES (
+                'bsl',
+                'BSL Salud Ocupacional',
+                ARRAY['bsl.com.co', 'www.bsl.com.co', 'plataforma.bsl.com.co', 'localhost'],
+                '{"usa_wix": true, "modulos_activos": ["todos"]}'::jsonb,
+                TRUE
+            )
+            ON CONFLICT (id) DO NOTHING
+        `);
+
+        // 3. Agregar columna tenant_id a todas las tablas tenant-scoped con DEFAULT 'bsl'.
+        //    El DEFAULT hace que toda fila existente y toda nueva inserción sin tenant_id
+        //    quede marcada como BSL — transparente para el código actual.
+        const tenantScopedTables = [
+            'formularios',
+            '"HistoriaClinica"',
+            'empresas',
+            'usuarios',
+            'audiometrias',
+            'visiometrias',
+            'visiometrias_virtual',
+            'voximetrias_virtual',
+            '"pruebasADC"',
+            'scl90',
+            'laboratorios',
+            'medicos_disponibilidad',
+            'conversaciones_whatsapp',
+            'mensajes_whatsapp',
+            'agentes_estado',
+            'transferencias_conversacion',
+            'reglas_enrutamiento',
+            'sesiones',
+            'permisos_usuario',
+            'seguimiento_comunidad'
+        ];
+
+        for (const table of tenantScopedTables) {
+            try {
+                await pool.query(`
+                    ALTER TABLE ${table}
+                    ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(50) NOT NULL DEFAULT 'bsl'
+                `);
+            } catch (err) {
+                console.error(`⚠️  No se pudo agregar tenant_id a ${table}:`, err.message);
+            }
+        }
+
+        // 4. Índices sobre tenant_id en las tablas más consultadas
+        const tenantIndexes = [
+            { table: '"HistoriaClinica"', name: 'idx_hc_tenant' },
+            { table: 'formularios', name: 'idx_formularios_tenant' },
+            { table: 'empresas', name: 'idx_empresas_tenant' },
+            { table: 'usuarios', name: 'idx_usuarios_tenant' },
+            { table: 'conversaciones_whatsapp', name: 'idx_conv_whatsapp_tenant' },
+            { table: 'mensajes_whatsapp', name: 'idx_msj_whatsapp_tenant' }
+        ];
+        for (const { table, name } of tenantIndexes) {
+            try {
+                await pool.query(`CREATE INDEX IF NOT EXISTS ${name} ON ${table}(tenant_id)`);
+            } catch (err) {
+                // índice ya existe o tabla no disponible
+            }
+        }
+
+        console.log('✅ Multi-tenant: tabla tenants + columnas tenant_id inicializadas (default: bsl)');
+
         console.log('Base de datos inicializada correctamente');
     } catch (error) {
         console.error('Error al inicializar la base de datos:', error);

@@ -2,10 +2,22 @@
  * Sincronización de datos con Wix CMS
  * - Audiometría → Wix crearAudiometria
  * - Pruebas ADC → Wix crearADC
+ *
+ * ⚠️  BSL-only (ver CLAUDE.md sección "Multi-Tenant Architecture").
+ * Wix es exclusivo del tenant BSL. Otros tenants no se sincronizan con Wix —
+ * las funciones hacen early-return con success=true (no-op silencioso) para
+ * no romper call sites existentes.
  */
 
+const { isBslTenantId } = require('../helpers/tenant');
+
 // Función para sincronizar audiometría con Wix
-async function syncAudiometriaToWix(datos, operacion) {
+async function syncAudiometriaToWix(datos, operacion, tenantId) {
+    // Multi-tenant: solo BSL usa Wix
+    if (!isBslTenantId(tenantId)) {
+        return { success: true, skipped: true, reason: 'wix-bsl-only' };
+    }
+
     try {
         const fetch = (await import('node-fetch')).default;
 
@@ -65,7 +77,12 @@ async function syncAudiometriaToWix(datos, operacion) {
 }
 
 // Función para sincronizar prueba ADC con Wix
-async function syncADCToWix(datos, operacion) {
+async function syncADCToWix(datos, operacion, tenantId) {
+    // Multi-tenant: solo BSL usa Wix
+    if (!isBslTenantId(tenantId)) {
+        return { success: true, skipped: true, reason: 'wix-bsl-only' };
+    }
+
     try {
         const fetch = (await import('node-fetch')).default;
 

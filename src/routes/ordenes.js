@@ -13,6 +13,7 @@ const { sendWhapiMessage } = require('../services/whapi');
 const { notificarCoordinadorNuevaOrden } = require('../services/payment');
 const { enviarEmailConfirmacionCita } = require('../services/email');
 const { HistoriaClinicaRepository, FormulariosRepository } = require('../repositories');
+const { isBsl } = require('../helpers/tenant');
 
 // Configuración de multer para uploads en memoria
 const upload = multer({ storage: multer.memoryStorage() });
@@ -746,23 +747,26 @@ router.post('/', async (req, res) => {
 
             console.log('Fecha para Wix:', fechaAtencionWix);
 
-            const wixResponse = await fetch('https://www.bsl.com.co/_functions/crearHistoriaClinica', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(wixPayload)
-            });
+            // Multi-tenant: Wix es BSL-only (ver CLAUDE.md)
+            if (isBsl(req)) {
+                const wixResponse = await fetch('https://www.bsl.com.co/_functions/crearHistoriaClinica', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(wixPayload)
+                });
 
-            if (wixResponse.ok) {
-                const wixResult = await wixResponse.json();
-                console.log('Wix: Sincronizado exitosamente');
-                console.log('   Respuesta:', JSON.stringify(wixResult, null, 2));
-            } else {
-                const errorText = await wixResponse.text();
-                console.error('Wix: Error al sincronizar');
-                console.error('   Status:', wixResponse.status);
-                console.error('   Response:', errorText);
+                if (wixResponse.ok) {
+                    const wixResult = await wixResponse.json();
+                    console.log('Wix: Sincronizado exitosamente');
+                    console.log('   Respuesta:', JSON.stringify(wixResult, null, 2));
+                } else {
+                    const errorText = await wixResponse.text();
+                    console.error('Wix: Error al sincronizar');
+                    console.error('   Status:', wixResponse.status);
+                    console.error('   Response:', errorText);
+                }
             }
         } catch (wixError) {
             console.error('Wix: Excepcion al sincronizar:', wixError.message);
@@ -1736,16 +1740,19 @@ router.post('/importar-desde-preview', async (req, res) => {
                         examenes: examenesArray
                     };
 
-                    const wixResponse = await fetch('https://www.bsl.com.co/_functions/crearHistoriaClinica', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(wixPayload)
-                    });
+                    // Multi-tenant: Wix es BSL-only (ver CLAUDE.md)
+                    if (isBsl(req)) {
+                        const wixResponse = await fetch('https://www.bsl.com.co/_functions/crearHistoriaClinica', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(wixPayload)
+                        });
 
-                    if (wixResponse.ok) {
-                        console.log(`${registro.primerNombre} ${registro.primerApellido} (${registro.numeroId}) - Sincronizado con Wix`);
-                    } else {
-                        console.log(`${registro.primerNombre} ${registro.primerApellido} - PostgreSQL OK, Wix fallo`);
+                        if (wixResponse.ok) {
+                            console.log(`${registro.primerNombre} ${registro.primerApellido} (${registro.numeroId}) - Sincronizado con Wix`);
+                        } else {
+                            console.log(`${registro.primerNombre} ${registro.primerApellido} - PostgreSQL OK, Wix fallo`);
+                        }
                     }
 
                 } catch (wixError) {
@@ -2141,16 +2148,19 @@ router.post('/importar-csv', upload.single('archivo'), async (req, res) => {
                         examenes: examenesArray
                     };
 
-                    const wixResponse = await fetch('https://www.bsl.com.co/_functions/crearHistoriaClinica', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(wixPayload)
-                    });
+                    // Multi-tenant: Wix es BSL-only (ver CLAUDE.md)
+                    if (isBsl(req)) {
+                        const wixResponse = await fetch('https://www.bsl.com.co/_functions/crearHistoriaClinica', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(wixPayload)
+                        });
 
-                    if (wixResponse.ok) {
-                        console.log(`Fila ${i + 1}: ${row.primerNombre} ${row.primerApellido} (${row.numeroId}) - Sincronizado con Wix`);
-                    } else {
-                        console.log(`Fila ${i + 1}: ${row.primerNombre} ${row.primerApellido} - PostgreSQL OK, Wix fallo`);
+                        if (wixResponse.ok) {
+                            console.log(`Fila ${i + 1}: ${row.primerNombre} ${row.primerApellido} (${row.numeroId}) - Sincronizado con Wix`);
+                        } else {
+                            console.log(`Fila ${i + 1}: ${row.primerNombre} ${row.primerApellido} - PostgreSQL OK, Wix fallo`);
+                        }
                     }
                 } catch (wixError) {
                     console.log(`Fila ${i + 1}: ${row.primerNombre} ${row.primerApellido} - PostgreSQL OK, Wix error: ${wixError.message}`);

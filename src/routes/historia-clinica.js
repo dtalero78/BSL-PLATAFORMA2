@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require('../config/database');
 const { construirFechaAtencionColombia } = require('../helpers/date');
 const { HistoriaClinicaRepository } = require('../repositories');
+const { isBsl } = require('../helpers/tenant');
 
 // ==================== HISTORIA CLINICA ENDPOINTS ====================
 // Mounted at /api/historia-clinica
@@ -337,39 +338,41 @@ router.put('/:id', async (req, res) => {
                 console.log('🔄 Actualización en cascada completada');
             }
 
-            // Sincronizar con Wix
-            try {
-                const fetch = (await import('node-fetch')).default;
+            // Sincronizar con Wix (Multi-tenant: Wix es BSL-only, ver CLAUDE.md)
+            if (isBsl(req)) {
+                try {
+                    const fetch = (await import('node-fetch')).default;
 
-                // Preparar payload para Wix, convirtiendo fechaAtencion a ISO string
-                const wixPayload = { _id: id, ...datos };
+                    // Preparar payload para Wix, convirtiendo fechaAtencion a ISO string
+                    const wixPayload = { _id: id, ...datos };
 
-                // Si hay fechaAtencion, convertirla a ISO string para Wix
-                if (datos.fechaAtencion) {
-                    const fechaHora = datos.fechaAtencion.split('T');
-                    const fecha = fechaHora[0];
-                    const hora = fechaHora[1] || '08:00';
-                    const fechaObj = construirFechaAtencionColombia(fecha, hora);
-                    if (fechaObj) {
-                        wixPayload.fechaAtencion = fechaObj.toISOString();
-                        console.log('📅 Fecha para Wix (edición):', wixPayload.fechaAtencion);
+                    // Si hay fechaAtencion, convertirla a ISO string para Wix
+                    if (datos.fechaAtencion) {
+                        const fechaHora = datos.fechaAtencion.split('T');
+                        const fecha = fechaHora[0];
+                        const hora = fechaHora[1] || '08:00';
+                        const fechaObj = construirFechaAtencionColombia(fecha, hora);
+                        if (fechaObj) {
+                            wixPayload.fechaAtencion = fechaObj.toISOString();
+                            console.log('📅 Fecha para Wix (edición):', wixPayload.fechaAtencion);
+                        }
                     }
-                }
 
-                console.log('📤 Sincronizando HistoriaClinica con Wix...');
-                const wixResponse = await fetch('https://www.bsl.com.co/_functions/actualizarHistoriaClinica', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(wixPayload)
-                });
+                    console.log('📤 Sincronizando HistoriaClinica con Wix...');
+                    const wixResponse = await fetch('https://www.bsl.com.co/_functions/actualizarHistoriaClinica', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(wixPayload)
+                    });
 
-                if (wixResponse.ok) {
-                    console.log('✅ WIX: HistoriaClinica sincronizada exitosamente');
-                } else {
-                    console.error('❌ WIX: ERROR al sincronizar - Status:', wixResponse.status);
+                    if (wixResponse.ok) {
+                        console.log('✅ WIX: HistoriaClinica sincronizada exitosamente');
+                    } else {
+                        console.error('❌ WIX: ERROR al sincronizar - Status:', wixResponse.status);
+                    }
+                } catch (wixError) {
+                    console.error('❌ WIX: EXCEPCIÓN al sincronizar:', wixError.message);
                 }
-            } catch (wixError) {
-                console.error('❌ WIX: EXCEPCIÓN al sincronizar:', wixError.message);
             }
 
             return res.json({
@@ -517,30 +520,33 @@ router.patch('/:id/pago', async (req, res) => {
 
         // Sincronizar con Wix usando endpoint marcarPagado (necesita numeroId)
         if (numeroId) {
-            try {
-                const wixPayload = {
-                    userId: numeroId,
-                    observaciones: pvEstado
-                };
-                console.log('📤 Sincronizando pvEstado con Wix (marcarPagado):', JSON.stringify(wixPayload));
+            // Multi-tenant: Wix es BSL-only (ver CLAUDE.md)
+            if (isBsl(req)) {
+                try {
+                    const wixPayload = {
+                        userId: numeroId,
+                        observaciones: pvEstado
+                    };
+                    console.log('📤 Sincronizando pvEstado con Wix (marcarPagado):', JSON.stringify(wixPayload));
 
-                const wixResponse = await fetch('https://www.bsl.com.co/_functions/marcarPagado', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(wixPayload)
-                });
+                    const wixResponse = await fetch('https://www.bsl.com.co/_functions/marcarPagado', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(wixPayload)
+                    });
 
-                const wixText = await wixResponse.text();
-                console.log('📡 WIX Response Status:', wixResponse.status);
-                console.log('📡 WIX Response Body:', wixText);
+                    const wixText = await wixResponse.text();
+                    console.log('📡 WIX Response Status:', wixResponse.status);
+                    console.log('📡 WIX Response Body:', wixText);
 
-                if (wixResponse.ok) {
-                    console.log('✅ WIX: pvEstado sincronizado en HistoriaClinica');
-                } else {
-                    console.log('⚠️ WIX: No se pudo sincronizar pvEstado:', wixText);
+                    if (wixResponse.ok) {
+                        console.log('✅ WIX: pvEstado sincronizado en HistoriaClinica');
+                    } else {
+                        console.log('⚠️ WIX: No se pudo sincronizar pvEstado:', wixText);
+                    }
+                } catch (wixError) {
+                    console.log('⚠️ WIX: Error al sincronizar pvEstado:', wixError.message);
                 }
-            } catch (wixError) {
-                console.log('⚠️ WIX: Error al sincronizar pvEstado:', wixError.message);
             }
         } else {
             console.log('⚠️ WIX: No se puede sincronizar, falta numeroId');

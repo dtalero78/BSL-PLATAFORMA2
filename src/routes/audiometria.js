@@ -225,8 +225,8 @@ router.post('/audiometrias', async (req, res) => {
             const result = await pool.query(updateQuery, values);
             console.log('Audiometria actualizada para orden:', datos.orden_id);
 
-            // Sincronizar con Wix
-            await syncAudiometriaToWix(datos, 'UPDATE');
+            // Sincronizar con Wix (BSL-only, ver CLAUDE.md Multi-Tenant)
+            await syncAudiometriaToWix(datos, 'UPDATE', req.tenant?.id);
 
             return res.json({ success: true, data: result.rows[0], operacion: 'UPDATE' });
         } else {
@@ -309,8 +309,8 @@ router.post('/audiometrias', async (req, res) => {
             const result = await pool.query(insertQuery, values);
             console.log('Audiometria creada para orden:', datos.orden_id);
 
-            // Sincronizar con Wix
-            await syncAudiometriaToWix(datos, 'INSERT');
+            // Sincronizar con Wix (BSL-only, ver CLAUDE.md Multi-Tenant)
+            await syncAudiometriaToWix(datos, 'INSERT', req.tenant?.id);
 
             return res.json({ success: true, data: result.rows[0], operacion: 'INSERT' });
         }

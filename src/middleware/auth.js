@@ -12,8 +12,12 @@ function hashToken(token) {
 }
 
 // Función para generar token JWT
+// Multi-tenant: el claim tenant_id viaja en el token. Default 'bsl' para zero-regression
+// (tokens generados antes del cambio también son válidos — al decodificarse, tenant_id ausente
+// se trata como 'bsl' en el authMiddleware).
 function generarToken(userId, extra = {}) {
-    return jwt.sign({ userId, ...extra }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    const payload = { userId, tenant_id: extra.tenant_id || 'bsl', ...extra };
+    return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
 // Función para hashear password
@@ -104,6 +108,9 @@ const authMiddleware = async (req, res, next) => {
         }
 
         // Adjuntar usuario al request
+        // Multi-tenant: el token puede traer tenant_id explícito; si no (tokens legacy), default 'bsl'.
+        const tokenTenantId = decoded.tenant_id || 'bsl';
+
         req.usuario = {
             id: decoded.userId,
             email: sesion.email,
@@ -112,8 +119,20 @@ const authMiddleware = async (req, res, next) => {
             codEmpresa: sesion.cod_empresa,
             numeroDocumento: sesion.numero_documento,
             sesionId: sesion.id,
-            empresas_excluidas: sesion.empresas_excluidas || []
+            empresas_excluidas: sesion.empresas_excluidas || [],
+            tenant_id: tokenTenantId
         };
+
+        // Consistencia: si el tenantMiddleware ya montó req.tenant y no coincide con el del token,
+        // se rechaza (evita que un token emitido para tenant A se use en el dominio de tenant B).
+        // Durante Sprint 1 ambos son 'bsl' por default, así que este check es no-op para BSL.
+        if (req.tenant && req.tenant.id && req.tenant.id !== tokenTenantId) {
+            return res.status(403).json({
+                success: false,
+                message: 'Token no válido para este dominio',
+                code: 'TENANT_MISMATCH'
+            });
+        }
 
         next();
 

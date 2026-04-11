@@ -6,6 +6,7 @@ const { enviarAlertasPreguntasCriticas } = require('../services/payment');
 const { enviarEmailConfirmacionCita } = require('../services/email');
 const { generarLinkGoogleCalendar } = require('../helpers/google-calendar');
 const { FormulariosRepository, HistoriaClinicaRepository } = require('../repositories');
+const { isBsl } = require('../helpers/tenant');
 
 // Ruta para recibir el formulario
 router.post('/formulario', async (req, res) => {
@@ -277,33 +278,36 @@ router.post('/formulario', async (req, res) => {
                 inscripcionBoletin: datos.inscripcionBoletin || ""
             };
 
-            console.log('📤 Enviando datos a Wix...');
-            console.log('📦 Payload:', JSON.stringify(wixPayload, null, 2));
+            // Multi-tenant: Wix es BSL-only (ver CLAUDE.md)
+            if (isBsl(req)) {
+                console.log('📤 Enviando datos a Wix...');
+                console.log('📦 Payload:', JSON.stringify(wixPayload, null, 2));
 
-            const wixResponse = await fetch('https://www.bsl.com.co/_functions/crearFormulario', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(wixPayload)
-            });
+                const wixResponse = await fetch('https://www.bsl.com.co/_functions/crearFormulario', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(wixPayload)
+                });
 
-            console.log('📡 Respuesta de Wix - Status:', wixResponse.status);
+                console.log('📡 Respuesta de Wix - Status:', wixResponse.status);
 
-            if (wixResponse.ok) {
-                const wixResult = await wixResponse.json();
-                console.log('✅ Datos guardados en Wix exitosamente:', wixResult);
-            } else {
-                const errorText = await wixResponse.text();
-                console.error('❌ ERROR al guardar en Wix:');
-                console.error('   Status:', wixResponse.status);
-                console.error('   Response:', errorText);
-                // Intentar parsear como JSON para ver el error
-                try {
-                    const errorJson = JSON.parse(errorText);
-                    console.error('   Error JSON:', errorJson);
-                } catch (e) {
-                    // No es JSON, ya imprimimos el texto
+                if (wixResponse.ok) {
+                    const wixResult = await wixResponse.json();
+                    console.log('✅ Datos guardados en Wix exitosamente:', wixResult);
+                } else {
+                    const errorText = await wixResponse.text();
+                    console.error('❌ ERROR al guardar en Wix:');
+                    console.error('   Status:', wixResponse.status);
+                    console.error('   Response:', errorText);
+                    // Intentar parsear como JSON para ver el error
+                    try {
+                        const errorJson = JSON.parse(errorText);
+                        console.error('   Error JSON:', errorJson);
+                    } catch (e) {
+                        // No es JSON, ya imprimimos el texto
+                    }
                 }
             }
 
@@ -680,8 +684,8 @@ router.put('/formularios/:id', async (req, res) => {
         });
         console.log('═══════════════════════════════════════════════════════════');
 
-        // Actualizar en Wix si tiene wix_id
-        if (formularioActual.wix_id) {
+        // Actualizar en Wix si tiene wix_id (Multi-tenant: Wix es BSL-only, ver CLAUDE.md)
+        if (formularioActual.wix_id && isBsl(req)) {
             try {
                 const fetch = (await import('node-fetch')).default;
 

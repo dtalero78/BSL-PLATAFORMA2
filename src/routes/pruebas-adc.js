@@ -195,8 +195,8 @@ router.post('/', async (req, res) => {
             // Calcular y guardar resultados
             await guardarResultadosCalculados(result.rows[0]);
 
-            // Sincronizar con Wix
-            await syncADCToWix(datos, 'UPDATE');
+            // Sincronizar con Wix (BSL-only, ver CLAUDE.md Multi-Tenant)
+            await syncADCToWix(datos, 'UPDATE', req.tenant?.id);
 
             return res.json({ success: true, data: result.rows[0], operacion: 'UPDATE' });
         } else {
@@ -226,8 +226,8 @@ router.post('/', async (req, res) => {
             // Calcular y guardar resultados
             await guardarResultadosCalculados(result.rows[0]);
 
-            // Sincronizar con Wix
-            await syncADCToWix(datos, 'INSERT');
+            // Sincronizar con Wix (BSL-only, ver CLAUDE.md Multi-Tenant)
+            await syncADCToWix(datos, 'INSERT', req.tenant?.id);
 
             return res.json({ success: true, data: result.rows[0], operacion: 'INSERT' });
         }

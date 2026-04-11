@@ -40,6 +40,13 @@ app.use(bodyParser.json({ limit: '25mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '25mb' }));
 app.use(express.static('public'));
 
+// ========== MULTI-TENANT ==========
+// Resuelve el tenant por hostname y lo monta en req.tenant.
+// Durante la migración (un solo tenant activo), hace fallback a 'bsl' — BSL sigue idéntico.
+// Ver CLAUDE.md sección "Multi-Tenant Architecture".
+const { tenantMiddleware } = require('./src/middleware/tenant');
+app.use(tenantMiddleware);
+
 // ========== SSE (Server-Sent Events) ==========
 const { addSSEClient, removeSSEClient } = require('./src/helpers/sse');
 
@@ -71,9 +78,13 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', database: 'connected' });
 });
 
-// Wix data proxy
+// Wix data proxy (Multi-tenant: BSL-only, ver CLAUDE.md)
+const { isBsl: isBslReq } = require('./src/helpers/tenant');
 app.get('/api/wix/:id', async (req, res) => {
     try {
+        if (!isBslReq(req)) {
+            return res.status(404).json({ success: false, message: 'Wix no disponible para este tenant' });
+        }
         const { id } = req.params;
         const fetch = (await import('node-fetch')).default;
         const response = await fetch(`https://www.bsl.com.co/_functions/historiaClinicaPorId?_id=${id}`);
