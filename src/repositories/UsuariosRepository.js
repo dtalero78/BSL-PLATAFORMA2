@@ -2,142 +2,84 @@ const BaseRepository = require('./BaseRepository');
 
 /**
  * Repository para la tabla usuarios
- * Métodos específicos para gestión de usuarios y autenticación
+ * Multi-tenant (ver CLAUDE.md): todos los métodos aceptan tenantId opcional (default 'bsl').
  */
 class UsuariosRepository extends BaseRepository {
     constructor() {
         super('usuarios');
     }
 
-    /**
-     * Busca usuario por email
-     * @param {string} email
-     * @returns {Promise<Object|null>}
-     */
-    async findByEmail(email) {
-        return await this.findOne({ email });
+    async findByEmail(email, tenantId = 'bsl') {
+        return await this.findOne({ email }, { tenantId });
     }
 
-    /**
-     * Busca usuario por username
-     * @param {string} username
-     * @returns {Promise<Object|null>}
-     */
-    async findByUsername(username) {
-        return await this.findOne({ username });
+    async findByUsername(username, tenantId = 'bsl') {
+        return await this.findOne({ username }, { tenantId });
     }
 
-    /**
-     * Busca usuarios por rol
-     * @param {string} role - Rol del usuario (ADMIN, MEDICO, APROBADOR, EMPRESA, etc.)
-     * @param {Object} options - {limit, offset, orderBy, orderDir}
-     * @returns {Promise<Array>}
-     */
     async findByRole(role, options = {}) {
         const defaultOptions = {
             orderBy: 'nombre',
             orderDir: 'ASC',
+            tenantId: 'bsl',
             ...options
         };
         return await this.findAll({ role }, defaultOptions);
     }
 
-    /**
-     * Busca usuarios activos
-     * @param {Object} options - {limit, offset, orderBy, orderDir}
-     * @returns {Promise<Array>}
-     */
     async findActivos(options = {}) {
         const defaultOptions = {
             orderBy: 'nombre',
             orderDir: 'ASC',
+            tenantId: 'bsl',
             ...options
         };
         return await this.findAll({ activo: true }, defaultOptions);
     }
 
-    /**
-     * Busca usuarios inactivos
-     * @param {Object} options - {limit, offset, orderBy, orderDir}
-     * @returns {Promise<Array>}
-     */
     async findInactivos(options = {}) {
         const defaultOptions = {
             orderBy: 'nombre',
             orderDir: 'ASC',
+            tenantId: 'bsl',
             ...options
         };
         return await this.findAll({ activo: false }, defaultOptions);
     }
 
-    /**
-     * Activa un usuario
-     * @param {string|number} id
-     * @returns {Promise<Object|null>}
-     */
-    async activateUser(id) {
-        return await this.update(id, { activo: true }, 'id');
+    async activateUser(id, tenantId = 'bsl') {
+        return await this.update(id, { activo: true }, 'id', tenantId);
     }
 
-    /**
-     * Desactiva un usuario
-     * @param {string|number} id
-     * @returns {Promise<Object|null>}
-     */
-    async deactivateUser(id) {
-        return await this.update(id, { activo: false }, 'id');
+    async deactivateUser(id, tenantId = 'bsl') {
+        return await this.update(id, { activo: false }, 'id', tenantId);
     }
 
-    /**
-     * Actualiza la contraseña de un usuario
-     * @param {string|number} id
-     * @param {string} hashedPassword - Contraseña ya hasheada
-     * @returns {Promise<Object|null>}
-     */
-    async actualizarPassword(id, hashedPassword) {
-        return await this.update(id, { password: hashedPassword }, 'id');
+    async actualizarPassword(id, hashedPassword, tenantId = 'bsl') {
+        return await this.update(id, { password: hashedPassword }, 'id', tenantId);
     }
 
-    /**
-     * Actualiza los permisos de un usuario
-     * @param {string|number} id
-     * @param {Array} permisos - Array de permisos
-     * @returns {Promise<Object|null>}
-     */
-    async actualizarPermisos(id, permisos) {
-        return await this.update(id, { permisos }, 'id');
+    async actualizarPermisos(id, permisos, tenantId = 'bsl') {
+        return await this.update(id, { permisos }, 'id', tenantId);
     }
 
-    /**
-     * Busca usuarios por rol y empresa
-     * @param {string} role
-     * @param {string} codEmpresa
-     * @param {Object} options - {limit, offset}
-     * @returns {Promise<Array>}
-     */
     async findByRoleAndEmpresa(role, codEmpresa, options = {}) {
-        const { limit = 100, offset = 0 } = options;
+        const { limit = 100, offset = 0, tenantId = 'bsl' } = options;
 
         const query = `
             SELECT *
             FROM ${this.tableName}
-            WHERE "role" = $1 AND "cod_empresa" = $2
+            WHERE "role" = $1 AND "cod_empresa" = $2 AND tenant_id = $3
             ORDER BY "nombre" ASC
-            LIMIT $3 OFFSET $4
+            LIMIT $4 OFFSET $5
         `;
 
-        const result = await this.query(query, [role, codEmpresa, limit, offset]);
+        const result = await this.query(query, [role, codEmpresa, tenantId, limit, offset]);
         return result.rows;
     }
 
-    /**
-     * Busca usuarios con búsqueda general
-     * @param {string} buscar - Término de búsqueda
-     * @param {Object} options - {limit, offset, role}
-     * @returns {Promise<Array>}
-     */
     async buscar(buscar, options = {}) {
-        const { limit = 100, offset = 0, role } = options;
+        const { limit = 100, offset = 0, role, tenantId = 'bsl' } = options;
 
         let query = `
             SELECT *
@@ -147,10 +89,11 @@ class UsuariosRepository extends BaseRepository {
                 COALESCE("email", '') || ' ' ||
                 COALESCE("username", '')
             ) ILIKE $1
+              AND tenant_id = $2
         `;
 
-        const params = [`%${buscar}%`];
-        let paramIndex = 2;
+        const params = [`%${buscar}%`, tenantId];
+        let paramIndex = 3;
 
         if (role) {
             query += ` AND "role" = $${paramIndex}`;
@@ -166,27 +109,16 @@ class UsuariosRepository extends BaseRepository {
         return result.rows;
     }
 
-    /**
-     * Cuenta usuarios por rol
-     * @param {string} role
-     * @returns {Promise<number>}
-     */
-    async countByRole(role) {
-        return await this.count({ role });
+    async countByRole(role, tenantId = 'bsl') {
+        return await this.count({ role }, { tenantId });
     }
 
-    /**
-     * Verifica si un email ya está en uso (para registro)
-     * @param {string} email
-     * @param {string|number} excludeId - ID a excluir (para edición)
-     * @returns {Promise<boolean>}
-     */
-    async emailExists(email, excludeId = null) {
-        let query = `SELECT COUNT(*) FROM ${this.tableName} WHERE "email" = $1`;
-        const params = [email];
+    async emailExists(email, excludeId = null, tenantId = 'bsl') {
+        let query = `SELECT COUNT(*) FROM ${this.tableName} WHERE "email" = $1 AND tenant_id = $2`;
+        const params = [email, tenantId];
 
         if (excludeId) {
-            query += ` AND "id" != $2`;
+            query += ` AND "id" != $3`;
             params.push(excludeId);
         }
 
@@ -194,18 +126,12 @@ class UsuariosRepository extends BaseRepository {
         return parseInt(result.rows[0].count) > 0;
     }
 
-    /**
-     * Verifica si un username ya está en uso
-     * @param {string} username
-     * @param {string|number} excludeId - ID a excluir (para edición)
-     * @returns {Promise<boolean>}
-     */
-    async usernameExists(username, excludeId = null) {
-        let query = `SELECT COUNT(*) FROM ${this.tableName} WHERE "username" = $1`;
-        const params = [username];
+    async usernameExists(username, excludeId = null, tenantId = 'bsl') {
+        let query = `SELECT COUNT(*) FROM ${this.tableName} WHERE "username" = $1 AND tenant_id = $2`;
+        const params = [username, tenantId];
 
         if (excludeId) {
-            query += ` AND "id" != $2`;
+            query += ` AND "id" != $3`;
             params.push(excludeId);
         }
 
@@ -213,48 +139,37 @@ class UsuariosRepository extends BaseRepository {
         return parseInt(result.rows[0].count) > 0;
     }
 
-    /**
-     * Crea un usuario con validaciones
-     * @param {Object} userData
-     * @returns {Promise<Object>}
-     */
-    async crearUsuario(userData) {
+    async crearUsuario(userData, tenantId = 'bsl') {
         const { email, username } = userData;
 
-        // Validar email único
-        const emailExiste = await this.emailExists(email);
+        const emailExiste = await this.emailExists(email, null, tenantId);
         if (emailExiste) {
             throw new Error('El email ya está registrado');
         }
 
-        // Validar username único
-        const usernameExiste = await this.usernameExists(username);
+        const usernameExiste = await this.usernameExists(username, null, tenantId);
         if (usernameExiste) {
             throw new Error('El username ya está en uso');
         }
 
-        // Crear usuario
-        return await this.create(userData);
+        return await this.create(userData, { tenantId });
     }
 
     /**
      * Lista usuarios con filtros múltiples (para admin)
-     * @param {Object} filters - {estado, rol, buscar}
-     * @param {Object} options - {limit, offset}
-     * @returns {Promise<Array>}
      */
     async findWithFilters(filters = {}, options = {}) {
         const { estado, rol, buscar } = filters;
-        const { limit = 50, offset = 0 } = options;
+        const { limit = 50, offset = 0, tenantId = 'bsl' } = options;
 
         let query = `
             SELECT id, email, nombre_completo, numero_documento, celular_whatsapp, rol, cod_empresa,
                    estado, fecha_registro, fecha_aprobacion, ultimo_login, activo
             FROM ${this.tableName}
-            WHERE 1=1
+            WHERE tenant_id = $1
         `;
-        const params = [];
-        let paramIndex = 1;
+        const params = [tenantId];
+        let paramIndex = 2;
 
         if (estado) {
             query += ` AND estado = $${paramIndex}`;
@@ -281,17 +196,12 @@ class UsuariosRepository extends BaseRepository {
         return result.rows;
     }
 
-    /**
-     * Cuenta usuarios con filtros
-     * @param {Object} filters - {estado, rol, buscar}
-     * @returns {Promise<number>}
-     */
-    async countWithFilters(filters = {}) {
+    async countWithFilters(filters = {}, tenantId = 'bsl') {
         const { estado, rol, buscar } = filters;
 
-        let query = 'SELECT COUNT(*) FROM usuarios WHERE 1=1';
-        const params = [];
-        let paramIndex = 1;
+        let query = 'SELECT COUNT(*) FROM usuarios WHERE tenant_id = $1';
+        const params = [tenantId];
+        let paramIndex = 2;
 
         if (estado) {
             query += ` AND estado = $${paramIndex}`;
@@ -312,98 +222,70 @@ class UsuariosRepository extends BaseRepository {
         return parseInt(result.rows[0].count);
     }
 
-    /**
-     * Lista usuarios pendientes de aprobación
-     * @returns {Promise<Array>}
-     */
-    async findPendientes() {
+    async findPendientes(tenantId = 'bsl') {
         const query = `
             SELECT id, email, nombre_completo, numero_documento, celular_whatsapp, cod_empresa, fecha_registro
             FROM ${this.tableName}
-            WHERE estado = 'pendiente' AND activo = true
+            WHERE estado = 'pendiente' AND activo = true AND tenant_id = $1
             ORDER BY fecha_registro ASC
         `;
-        const result = await this.query(query);
+        const result = await this.query(query, [tenantId]);
         return result.rows;
     }
 
-    /**
-     * Aprueba un usuario
-     * @param {number} id
-     * @param {number} aprobadoPor - ID del admin que aprueba
-     * @returns {Promise<Object|null>}
-     */
-    async aprobarUsuario(id, aprobadoPor) {
+    async aprobarUsuario(id, aprobadoPor, tenantId = 'bsl') {
         const query = `
             UPDATE ${this.tableName}
             SET estado = 'aprobado',
                 fecha_aprobacion = NOW(),
                 aprobado_por = $1
-            WHERE id = $2
+            WHERE id = $2 AND tenant_id = $3
             RETURNING *
         `;
-        const result = await this.query(query, [aprobadoPor, id]);
+        const result = await this.query(query, [aprobadoPor, id, tenantId]);
         return result.rows[0] || null;
     }
 
-    /**
-     * Rechaza un usuario
-     * @param {number} id
-     * @returns {Promise<Object|null>}
-     */
-    async rechazarUsuario(id) {
+    async rechazarUsuario(id, tenantId = 'bsl') {
         const query = `
             UPDATE ${this.tableName}
             SET estado = 'rechazado',
                 activo = false
-            WHERE id = $1
+            WHERE id = $1 AND tenant_id = $2
             RETURNING *
         `;
-        const result = await this.query(query, [id]);
+        const result = await this.query(query, [id, tenantId]);
         return result.rows[0] || null;
     }
 
-    /**
-     * Desactiva un usuario y cierra sus sesiones
-     * @param {number} id
-     * @returns {Promise<Object|null>}
-     */
-    async desactivarUsuario(id) {
+    async desactivarUsuario(id, tenantId = 'bsl') {
         return await this.transaction(async (client) => {
-            // Cerrar sesiones
-            await client.query('UPDATE sesiones SET activa = false WHERE usuario_id = $1', [id]);
+            // Cerrar sesiones (scoped por tenant)
+            await client.query(
+                'UPDATE sesiones SET activa = false WHERE usuario_id = $1 AND tenant_id = $2',
+                [id, tenantId]
+            );
 
-            // Desactivar usuario
+            // Desactivar usuario (scoped por tenant)
             const result = await client.query(
-                'UPDATE usuarios SET activo = false WHERE id = $1 RETURNING *',
-                [id]
+                'UPDATE usuarios SET activo = false WHERE id = $1 AND tenant_id = $2 RETURNING *',
+                [id, tenantId]
             );
             return result.rows[0] || null;
         });
     }
 
-    /**
-     * Actualiza el código de empresa de un usuario
-     * @param {number} id
-     * @param {string} codEmpresa
-     * @returns {Promise<Object|null>}
-     */
-    async actualizarCodEmpresa(id, codEmpresa) {
-        return await this.update(id, { cod_empresa: codEmpresa }, 'id');
+    async actualizarCodEmpresa(id, codEmpresa, tenantId = 'bsl') {
+        return await this.update(id, { cod_empresa: codEmpresa }, 'id', tenantId);
     }
 
-    /**
-     * Verifica si existe usuario por email o documento
-     * @param {string} email
-     * @param {string} numeroDocumento
-     * @returns {Promise<Object|null>}
-     */
-    async findByEmailOrDocumento(email, numeroDocumento) {
+    async findByEmailOrDocumento(email, numeroDocumento, tenantId = 'bsl') {
         const query = `
             SELECT id FROM ${this.tableName}
-            WHERE email = $1 OR numero_documento = $2
+            WHERE (email = $1 OR numero_documento = $2)
+              AND tenant_id = $3
         `;
-        const result = await this.query(query, [email, numeroDocumento]);
+        const result = await this.query(query, [email, numeroDocumento, tenantId]);
         return result.rows[0] || null;
     }
 }

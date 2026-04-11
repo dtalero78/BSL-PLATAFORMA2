@@ -8,6 +8,11 @@ const { generarLinkGoogleCalendar } = require('../helpers/google-calendar');
 const { FormulariosRepository, HistoriaClinicaRepository } = require('../repositories');
 const { isBsl } = require('../helpers/tenant');
 
+// Multi-tenant helper (ver CLAUDE.md)
+function tenantId(req) {
+    return (req.tenant && req.tenant.id) || 'bsl';
+}
+
 // Ruta para recibir el formulario
 router.post('/formulario', async (req, res) => {
     try {
@@ -28,12 +33,13 @@ router.post('/formulario', async (req, res) => {
             fotoUrl = await subirFotoASpaces(datos.foto, datos.numeroId, 'new');
         }
 
-        // Verificar si ya existe un formulario con este wix_id
+        // Verificar si ya existe un formulario con este wix_id (scoped por tenant)
+        const tId = tenantId(req);
         let existeFormulario = false;
         if (datos.wixId) {
             const checkResult = await pool.query(
-                'SELECT id FROM formularios WHERE wix_id = $1',
-                [datos.wixId]
+                'SELECT id FROM formularios WHERE wix_id = $1 AND tenant_id = $2',
+                [datos.wixId, tId]
             );
             existeFormulario = checkResult.rows.length > 0;
         }
@@ -61,7 +67,7 @@ router.post('/formulario', async (req, res) => {
                     enfermedades_laborales = $59, enfermedad_osteomuscular = $60, enfermedad_autoinmune = $61,
                     firma = $62, inscripcion_boletin = $63, foto_url = COALESCE($64, foto_url),
                     updated_at = CURRENT_TIMESTAMP
-                WHERE wix_id = $1
+                WHERE wix_id = $1 AND tenant_id = $65
                 RETURNING id
             `;
 
@@ -81,7 +87,8 @@ router.post('/formulario', async (req, res) => {
                 datos.familiaTrastornos, datos.familiaInfecciosas,
                 datos.trastornoPsicologico, datos.sintomasPsicologicos, datos.diagnosticoCancer,
                 datos.enfermedadesLaborales, datos.enfermedadOsteomuscular, datos.enfermedadAutoinmune,
-                datos.firma, datos.inscripcionBoletin, fotoUrl
+                datos.firma, datos.inscripcionBoletin, fotoUrl,
+                tId
             ];
 
             result = await pool.query(updateQuery, updateValues);
@@ -105,7 +112,7 @@ router.post('/formulario', async (req, res) => {
                     familia_trastornos, familia_infecciosas,
                     trastorno_psicologico, sintomas_psicologicos, diagnostico_cancer,
                     enfermedades_laborales, enfermedad_osteomuscular, enfermedad_autoinmune,
-                    firma, inscripcion_boletin, foto_url
+                    firma, inscripcion_boletin, foto_url, tenant_id
                 ) VALUES (
                     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
                     $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
@@ -113,7 +120,7 @@ router.post('/formulario', async (req, res) => {
                     $31, $32, $33, $34, $35, $36, $37, $38, $39, $40,
                     $41, $42, $43, $44, $45, $46, $47, $48, $49, $50,
                     $51, $52, $53, $54, $55, $56, $57, $58, $59, $60,
-                    $61, $62, $63, $64
+                    $61, $62, $63, $64, $65
                 ) RETURNING id
             `;
 
@@ -133,7 +140,8 @@ router.post('/formulario', async (req, res) => {
                 datos.familiaTrastornos, datos.familiaInfecciosas,
                 datos.trastornoPsicologico, datos.sintomasPsicologicos, datos.diagnosticoCancer,
                 datos.enfermedadesLaborales, datos.enfermedadOsteomuscular, datos.enfermedadAutoinmune,
-                datos.firma, datos.inscripcionBoletin, fotoUrl
+                datos.firma, datos.inscripcionBoletin, fotoUrl,
+                tId
             ];
 
             result = await pool.query(insertQuery, insertValues);
@@ -143,17 +151,17 @@ router.post('/formulario', async (req, res) => {
         // Sincronizar email del paciente a HistoriaClinica.correo y enviar email de confirmacion
         if (datos.email && datos.wixId) {
             try {
-                // Guardar correo en HistoriaClinica
+                // Guardar correo en HistoriaClinica (scoped por tenant)
                 await pool.query(
-                    `UPDATE "HistoriaClinica" SET correo = $1 WHERE "_id" = $2`,
-                    [datos.email, datos.wixId]
+                    `UPDATE "HistoriaClinica" SET correo = $1 WHERE "_id" = $2 AND tenant_id = $3`,
+                    [datos.email, datos.wixId, tId]
                 );
                 console.log(`[EMAIL] Correo ${datos.email} sincronizado a HistoriaClinica ${datos.wixId}`);
 
                 // Obtener datos de la cita para el email de confirmacion
                 const hcResult = await pool.query(
-                    `SELECT "fechaAtencion", "horaAtencion", "codEmpresa", empresa, ciudad, "primerNombre", "primerApellido" FROM "HistoriaClinica" WHERE "_id" = $1`,
-                    [datos.wixId]
+                    `SELECT "fechaAtencion", "horaAtencion", "codEmpresa", empresa, ciudad, "primerNombre", "primerApellido" FROM "HistoriaClinica" WHERE "_id" = $1 AND tenant_id = $2`,
+                    [datos.wixId, tId]
                 );
                 const hc = hcResult.rows[0];
 
@@ -354,9 +362,10 @@ router.get('/formularios', async (req, res) => {
                 hc."fechaConsulta" as fecha_consulta,
                 hc."atendido" as estado_atencion
             FROM formularios f
-            LEFT JOIN "HistoriaClinica" hc ON f.wix_id = hc."_id"
+            LEFT JOIN "HistoriaClinica" hc ON f.wix_id = hc."_id" AND hc.tenant_id = f.tenant_id
+            WHERE f.tenant_id = $1
             ORDER BY f.fecha_registro DESC
-        `);
+        `, [tenantId(req)]);
 
         res.json({
             success: true,
@@ -379,7 +388,7 @@ router.get('/formulario/:id', async (req, res) => {
         const { id } = req.params;
 
         // Use repository
-        const formulario = await FormulariosRepository.findById(id, 'id');
+        const formulario = await FormulariosRepository.findById(id, 'id', tenantId(req));
 
         if (formulario) {
             res.json({ success: true, data: formulario });
@@ -425,7 +434,7 @@ router.get('/formularios/search', async (req, res) => {
                 hc."fechaConsulta" as fecha_consulta,
                 hc."atendido" as estado_atencion
             FROM formularios f
-            LEFT JOIN "HistoriaClinica" hc ON f.wix_id = hc."_id"
+            LEFT JOIN "HistoriaClinica" hc ON f.wix_id = hc."_id" AND hc.tenant_id = f.tenant_id
             WHERE (
                 COALESCE(f.numero_id, '') || ' ' ||
                 COALESCE(f.primer_nombre, '') || ' ' ||
@@ -433,9 +442,10 @@ router.get('/formularios/search', async (req, res) => {
                 COALESCE(f.cod_empresa, '') || ' ' ||
                 COALESCE(f.celular, '')
             ) ILIKE $1
+              AND f.tenant_id = $2
             ORDER BY f.fecha_registro DESC
             LIMIT 100
-        `, [searchTerm]);
+        `, [searchTerm, tenantId(req)]);
 
         console.log(`✅ Encontrados ${result.rows.length} formularios para "${q}"`);
 
@@ -463,15 +473,15 @@ router.get('/formularios/buscar/:identificador', async (req, res) => {
         console.log(`🔍 Buscando formulario por identificador: ${identificador}`);
 
         // Use repositories - buscar por wix_id, luego numero_id, luego via HistoriaClinica
-        let formulario = await FormulariosRepository.findByWixId(identificador);
+        let formulario = await FormulariosRepository.findByWixId(identificador, tenantId(req));
 
         if (!formulario) {
             console.log(`🔍 No encontrado por wix_id, buscando por numero_id...`);
-            formulario = await FormulariosRepository.findUltimoPorNumeroId(identificador);
+            formulario = await FormulariosRepository.findUltimoPorNumeroId(identificador, tenantId(req));
         }
 
         if (!formulario) {
-            const hc = await HistoriaClinicaRepository.findByNumeroId(identificador);
+            const hc = await HistoriaClinicaRepository.findByNumeroId(identificador, tenantId(req));
             if (hc) {
                 console.log(`🔍 Buscando formulario por wix_id desde HC: ${hc._id}`);
                 formulario = await FormulariosRepository.findByWixId(hc._id);
@@ -506,7 +516,7 @@ router.get('/formularios/:id', async (req, res) => {
         const { id } = req.params;
 
         // Use repository
-        const formulario = await FormulariosRepository.findById(id, 'id');
+        const formulario = await FormulariosRepository.findById(id, 'id', tenantId(req));
 
         if (!formulario) {
             return res.status(404).json({
@@ -519,7 +529,7 @@ router.get('/formularios/:id', async (req, res) => {
         let historiaClinica = null;
         if (formulario.numero_id) {
             try {
-                historiaClinica = await HistoriaClinicaRepository.findByNumeroId(formulario.numero_id);
+                historiaClinica = await HistoriaClinicaRepository.findByNumeroId(formulario.numero_id, tenantId(req));
             } catch (historiaError) {
                 console.error('⚠️ No se pudo obtener HistoriaClinica:', historiaError.message);
             }
@@ -551,8 +561,9 @@ router.post('/formularios/enlazar-orden', async (req, res) => {
             return res.status(400).json({ success: false, error: 'nuevoWixId es requerido' });
         }
 
-        // Use repository - verificar que la orden existe
-        const ordenExiste = await HistoriaClinicaRepository.findById(nuevoWixId);
+        // Use repository - verificar que la orden existe (scoped por tenant)
+        const tIdLink = tenantId(req);
+        const ordenExiste = await HistoriaClinicaRepository.findById(nuevoWixId, '_id', tIdLink);
 
         if (!ordenExiste) {
             return res.status(404).json({
@@ -566,14 +577,14 @@ router.post('/formularios/enlazar-orden', async (req, res) => {
         if (formId) {
             // Actualizar por ID del formulario
             result = await pool.query(
-                'UPDATE formularios SET wix_id = $1 WHERE id = $2 RETURNING id, wix_id, numero_id',
-                [nuevoWixId, formId]
+                'UPDATE formularios SET wix_id = $1 WHERE id = $2 AND tenant_id = $3 RETURNING id, wix_id, numero_id',
+                [nuevoWixId, formId, tIdLink]
             );
         } else if (numeroId) {
             // Actualizar por numero de identificacion
             result = await pool.query(
-                'UPDATE formularios SET wix_id = $1 WHERE numero_id = $2 RETURNING id, wix_id, numero_id',
-                [nuevoWixId, numeroId]
+                'UPDATE formularios SET wix_id = $1 WHERE numero_id = $2 AND tenant_id = $3 RETURNING id, wix_id, numero_id',
+                [nuevoWixId, numeroId, tIdLink]
             );
         } else {
             return res.status(400).json({
@@ -610,7 +621,7 @@ router.put('/formularios/:id', async (req, res) => {
         const datos = req.body;
 
         // Use repository - verificar que el formulario existe
-        const formularioActual = await FormulariosRepository.findById(id, 'id');
+        const formularioActual = await FormulariosRepository.findById(id, 'id', tenantId(req));
         if (!formularioActual) {
             return res.status(404).json({
                 success: false,
@@ -643,7 +654,7 @@ router.put('/formularios/:id', async (req, res) => {
                 estatura = COALESCE($17, estatura),
                 peso = COALESCE($18, peso),
                 ejercicio = COALESCE($19, ejercicio)
-            WHERE id = $20
+            WHERE id = $20 AND tenant_id = $21
             RETURNING *
         `;
 
@@ -667,7 +678,8 @@ router.put('/formularios/:id', async (req, res) => {
             parseNumeric(datos.estatura),
             parseNumeric(datos.peso),
             datos.ejercicio,
-            id
+            id,
+            tenantId(req)
         ];
 
         const result = await pool.query(query, values);
@@ -827,7 +839,7 @@ router.delete('/formularios/:id', async (req, res) => {
         console.log('═══════════════════════════════════════════════════════════');
 
         // Use repository - verificar existencia
-        const formulario = await FormulariosRepository.findById(id, 'id');
+        const formulario = await FormulariosRepository.findById(id, 'id', tenantId(req));
         if (!formulario) {
             return res.status(404).json({
                 success: false,
@@ -838,11 +850,12 @@ router.delete('/formularios/:id', async (req, res) => {
         let historiaClinicaEliminada = false;
 
         // Intentar eliminar la historia clinica asociada (si existe)
+        const tIdDel = tenantId(req);
         if (numeroId) {
             try {
-                const hc = await HistoriaClinicaRepository.findByNumeroId(numeroId);
+                const hc = await HistoriaClinicaRepository.findByNumeroId(numeroId, tIdDel);
                 if (hc) {
-                    await HistoriaClinicaRepository.delete(hc._id);
+                    await HistoriaClinicaRepository.delete(hc._id, '_id', tIdDel);
                     historiaClinicaEliminada = true;
                     console.log('   ✅ Historia Clinica eliminada');
                 } else {
@@ -854,7 +867,7 @@ router.delete('/formularios/:id', async (req, res) => {
         }
 
         // Use repository - eliminar formulario
-        const eliminado = await FormulariosRepository.delete(id, 'id');
+        const eliminado = await FormulariosRepository.delete(id, 'id', tIdDel);
 
         if (!eliminado) {
             return res.status(500).json({
@@ -901,7 +914,7 @@ router.get('/buscar-paciente/:numeroId', async (req, res) => {
         }
 
         // Buscar en formularios primero
-        const formulario = await FormulariosRepository.findUltimoPorNumeroId(numeroId);
+        const formulario = await FormulariosRepository.findUltimoPorNumeroId(numeroId, tenantId(req));
 
         if (formulario) {
             return res.json({
@@ -916,7 +929,7 @@ router.get('/buscar-paciente/:numeroId', async (req, res) => {
         }
 
         // Fallback: buscar en HistoriaClinica
-        const hc = await HistoriaClinicaRepository.findByNumeroId(numeroId);
+        const hc = await HistoriaClinicaRepository.findByNumeroId(numeroId, tenantId(req));
 
         if (hc) {
             return res.json({
@@ -959,24 +972,24 @@ router.post('/actualizar-foto', async (req, res) => {
         }
 
         // Buscar en HistoriaClinica para obtener el _id (wix_id)
-        const hc = await HistoriaClinicaRepository.findByNumeroId(numeroId);
+        const hc = await HistoriaClinicaRepository.findByNumeroId(numeroId, tenantId(req));
         let actualizado = false;
 
         // Actualizar foto_url en formularios (buscar por numero_id O por wix_id)
-        let formulario = await FormulariosRepository.findUltimoPorNumeroId(numeroId);
+        let formulario = await FormulariosRepository.findUltimoPorNumeroId(numeroId, tenantId(req));
         if (!formulario && hc) {
             formulario = await FormulariosRepository.findByWixId(hc._id);
         }
 
         if (formulario) {
-            await FormulariosRepository.actualizarFotoUrl(formulario.id, fotoUrl);
+            await FormulariosRepository.actualizarFotoUrl(formulario.id, fotoUrl, tenantId(req));
             actualizado = true;
             console.log('✅ Foto actualizada en formularios para:', numeroId);
         }
 
         // Actualizar foto_url en HistoriaClinica
         if (hc) {
-            await HistoriaClinicaRepository.update(hc._id, { foto_url: fotoUrl });
+            await HistoriaClinicaRepository.update(hc._id, { foto_url: fotoUrl }, '_id', tenantId(req));
             actualizado = true;
             console.log('✅ Foto actualizada en HistoriaClinica para:', numeroId);
         }

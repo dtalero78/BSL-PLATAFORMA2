@@ -7,6 +7,11 @@ const { authMiddleware, requireAdmin, JWT_SECRET, hashPassword } = require('../m
 const { sendWhatsAppFreeText, sendWhatsAppMedia } = require('../services/whatsapp');
 const { UsuariosRepository } = require('../repositories');
 
+// Multi-tenant helper (ver CLAUDE.md)
+function tenantId(req) {
+    return (req.tenant && req.tenant.id) || 'bsl';
+}
+
 const upload = multer({ storage: multer.memoryStorage() });
 
 // ========== ENDPOINTS DE ADMINISTRACION DE USUARIOS ==========
@@ -17,8 +22,9 @@ router.get('/usuarios', authMiddleware, requireAdmin, async (req, res) => {
         const { estado, rol, buscar, limit = 50, offset = 0 } = req.query;
 
         // Use repository - 2 lines instead of 70
-        const data = await UsuariosRepository.findWithFilters({ estado, rol, buscar }, { limit, offset });
-        const total = await UsuariosRepository.countWithFilters({ estado, rol, buscar });
+        const tId = tenantId(req);
+        const data = await UsuariosRepository.findWithFilters({ estado, rol, buscar }, { limit, offset, tenantId: tId });
+        const total = await UsuariosRepository.countWithFilters({ estado, rol, buscar }, tId);
 
         res.json({
             success: true,
@@ -43,9 +49,9 @@ router.get('/usuarios/pendientes', authMiddleware, requireAdmin, async (req, res
         const result = await pool.query(`
             SELECT id, email, nombre_completo, numero_documento, celular_whatsapp, cod_empresa, fecha_registro
             FROM usuarios
-            WHERE estado = 'pendiente' AND activo = true
+            WHERE estado = 'pendiente' AND activo = true AND tenant_id = $1
             ORDER BY fecha_registro ASC
-        `);
+        `, [tenantId(req)]);
 
         res.json({
             success: true,
@@ -68,10 +74,11 @@ router.put('/usuarios/:id/aprobar', authMiddleware, requireAdmin, async (req, re
         const { id } = req.params;
         const { codEmpresa, rol } = req.body;
 
-        // Obtener informacion del usuario a aprobar
+        // Obtener informacion del usuario a aprobar (scoped por tenant)
+        const tId = tenantId(req);
         const usuarioResult = await pool.query(
-            'SELECT id, email, nombre_completo FROM usuarios WHERE id = $1 AND estado = \'pendiente\'',
-            [id]
+            'SELECT id, email, nombre_completo FROM usuarios WHERE id = $1 AND estado = \'pendiente\' AND tenant_id = $2',
+            [id, tId]
         );
 
         if (usuarioResult.rows.length === 0) {
@@ -98,10 +105,10 @@ router.put('/usuarios/:id/aprobar', authMiddleware, requireAdmin, async (req, re
                 });
             }
 
-            // Verificar que la empresa existe
+            // Verificar que la empresa existe (scoped por tenant)
             const empresaCheck = await pool.query(
-                'SELECT cod_empresa FROM empresas WHERE cod_empresa = $1 AND activo = true',
-                [codEmpresa.toUpperCase()]
+                'SELECT cod_empresa FROM empresas WHERE cod_empresa = $1 AND activo = true AND tenant_id = $2',
+                [codEmpresa.toUpperCase(), tId]
             );
 
             if (empresaCheck.rows.length === 0) {
@@ -112,7 +119,7 @@ router.put('/usuarios/:id/aprobar', authMiddleware, requireAdmin, async (req, re
             }
         }
 
-        // Actualizar usuario con rol y empresa
+        // Actualizar usuario con rol y empresa (scoped por tenant)
         const result = await pool.query(`
             UPDATE usuarios
             SET estado = 'aprobado',
@@ -120,9 +127,9 @@ router.put('/usuarios/:id/aprobar', authMiddleware, requireAdmin, async (req, re
                 aprobado_por = $1,
                 rol = $2,
                 cod_empresa = $3
-            WHERE id = $4
+            WHERE id = $4 AND tenant_id = $5
             RETURNING id, email, nombre_completo, estado, cod_empresa, rol
-        `, [req.usuario.id, rol, codEmpresa ? codEmpresa.toUpperCase() : null, id]);
+        `, [req.usuario.id, rol, codEmpresa ? codEmpresa.toUpperCase() : null, id, tId]);
 
         const empresaInfo = result.rows[0].cod_empresa ? ` -> ${result.rows[0].cod_empresa}` : '';
         console.log(`Usuario aprobado: ${result.rows[0].email} (${result.rows[0].rol})${empresaInfo} (por ${req.usuario.email})`);
@@ -151,9 +158,9 @@ router.put('/usuarios/:id/rechazar', authMiddleware, requireAdmin, async (req, r
         const result = await pool.query(`
             UPDATE usuarios
             SET estado = 'rechazado'
-            WHERE id = $1 AND estado = 'pendiente'
+            WHERE id = $1 AND estado = 'pendiente' AND tenant_id = $2
             RETURNING id, email, nombre_completo, estado
-        `, [id]);
+        `, [id, tenantId(req)]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({
@@ -192,12 +199,13 @@ router.put('/usuarios/:id/suspender', authMiddleware, requireAdmin, async (req, 
             });
         }
 
+        const tIdSusp = tenantId(req);
         const result = await pool.query(`
             UPDATE usuarios
             SET estado = 'suspendido'
-            WHERE id = $1 AND estado = 'aprobado'
+            WHERE id = $1 AND estado = 'aprobado' AND tenant_id = $2
             RETURNING id, email, nombre_completo, estado
-        `, [id]);
+        `, [id, tIdSusp]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({
@@ -206,8 +214,11 @@ router.put('/usuarios/:id/suspender', authMiddleware, requireAdmin, async (req, 
             });
         }
 
-        // Revocar todas las sesiones activas del usuario
-        await pool.query('UPDATE sesiones SET activa = false WHERE usuario_id = $1', [id]);
+        // Revocar todas las sesiones activas del usuario (scoped por tenant)
+        await pool.query(
+            'UPDATE sesiones SET activa = false WHERE usuario_id = $1 AND tenant_id = $2',
+            [id, tIdSusp]
+        );
 
         console.log(`Usuario suspendido: ${result.rows[0].email} (por ${req.usuario.email})`);
 
@@ -234,9 +245,9 @@ router.put('/usuarios/:id/reactivar', authMiddleware, requireAdmin, async (req, 
         const result = await pool.query(`
             UPDATE usuarios
             SET estado = 'aprobado', fecha_aprobacion = NOW(), aprobado_por = $1
-            WHERE id = $2 AND estado IN ('suspendido', 'rechazado')
+            WHERE id = $2 AND estado IN ('suspendido', 'rechazado') AND tenant_id = $3
             RETURNING id, email, nombre_completo, estado
-        `, [req.usuario.id, id]);
+        `, [req.usuario.id, id, tenantId(req)]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({
@@ -328,8 +339,8 @@ router.get('/usuarios/:id', authMiddleware, requireAdmin, async (req, res) => {
                    nombre_empresa, cod_empresa, rol, estado, fecha_registro,
                    fecha_aprobacion, ultimo_login, activo
             FROM usuarios
-            WHERE id = $1
-        `, [id]);
+            WHERE id = $1 AND tenant_id = $2
+        `, [id, tenantId(req)]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({
@@ -360,8 +371,8 @@ router.get('/usuarios/:id/permisos', authMiddleware, requireAdmin, async (req, r
         const permisos = await pool.query(`
             SELECT permiso, activo, fecha_asignacion
             FROM permisos_usuario
-            WHERE usuario_id = $1
-        `, [id]);
+            WHERE usuario_id = $1 AND tenant_id = $2
+        `, [id, tenantId(req)]);
 
         res.json({
             success: true,
@@ -402,15 +413,19 @@ router.put('/usuarios/:id/permisos', authMiddleware, requireAdmin, async (req, r
             });
         }
 
-        // Eliminar permisos actuales del usuario
-        await pool.query('DELETE FROM permisos_usuario WHERE usuario_id = $1', [id]);
+        // Eliminar permisos actuales del usuario (scoped por tenant)
+        const tIdPerm = tenantId(req);
+        await pool.query(
+            'DELETE FROM permisos_usuario WHERE usuario_id = $1 AND tenant_id = $2',
+            [id, tIdPerm]
+        );
 
-        // Insertar nuevos permisos
+        // Insertar nuevos permisos (con tenant_id)
         if (permisos.length > 0) {
-            const values = permisos.map((p, i) => `($1, $${i + 2}, true, NOW(), $${permisos.length + 2})`).join(', ');
-            const params = [id, ...permisos, req.usuario.id];
+            const values = permisos.map((p, i) => `($1, $${i + 2}, true, NOW(), $${permisos.length + 2}, $${permisos.length + 3})`).join(', ');
+            const params = [id, ...permisos, req.usuario.id, tIdPerm];
             await pool.query(`
-                INSERT INTO permisos_usuario (usuario_id, permiso, activo, fecha_asignacion, asignado_por)
+                INSERT INTO permisos_usuario (usuario_id, permiso, activo, fecha_asignacion, asignado_por, tenant_id)
                 VALUES ${values}
             `, params);
         }
@@ -438,8 +453,11 @@ router.put('/usuarios/:id/cod-empresa', authMiddleware, requireAdmin, async (req
         const { id } = req.params;
         const { codEmpresa } = req.body;
 
-        // Verificar que el usuario existe
-        const usuarioResult = await pool.query('SELECT id, email, rol FROM usuarios WHERE id = $1', [id]);
+        // Verificar que el usuario existe (scoped por tenant)
+        const usuarioResult = await pool.query(
+            'SELECT id, email, rol FROM usuarios WHERE id = $1 AND tenant_id = $2',
+            [id, tenantId(req)]
+        );
         if (usuarioResult.rows.length === 0) {
             return res.status(404).json({
                 success: false,
@@ -457,10 +475,10 @@ router.put('/usuarios/:id/cod-empresa', authMiddleware, requireAdmin, async (req
             });
         }
 
-        // Actualizar cod_empresa
+        // Actualizar cod_empresa (scoped por tenant)
         await pool.query(
-            'UPDATE usuarios SET cod_empresa = $1 WHERE id = $2',
-            [codEmpresa || null, id]
+            'UPDATE usuarios SET cod_empresa = $1 WHERE id = $2 AND tenant_id = $3',
+            [codEmpresa || null, id, tenantId(req)]
         );
 
         console.log(`Codigo de empresa actualizado para usuario ${id} (${usuario.email}): ${codEmpresa || 'NULL'} (por ${req.usuario.email})`);
@@ -509,10 +527,11 @@ router.post('/usuarios', authMiddleware, requireAdmin, async (req, res) => {
             });
         }
 
-        // Verificar duplicados
+        // Verificar duplicados (scoped por tenant)
+        const tIdCreate = tenantId(req);
         const existe = await pool.query(
-            'SELECT id FROM usuarios WHERE email = $1 OR numero_documento = $2',
-            [email.toLowerCase(), numeroDocumento]
+            'SELECT id FROM usuarios WHERE (email = $1 OR numero_documento = $2) AND tenant_id = $3',
+            [email.toLowerCase(), numeroDocumento, tIdCreate]
         );
 
         if (existe.rows.length > 0) {
@@ -525,12 +544,12 @@ router.post('/usuarios', authMiddleware, requireAdmin, async (req, res) => {
         // Hashear password
         const passwordHash = await hashPassword(password);
 
-        // Insertar usuario ya aprobado
+        // Insertar usuario ya aprobado (con tenant_id)
         const result = await pool.query(`
-            INSERT INTO usuarios (email, password_hash, numero_documento, celular_whatsapp, nombre_completo, cod_empresa, rol, estado, fecha_aprobacion, aprobado_por)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, 'aprobado', NOW(), $8)
+            INSERT INTO usuarios (email, password_hash, numero_documento, celular_whatsapp, nombre_completo, cod_empresa, rol, estado, fecha_aprobacion, aprobado_por, tenant_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, 'aprobado', NOW(), $8, $9)
             RETURNING id, email, nombre_completo, rol, estado, fecha_registro
-        `, [email.toLowerCase(), passwordHash, numeroDocumento, celularWhatsapp, nombreCompleto || null, codEmpresa?.toUpperCase() || null, rol, req.usuario.id]);
+        `, [email.toLowerCase(), passwordHash, numeroDocumento, celularWhatsapp, nombreCompleto || null, codEmpresa?.toUpperCase() || null, rol, req.usuario.id, tIdCreate]);
 
         console.log(`Usuario creado por admin: ${email} (${rol})`);
 
@@ -699,10 +718,11 @@ router.get('/whatsapp/conversaciones', authMiddleware, requireAdmin, async (req,
         const busqueda = req.query.busqueda || '';
         const mostrarTodas = req.query.todas === 'true';
 
-        // Construir WHERE condicional
-        let whereConditions = [];
-        let queryParams = [];
-        let paramIndex = 1;
+        // Construir WHERE condicional (scoped por tenant)
+        const tIdConv = tenantId(req);
+        let whereConditions = [`c.tenant_id = $1`];
+        let queryParams = [tIdConv];
+        let paramIndex = 2;
 
         // Si NO esta buscando y NO quiere ver todas, solo mostrar conversaciones con mensajes no leidos
         if (!busqueda && !mostrarTodas) {
@@ -712,6 +732,7 @@ router.get('/whatsapp/conversaciones', authMiddleware, requireAdmin, async (req,
                     WHERE m.conversacion_id = c.id
                     AND m.direccion = 'entrante'
                     AND m.leido_por_agente = false
+                    AND m.tenant_id = c.tenant_id
                 )
             `);
         }
@@ -725,29 +746,29 @@ router.get('/whatsapp/conversaciones', authMiddleware, requireAdmin, async (req,
                     SELECT 1 FROM mensajes_whatsapp m2
                     WHERE m2.conversacion_id = c.id
                     AND m2.contenido ILIKE $${paramIndex}
+                    AND m2.tenant_id = c.tenant_id
                  ))
             `);
             queryParams.push(`%${busqueda}%`);
             paramIndex++;
         }
 
-        const whereClause = whereConditions.length > 0
-            ? `WHERE ${whereConditions.join(' AND ')}`
-            : '';
+        const whereClause = `WHERE ${whereConditions.join(' AND ')}`;
 
         const query = `
             WITH unread_counts AS (
-                -- Pre-calcular conteo de mensajes no leidos por conversacion
+                -- Pre-calcular conteo de mensajes no leidos por conversacion (scoped tenant)
                 SELECT
                     conversacion_id,
                     COUNT(*)::int as no_leidos
                 FROM mensajes_whatsapp
                 WHERE direccion = 'entrante'
                   AND leido_por_agente = false
+                  AND tenant_id = $1
                 GROUP BY conversacion_id
             ),
             last_messages AS (
-                -- Pre-calcular ultimo mensaje por conversacion
+                -- Pre-calcular ultimo mensaje por conversacion (scoped tenant)
                 SELECT DISTINCT ON (conversacion_id)
                     conversacion_id,
                     json_build_object(
@@ -756,6 +777,7 @@ router.get('/whatsapp/conversaciones', authMiddleware, requireAdmin, async (req,
                         'fecha_envio', timestamp
                     ) as ultimo_mensaje
                 FROM mensajes_whatsapp
+                WHERE tenant_id = $1
                 ORDER BY conversacion_id, timestamp DESC
             ),
             conversaciones_filtradas AS (
@@ -768,8 +790,7 @@ router.get('/whatsapp/conversaciones', authMiddleware, requireAdmin, async (req,
                 LIMIT ${mostrarTodas ? 15 : 100}
             ),
             company_codes AS (
-                -- Solo buscar codigos de empresa para las conversaciones filtradas
-                -- Normalizar: quitar + y prefijo 57, dejando solo los 10 digitos del celular
+                -- Solo buscar codigos de empresa para las conversaciones filtradas (scoped tenant)
                 SELECT DISTINCT ON (celular_normalizado)
                     REGEXP_REPLACE(
                         REPLACE(REPLACE("celular", '+', ''), ' ', ''),
@@ -781,6 +802,7 @@ router.get('/whatsapp/conversaciones', authMiddleware, requireAdmin, async (req,
                 FROM "HistoriaClinica"
                 WHERE "celular" IS NOT NULL
                   AND "celular" != ''
+                  AND tenant_id = $1
                   AND REGEXP_REPLACE(
                       REPLACE(REPLACE("celular", '+', ''), ' ', ''),
                       '^57',
@@ -838,6 +860,7 @@ router.get('/whatsapp/conversaciones/:id/mensajes', authMiddleware, requireAdmin
         const limit = parseInt(req.query.limit) || 50; // Por defecto 50 mensajes
         const offset = parseInt(req.query.offset) || 0;
 
+        const tIdMsg = tenantId(req);
         const query = `
             SELECT
                 id,
@@ -849,16 +872,16 @@ router.get('/whatsapp/conversaciones/:id/mensajes', authMiddleware, requireAdmin
                 media_url,
                 media_type
             FROM mensajes_whatsapp
-            WHERE conversacion_id = $1
+            WHERE conversacion_id = $1 AND tenant_id = $4
             ORDER BY timestamp DESC
             LIMIT $2 OFFSET $3
         `;
 
-        const result = await pool.query(query, [id, limit, offset]);
+        const result = await pool.query(query, [id, limit, offset, tIdMsg]);
 
         // Obtener el total de mensajes para saber si hay mas
-        const countQuery = 'SELECT COUNT(*)::int as total FROM mensajes_whatsapp WHERE conversacion_id = $1';
-        const countResult = await pool.query(countQuery, [id]);
+        const countQuery = 'SELECT COUNT(*)::int as total FROM mensajes_whatsapp WHERE conversacion_id = $1 AND tenant_id = $2';
+        const countResult = await pool.query(countQuery, [id, tIdMsg]);
         const total = countResult.rows[0].total;
 
         // Marcar todos los mensajes entrantes de esta conversacion como leidos (sin bloquear la respuesta)
@@ -869,7 +892,8 @@ router.get('/whatsapp/conversaciones/:id/mensajes', authMiddleware, requireAdmin
             WHERE conversacion_id = $1
               AND direccion = 'entrante'
               AND leido_por_agente = false
-        `, [id]).catch(err => console.error('Error marking messages as read:', err));
+              AND tenant_id = $2
+        `, [id, tIdMsg]).catch(err => console.error('Error marking messages as read:', err));
 
         // Invertir el orden para mostrar mas antiguos primero (el query DESC trae los mas recientes)
         const mensajes = result.rows.reverse();
@@ -966,10 +990,10 @@ router.post('/whatsapp/conversaciones/:id/mensajes', authMiddleware, requireAdmi
         const { id } = req.params;
         const { contenido } = req.body;
 
-        // Obtener numero del cliente de la conversacion
+        // Obtener numero del cliente de la conversacion (scoped por tenant)
         const convResult = await pool.query(`
-            SELECT celular FROM conversaciones_whatsapp WHERE id = $1
-        `, [id]);
+            SELECT celular FROM conversaciones_whatsapp WHERE id = $1 AND tenant_id = $2
+        `, [id, tenantId(req)]);
 
         if (convResult.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Conversacion no encontrada' });
@@ -1040,10 +1064,11 @@ router.get('/whatsapp/conversaciones/:id/paciente', authMiddleware, requireAdmin
     try {
         const { id } = req.params;
 
-        // Obtener numero del cliente de la conversacion
+        // Obtener numero del cliente de la conversacion (scoped por tenant)
+        const tIdPat = tenantId(req);
         const convResult = await pool.query(`
-            SELECT celular FROM conversaciones_whatsapp WHERE id = $1
-        `, [id]);
+            SELECT celular FROM conversaciones_whatsapp WHERE id = $1 AND tenant_id = $2
+        `, [id, tIdPat]);
 
         if (convResult.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Conversacion no encontrada' });
@@ -1051,7 +1076,7 @@ router.get('/whatsapp/conversaciones/:id/paciente', authMiddleware, requireAdmin
 
         const numeroCliente = convResult.rows[0].celular;
 
-        // Buscar paciente en HistoriaClinica
+        // Buscar paciente en HistoriaClinica (scoped por tenant)
         const celularLimpio = numeroCliente.replace(/\D/g, '').replace(/^57/, '');
         const celularCon57 = '57' + celularLimpio;
         const celularConPlus = '+57' + celularLimpio;
@@ -1061,10 +1086,10 @@ router.get('/whatsapp/conversaciones/:id/paciente', authMiddleware, requireAdmin
                 "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
                 "fechaAtencion", "horaAtencion", "numeroId", "fechaConsulta", "examenes"
             FROM "HistoriaClinica"
-            WHERE "celular" IN ($1, $2, $3)
+            WHERE "celular" IN ($1, $2, $3) AND tenant_id = $4
             ORDER BY "_createdDate" DESC
             LIMIT 1
-        `, [celularLimpio, celularCon57, celularConPlus]);
+        `, [celularLimpio, celularCon57, celularConPlus, tIdPat]);
 
         if (pacienteResult.rows.length === 0) {
             return res.status(404).json({
@@ -1111,10 +1136,11 @@ router.post('/whatsapp/conversaciones/:id/media', authMiddleware, requireAdmin, 
             return res.status(400).json({ success: false, message: 'El archivo excede el tamano maximo de 16MB' });
         }
 
-        // Obtener numero del cliente de la conversacion
+        // Obtener numero del cliente de la conversacion (scoped por tenant)
+        const tIdMedia = tenantId(req);
         const convResult = await pool.query(`
-            SELECT celular FROM conversaciones_whatsapp WHERE id = $1
-        `, [id]);
+            SELECT celular FROM conversaciones_whatsapp WHERE id = $1 AND tenant_id = $2
+        `, [id, tIdMedia]);
 
         if (convResult.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Conversacion no encontrada' });
@@ -1151,9 +1177,9 @@ router.post('/whatsapp/conversaciones/:id/media', authMiddleware, requireAdmin, 
 
         const insertQuery = `
             INSERT INTO mensajes_whatsapp (
-                conversacion_id, contenido, direccion, sid_twilio, tipo_mensaje, media_url, media_type
+                conversacion_id, contenido, direccion, sid_twilio, tipo_mensaje, media_url, media_type, tenant_id
             )
-            VALUES ($1, $2, 'saliente', $3, $4, $5, $6)
+            VALUES ($1, $2, 'saliente', $3, $4, $5, $6, $7)
             RETURNING *
         `;
 
@@ -1163,15 +1189,16 @@ router.post('/whatsapp/conversaciones/:id/media', authMiddleware, requireAdmin, 
             twilioResult.sid,
             tipoMensaje,
             JSON.stringify([twilioResult.mediaUrl]),
-            JSON.stringify([file.mimetype])
+            JSON.stringify([file.mimetype]),
+            tIdMedia
         ]);
 
-        // Actualizar fecha de ultima actividad
+        // Actualizar fecha de ultima actividad (scoped por tenant)
         await pool.query(`
             UPDATE conversaciones_whatsapp
             SET fecha_ultima_actividad = NOW()
-            WHERE id = $1
-        `, [id]);
+            WHERE id = $1 AND tenant_id = $2
+        `, [id, tIdMedia]);
 
         // Emitir evento WebSocket para actualizacion en tiempo real
         if (global.emitWhatsAppEvent) {
@@ -1227,10 +1254,11 @@ router.patch('/whatsapp/conversaciones/:id/estado', authMiddleware, requireAdmin
         }
 
         values.push(id);
+        values.push(tenantId(req));
         const query = `
             UPDATE conversaciones_whatsapp
             SET ${updates.join(', ')}, fecha_ultima_actividad = NOW()
-            WHERE id = $${paramCount}
+            WHERE id = $${paramCount} AND tenant_id = $${paramCount + 1}
             RETURNING *
         `;
 
@@ -1256,9 +1284,9 @@ router.post('/whatsapp/conversaciones/:id/toggle-bot', authMiddleware, requireAd
         const result = await pool.query(`
             UPDATE conversaciones_whatsapp
             SET "stopBot" = $1, fecha_ultima_actividad = NOW()
-            WHERE id = $2
+            WHERE id = $2 AND tenant_id = $3
             RETURNING id, "stopBot"
-        `, [stopBot, id]);
+        `, [stopBot, id, tenantId(req)]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Conversacion no encontrada' });

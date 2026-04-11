@@ -2,6 +2,11 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 
+// Multi-tenant helper (ver CLAUDE.md)
+function tenantId(req) {
+    return (req.tenant && req.tenant.id) || 'bsl';
+}
+
 // Listar todos los médicos activos
 router.get('/', async (req, res) => {
     try {
@@ -10,9 +15,9 @@ router.get('/', async (req, res) => {
                    numero_licencia, tipo_licencia, fecha_vencimiento_licencia, especialidad,
                    firma, activo, created_at, COALESCE(tiempo_consulta, 10) as tiempo_consulta, alias
             FROM medicos
-            WHERE activo = true
+            WHERE activo = true AND tenant_id = $1
             ORDER BY primer_apellido, primer_nombre
-        `);
+        `, [tenantId(req)]);
 
         res.json({
             success: true,
@@ -33,7 +38,10 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const result = await pool.query('SELECT * FROM medicos WHERE id = $1', [id]);
+        const result = await pool.query(
+            'SELECT * FROM medicos WHERE id = $1 AND tenant_id = $2',
+            [id, tenantId(req)]
+        );
 
         if (result.rows.length === 0) {
             return res.status(404).json({
@@ -74,8 +82,8 @@ router.post('/', async (req, res) => {
         const result = await pool.query(`
             INSERT INTO medicos (
                 primer_nombre, segundo_nombre, primer_apellido, segundo_apellido,
-                alias, numero_licencia, tipo_licencia, fecha_vencimiento_licencia, especialidad, firma
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                alias, numero_licencia, tipo_licencia, fecha_vencimiento_licencia, especialidad, firma, tenant_id
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             RETURNING *
         `, [
             primerNombre,
@@ -87,10 +95,11 @@ router.post('/', async (req, res) => {
             tipoLicencia || null,
             fechaVencimientoLicencia ? new Date(fechaVencimientoLicencia) : null,
             especialidad || null,
-            firma || null
+            firma || null,
+            tenantId(req)
         ]);
 
-        console.log(`Medico creado: ${primerNombre} ${primerApellido} (Licencia: ${numeroLicencia})`);
+        console.log(`Medico creado: ${primerNombre} ${primerApellido} (Licencia: ${numeroLicencia}) tenant: ${tenantId(req)}`);
 
         res.json({
             success: true,
@@ -130,7 +139,7 @@ router.put('/:id', async (req, res) => {
                 firma = COALESCE($10, firma),
                 activo = COALESCE($11, activo),
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = $12
+            WHERE id = $12 AND tenant_id = $13
             RETURNING *
         `, [
             primerNombre,
@@ -144,7 +153,8 @@ router.put('/:id', async (req, res) => {
             especialidad,
             firma,
             activo,
-            id
+            id,
+            tenantId(req)
         ]);
 
         if (result.rows.length === 0) {
@@ -178,9 +188,9 @@ router.delete('/:id', async (req, res) => {
 
         const result = await pool.query(`
             UPDATE medicos SET activo = false, updated_at = CURRENT_TIMESTAMP
-            WHERE id = $1
+            WHERE id = $1 AND tenant_id = $2
             RETURNING id, primer_nombre, primer_apellido
-        `, [id]);
+        `, [id, tenantId(req)]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({
@@ -223,9 +233,9 @@ router.put('/:id/tiempo-consulta', async (req, res) => {
             UPDATE medicos SET
                 tiempo_consulta = $1,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = $2
+            WHERE id = $2 AND tenant_id = $3
             RETURNING id, primer_nombre, primer_apellido, tiempo_consulta
-        `, [tiempoConsulta, id]);
+        `, [tiempoConsulta, id, tenantId(req)]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({
@@ -260,6 +270,7 @@ router.get('/:id/disponibilidad', async (req, res) => {
     try {
         const { id } = req.params;
         const { modalidad, agrupado } = req.query; // agrupado=true para agrupar rangos por dia
+        const tId = tenantId(req);
 
         let query = `
             SELECT id, medico_id, dia_semana,
@@ -268,12 +279,12 @@ router.get('/:id/disponibilidad', async (req, res) => {
                    COALESCE(modalidad, 'presencial') as modalidad,
                    activo
             FROM medicos_disponibilidad
-            WHERE medico_id = $1
+            WHERE medico_id = $1 AND tenant_id = $2
         `;
-        const params = [id];
+        const params = [id, tId];
 
         if (modalidad) {
-            query += ` AND modalidad = $2`;
+            query += ` AND modalidad = $3`;
             params.push(modalidad);
         }
 
@@ -326,6 +337,7 @@ router.post('/:id/disponibilidad', async (req, res) => {
     try {
         const { id } = req.params;
         const { disponibilidad, modalidad = 'presencial' } = req.body;
+        const tId = tenantId(req);
 
         if (!Array.isArray(disponibilidad)) {
             return res.status(400).json({
@@ -334,8 +346,11 @@ router.post('/:id/disponibilidad', async (req, res) => {
             });
         }
 
-        // Verificar que el medico existe
-        const medicoCheck = await pool.query('SELECT id FROM medicos WHERE id = $1', [id]);
+        // Verificar que el medico existe (scoped por tenant)
+        const medicoCheck = await pool.query(
+            'SELECT id FROM medicos WHERE id = $1 AND tenant_id = $2',
+            [id, tId]
+        );
         if (medicoCheck.rows.length === 0) {
             return res.status(404).json({
                 success: false,
@@ -343,8 +358,11 @@ router.post('/:id/disponibilidad', async (req, res) => {
             });
         }
 
-        // Eliminar disponibilidad existente SOLO para esta modalidad
-        await pool.query('DELETE FROM medicos_disponibilidad WHERE medico_id = $1 AND modalidad = $2', [id, modalidad]);
+        // Eliminar disponibilidad existente SOLO para esta modalidad (scoped por tenant)
+        await pool.query(
+            'DELETE FROM medicos_disponibilidad WHERE medico_id = $1 AND modalidad = $2 AND tenant_id = $3',
+            [id, modalidad, tId]
+        );
 
         // Insertar nueva disponibilidad
         // Ahora soporta multiples rangos por dia usando el campo 'rangos'
@@ -355,18 +373,18 @@ router.post('/:id/disponibilidad', async (req, res) => {
                     for (const rango of dia.rangos) {
                         if (rango.hora_inicio && rango.hora_fin) {
                             await pool.query(`
-                                INSERT INTO medicos_disponibilidad (medico_id, dia_semana, hora_inicio, hora_fin, modalidad, activo)
-                                VALUES ($1, $2, $3, $4, $5, $6)
-                            `, [id, dia.dia_semana, rango.hora_inicio, rango.hora_fin, modalidad, true]);
+                                INSERT INTO medicos_disponibilidad (medico_id, dia_semana, hora_inicio, hora_fin, modalidad, activo, tenant_id)
+                                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                            `, [id, dia.dia_semana, rango.hora_inicio, rango.hora_fin, modalidad, true, tId]);
                         }
                     }
                 }
                 // Formato anterior: { dia_semana, activo, hora_inicio, hora_fin }
                 else if (dia.hora_inicio && dia.hora_fin) {
                     await pool.query(`
-                        INSERT INTO medicos_disponibilidad (medico_id, dia_semana, hora_inicio, hora_fin, modalidad, activo)
-                        VALUES ($1, $2, $3, $4, $5, $6)
-                    `, [id, dia.dia_semana, dia.hora_inicio, dia.hora_fin, modalidad, dia.activo]);
+                        INSERT INTO medicos_disponibilidad (medico_id, dia_semana, hora_inicio, hora_fin, modalidad, activo, tenant_id)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    `, [id, dia.dia_semana, dia.hora_inicio, dia.hora_fin, modalidad, dia.activo, tId]);
                 }
             }
         }
@@ -392,12 +410,13 @@ router.delete('/:id/disponibilidad/:dia', async (req, res) => {
     try {
         const { id, dia } = req.params;
         const { modalidad } = req.query;
+        const tId = tenantId(req);
 
-        let query = `DELETE FROM medicos_disponibilidad WHERE medico_id = $1 AND dia_semana = $2`;
-        const params = [id, dia];
+        let query = `DELETE FROM medicos_disponibilidad WHERE medico_id = $1 AND dia_semana = $2 AND tenant_id = $3`;
+        const params = [id, dia, tId];
 
         if (modalidad) {
-            query += ` AND modalidad = $3`;
+            query += ` AND modalidad = $4`;
             params.push(modalidad);
         }
 

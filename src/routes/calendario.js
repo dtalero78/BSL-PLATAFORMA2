@@ -3,6 +3,11 @@ const router = express.Router();
 const pool = require('../config/database');
 const { construirFechaAtencionColombia } = require('../helpers/date');
 
+// Multi-tenant helper (ver CLAUDE.md)
+function tenantId(req) {
+    return (req.tenant && req.tenant.id) || 'bsl';
+}
+
 // ==================== CALENDARIO ENDPOINTS ====================
 
 // GET /calendario/mes - Obtener conteo de citas por día del mes
@@ -30,11 +35,12 @@ router.get('/calendario/mes', async (req, res) => {
             WHERE fecha_atencion IS NOT NULL
               AND fecha_atencion >= $1
               AND fecha_atencion <= $2
+              AND tenant_id = $3
         `;
-        const params = [startDate, endDateStr];
+        const params = [startDate, endDateStr, tenantId(req)];
 
         if (medico) {
-            query += ` AND medico = $3`;
+            query += ` AND medico = $4`;
             params.push(medico);
         }
 
@@ -101,11 +107,12 @@ router.get('/calendario/mes-detalle', async (req, res) => {
             WHERE "fechaAtencion" IS NOT NULL
               AND "fechaAtencion" >= $1::timestamp
               AND "fechaAtencion" < ($2::timestamp + interval '1 day')
+              AND tenant_id = $3
             GROUP BY "fechaAtencion", "medico", "atendido"
             ORDER BY "fechaAtencion", total DESC
         `;
 
-        const result = await pool.query(query, [startDate, endDateStr]);
+        const result = await pool.query(query, [startDate, endDateStr, tenantId(req)]);
 
         const hoy = new Date();
         hoy.setHours(0, 0, 0, 0);
@@ -203,14 +210,15 @@ router.get('/calendario/dia', async (req, res) => {
             FROM "HistoriaClinica"
             WHERE "fechaAtencion" >= $1::timestamp
               AND "fechaAtencion" < ($1::timestamp + interval '1 day')
+              AND tenant_id = $2
         `;
-        const params = [fecha];
+        const params = [fecha, tenantId(req)];
 
         if (medico) {
             if (medico === 'Sin asignar') {
                 query += ` AND "medico" IS NULL`;
             } else {
-                query += ` AND "medico" = $2`;
+                query += ` AND "medico" = $3`;
                 params.push(medico);
             }
         }
@@ -251,13 +259,15 @@ router.get('/horarios-disponibles', async (req, res) => {
         const fechaObj = new Date(fecha + 'T12:00:00');
         const diaSemana = fechaObj.getDay();
 
-        // Obtener tiempo de consulta y ID del médico
+        // Obtener tiempo de consulta y ID del médico (scoped por tenant)
+        const tIdCal = tenantId(req);
         const medicoResult = await pool.query(`
             SELECT id, COALESCE(tiempo_consulta, 10) as tiempo_consulta
             FROM medicos
             WHERE CONCAT(primer_nombre, ' ', primer_apellido) = $1
             AND activo = true
-        `, [medico]);
+            AND tenant_id = $2
+        `, [medico, tIdCal]);
 
         if (medicoResult.rows.length === 0) {
             return res.status(404).json({
@@ -274,9 +284,9 @@ router.get('/horarios-disponibles', async (req, res) => {
             SELECT TO_CHAR(hora_inicio, 'HH24:MI') as hora_inicio,
                    TO_CHAR(hora_fin, 'HH24:MI') as hora_fin
             FROM medicos_disponibilidad
-            WHERE medico_id = $1 AND dia_semana = $2 AND modalidad = $3 AND activo = true
+            WHERE medico_id = $1 AND dia_semana = $2 AND modalidad = $3 AND activo = true AND tenant_id = $4
             ORDER BY hora_inicio
-        `, [medicoId, diaSemana, modalidad]);
+        `, [medicoId, diaSemana, modalidad, tIdCal]);
 
         // Si no hay disponibilidad configurada para este día y modalidad
         let rangosHorarios = [];
@@ -292,8 +302,8 @@ router.get('/horarios-disponibles', async (req, res) => {
             // Verificar si tiene alguna disponibilidad configurada para esta modalidad (en cualquier día)
             const tieneConfigResult = await pool.query(`
                 SELECT COUNT(*) as total FROM medicos_disponibilidad
-                WHERE medico_id = $1 AND modalidad = $2
-            `, [medicoId, modalidad]);
+                WHERE medico_id = $1 AND modalidad = $2 AND tenant_id = $3
+            `, [medicoId, modalidad, tIdCal]);
 
             // Si tiene configuración para esta modalidad pero no para este día, no está disponible
             if (parseInt(tieneConfigResult.rows[0].total) > 0) {
@@ -327,7 +337,8 @@ router.get('/horarios-disponibles', async (req, res) => {
               AND "medico" = $2
               AND "horaAtencion" IS NOT NULL
               AND "atendido" = 'PENDIENTE'
-        `, [fecha, medico]);
+              AND tenant_id = $3
+        `, [fecha, medico, tIdCal]);
 
         const horasOcupadas = citasResult.rows.map(r => r.hora);
 
@@ -399,20 +410,22 @@ router.get('/turnos-disponibles', async (req, res) => {
 
         // Obtener todos los médicos activos con disponibilidad para esta modalidad y día (excepto NUBIA)
         // Ahora puede devolver múltiples filas por médico (múltiples rangos horarios)
+        const tIdTurnos = tenantId(req);
         const medicosResult = await pool.query(`
             SELECT m.id, m.primer_nombre, m.primer_apellido, m.alias,
                    COALESCE(m.tiempo_consulta, 10) as tiempo_consulta,
                    TO_CHAR(md.hora_inicio, 'HH24:MI') as hora_inicio,
                    TO_CHAR(md.hora_fin, 'HH24:MI') as hora_fin
             FROM medicos m
-            INNER JOIN medicos_disponibilidad md ON m.id = md.medico_id
+            INNER JOIN medicos_disponibilidad md ON m.id = md.medico_id AND md.tenant_id = m.tenant_id
             WHERE m.activo = true
               AND md.activo = true
               AND md.modalidad = $1
               AND md.dia_semana = $2
+              AND m.tenant_id = $3
               AND UPPER(CONCAT(m.primer_nombre, ' ', m.primer_apellido)) NOT LIKE '%NUBIA%'
             ORDER BY m.primer_nombre, md.hora_inicio
-        `, [modalidad, diaSemana]);
+        `, [modalidad, diaSemana, tIdTurnos]);
 
         if (medicosResult.rows.length === 0) {
             return res.json({
@@ -460,7 +473,8 @@ router.get('/turnos-disponibles', async (req, res) => {
                   AND "medico" = $2
                   AND "horaAtencion" IS NOT NULL
                   AND "atendido" = 'PENDIENTE'
-            `, [fecha, medicoNombre]);
+                  AND tenant_id = $3
+            `, [fecha, medicoNombre, tIdTurnos]);
 
             const horasOcupadas = citasResult.rows.map(r => {
                 if (!r.hora) return null;
@@ -561,18 +575,19 @@ router.get('/medicos-por-modalidad', async (req, res) => {
             SELECT DISTINCT m.id, m.primer_nombre, m.primer_apellido, m.alias,
                    m.especialidad, COALESCE(m.tiempo_consulta, 10) as tiempo_consulta
             FROM medicos m
-            INNER JOIN medicos_disponibilidad md ON m.id = md.medico_id
+            INNER JOIN medicos_disponibilidad md ON m.id = md.medico_id AND md.tenant_id = m.tenant_id
             WHERE m.activo = true
               AND md.activo = true
               AND md.modalidad = $1
+              AND m.tenant_id = $2
         `;
-        const params = [modalidad];
+        const params = [modalidad, tenantId(req)];
 
         // Si se proporciona fecha, filtrar por día de la semana
         if (fecha) {
             const fechaObj = new Date(fecha + 'T12:00:00');
             const diaSemana = fechaObj.getDay();
-            query += ` AND md.dia_semana = $2`;
+            query += ` AND md.dia_semana = $3`;
             params.push(diaSemana);
         }
 
@@ -603,8 +618,9 @@ router.get('/examenes', async (req, res) => {
         const result = await pool.query(`
             SELECT id, nombre, activo, created_at
             FROM examenes
+            WHERE tenant_id = $1
             ORDER BY nombre ASC
-        `);
+        `, [tenantId(req)]);
         res.json(result.rows);
     } catch (error) {
         console.error('Error al obtener exámenes:', error);
@@ -619,8 +635,8 @@ router.get('/examenes/:id', async (req, res) => {
         const result = await pool.query(`
             SELECT id, nombre, activo, created_at
             FROM examenes
-            WHERE id = $1
-        `, [id]);
+            WHERE id = $1 AND tenant_id = $2
+        `, [id, tenantId(req)]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Examen no encontrado' });
@@ -642,10 +658,10 @@ router.post('/examenes', async (req, res) => {
         }
 
         const result = await pool.query(`
-            INSERT INTO examenes (nombre)
-            VALUES ($1)
+            INSERT INTO examenes (nombre, tenant_id)
+            VALUES ($1, $2)
             RETURNING id, nombre, activo, created_at
-        `, [nombre.trim()]);
+        `, [nombre.trim(), tenantId(req)]);
 
         res.status(201).json(result.rows[0]);
     } catch (error) {
@@ -670,9 +686,9 @@ router.put('/examenes/:id', async (req, res) => {
         const result = await pool.query(`
             UPDATE examenes
             SET nombre = $1, activo = $2
-            WHERE id = $3
+            WHERE id = $3 AND tenant_id = $4
             RETURNING id, nombre, activo, created_at
-        `, [nombre.trim(), activo !== false, id]);
+        `, [nombre.trim(), activo !== false, id, tenantId(req)]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Examen no encontrado' });
@@ -693,9 +709,9 @@ router.delete('/examenes/:id', async (req, res) => {
         const { id } = req.params;
         const result = await pool.query(`
             DELETE FROM examenes
-            WHERE id = $1
+            WHERE id = $1 AND tenant_id = $2
             RETURNING id
-        `, [id]);
+        `, [id, tenantId(req)]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Examen no encontrado' });

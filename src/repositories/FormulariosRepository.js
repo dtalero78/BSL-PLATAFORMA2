@@ -3,86 +3,57 @@ const BaseRepository = require('./BaseRepository');
 /**
  * Repository para la tabla formularios
  * Métodos específicos para formularios de pacientes
+ *
+ * Multi-tenant (ver CLAUDE.md): todos los métodos aceptan tenantId opcional (default 'bsl').
  */
 class FormulariosRepository extends BaseRepository {
     constructor() {
         super('formularios');
     }
 
-    /**
-     * Busca por número de documento
-     * @param {string} numeroId
-     * @returns {Promise<Object|null>}
-     */
-    async findByNumeroId(numeroId) {
-        return await this.findOne({ numero_id: numeroId });
+    async findByNumeroId(numeroId, tenantId = 'bsl') {
+        return await this.findOne({ numero_id: numeroId }, { tenantId });
     }
 
-    /**
-     * Busca múltiples formularios por número de documento
-     * @param {string} numeroId
-     * @param {Object} options - {limit, offset, orderBy, orderDir}
-     * @returns {Promise<Array>}
-     */
     async findAllByNumeroId(numeroId, options = {}) {
         const defaultOptions = {
             orderBy: 'fecha_registro',
             orderDir: 'DESC',
+            tenantId: 'bsl',
             ...options
         };
         return await this.findAll({ numero_id: numeroId }, defaultOptions);
     }
 
-    /**
-     * Busca por Wix ID
-     * @param {string} wixId
-     * @returns {Promise<Object|null>}
-     */
-    async findByWixId(wixId) {
-        return await this.findOne({ wix_id: wixId });
+    async findByWixId(wixId, tenantId = 'bsl') {
+        return await this.findOne({ wix_id: wixId }, { tenantId });
     }
 
-    /**
-     * Busca por celular
-     * @param {string} celular
-     * @returns {Promise<Object|null>}
-     */
-    async findByCelular(celular) {
-        return await this.findOne({ celular });
+    async findByCelular(celular, tenantId = 'bsl') {
+        return await this.findOne({ celular }, { tenantId });
     }
 
-    /**
-     * Busca múltiples formularios por celular
-     * @param {string} celular
-     * @param {Object} options - {limit, offset, orderBy, orderDir}
-     * @returns {Promise<Array>}
-     */
     async findAllByCelular(celular, options = {}) {
         const defaultOptions = {
             orderBy: 'fecha_registro',
             orderDir: 'DESC',
+            tenantId: 'bsl',
             ...options
         };
         return await this.findAll({ celular }, defaultOptions);
     }
 
-    /**
-     * Busca por código de empresa con paginación y búsqueda
-     * @param {string} codEmpresa
-     * @param {Object} options - {limit, offset, buscar}
-     * @returns {Promise<Array>}
-     */
     async findByCodEmpresa(codEmpresa, options = {}) {
-        const { limit = 100, offset = 0, buscar } = options;
+        const { limit = 100, offset = 0, buscar, tenantId = 'bsl' } = options;
 
         let query = `
             SELECT *
             FROM ${this.tableName}
-            WHERE "cod_empresa" = $1
+            WHERE "cod_empresa" = $1 AND tenant_id = $2
         `;
 
-        const params = [codEmpresa];
-        let paramIndex = 2;
+        const params = [codEmpresa, tenantId];
+        let paramIndex = 3;
 
         if (buscar) {
             query += ` AND (
@@ -104,15 +75,9 @@ class FormulariosRepository extends BaseRepository {
         return result.rows;
     }
 
-    /**
-     * Cuenta registros por empresa con búsqueda opcional
-     * @param {string} codEmpresa
-     * @param {string} buscar - Término de búsqueda opcional
-     * @returns {Promise<number>}
-     */
-    async countByCodEmpresa(codEmpresa, buscar = null) {
-        let query = `SELECT COUNT(*) FROM ${this.tableName} WHERE "cod_empresa" = $1`;
-        const params = [codEmpresa];
+    async countByCodEmpresa(codEmpresa, buscar = null, tenantId = 'bsl') {
+        let query = `SELECT COUNT(*) FROM ${this.tableName} WHERE "cod_empresa" = $1 AND tenant_id = $2`;
+        const params = [codEmpresa, tenantId];
 
         if (buscar) {
             query += ` AND (
@@ -121,7 +86,7 @@ class FormulariosRepository extends BaseRepository {
                 COALESCE("primer_apellido", '') || ' ' ||
                 COALESCE("celular", '') || ' ' ||
                 COALESCE("email", '')
-            ) ILIKE $2`;
+            ) ILIKE $3`;
             params.push(`%${buscar}%`);
         }
 
@@ -129,45 +94,37 @@ class FormulariosRepository extends BaseRepository {
         return parseInt(result.rows[0].count);
     }
 
-    /**
-     * Busca formularios recientes (últimos N días)
-     * @param {number} dias - Número de días hacia atrás
-     * @param {Object} options - {limit, offset}
-     * @returns {Promise<Array>}
-     */
     async findRecientes(dias = 7, options = {}) {
-        const { limit = 100, offset = 0 } = options;
+        const { limit = 100, offset = 0, tenantId = 'bsl' } = options;
 
         const query = `
             SELECT *
             FROM ${this.tableName}
             WHERE "fecha_registro" >= NOW() - INTERVAL '${dias} days'
+              AND tenant_id = $3
             ORDER BY "fecha_registro" DESC
             LIMIT $1 OFFSET $2
         `;
 
-        const result = await this.query(query, [limit, offset]);
+        const result = await this.query(query, [limit, offset, tenantId]);
         return result.rows;
     }
 
-    /**
-     * Busca formularios con foto URL
-     * @param {Object} filters - Filtros adicionales
-     * @param {Object} options - {limit, offset}
-     * @returns {Promise<Array>}
-     */
     async findConFoto(filters = {}, options = {}) {
-        const { limit, offset } = options;
+        const { limit, offset, tenantId = 'bsl' } = options;
+
+        const mergedFilters = filters.tenant_id !== undefined
+            ? filters
+            : { ...filters, tenant_id: tenantId };
 
         let query = `SELECT * FROM ${this.tableName} WHERE "foto_url" IS NOT NULL`;
         const params = [];
         let paramIndex = 1;
 
-        // Agregar filtros adicionales
-        const filterKeys = Object.keys(filters);
+        const filterKeys = Object.keys(mergedFilters);
         if (filterKeys.length > 0) {
             const whereClauses = filterKeys.map(key => {
-                params.push(filters[key]);
+                params.push(mergedFilters[key]);
                 return `"${key}" = $${paramIndex++}`;
             });
             query += ` AND ${whereClauses.join(' AND ')}`;
@@ -188,55 +145,34 @@ class FormulariosRepository extends BaseRepository {
         return result.rows;
     }
 
-    /**
-     * Actualiza la foto URL de un formulario
-     * @param {string|number} id
-     * @param {string} fotoUrl
-     * @returns {Promise<Object|null>}
-     */
-    async actualizarFotoUrl(id, fotoUrl) {
-        return await this.update(id, { foto_url: fotoUrl }, 'id');
+    async actualizarFotoUrl(id, fotoUrl, tenantId = 'bsl') {
+        return await this.update(id, { foto_url: fotoUrl }, 'id', tenantId);
     }
 
-    /**
-     * Encuentra el último formulario de un paciente
-     * @param {string} numeroId
-     * @returns {Promise<Object|null>}
-     */
-    async findUltimoPorNumeroId(numeroId) {
+    async findUltimoPorNumeroId(numeroId, tenantId = 'bsl') {
         const query = `
             SELECT *
             FROM ${this.tableName}
-            WHERE "numero_id" = $1
+            WHERE "numero_id" = $1 AND tenant_id = $2
             ORDER BY "fecha_registro" DESC
             LIMIT 1
         `;
-        const result = await this.query(query, [numeroId]);
+        const result = await this.query(query, [numeroId, tenantId]);
         return result.rows[0] || null;
     }
 
-    /**
-     * Busca formulario por wix_id o numero_id (existencia)
-     * @param {string} wixId
-     * @param {string} numeroId
-     * @returns {Promise<Object|null>}
-     */
-    async findByWixIdOrNumeroId(wixId, numeroId) {
+    async findByWixIdOrNumeroId(wixId, numeroId, tenantId = 'bsl') {
         const query = `
             SELECT id FROM ${this.tableName}
-            WHERE wix_id = $1 OR numero_id = $2
+            WHERE (wix_id = $1 OR numero_id = $2)
+              AND tenant_id = $3
             LIMIT 1
         `;
-        const result = await this.query(query, [wixId, numeroId]);
+        const result = await this.query(query, [wixId, numeroId, tenantId]);
         return result.rows[0] || null;
     }
 
-    /**
-     * Obtiene estadísticas de salud por empresa para IA
-     * @param {string} codEmpresa
-     * @returns {Promise<Object>}
-     */
-    async getEstadisticasSalud(codEmpresa) {
+    async getEstadisticasSalud(codEmpresa, tenantId = 'bsl') {
         const query = `
             SELECT
                 COUNT(*) as total_empleados,
@@ -286,9 +222,9 @@ class FormulariosRepository extends BaseRepository {
                 COUNT(*) FILTER (WHERE UPPER(ejercicio) = '2 DIAS SEMANALES' OR UPPER(ejercicio) = '2 DIAS SEMANALES') as ejercicio_2_dias,
                 COUNT(*) FILTER (WHERE UPPER(ejercicio) LIKE '%+ DE 2%' OR UPPER(ejercicio) LIKE '%MAS DE 2%') as ejercicio_mas_2_dias
             FROM ${this.tableName}
-            WHERE UPPER(cod_empresa) = UPPER($1)
+            WHERE UPPER(cod_empresa) = UPPER($1) AND tenant_id = $2
         `;
-        const result = await this.query(query, [codEmpresa]);
+        const result = await this.query(query, [codEmpresa, tenantId]);
         return result.rows[0];
     }
 }
