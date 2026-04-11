@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
-const { authMiddleware, requireAdmin, JWT_SECRET, hashPassword } = require('../middleware/auth');
+const { authMiddleware, requireAdmin, requireSuperAdmin, JWT_SECRET, hashPassword } = require('../middleware/auth');
 const { sendWhatsAppFreeText, sendWhatsAppMedia } = require('../services/whatsapp');
 const { UsuariosRepository } = require('../repositories');
 
@@ -568,10 +568,13 @@ router.post('/usuarios', authMiddleware, requireAdmin, async (req, res) => {
     }
 });
 
-// ========== ENDPOINTS PARA EXPLORAR TABLAS DE BASE DE DATOS (Admin) ==========
+// ========== ENDPOINTS PARA EXPLORAR TABLAS DE BASE DE DATOS (Super-Admin BSL) ==========
+// Estos endpoints son herramientas de inspección de plataforma, no del tenant. Operan sobre
+// nombres de tabla dinámicos y no pueden inyectar filtro tenant_id de forma segura, por lo
+// que están reservados al super-admin BSL (ver requireSuperAdmin en auth middleware).
 
 // GET /tablas - Listar todas las tablas de la base de datos
-router.get('/tablas', authMiddleware, requireAdmin, async (req, res) => {
+router.get('/tablas', authMiddleware, requireSuperAdmin, async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT table_name
@@ -592,7 +595,7 @@ router.get('/tablas', authMiddleware, requireAdmin, async (req, res) => {
 });
 
 // GET /tablas/:nombre/estructura - Obtener estructura de una tabla
-router.get('/tablas/:nombre/estructura', authMiddleware, requireAdmin, async (req, res) => {
+router.get('/tablas/:nombre/estructura', authMiddleware, requireSuperAdmin, async (req, res) => {
     try {
         const { nombre } = req.params;
 
@@ -625,7 +628,7 @@ router.get('/tablas/:nombre/estructura', authMiddleware, requireAdmin, async (re
 });
 
 // GET /tablas/:nombre/datos - Obtener datos de una tabla con paginacion
-router.get('/tablas/:nombre/datos', authMiddleware, requireAdmin, async (req, res) => {
+router.get('/tablas/:nombre/datos', authMiddleware, requireSuperAdmin, async (req, res) => {
     try {
         const { nombre } = req.params;
         const limit = parseInt(req.query.limit) || 50;

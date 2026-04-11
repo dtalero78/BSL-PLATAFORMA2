@@ -358,7 +358,7 @@ router.get('/perfil', authMiddleware, async (req, res) => {
 // GET /mis-permisos - Obtener permisos del usuario autenticado
 router.get('/mis-permisos', authMiddleware, async (req, res) => {
     try {
-        const permisos = await obtenerPermisosUsuario(req.usuario.id);
+        const permisos = await obtenerPermisosUsuario(req.usuario.id, req.usuario.tenant_id);
 
         res.json({
             success: true,

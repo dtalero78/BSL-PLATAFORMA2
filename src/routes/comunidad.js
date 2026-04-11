@@ -3,6 +3,11 @@ const router = express.Router();
 const pool = require('../config/database');
 const { authMiddleware } = require('../middleware/auth');
 
+// Multi-tenant helper (ver CLAUDE.md)
+function tenantId(req) {
+    return (req.tenant && req.tenant.id) || 'bsl';
+}
+
 // ========== COMUNIDAD DE SALUD ==========
 
 // GET /pacientes - Listado de pacientes con sus perfiles de salud
@@ -511,10 +516,10 @@ router.post('/seguimiento', authMiddleware, async (req, res) => {
         }
 
         const result = await pool.query(`
-            INSERT INTO seguimiento_comunidad (historia_clinica_id, numero_id, celular, perfil, tipo_mensaje, observacion, usuario_id)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            INSERT INTO seguimiento_comunidad (historia_clinica_id, numero_id, celular, perfil, tipo_mensaje, observacion, usuario_id, tenant_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING id, created_at
-        `, [historia_clinica_id || null, numero_id, celular || null, perfil || null, tipo_mensaje || null, observacion, req.usuario.id]);
+        `, [historia_clinica_id || null, numero_id, celular || null, perfil || null, tipo_mensaje || null, observacion, req.usuario.id, tenantId(req)]);
 
         res.json({ success: true, data: result.rows[0] });
     } catch (error) {
@@ -529,10 +534,10 @@ router.get('/seguimiento/:numeroId', authMiddleware, async (req, res) => {
         const result = await pool.query(`
             SELECT s.*, u.nombre_completo as usuario
             FROM seguimiento_comunidad s
-            LEFT JOIN usuarios u ON s.usuario_id = u.id
-            WHERE s.numero_id = $1
+            LEFT JOIN usuarios u ON s.usuario_id = u.id AND u.tenant_id = s.tenant_id
+            WHERE s.numero_id = $1 AND s.tenant_id = $2
             ORDER BY s.created_at DESC
-        `, [req.params.numeroId]);
+        `, [req.params.numeroId, tenantId(req)]);
 
         res.json({ success: true, data: result.rows });
     } catch (error) {
@@ -545,11 +550,11 @@ router.get('/seguimiento/:numeroId', authMiddleware, async (req, res) => {
 router.get('/seguimiento-ids', authMiddleware, async (req, res) => {
     try {
         const { perfil } = req.query;
-        let query = `SELECT DISTINCT numero_id FROM seguimiento_comunidad`;
-        const params = [];
+        const params = [tenantId(req)];
+        let query = `SELECT DISTINCT numero_id FROM seguimiento_comunidad WHERE tenant_id = $1`;
         if (perfil) {
             params.push(perfil);
-            query += ` WHERE perfil = $1`;
+            query += ` AND perfil = $2`;
         }
         const result = await pool.query(query, params);
         const ids = result.rows.map(r => r.numero_id);

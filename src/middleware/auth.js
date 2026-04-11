@@ -31,13 +31,15 @@ async function verificarPassword(password, hash) {
     return bcrypt.compare(password, hash);
 }
 
-// Función para obtener permisos de un usuario
-async function obtenerPermisosUsuario(userId) {
+// Función para obtener permisos de un usuario.
+// Multi-tenant: filtra por tenant_id para defense-in-depth. Aunque usuario.id es
+// único global, la tabla permisos_usuario tiene tenant_id y debe respetarse.
+async function obtenerPermisosUsuario(userId, tenantId = 'bsl') {
     try {
         const result = await pool.query(`
             SELECT permiso FROM permisos_usuario
-            WHERE usuario_id = $1 AND activo = true
-        `, [userId]);
+            WHERE usuario_id = $1 AND activo = true AND tenant_id = $2
+        `, [userId, tenantId]);
 
         return result.rows.map(row => row.permiso);
     } catch (error) {

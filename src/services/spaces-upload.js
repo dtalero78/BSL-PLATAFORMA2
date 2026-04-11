@@ -16,13 +16,17 @@ const s3Client = new S3Client({
 });
 
 /**
- * Sube una imagen base64 a DigitalOcean Spaces y retorna la URL pública
+ * Sube una imagen base64 a DigitalOcean Spaces y retorna la URL pública.
+ * Multi-tenant: el path incluye tenantId como prefijo para evitar colisiones
+ * entre tenants con el mismo numeroId (cédula colombiana) y dificultar la
+ * enumeración cross-tenant.
  * @param {string} base64Data - Imagen en formato base64 (con o sin prefijo data:image)
  * @param {string} numeroId - Número de identificación del paciente
  * @param {number|string} formId - ID del formulario
+ * @param {string} [tenantId='bsl'] - ID del tenant dueño de la foto
  * @returns {Promise<string|null>} URL pública de la imagen o null si falla
  */
-async function subirFotoASpaces(base64Data, numeroId, formId) {
+async function subirFotoASpaces(base64Data, numeroId, formId, tenantId = 'bsl') {
     try {
         if (!base64Data || base64Data.length < 100) {
             console.log('⚠️ subirFotoASpaces: base64 inválido o muy pequeño');
@@ -49,9 +53,11 @@ async function subirFotoASpaces(base64Data, numeroId, formId) {
             return null;
         }
 
-        // Generar nombre único
+        // Generar nombre único. Para tenant='bsl' mantenemos el path legacy sin prefijo
+        // (zero-regression con URLs ya guardadas en BD). Tenants nuevos usan prefijo.
         const timestamp = Date.now();
-        const fileName = `fotos/${numeroId || 'unknown'}_${formId}_${timestamp}.${ext}`;
+        const tenantPrefix = (tenantId && tenantId !== 'bsl') ? `${tenantId}/` : '';
+        const fileName = `${tenantPrefix}fotos/${numeroId || 'unknown'}_${formId}_${timestamp}.${ext}`;
 
         // Subir a Spaces
         await s3Client.send(new PutObjectCommand({

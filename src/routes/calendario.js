@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 const { construirFechaAtencionColombia } = require('../helpers/date');
+const { authMiddleware } = require('../middleware/auth');
 
 // Multi-tenant helper (ver CLAUDE.md)
 function tenantId(req) {
@@ -613,7 +614,7 @@ router.get('/medicos-por-modalidad', async (req, res) => {
 // ==================== CRUD EXAMENES ====================
 
 // GET - Listar todos los exámenes
-router.get('/examenes', async (req, res) => {
+router.get('/examenes', authMiddleware, async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT id, nombre, activo, created_at
@@ -629,7 +630,7 @@ router.get('/examenes', async (req, res) => {
 });
 
 // GET - Obtener un examen por ID
-router.get('/examenes/:id', async (req, res) => {
+router.get('/examenes/:id', authMiddleware, async (req, res) => {
     try {
         const { id } = req.params;
         const result = await pool.query(`
@@ -649,7 +650,7 @@ router.get('/examenes/:id', async (req, res) => {
 });
 
 // POST - Crear nuevo examen
-router.post('/examenes', async (req, res) => {
+router.post('/examenes', authMiddleware, async (req, res) => {
     try {
         const { nombre } = req.body;
 
@@ -674,7 +675,7 @@ router.post('/examenes', async (req, res) => {
 });
 
 // PUT - Actualizar examen
-router.put('/examenes/:id', async (req, res) => {
+router.put('/examenes/:id', authMiddleware, async (req, res) => {
     try {
         const { id } = req.params;
         const { nombre, activo } = req.body;
@@ -704,7 +705,7 @@ router.put('/examenes/:id', async (req, res) => {
 });
 
 // DELETE - Eliminar examen
-router.delete('/examenes/:id', async (req, res) => {
+router.delete('/examenes/:id', authMiddleware, async (req, res) => {
     try {
         const { id } = req.params;
         const result = await pool.query(`

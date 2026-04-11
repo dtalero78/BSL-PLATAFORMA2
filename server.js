@@ -213,7 +213,10 @@ app.use('/api/envio-empresas', require('./src/routes/envio-empresas'));
 // Estadísticas
 app.use('/api/estadisticas', require('./src/routes/estadisticas'));
 
-app.use('/api/external', require('./src/routes/external'));
+// /api/external es BSL-only (integración SIIGO). Envuelto con requireBslTenant para
+// prevenir creación de órdenes huérfanas en tenants equivocados si alguien llamara
+// al endpoint desde otro hostname con la API key válida.
+app.use('/api/external', requireBslTenant, require('./src/routes/external'));
 
 // ========== CRON JOBS ==========
 

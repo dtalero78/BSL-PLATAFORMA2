@@ -26,15 +26,15 @@ router.post('/formulario', async (req, res) => {
             });
         }
 
-        // Subir foto a DigitalOcean Spaces si existe
+        // Subir foto a DigitalOcean Spaces si existe (path incluye tenant)
+        const tId = tenantId(req);
         let fotoUrl = null;
         if (datos.foto && datos.foto.startsWith('data:image')) {
             console.log('📤 Subiendo foto a DigitalOcean Spaces...');
-            fotoUrl = await subirFotoASpaces(datos.foto, datos.numeroId, 'new');
+            fotoUrl = await subirFotoASpaces(datos.foto, datos.numeroId, 'new', tId);
         }
 
         // Verificar si ya existe un formulario con este wix_id (scoped por tenant)
-        const tId = tenantId(req);
         let existeFormulario = false;
         if (datos.wixId) {
             const checkResult = await pool.query(
@@ -964,8 +964,8 @@ router.post('/actualizar-foto', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Formato de imagen invalido' });
         }
 
-        // Subir foto a DigitalOcean Spaces
-        const fotoUrl = await subirFotoASpaces(foto, numeroId, 'update');
+        // Subir foto a DigitalOcean Spaces (path incluye tenant)
+        const fotoUrl = await subirFotoASpaces(foto, numeroId, 'update', tenantId(req));
 
         if (!fotoUrl) {
             return res.status(500).json({ success: false, message: 'Error al subir la foto' });
