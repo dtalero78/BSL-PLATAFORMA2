@@ -204,7 +204,8 @@ router.post('/login', async (req, res) => {
                 nombreCompleto: usuario.nombre_completo,
                 rol: usuario.rol,
                 codEmpresa: usuario.cod_empresa,
-                numeroDocumento: usuario.numero_documento
+                numeroDocumento: usuario.numero_documento,
+                tenant_id: tId
             },
             expiresIn: 86400 // 24 horas en segundos
         });

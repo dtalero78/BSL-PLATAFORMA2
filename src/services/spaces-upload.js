@@ -102,10 +102,47 @@ async function subirMediaWhatsAppASpaces(buffer, fileName, mimeType) {
     }
 }
 
+/**
+ * Sube el logo de un tenant a Spaces con clave tenants/{tenantId}/logo.{ext}
+ * @param {Buffer} buffer - Buffer de la imagen
+ * @param {string} tenantId - Identificador del tenant
+ * @param {string} mimeType - MIME type (image/png, image/jpeg, image/webp)
+ * @returns {Promise<string>} URL pública del logo
+ */
+async function subirLogoTenantASpaces(buffer, tenantId, mimeType) {
+    try {
+        let ext = 'png';
+        if (mimeType === 'image/jpeg' || mimeType === 'image/jpg') ext = 'jpg';
+        else if (mimeType === 'image/webp') ext = 'webp';
+        else if (mimeType === 'image/svg+xml') ext = 'svg';
+
+        // Cache buster con timestamp para evitar caché stale del logo
+        const key = `tenants/${tenantId}/logo_${Date.now()}.${ext}`;
+
+        await s3Client.send(new PutObjectCommand({
+            Bucket: SPACES_BUCKET,
+            Key: key,
+            Body: buffer,
+            ContentType: mimeType,
+            ACL: 'public-read',
+            CacheControl: 'max-age=86400' // 1 día (permitir cambios frecuentes)
+        }));
+
+        const logoUrl = `https://${SPACES_BUCKET}.${SPACES_REGION}.digitaloceanspaces.com/${key}`;
+        console.log(`🖼️  Logo tenant subido a Spaces: ${key} (${(buffer.length / 1024).toFixed(1)} KB)`);
+
+        return logoUrl;
+    } catch (error) {
+        console.error('❌ Error subiendo logo tenant a Spaces:', error.message);
+        throw error;
+    }
+}
+
 module.exports = {
     s3Client,
     subirFotoASpaces,
     subirMediaWhatsAppASpaces,
+    subirLogoTenantASpaces,
     SPACES_BUCKET,
     SPACES_REGION,
     SPACES_ENDPOINT

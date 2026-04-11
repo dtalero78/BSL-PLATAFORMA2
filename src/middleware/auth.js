@@ -167,6 +167,25 @@ const requireAdminOrSupervisor = (req, res, next) => {
     next();
 };
 
+// Middleware para rutas que solo puede usar el super-admin (admin del tenant BSL).
+// Previene que admins de otras IPS puedan crear tenants o gestionar el sistema global.
+const requireSuperAdmin = (req, res, next) => {
+    if (!req.usuario || req.usuario.rol !== 'admin') {
+        return res.status(403).json({
+            success: false,
+            message: 'Acceso denegado: se requiere rol de administrador'
+        });
+    }
+    // Solo admins del tenant 'bsl' pueden ser super-admin
+    if ((req.usuario.tenant_id || 'bsl') !== 'bsl') {
+        return res.status(403).json({
+            success: false,
+            message: 'Acceso denegado: se requiere super-administrador (BSL)'
+        });
+    }
+    next();
+};
+
 module.exports = {
     JWT_SECRET,
     JWT_EXPIRES_IN,
@@ -177,5 +196,6 @@ module.exports = {
     obtenerPermisosUsuario,
     authMiddleware,
     requireAdmin,
-    requireAdminOrSupervisor
+    requireAdminOrSupervisor,
+    requireSuperAdmin
 };

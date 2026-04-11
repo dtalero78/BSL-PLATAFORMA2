@@ -124,6 +124,9 @@ app.get('/api/wix/:id', async (req, res) => {
 app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/admin', require('./src/routes/admin'));
 
+// Multi-tenant management (super-admin only)
+app.use('/api/tenants', require('./src/routes/tenants'));
+
 // WhatsApp webhook (Twilio)
 app.use('/api/whatsapp', require('./src/routes/whatsapp'));
 

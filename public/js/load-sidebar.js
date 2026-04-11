@@ -66,9 +66,20 @@ window.toggleSidebar = function() {
                 // Mostrar/ocultar elementos solo para ADMIN
                 if (window.Auth) {
                     const usuario = window.Auth.getUser();
-                    if (usuario && (usuario.rol === 'ADMIN' || usuario.rol === 'admin')) {
+                    const esAdmin = usuario && (usuario.rol === 'ADMIN' || usuario.rol === 'admin');
+
+                    if (esAdmin) {
                         const adminElements = document.querySelectorAll('.admin-only');
                         adminElements.forEach(el => {
+                            el.style.display = 'block';
+                        });
+                    }
+
+                    // super-admin-only: visible solo para admins del tenant 'bsl'
+                    const esSuperAdmin = esAdmin && (usuario.tenant_id || 'bsl') === 'bsl';
+                    if (esSuperAdmin) {
+                        const superAdminElements = document.querySelectorAll('.super-admin-only');
+                        superAdminElements.forEach(el => {
                             el.style.display = 'block';
                         });
                     }
