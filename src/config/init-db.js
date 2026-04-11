@@ -1253,10 +1253,15 @@ const initDB = async () => {
         //    El DEFAULT hace que toda fila existente y toda nueva inserción sin tenant_id
         //    quede marcada como BSL — transparente para el código actual.
         const tenantScopedTables = [
+            // Core medical
             'formularios',
             '"HistoriaClinica"',
             'empresas',
             'usuarios',
+            'medicos',
+            'medicos_disponibilidad',
+            'examenes',
+            // Exam modules
             'audiometrias',
             'visiometrias',
             'visiometrias_virtual',
@@ -1264,15 +1269,21 @@ const initDB = async () => {
             '"pruebasADC"',
             'scl90',
             'laboratorios',
-            'medicos_disponibilidad',
+            // WhatsApp chat
             'conversaciones_whatsapp',
             'mensajes_whatsapp',
             'agentes_estado',
             'transferencias_conversacion',
             'reglas_enrutamiento',
+            // Auth & permissions
             'sesiones',
             'permisos_usuario',
-            'seguimiento_comunidad'
+            // Community & tracking
+            'seguimiento_comunidad',
+            'certificado_envio_logs',
+            'configuracion_facturacion_empresa',
+            'contenido_educativo',
+            'sistema_asignacion'
         ];
 
         for (const table of tenantScopedTables) {

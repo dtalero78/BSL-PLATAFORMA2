@@ -15,6 +15,11 @@ const { enviarEmailConfirmacionCita } = require('../services/email');
 const { HistoriaClinicaRepository, FormulariosRepository } = require('../repositories');
 const { isBsl } = require('../helpers/tenant');
 
+// Multi-tenant helper (ver CLAUDE.md)
+function tenantId(req) {
+    return (req.tenant && req.tenant.id) || 'bsl';
+}
+
 // Configuración de multer para uploads en memoria
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -29,7 +34,7 @@ router.get('/verificar-duplicado/:numeroId', async (req, res) => {
         }
 
         // Use repository - buscar duplicados pendientes
-        const ordenExistente = await HistoriaClinicaRepository.findDuplicadoPendiente(numeroId, codEmpresa);
+        const ordenExistente = await HistoriaClinicaRepository.findDuplicadoPendiente(numeroId, codEmpresa, tenantId(req));
 
         if (ordenExistente) {
 
@@ -66,7 +71,7 @@ router.get('/verificar-duplicado/:numeroId', async (req, res) => {
         }
 
         // Si no hay PENDIENTE, buscar ATENDIDO - use repository
-        const ordenAtendida = await HistoriaClinicaRepository.findDuplicadoAtendido(numeroId, codEmpresa);
+        const ordenAtendida = await HistoriaClinicaRepository.findDuplicadoAtendido(numeroId, codEmpresa, tenantId(req));
 
         if (ordenAtendida) {
 
@@ -159,7 +164,7 @@ router.patch('/:id/fecha-atencion', async (req, res) => {
 
         // Actualizar en PostgreSQL - use repository
         const fechaCorrecta = construirFechaAtencionColombia(fechaAtencion, horaAtencion);
-        const ordenActualizada = await HistoriaClinicaRepository.actualizarFechaAtencionConMedico(id, fechaCorrecta, medico || null);
+        const ordenActualizada = await HistoriaClinicaRepository.actualizarFechaAtencionConMedico(id, fechaCorrecta, medico || null, tenantId(req));
 
         if (!ordenActualizada) {
             return res.status(404).json({
@@ -284,14 +289,15 @@ router.post('/', async (req, res) => {
                        TO_CHAR(md.hora_inicio, 'HH24:MI') as hora_inicio,
                        TO_CHAR(md.hora_fin, 'HH24:MI') as hora_fin
                 FROM medicos m
-                INNER JOIN medicos_disponibilidad md ON m.id = md.medico_id
+                INNER JOIN medicos_disponibilidad md ON m.id = md.medico_id AND md.tenant_id = m.tenant_id
                 WHERE m.activo = true
                   AND md.activo = true
                   AND md.modalidad = $1
                   AND md.dia_semana = $2
+                  AND m.tenant_id = $3
                   AND UPPER(CONCAT(m.primer_nombre, ' ', m.primer_apellido)) NOT LIKE '%NUBIA%'
                 ORDER BY m.primer_nombre, md.hora_inicio
-            `, [modalidadBuscar, diaSemana]);
+            `, [modalidadBuscar, diaSemana, tenantId(req)]);
 
             // Agrupar rangos horarios por médico
             const medicosPorId = {};
@@ -363,7 +369,8 @@ router.post('/', async (req, res) => {
                           AND "fechaAtencion" < ($1::timestamp + interval '1 day')
                           AND "medico" = $2
                           AND "atendido" = 'PENDIENTE'
-                    `, [fechaAtencion, med.nombre]);
+                          AND tenant_id = $3
+                    `, [fechaAtencion, med.nombre, tenantId(req)]);
                     const carga = parseInt(cargaResult.rows[0].total);
                     console.log(`   ${med.nombre} tiene ${carga} pacientes PENDIENTES hoy`);
                     medicosDisponibles.push({ nombre: med.nombre, carga });
@@ -377,7 +384,8 @@ router.post('/', async (req, res) => {
                           AND "medico" = $2
                           AND "horaAtencion" = $3
                           AND "atendido" = 'PENDIENTE'
-                    `, [fechaAtencion, med.nombre, horaAtencion]);
+                          AND tenant_id = $4
+                    `, [fechaAtencion, med.nombre, horaAtencion, tenantId(req)]);
 
                     if (parseInt(citaExistente.rows[0].total) === 0) {
                         medicosDisponibles.push(med.nombre);
@@ -417,9 +425,9 @@ router.post('/', async (req, res) => {
             INSERT INTO "HistoriaClinica" (
                 "_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
                 "celular", "codEmpresa", "empresa", "cargo", "ciudad", "subempresa", "centro_de_costo", "tipoExamen", "medico",
-                "fechaAtencion", "horaAtencion", "atendido", "examenes", "_createdDate", "_updatedDate"
+                "fechaAtencion", "horaAtencion", "atendido", "examenes", tenant_id, "_createdDate", "_updatedDate"
             ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW(), NOW()
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, NOW(), NOW()
             )
             RETURNING "_id", "numeroId", "primerNombre", "primerApellido"
         `;
@@ -443,7 +451,8 @@ router.post('/', async (req, res) => {
             construirFechaAtencionColombia(fechaAtencion, horaAtencion),
             horaAtencion || null,
             atendido || 'PENDIENTE',
-            examenes || null
+            examenes || null,
+            tenantId(req)
         ];
 
         const pgResult = await pool.query(insertQuery, insertValues);
@@ -463,22 +472,26 @@ router.post('/', async (req, res) => {
 
             // Verificar si ya existe un registro con ese celular (búsqueda retrocompatible)
             // Primero buscar con +, luego sin + para conversaciones antiguas
+            const tId = tenantId(req);
             let conversacionExistente = await pool.query(`
                 SELECT id, celular, "stopBot"
                 FROM conversaciones_whatsapp
-                WHERE celular = $1
-            `, [celularConPrefijo]);
+                WHERE celular = $1 AND tenant_id = $2
+            `, [celularConPrefijo, tId]);
 
             // Si no encuentra con +, buscar sin + (conversaciones antiguas) y migrar formato
             if (conversacionExistente.rows.length === 0 && celularSinMas) {
                 conversacionExistente = await pool.query(`
                     SELECT id, celular, "stopBot"
                     FROM conversaciones_whatsapp
-                    WHERE celular = $1
-                `, [celularSinMas]);
+                    WHERE celular = $1 AND tenant_id = $2
+                `, [celularSinMas, tId]);
                 if (conversacionExistente.rows.length > 0) {
                     console.log('Conversacion encontrada con formato antiguo (sin +), migrando a:', celularConPrefijo);
-                    await pool.query(`UPDATE conversaciones_whatsapp SET celular = $1 WHERE id = $2`, [celularConPrefijo, conversacionExistente.rows[0].id]);
+                    await pool.query(
+                        `UPDATE conversaciones_whatsapp SET celular = $1 WHERE id = $2 AND tenant_id = $3`,
+                        [celularConPrefijo, conversacionExistente.rows[0].id, tId]
+                    );
                 }
             }
 
@@ -491,8 +504,8 @@ router.post('/', async (req, res) => {
                         paciente_id = $2,
                         nombre_paciente = $3,
                         fecha_ultima_actividad = NOW()
-                    WHERE celular = $1
-                `, [celularConPrefijo, numeroId, `${primerNombre} ${primerApellido}`]);
+                    WHERE celular = $1 AND tenant_id = $4
+                `, [celularConPrefijo, numeroId, `${primerNombre} ${primerApellido}`, tId]);
                 console.log('Conversacion WhatsApp actualizada: stopBot = true, bot_activo = false para', celularConPrefijo);
             } else {
                 // Si no existe, crear nuevo registro con stopBot = true (con formato +)
@@ -506,14 +519,16 @@ router.post('/', async (req, res) => {
                         estado,
                         bot_activo,
                         fecha_inicio,
-                        fecha_ultima_actividad
+                        fecha_ultima_actividad,
+                        tenant_id
                     ) VALUES (
-                        $1, $2, $3, true, 'POSTGRES', 'nueva', false, NOW(), NOW()
+                        $1, $2, $3, true, 'POSTGRES', 'nueva', false, NOW(), NOW(), $4
                     )
                 `, [
                     celularConPrefijo,
                     numeroId,
-                    `${primerNombre} ${primerApellido}`
+                    `${primerNombre} ${primerApellido}`,
+                    tId
                 ]);
                 console.log('Nueva conversacion WhatsApp creada con stopBot = true para', celularConPrefijo);
             }
@@ -615,14 +630,17 @@ router.post('/', async (req, res) => {
         if (fechaAtencion && horaAtencion) {
             try {
                 const emailResult = await pool.query(
-                    `SELECT email FROM formularios WHERE numero_id = $1 AND email IS NOT NULL AND email != '' ORDER BY fecha_registro DESC LIMIT 1`,
-                    [numeroId]
+                    `SELECT email FROM formularios WHERE numero_id = $1 AND email IS NOT NULL AND email != '' AND tenant_id = $2 ORDER BY fecha_registro DESC LIMIT 1`,
+                    [numeroId, tenantId(req)]
                 );
                 const correoPaciente = emailResult.rows[0]?.email;
 
                 if (correoPaciente) {
                     // Guardar correo en la orden recien creada
-                    await pool.query(`UPDATE "HistoriaClinica" SET correo = $1 WHERE "_id" = $2`, [correoPaciente, wixId]);
+                    await pool.query(
+                        `UPDATE "HistoriaClinica" SET correo = $1 WHERE "_id" = $2 AND tenant_id = $3`,
+                        [correoPaciente, wixId, tenantId(req)]
+                    );
 
                     const fechaObj = construirFechaAtencionColombia(fechaAtencion, horaAtencion);
                     if (fechaObj) {
@@ -1207,13 +1225,13 @@ router.post('/asignar-medicos', async (req, res) => {
             return res.status(400).json({ success: false, message: 'No se seleccionaron médicos' });
         }
 
-        // Obtener datos de los médicos seleccionados
+        // Obtener datos de los médicos seleccionados (scoped al tenant)
         const medicosResult = await pool.query(`
             SELECT id, primer_nombre, segundo_nombre, primer_apellido, alias,
                    COALESCE(tiempo_consulta, 10) as tiempo_consulta
-            FROM medicos WHERE id = ANY($1) AND activo = true
+            FROM medicos WHERE id = ANY($1) AND activo = true AND tenant_id = $2
             ORDER BY primer_apellido, primer_nombre
-        `, [medicosIds]);
+        `, [medicosIds, tenantId(req)]);
 
         const medicos = medicosResult.rows;
         if (medicos.length === 0) {
@@ -1619,16 +1637,17 @@ router.post('/importar-desde-preview', async (req, res) => {
                     }
                 }
 
-                // Insertar en PostgreSQL
+                // Insertar en PostgreSQL (con tenant_id)
+                const tIdBulk = tenantId(req);
                 const insertQuery = `
                     INSERT INTO "HistoriaClinica" (
                         "_id", "numeroId", "primerNombre", "segundoNombre",
                         "primerApellido", "segundoApellido",
                         "celular", "cargo", "ciudad", "fechaAtencion",
                         "empresa", "tipoExamen", "medico", "atendido",
-                        "codEmpresa", "examenes", "correo", "_createdDate", "_updatedDate"
+                        "codEmpresa", "examenes", "correo", tenant_id, "_createdDate", "_updatedDate"
                     ) VALUES (
-                        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW()
+                        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW(), NOW()
                     )
                     RETURNING "_id"
                 `;
@@ -1650,7 +1669,8 @@ router.post('/importar-desde-preview', async (req, res) => {
                     'PENDIENTE',
                     registro.codEmpresa,
                     registro.examenes || null,
-                    registro.correo || null
+                    registro.correo || null,
+                    tIdBulk
                 ];
 
                 await pool.query(insertQuery, insertValues);
@@ -1663,19 +1683,22 @@ router.post('/importar-desde-preview', async (req, res) => {
                         if (telefonoNormalizado) {
                             // Buscar conversación - primero con +, luego sin + (conversaciones viejas)
                             let conversacionExistente = await pool.query(
-                                'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1 AND estado != $2',
-                                [telefonoNormalizado, 'cerrada']
+                                'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1 AND estado != $2 AND tenant_id = $3',
+                                [telefonoNormalizado, 'cerrada', tIdBulk]
                             );
 
                             // Si no se encuentra con +, buscar sin + (conversaciones antiguas) y migrar formato
                             if (conversacionExistente.rows.length === 0 && telefonoNormalizado.startsWith('+')) {
                                 const numeroSinMas = telefonoNormalizado.substring(1);
                                 conversacionExistente = await pool.query(
-                                    'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1 AND estado != $2',
-                                    [numeroSinMas, 'cerrada']
+                                    'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1 AND estado != $2 AND tenant_id = $3',
+                                    [numeroSinMas, 'cerrada', tIdBulk]
                                 );
                                 if (conversacionExistente.rows.length > 0) {
-                                    await pool.query(`UPDATE conversaciones_whatsapp SET celular = $1 WHERE id = $2`, [telefonoNormalizado, conversacionExistente.rows[0].id]);
+                                    await pool.query(
+                                        `UPDATE conversaciones_whatsapp SET celular = $1 WHERE id = $2 AND tenant_id = $3`,
+                                        [telefonoNormalizado, conversacionExistente.rows[0].id, tIdBulk]
+                                    );
                                 }
                             }
 
@@ -1683,14 +1706,15 @@ router.post('/importar-desde-preview', async (req, res) => {
                                 // No existe conversación activa, crear una nueva
                                 await pool.query(`
                                     INSERT INTO conversaciones_whatsapp (
-                                        celular, paciente_id, nombre_paciente, "stopBot", bot_activo, estado, canal, fecha_inicio, fecha_ultima_actividad, origen
-                                    ) VALUES ($1, $2, $3, true, false, $4, $5, NOW(), NOW(), 'POSTGRES')
+                                        celular, paciente_id, nombre_paciente, "stopBot", bot_activo, estado, canal, fecha_inicio, fecha_ultima_actividad, origen, tenant_id
+                                    ) VALUES ($1, $2, $3, true, false, $4, $5, NOW(), NOW(), 'POSTGRES', $6)
                                 `, [
                                     telefonoNormalizado,
                                     ordenId,
                                     `${registro.primerNombre} ${registro.primerApellido}`,
                                     'nueva',
-                                    'bot'
+                                    'bot',
+                                    tIdBulk
                                 ]);
 
                                 console.log(`Conversacion WhatsApp creada para ${telefonoNormalizado} con stopBot = true`);
@@ -1698,8 +1722,8 @@ router.post('/importar-desde-preview', async (req, res) => {
                                 await pool.query(`
                                     UPDATE conversaciones_whatsapp
                                     SET "stopBot" = true, bot_activo = false, fecha_ultima_actividad = NOW()
-                                    WHERE celular = $1 AND estado != 'cerrada'
-                                `, [telefonoNormalizado]);
+                                    WHERE celular = $1 AND estado != 'cerrada' AND tenant_id = $2
+                                `, [telefonoNormalizado, tIdBulk]);
 
                                 console.log(`Conversacion WhatsApp actualizada para ${telefonoNormalizado} con stopBot = true`);
                             }
@@ -2026,16 +2050,17 @@ router.post('/importar-csv', upload.single('archivo'), async (req, res) => {
                     }
                 }
 
-                // Insertar en PostgreSQL
+                // Insertar en PostgreSQL (con tenant_id)
+                const tIdCsv = tenantId(req);
                 const insertQuery = `
                     INSERT INTO "HistoriaClinica" (
                         "_id", "numeroId", "primerNombre", "segundoNombre",
                         "primerApellido", "segundoApellido",
                         "celular", "cargo", "ciudad", "fechaAtencion",
                         "empresa", "tipoExamen", "medico", "atendido",
-                        "codEmpresa", "examenes", "_createdDate", "_updatedDate"
+                        "codEmpresa", "examenes", tenant_id, "_createdDate", "_updatedDate"
                     ) VALUES (
-                        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW(), NOW()
+                        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW()
                     )
                     RETURNING "_id"
                 `;
@@ -2056,7 +2081,8 @@ router.post('/importar-csv', upload.single('archivo'), async (req, res) => {
                     row.medico || null,
                     row.atendido || 'PENDIENTE',
                     row.codEmpresa,
-                    row.examenes || null
+                    row.examenes || null,
+                    tIdCsv
                 ];
 
                 await pool.query(insertQuery, insertValues);
@@ -2069,19 +2095,22 @@ router.post('/importar-csv', upload.single('archivo'), async (req, res) => {
                         if (telefonoNormalizado) {
                             // Buscar conversación - primero con +, luego sin + (conversaciones viejas)
                             let conversacionExistente = await pool.query(
-                                'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1 AND estado != $2',
-                                [telefonoNormalizado, 'cerrada']
+                                'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1 AND estado != $2 AND tenant_id = $3',
+                                [telefonoNormalizado, 'cerrada', tIdCsv]
                             );
 
                             // Si no se encuentra con +, buscar sin + (conversaciones antiguas) y migrar formato
                             if (conversacionExistente.rows.length === 0 && telefonoNormalizado.startsWith('+')) {
                                 const numeroSinMas = telefonoNormalizado.substring(1);
                                 conversacionExistente = await pool.query(
-                                    'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1 AND estado != $2',
-                                    [numeroSinMas, 'cerrada']
+                                    'SELECT id, celular FROM conversaciones_whatsapp WHERE celular = $1 AND estado != $2 AND tenant_id = $3',
+                                    [numeroSinMas, 'cerrada', tIdCsv]
                                 );
                                 if (conversacionExistente.rows.length > 0) {
-                                    await pool.query(`UPDATE conversaciones_whatsapp SET celular = $1 WHERE id = $2`, [telefonoNormalizado, conversacionExistente.rows[0].id]);
+                                    await pool.query(
+                                        `UPDATE conversaciones_whatsapp SET celular = $1 WHERE id = $2 AND tenant_id = $3`,
+                                        [telefonoNormalizado, conversacionExistente.rows[0].id, tIdCsv]
+                                    );
                                 }
                             }
 
@@ -2089,15 +2118,16 @@ router.post('/importar-csv', upload.single('archivo'), async (req, res) => {
                                 // No existe conversación activa, crear una nueva
                                 await pool.query(`
                                     INSERT INTO conversaciones_whatsapp (
-                                        celular, paciente_id, nombre_paciente, bot_activo, estado, canal
-                                    ) VALUES ($1, $2, $3, $4, $5, $6)
+                                        celular, paciente_id, nombre_paciente, bot_activo, estado, canal, tenant_id
+                                    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
                                 `, [
                                     telefonoNormalizado,
                                     ordenId,
                                     `${row.primerNombre} ${row.primerApellido}`,
                                     false, // bot_activo = false (stopBot = true)
                                     'nueva',
-                                    'bot'
+                                    'bot',
+                                    tIdCsv
                                 ]);
 
                                 console.log(`Conversacion WhatsApp creada para ${telefonoNormalizado} (bot detenido)`);
@@ -2105,8 +2135,8 @@ router.post('/importar-csv', upload.single('archivo'), async (req, res) => {
                                 await pool.query(`
                                     UPDATE conversaciones_whatsapp
                                     SET bot_activo = false, fecha_ultima_actividad = NOW()
-                                    WHERE celular = $1 AND estado != 'cerrada'
-                                `, [telefonoNormalizado]);
+                                    WHERE celular = $1 AND estado != 'cerrada' AND tenant_id = $2
+                                `, [telefonoNormalizado, tIdCsv]);
 
                                 console.log(`Conversacion WhatsApp actualizada para ${telefonoNormalizado} (bot detenido)`);
                             }
@@ -2212,6 +2242,7 @@ router.get('/', authMiddleware, async (req, res) => {
         const { codEmpresa, buscar, limit = 100, offset = 0 } = req.query;
 
         // Query con subquery para obtener foto_url del formulario más reciente (evita duplicados)
+        const tIdList = tenantId(req);
         let query = `
             SELECT h."_id", h."numeroId", h."primerNombre", h."segundoNombre", h."primerApellido", h."segundoApellido",
                    h."codEmpresa", h."empresa", h."cargo", h."tipoExamen", h."medico", h."atendido",
@@ -2221,15 +2252,15 @@ router.get('/', authMiddleware, async (req, res) => {
                    h."centro_de_costo", h."aprobacion",
                    COALESCE(
                        (SELECT foto_url FROM formularios
-                        WHERE (wix_id = h."_id" OR numero_id = h."numeroId") AND foto_url IS NOT NULL
+                        WHERE (wix_id = h."_id" OR numero_id = h."numeroId") AND foto_url IS NOT NULL AND tenant_id = h.tenant_id
                         ORDER BY fecha_registro DESC LIMIT 1),
                        h."foto_url"
                    ) as foto_url
             FROM "HistoriaClinica" h
-            WHERE 1=1
+            WHERE h.tenant_id = $1
         `;
-        const params = [];
-        let paramIndex = 1;
+        const params = [tIdList];
+        let paramIndex = 2;
 
         // Filtrar empresas excluidas para empleados
         if (req.usuario.rol === 'empleado' && req.usuario.empresas_excluidas && req.usuario.empresas_excluidas.length > 0) {
@@ -2265,9 +2296,9 @@ router.get('/', authMiddleware, async (req, res) => {
         const result = await pool.query(query, params);
 
         // Obtener el total para paginación
-        let countQuery = `SELECT COUNT(*) FROM "HistoriaClinica" WHERE 1=1`;
-        const countParams = [];
-        let countParamIndex = 1;
+        let countQuery = `SELECT COUNT(*) FROM "HistoriaClinica" WHERE tenant_id = $1`;
+        const countParams = [tIdList];
+        let countParamIndex = 2;
 
         // Aplicar el mismo filtro de empresas excluidas al count
         if (req.usuario.rol === 'empleado' && req.usuario.empresas_excluidas && req.usuario.empresas_excluidas.length > 0) {
@@ -2301,7 +2332,7 @@ router.get('/', authMiddleware, async (req, res) => {
         // Si se filtra por empresa, calcular estadísticas - use repository
         let stats = null;
         if (codEmpresa) {
-            stats = await HistoriaClinicaRepository.getStatsHoy(codEmpresa);
+            stats = await HistoriaClinicaRepository.getStatsHoy(codEmpresa, tIdList);
         }
 
         res.json({
@@ -2330,7 +2361,7 @@ router.get('/:id', async (req, res) => {
         const { id } = req.params;
 
         // Use repository
-        const orden = await HistoriaClinicaRepository.findById(id);
+        const orden = await HistoriaClinicaRepository.findById(id, '_id', tenantId(req));
 
         if (!orden) {
             return res.status(404).json({
@@ -2386,7 +2417,7 @@ router.put('/:id', async (req, res) => {
                 "fechaAtencion" = $8,
                 "horaAtencion" = $9,
                 "_updatedDate" = NOW()
-            WHERE "_id" = $1
+            WHERE "_id" = $1 AND tenant_id = $10
             RETURNING *
         `;
 
@@ -2399,7 +2430,8 @@ router.put('/:id', async (req, res) => {
             medico || null,
             atendido || null,
             fechaAtencion ? new Date(fechaAtencion) : null,
-            horaAtencion || null
+            horaAtencion || null,
+            tenantId(req)
         ];
 
         const result = await pool.query(updateQuery, values);

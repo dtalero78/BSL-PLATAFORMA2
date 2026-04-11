@@ -18,7 +18,13 @@ const PORT = process.env.PORT || 8080;
 // ========== DATABASE ==========
 const pool = require('./src/config/database');
 const initDB = require('./src/config/init-db');
-initDB();
+
+// initDB corre en background al arranque. Las rutas que dependen de columnas nuevas
+// (ej. tenant_id en tablas recién agregadas) se protegen por sí solas — el middleware
+// de tenant tiene fallback a BSL si el cache falla durante los primeros ms del boot.
+// Para evitar race conditions críticas en deploys con schema changes, esperamos a
+// que initDB complete ANTES de empezar a aceptar tráfico (ver bloque START SERVER).
+const initDBPromise = initDB();
 
 // Exponer pool para rutas de facturación (usa app.locals.pool)
 app.locals.pool = pool;
@@ -260,8 +266,15 @@ global.emitWhatsAppEvent = function(eventType, data) {
 };
 
 // ========== START SERVER ==========
-server.listen(PORT, () => {
-    console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
-    console.log(`📊 Base de datos: PostgreSQL en Digital Ocean`);
-    console.log(`🔌 Socket.IO: Listo para conexiones en tiempo real`);
-});
+// Esperamos a que initDB (schema migration) termine antes de aceptar tráfico.
+// Si falla initDB el servidor igual arranca (para no bloquear deploys por DB issues
+// transitorias), pero quedará un warning en el log.
+initDBPromise
+    .catch(err => console.error('⚠️  initDB falló, arrancando igualmente:', err.message))
+    .finally(() => {
+        server.listen(PORT, () => {
+            console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+            console.log(`📊 Base de datos: PostgreSQL en Digital Ocean`);
+            console.log(`🔌 Socket.IO: Listo para conexiones en tiempo real`);
+        });
+    });

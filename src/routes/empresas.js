@@ -2,6 +2,11 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 
+// Multi-tenant helper (ver CLAUDE.md)
+function tenantId(req) {
+    return (req.tenant && req.tenant.id) || 'bsl';
+}
+
 // Listar todas las empresas activas
 router.get('/', async (req, res) => {
     try {
@@ -9,9 +14,9 @@ router.get('/', async (req, res) => {
             SELECT id, cod_empresa, empresa, nit, profesiograma, activo, created_at,
                    ciudades, examenes, subempresas, centros_de_costo, cargos
             FROM empresas
-            WHERE activo = true
+            WHERE activo = true AND tenant_id = $1
             ORDER BY empresa
-        `);
+        `, [tenantId(req)]);
 
         res.json({
             success: true,
@@ -36,8 +41,8 @@ router.get('/codigo/:codEmpresa', async (req, res) => {
         const result = await pool.query(`
             SELECT id, cod_empresa, empresa, nit, profesiograma, ciudades, examenes, subempresas, centros_de_costo, cargos
             FROM empresas
-            WHERE cod_empresa = $1 AND activo = true
-        `, [codEmpresa]);
+            WHERE cod_empresa = $1 AND activo = true AND tenant_id = $2
+        `, [codEmpresa, tenantId(req)]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({
@@ -64,7 +69,10 @@ router.get('/codigo/:codEmpresa', async (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const result = await pool.query('SELECT * FROM empresas WHERE id = $1', [id]);
+        const result = await pool.query(
+            'SELECT * FROM empresas WHERE id = $1 AND tenant_id = $2',
+            [id, tenantId(req)]
+        );
 
         if (result.rows.length === 0) {
             return res.status(404).json({
@@ -100,8 +108,8 @@ router.post('/', async (req, res) => {
         }
 
         const result = await pool.query(`
-            INSERT INTO empresas (cod_empresa, empresa, nit, profesiograma, ciudades, examenes, subempresas, centros_de_costo, cargos)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            INSERT INTO empresas (cod_empresa, empresa, nit, profesiograma, ciudades, examenes, subempresas, centros_de_costo, cargos, tenant_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             RETURNING *
         `, [
             codEmpresa,
@@ -112,10 +120,11 @@ router.post('/', async (req, res) => {
             JSON.stringify(examenes || []),
             JSON.stringify(subempresas || []),
             JSON.stringify(centrosDeCosto || []),
-            JSON.stringify(cargos || [])
+            JSON.stringify(cargos || []),
+            tenantId(req)
         ]);
 
-        console.log(`✅ Empresa creada: ${empresa} (${codEmpresa})`);
+        console.log(`✅ Empresa creada: ${empresa} (${codEmpresa}) tenant: ${tenantId(req)}`);
 
         res.json({
             success: true,
@@ -157,7 +166,7 @@ router.put('/:id', async (req, res) => {
                 centros_de_costo = COALESCE($9, centros_de_costo),
                 cargos = COALESCE($10, cargos),
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = $11
+            WHERE id = $11 AND tenant_id = $12
             RETURNING *
         `, [
             codEmpresa,
@@ -170,7 +179,8 @@ router.put('/:id', async (req, res) => {
             subempresas ? JSON.stringify(subempresas) : null,
             centrosDeCosto ? JSON.stringify(centrosDeCosto) : null,
             cargos ? JSON.stringify(cargos) : null,
-            id
+            id,
+            tenantId(req)
         ]);
 
         if (result.rows.length === 0) {
@@ -204,9 +214,9 @@ router.delete('/:id', async (req, res) => {
 
         const result = await pool.query(`
             UPDATE empresas SET activo = false, updated_at = CURRENT_TIMESTAMP
-            WHERE id = $1
+            WHERE id = $1 AND tenant_id = $2
             RETURNING id, cod_empresa, empresa
-        `, [id]);
+        `, [id, tenantId(req)]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({

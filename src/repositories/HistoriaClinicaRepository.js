@@ -3,6 +3,11 @@ const BaseRepository = require('./BaseRepository');
 /**
  * Repository para la tabla HistoriaClinica
  * Métodos específicos para consultas médicas
+ *
+ * Multi-tenant (ver CLAUDE.md sección "Multi-Tenant Architecture"):
+ * Todos los métodos aceptan un tenantId opcional (default 'bsl' para
+ * zero-regression). Las queries raw incluyen AND tenant_id = $N en WHERE
+ * y tenant_id en INSERT/UPDATE.
  */
 class HistoriaClinicaRepository extends BaseRepository {
     constructor() {
@@ -11,30 +16,23 @@ class HistoriaClinicaRepository extends BaseRepository {
 
     /**
      * Busca por número de documento
-     * @param {string} numeroId
-     * @returns {Promise<Object|null>}
      */
-    async findByNumeroId(numeroId) {
-        return await this.findOne({ numeroId });
+    async findByNumeroId(numeroId, tenantId = 'bsl') {
+        return await this.findOne({ numeroId }, { tenantId });
     }
 
     /**
      * Busca múltiples registros por número de documento
-     * @param {string} numeroId
-     * @returns {Promise<Array>}
      */
-    async findAllByNumeroId(numeroId) {
-        return await this.findAll({ numeroId });
+    async findAllByNumeroId(numeroId, tenantId = 'bsl') {
+        return await this.findAll({ numeroId }, { tenantId });
     }
 
     /**
      * Busca por código de empresa
-     * @param {string} codEmpresa
-     * @param {Object} options - {limit, offset, buscar}
-     * @returns {Promise<Array>}
      */
     async findByEmpresa(codEmpresa, options = {}) {
-        const { limit = 100, offset = 0, buscar } = options;
+        const { limit = 100, offset = 0, buscar, tenantId = 'bsl' } = options;
 
         let query = `
             SELECT h."_id", h."numeroId", h."primerNombre", h."segundoNombre",
@@ -48,15 +46,16 @@ class HistoriaClinicaRepository extends BaseRepository {
                        (SELECT foto_url FROM formularios
                         WHERE (wix_id = h."_id" OR numero_id = h."numeroId")
                         AND foto_url IS NOT NULL
+                        AND tenant_id = $2
                         ORDER BY fecha_registro DESC LIMIT 1),
                        h."foto_url"
                    ) as foto_url
             FROM ${this.tableName} h
-            WHERE h."codEmpresa" = $1
+            WHERE h."codEmpresa" = $1 AND h.tenant_id = $2
         `;
 
-        const params = [codEmpresa];
-        let paramIndex = 2;
+        const params = [codEmpresa, tenantId];
+        let paramIndex = 3;
 
         if (buscar) {
             query += ` AND (
@@ -81,13 +80,10 @@ class HistoriaClinicaRepository extends BaseRepository {
 
     /**
      * Cuenta registros por empresa con búsqueda opcional
-     * @param {string} codEmpresa
-     * @param {string} buscar - Término de búsqueda opcional
-     * @returns {Promise<number>}
      */
-    async countByEmpresa(codEmpresa, buscar = null) {
-        let query = `SELECT COUNT(*) FROM ${this.tableName} WHERE "codEmpresa" = $1`;
-        const params = [codEmpresa];
+    async countByEmpresa(codEmpresa, buscar = null, tenantId = 'bsl') {
+        let query = `SELECT COUNT(*) FROM ${this.tableName} WHERE "codEmpresa" = $1 AND tenant_id = $2`;
+        const params = [codEmpresa, tenantId];
 
         if (buscar) {
             query += ` AND (
@@ -97,7 +93,7 @@ class HistoriaClinicaRepository extends BaseRepository {
                 COALESCE("codEmpresa", '') || ' ' ||
                 COALESCE("celular", '') || ' ' ||
                 COALESCE("empresa", '')
-            ) ILIKE $2`;
+            ) ILIKE $3`;
             params.push(`%${buscar}%`);
         }
 
@@ -107,36 +103,34 @@ class HistoriaClinicaRepository extends BaseRepository {
 
     /**
      * Busca por celular
-     * @param {string} celular
-     * @returns {Promise<Object|null>}
      */
-    async findByCelular(celular) {
-        return await this.findOne({ celular });
+    async findByCelular(celular, tenantId = 'bsl') {
+        return await this.findOne({ celular }, { tenantId });
     }
 
     /**
      * Busca pacientes atendidos hoy por código de empresa
-     * @param {string} codEmpresa
-     * @returns {Promise<Array>}
      */
-    async findAtendidosHoy(codEmpresa) {
+    async findAtendidosHoy(codEmpresa, tenantId = 'bsl') {
         const query = `
             SELECT * FROM ${this.tableName}
             WHERE "codEmpresa" = $1
             AND "fechaConsulta" = CURRENT_DATE
             AND "atendido" = 'ATENDIDO'
+            AND tenant_id = $2
             ORDER BY "_updatedDate" DESC
         `;
-        const result = await this.query(query, [codEmpresa]);
+        const result = await this.query(query, [codEmpresa, tenantId]);
         return result.rows;
     }
 
     /**
      * Marca un registro como atendido (upsert)
      * @param {Object} data - Datos del registro
-     * @returns {Promise<Object>}
+     * @param {string} tenantId - Tenant id (default 'bsl' — este método es BSL-only en la práctica,
+     *                            usado por el flujo de sincronización con Wix)
      */
-    async marcarAtendido(data) {
+    async marcarAtendido(data, tenantId = 'bsl') {
         const {
             wixId,
             atendido = 'ATENDIDO',
@@ -144,7 +138,6 @@ class HistoriaClinicaRepository extends BaseRepository {
             mdConceptoFinal,
             mdRecomendacionesMedicasAdicionales,
             mdObservacionesCertificado,
-            // Campos para INSERT si no existe
             numeroId,
             primerNombre,
             segundoNombre,
@@ -160,10 +153,9 @@ class HistoriaClinicaRepository extends BaseRepository {
         } = data;
 
         // Verificar si existe
-        const existente = await this.findById(wixId);
+        const existente = await this.findById(wixId, '_id', tenantId);
 
         if (existente) {
-            // UPDATE
             const updateQuery = `
                 UPDATE ${this.tableName} SET
                     "atendido" = $1,
@@ -172,7 +164,7 @@ class HistoriaClinicaRepository extends BaseRepository {
                     "mdRecomendacionesMedicasAdicionales" = $4,
                     "mdObservacionesCertificado" = $5,
                     "_updatedDate" = NOW()
-                WHERE "_id" = $6
+                WHERE "_id" = $6 AND tenant_id = $7
                 RETURNING *
             `;
             const result = await this.query(updateQuery, [
@@ -181,11 +173,11 @@ class HistoriaClinicaRepository extends BaseRepository {
                 mdConceptoFinal || null,
                 mdRecomendacionesMedicasAdicionales || null,
                 mdObservacionesCertificado || null,
-                wixId
+                wixId,
+                tenantId
             ]);
             return result.rows[0];
         } else {
-            // INSERT
             const insertQuery = `
                 INSERT INTO ${this.tableName} (
                     "_id", "numeroId", "primerNombre", "segundoNombre",
@@ -193,9 +185,9 @@ class HistoriaClinicaRepository extends BaseRepository {
                     "codEmpresa", "empresa", "cargo", "tipoExamen", "fechaAtencion",
                     "atendido", "fechaConsulta", "mdConceptoFinal",
                     "mdRecomendacionesMedicasAdicionales", "mdObservacionesCertificado",
-                    "_createdDate", "_updatedDate"
+                    "_createdDate", "_updatedDate", tenant_id
                 ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW(), NOW()
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW(), NOW(), $19
                 )
                 RETURNING *
             `;
@@ -217,7 +209,8 @@ class HistoriaClinicaRepository extends BaseRepository {
                 fechaConsulta ? new Date(fechaConsulta) : new Date(),
                 mdConceptoFinal || null,
                 mdRecomendacionesMedicasAdicionales || null,
-                mdObservacionesCertificado || null
+                mdObservacionesCertificado || null,
+                tenantId
             ]);
             return result.rows[0];
         }
@@ -225,11 +218,8 @@ class HistoriaClinicaRepository extends BaseRepository {
 
     /**
      * Verifica si hay duplicados pendientes
-     * @param {string} numeroId
-     * @param {string} codEmpresa - Opcional
-     * @returns {Promise<Object|null>}
      */
-    async findDuplicadoPendiente(numeroId, codEmpresa = null) {
+    async findDuplicadoPendiente(numeroId, codEmpresa = null, tenantId = 'bsl') {
         let query = `
             SELECT "_id", "numeroId", "primerNombre", "primerApellido",
                    "codEmpresa", "empresa", "tipoExamen", "atendido",
@@ -237,11 +227,12 @@ class HistoriaClinicaRepository extends BaseRepository {
             FROM ${this.tableName}
             WHERE "numeroId" = $1
             AND "atendido" = 'PENDIENTE'
+            AND tenant_id = $2
         `;
-        const params = [numeroId];
+        const params = [numeroId, tenantId];
 
         if (codEmpresa) {
-            query += ` AND "codEmpresa" = $2`;
+            query += ` AND "codEmpresa" = $3`;
             params.push(codEmpresa);
         }
 
@@ -253,28 +244,22 @@ class HistoriaClinicaRepository extends BaseRepository {
 
     /**
      * Actualiza fecha de atención
-     * @param {string} id
-     * @param {Date|string} fechaAtencion
-     * @returns {Promise<Object|null>}
      */
-    async actualizarFechaAtencion(id, fechaAtencion) {
+    async actualizarFechaAtencion(id, fechaAtencion, tenantId = 'bsl') {
         const query = `
             UPDATE ${this.tableName}
             SET "fechaAtencion" = $1, "_updatedDate" = NOW()
-            WHERE "_id" = $2
+            WHERE "_id" = $2 AND tenant_id = $3
             RETURNING *
         `;
-        const result = await this.query(query, [new Date(fechaAtencion), id]);
+        const result = await this.query(query, [new Date(fechaAtencion), id, tenantId]);
         return result.rows[0] || null;
     }
 
     /**
      * Busca duplicados atendidos por número de documento
-     * @param {string} numeroId
-     * @param {string} codEmpresa - Opcional
-     * @returns {Promise<Object|null>}
      */
-    async findDuplicadoAtendido(numeroId, codEmpresa = null) {
+    async findDuplicadoAtendido(numeroId, codEmpresa = null, tenantId = 'bsl') {
         let query = `
             SELECT "_id", "numeroId", "primerNombre", "primerApellido",
                    "codEmpresa", "empresa", "tipoExamen", "atendido",
@@ -282,11 +267,12 @@ class HistoriaClinicaRepository extends BaseRepository {
             FROM ${this.tableName}
             WHERE "numeroId" = $1
             AND "atendido" = 'ATENDIDO'
+            AND tenant_id = $2
         `;
-        const params = [numeroId];
+        const params = [numeroId, tenantId];
 
         if (codEmpresa) {
-            query += ` AND "codEmpresa" = $2`;
+            query += ` AND "codEmpresa" = $3`;
             params.push(codEmpresa);
         }
 
@@ -298,30 +284,24 @@ class HistoriaClinicaRepository extends BaseRepository {
 
     /**
      * Actualiza fecha de atención con médico (para PATCH)
-     * @param {string} id
-     * @param {Date} fechaCorrecta
-     * @param {string|null} medico
-     * @returns {Promise<Object|null>}
      */
-    async actualizarFechaAtencionConMedico(id, fechaCorrecta, medico = null) {
+    async actualizarFechaAtencionConMedico(id, fechaCorrecta, medico = null, tenantId = 'bsl') {
         const query = `
             UPDATE ${this.tableName}
             SET "fechaAtencion" = $1,
                 "horaAtencion" = NULL,
                 "medico" = COALESCE($3, "medico")
-            WHERE "_id" = $2
+            WHERE "_id" = $2 AND tenant_id = $4
             RETURNING "_id", "numeroId", "primerNombre", "primerApellido", "fechaAtencion", "medico"
         `;
-        const result = await this.query(query, [fechaCorrecta, id, medico]);
+        const result = await this.query(query, [fechaCorrecta, id, medico, tenantId]);
         return result.rows[0] || null;
     }
 
     /**
      * Obtiene estadísticas de programados/atendidos hoy por empresa
-     * @param {string} codEmpresa
-     * @returns {Promise<{programadosHoy: number, atendidosHoy: number}>}
      */
-    async getStatsHoy(codEmpresa) {
+    async getStatsHoy(codEmpresa, tenantId = 'bsl') {
         const hoy = new Date();
         const inicioHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 0, 0, 0);
         const finHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59);
@@ -331,8 +311,8 @@ class HistoriaClinicaRepository extends BaseRepository {
                 COUNT(*) FILTER (WHERE "fechaAtencion" >= $2 AND "fechaAtencion" <= $3) as programados_hoy,
                 COUNT(*) FILTER (WHERE "fechaConsulta" >= $2 AND "fechaConsulta" <= $3) as atendidos_hoy
             FROM ${this.tableName}
-            WHERE "codEmpresa" = $1
-        `, [codEmpresa, inicioHoy.toISOString(), finHoy.toISOString()]);
+            WHERE "codEmpresa" = $1 AND tenant_id = $4
+        `, [codEmpresa, inicioHoy.toISOString(), finHoy.toISOString(), tenantId]);
 
         return {
             programadosHoy: parseInt(result.rows[0].programados_hoy) || 0,
@@ -342,83 +322,78 @@ class HistoriaClinicaRepository extends BaseRepository {
 
     /**
      * Busca paciente por celular con normalización flexible
-     * @param {string} celular
-     * @returns {Promise<Object|null>}
      */
-    async findByCelularFlexible(celular) {
+    async findByCelularFlexible(celular, tenantId = 'bsl') {
         const celularLimpio = celular.replace(/\D/g, '');
         const celularSin57 = celularLimpio.startsWith('57') ? celularLimpio.substring(2) : celularLimpio;
 
         const query = `
             SELECT h.*
             FROM ${this.tableName} h
-            WHERE h."celular" = $1
+            WHERE (h."celular" = $1
                OR h."celular" = $2
                OR h."celular" = $3
                OR REPLACE(h."celular", ' ', '') = $1
                OR REPLACE(h."celular", ' ', '') = $2
-               OR REPLACE(h."celular", ' ', '') = $3
+               OR REPLACE(h."celular", ' ', '') = $3)
+               AND h.tenant_id = $4
             ORDER BY h."_createdDate" DESC
             LIMIT 1
         `;
-        const result = await this.query(query, [celular, celularLimpio, celularSin57]);
+        const result = await this.query(query, [celular, celularLimpio, celularSin57, tenantId]);
         return result.rows[0] || null;
     }
 
     /**
      * Lista con paginación, búsqueda y foto del formulario vinculado
-     * @param {Object} options - {page, limit, buscar}
-     * @returns {Promise<{rows: Array, total: number, totalPaginas: number}>}
      */
     async listWithFoto(options = {}) {
-        const { page = 1, limit = 20, buscar, cedulas } = options;
+        const { page = 1, limit = 20, buscar, cedulas, tenantId = 'bsl' } = options;
         const offset = (page - 1) * limit;
 
-        let whereClause = '';
-        const params = [];
+        let whereClause = `WHERE h.tenant_id = $1`;
+        const params = [tenantId];
+        let paramIndex = 2;
 
         if (cedulas && cedulas.length > 0) {
-            // Búsqueda por lista de cédulas
-            whereClause = `WHERE h."numeroId" = ANY($1)`;
+            whereClause += ` AND h."numeroId" = ANY($${paramIndex})`;
             params.push(cedulas);
+            paramIndex++;
         } else if (buscar && buscar.length >= 2) {
-            whereClause = `WHERE (
+            whereClause += ` AND (
                 COALESCE(h."numeroId", '') || ' ' ||
                 COALESCE(h."primerNombre", '') || ' ' ||
                 COALESCE(h."primerApellido", '') || ' ' ||
                 COALESCE(h."codEmpresa", '') || ' ' ||
                 COALESCE(h."celular", '') || ' ' ||
                 COALESCE(h."empresa", '')
-            ) ILIKE $1`;
+            ) ILIKE $${paramIndex}`;
             params.push(`%${buscar}%`);
+            paramIndex++;
         }
 
         // Count
         let totalRegistros;
-        if (cedulas && cedulas.length > 0) {
-            const countResult = await this.query(
-                `SELECT COUNT(*) FROM ${this.tableName} h ${whereClause}`, params
-            );
-            totalRegistros = parseInt(countResult.rows[0].count);
-        } else if (buscar && buscar.length >= 2) {
+        if ((cedulas && cedulas.length > 0) || (buscar && buscar.length >= 2)) {
             const countResult = await this.query(
                 `SELECT COUNT(*) FROM ${this.tableName} h ${whereClause}`, params
             );
             totalRegistros = parseInt(countResult.rows[0].count);
         } else {
+            // Sin filtros: usar COUNT real scoped por tenant (no pg_class estimate,
+            // porque esa estimación no puede filtrarse por tenant_id).
             const countResult = await this.query(
-                `SELECT reltuples::bigint as estimate FROM pg_class WHERE relname = 'HistoriaClinica'`
+                `SELECT COUNT(*) FROM ${this.tableName} WHERE tenant_id = $1`, [tenantId]
             );
-            totalRegistros = parseInt(countResult.rows[0].estimate) || 0;
+            totalRegistros = parseInt(countResult.rows[0].count);
         }
 
         const totalPaginas = Math.ceil(totalRegistros / limit);
 
         // Data
-        const hasFilter = (cedulas && cedulas.length > 0) || (buscar && buscar.length >= 2);
-        const queryParams = hasFilter ? [...params, limit, offset] : [limit, offset];
-        const limitParam = hasFilter ? '$2' : '$1';
-        const offsetParam = hasFilter ? '$3' : '$2';
+        params.push(limit, offset);
+        const limitParam = `$${paramIndex}`;
+        const offsetParam = `$${paramIndex + 1}`;
 
         const result = await this.query(`
             SELECT h."_id", h."numeroId", h."primerNombre", h."segundoNombre", h."primerApellido", h."segundoApellido",
@@ -429,16 +404,16 @@ class HistoriaClinicaRepository extends BaseRepository {
                    'historia' as origen,
                    COALESCE(f_exact.foto_url, f_fallback.foto_url, h."foto_url") as foto_url
             FROM ${this.tableName} h
-            LEFT JOIN formularios f_exact ON f_exact.wix_id = h."_id"
+            LEFT JOIN formularios f_exact ON f_exact.wix_id = h."_id" AND f_exact.tenant_id = h.tenant_id
             LEFT JOIN LATERAL (
                 SELECT foto_url FROM formularios
-                WHERE numero_id = h."numeroId" AND foto_url IS NOT NULL
+                WHERE numero_id = h."numeroId" AND foto_url IS NOT NULL AND tenant_id = h.tenant_id
                 ORDER BY fecha_registro DESC LIMIT 1
             ) f_fallback ON f_exact.id IS NULL
             ${whereClause}
             ORDER BY h."_createdDate" DESC
             LIMIT ${limitParam} OFFSET ${offsetParam}
-        `, queryParams);
+        `, params);
 
         return {
             rows: result.rows,
@@ -449,11 +424,8 @@ class HistoriaClinicaRepository extends BaseRepository {
 
     /**
      * Búsqueda con foto (para endpoint /buscar)
-     * @param {string} termino
-     * @param {number} limit
-     * @returns {Promise<Array>}
      */
-    async buscarConFoto(termino, limit = 100) {
+    async buscarConFoto(termino, limit = 100, tenantId = 'bsl') {
         const result = await this.query(`
             SELECT h."_id", h."numeroId", h."primerNombre", h."segundoNombre",
                    h."primerApellido", h."segundoApellido", h."celular", h."cargo",
@@ -464,10 +436,10 @@ class HistoriaClinicaRepository extends BaseRepository {
                    'historia' as origen,
                    COALESCE(f_exact.foto_url, f_fallback.foto_url, h."foto_url") as foto_url
             FROM ${this.tableName} h
-            LEFT JOIN formularios f_exact ON f_exact.wix_id = h."_id"
+            LEFT JOIN formularios f_exact ON f_exact.wix_id = h."_id" AND f_exact.tenant_id = h.tenant_id
             LEFT JOIN LATERAL (
                 SELECT foto_url FROM formularios
-                WHERE numero_id = h."numeroId" AND foto_url IS NOT NULL
+                WHERE numero_id = h."numeroId" AND foto_url IS NOT NULL AND tenant_id = h.tenant_id
                 ORDER BY fecha_registro DESC LIMIT 1
             ) f_fallback ON f_exact.id IS NULL
             WHERE (
@@ -478,21 +450,21 @@ class HistoriaClinicaRepository extends BaseRepository {
                 COALESCE(h."celular", '') || ' ' ||
                 COALESCE(h."empresa", '')
             ) ILIKE $1
+            AND h.tenant_id = $3
             ORDER BY h."_createdDate" DESC
             LIMIT $2
-        `, [`%${termino}%`, limit]);
+        `, [`%${termino}%`, limit, tenantId]);
 
         return result.rows;
     }
 
     /**
      * Toggle estado de pago
-     * @param {string} id
-     * @returns {Promise<{pagado: boolean, pvEstado: string, numeroId: string}>}
      */
-    async togglePago(id) {
+    async togglePago(id, tenantId = 'bsl') {
         const current = await this.query(
-            `SELECT "pagado", "numeroId" FROM ${this.tableName} WHERE "_id" = $1`, [id]
+            `SELECT "pagado", "numeroId" FROM ${this.tableName} WHERE "_id" = $1 AND tenant_id = $2`,
+            [id, tenantId]
         );
         if (current.rows.length === 0) return null;
 
@@ -501,8 +473,8 @@ class HistoriaClinicaRepository extends BaseRepository {
         const pvEstado = nuevoEstado ? 'Pagado' : '';
 
         await this.query(
-            `UPDATE ${this.tableName} SET "pagado" = $1, "pvEstado" = $2 WHERE "_id" = $3`,
-            [nuevoEstado, pvEstado, id]
+            `UPDATE ${this.tableName} SET "pagado" = $1, "pvEstado" = $2 WHERE "_id" = $3 AND tenant_id = $4`,
+            [nuevoEstado, pvEstado, id, tenantId]
         );
 
         return {
@@ -513,17 +485,15 @@ class HistoriaClinicaRepository extends BaseRepository {
     }
 
     /**
-     * Lista registros de asistencia SIIGO con paginación, búsqueda y filtros
-     * @param {Object} options - {page, limit, buscar, estado, fechaDesde, fechaHasta}
-     * @returns {Promise<{rows: Array, total: number, totalPaginas: number}>}
+     * Lista registros de asistencia SIIGO con paginación (BSL-only)
      */
     async findAsistenciaSiigo(options = {}) {
-        const { page = 1, limit = 20, buscar, estado, fechaDesde, fechaHasta } = options;
+        const { page = 1, limit = 20, buscar, estado, fechaDesde, fechaHasta, tenantId = 'bsl' } = options;
         const offset = (page - 1) * limit;
 
-        let whereClause = `WHERE "codEmpresa" = 'SIIGO' AND "fechaAtencion" < CURRENT_DATE`;
-        const params = [];
-        let paramIndex = 1;
+        let whereClause = `WHERE "codEmpresa" = 'SIIGO' AND "fechaAtencion" < CURRENT_DATE AND tenant_id = $1`;
+        const params = [tenantId];
+        let paramIndex = 2;
 
         if (estado === 'ATENDIDO') {
             whereClause += ` AND "atendido" = 'ATENDIDO'`;
@@ -575,12 +545,9 @@ class HistoriaClinicaRepository extends BaseRepository {
     }
 
     /**
-     * Upsert de registros de asistencia SIIGO (importación desde Excel)
-     * Si existe por numeroId + codEmpresa='SIIGO' actualiza, si no crea
-     * @param {Array} registros - [{numeroId, primerNombre, primerApellido, ciudad, celular, fechaConsulta, fechaAtencion, atendido}]
-     * @returns {Promise<{creados: number, actualizados: number, errores: Array}>}
+     * Upsert de registros de asistencia SIIGO (BSL-only)
      */
-    async upsertAsistenciaSiigo(registros) {
+    async upsertAsistenciaSiigo(registros, tenantId = 'bsl') {
         let creados = 0;
         let actualizados = 0;
         const errores = [];
@@ -594,9 +561,9 @@ class HistoriaClinicaRepository extends BaseRepository {
 
                 const existente = await this.query(`
                     SELECT "_id" FROM ${this.tableName}
-                    WHERE "numeroId" = $1 AND "codEmpresa" = 'SIIGO'
+                    WHERE "numeroId" = $1 AND "codEmpresa" = 'SIIGO' AND tenant_id = $2
                     ORDER BY "_createdDate" DESC LIMIT 1
-                `, [reg.numeroId]);
+                `, [reg.numeroId, tenantId]);
 
                 if (existente.rows.length > 0) {
                     await this.query(`
@@ -611,7 +578,7 @@ class HistoriaClinicaRepository extends BaseRepository {
                             "email" = COALESCE($8, "email"),
                             "observaciones_siigo" = COALESCE($9, "observaciones_siigo"),
                             "_updatedDate" = NOW()
-                        WHERE "_id" = $10
+                        WHERE "_id" = $10 AND tenant_id = $11
                     `, [
                         reg.primerNombre || null,
                         reg.primerApellido || null,
@@ -622,7 +589,8 @@ class HistoriaClinicaRepository extends BaseRepository {
                         reg.cargo || null,
                         reg.email || null,
                         reg.observaciones_siigo || null,
-                        existente.rows[0]._id
+                        existente.rows[0]._id,
+                        tenantId
                     ]);
                     actualizados++;
                 } else {
@@ -632,8 +600,8 @@ class HistoriaClinicaRepository extends BaseRepository {
                             "_id", "numeroId", "primerNombre", "primerApellido",
                             "ciudad", "celular", "fechaAtencion",
                             "atendido", "cargo", "email", "observaciones_siigo",
-                            "codEmpresa", "_createdDate", "_updatedDate"
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'SIIGO', NOW(), NOW())
+                            "codEmpresa", "_createdDate", "_updatedDate", tenant_id
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'SIIGO', NOW(), NOW(), $12)
                     `, [
                         id,
                         reg.numeroId,
@@ -645,7 +613,8 @@ class HistoriaClinicaRepository extends BaseRepository {
                         reg.atendido || 'PENDIENTE',
                         reg.cargo || null,
                         reg.email || null,
-                        reg.observaciones_siigo || null
+                        reg.observaciones_siigo || null,
+                        tenantId
                     ]);
                     creados++;
                 }
@@ -659,19 +628,17 @@ class HistoriaClinicaRepository extends BaseRepository {
 
     /**
      * Obtiene estadísticas de órdenes por empresa
-     * @param {string} codEmpresa
-     * @returns {Promise<Object>}
      */
-    async getEstadisticasOrdenes(codEmpresa) {
+    async getEstadisticasOrdenes(codEmpresa, tenantId = 'bsl') {
         const query = `
             SELECT
                 COUNT(*) as total_ordenes,
                 COUNT(*) FILTER (WHERE "atendido" = 'ATENDIDO') as atendidos,
                 COUNT(*) FILTER (WHERE "atendido" = 'PENDIENTE') as pendientes
             FROM ${this.tableName}
-            WHERE UPPER("codEmpresa") = UPPER($1)
+            WHERE UPPER("codEmpresa") = UPPER($1) AND tenant_id = $2
         `;
-        const result = await this.query(query, [codEmpresa]);
+        const result = await this.query(query, [codEmpresa, tenantId]);
         return result.rows[0];
     }
 }

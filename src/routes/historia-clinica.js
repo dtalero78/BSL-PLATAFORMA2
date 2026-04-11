@@ -5,6 +5,11 @@ const { construirFechaAtencionColombia } = require('../helpers/date');
 const { HistoriaClinicaRepository } = require('../repositories');
 const { isBsl } = require('../helpers/tenant');
 
+// Multi-tenant helper (ver CLAUDE.md)
+function tenantId(req) {
+    return (req.tenant && req.tenant.id) || 'bsl';
+}
+
 // ==================== HISTORIA CLINICA ENDPOINTS ====================
 // Mounted at /api/historia-clinica
 
@@ -21,7 +26,7 @@ router.get('/list', async (req, res) => {
         console.log(`📋 Listando órdenes de HistoriaClinica (página ${page}, limit ${limit}${buscar ? `, búsqueda: "${buscar}"` : ''}${cedulas ? `, cédulas: ${cedulas.length}` : ''})...`);
 
         // Use repository - 1 call instead of 70+ lines
-        const { rows, total, totalPaginas } = await HistoriaClinicaRepository.listWithFoto({ page, limit, buscar, cedulas });
+        const { rows, total, totalPaginas } = await HistoriaClinicaRepository.listWithFoto({ page, limit, buscar, cedulas, tenantId: tenantId(req) });
 
         console.log(`✅ HistoriaClinica: ${rows.length} registros (página ${page}/${totalPaginas})`);
 
@@ -56,7 +61,7 @@ router.get('/buscar', async (req, res) => {
         console.log(`🔍 Buscando en HistoriaClinica: "${q}"`);
 
         // Use repository - 1 line instead of 30+
-        const data = await HistoriaClinicaRepository.buscarConFoto(q);
+        const data = await HistoriaClinicaRepository.buscarConFoto(q, 100, tenantId(req));
 
         console.log(`✅ Encontrados ${data.length} registros para "${q}"`);
 
@@ -88,7 +93,7 @@ router.get('/buscar-por-celular', async (req, res) => {
         console.log(`🔍 Buscando paciente por celular: "${celular}"`);
 
         // Use repository - 1 line instead of 15
-        const paciente = await HistoriaClinicaRepository.findByCelularFlexible(celular);
+        const paciente = await HistoriaClinicaRepository.findByCelularFlexible(celular, tenantId(req));
 
         if (!paciente) {
             console.log(`⚠️ No se encontró paciente con celular: ${celular}`);
@@ -116,9 +121,10 @@ router.get('/buscar-por-celular', async (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
+        const tId = tenantId(req);
 
         // Use repository - 1 line instead of raw query
-        const historia = await HistoriaClinicaRepository.findById(id);
+        const historia = await HistoriaClinicaRepository.findById(id, '_id', tId);
 
         if (historia) {
             return res.json({
@@ -154,8 +160,9 @@ router.get('/:id', async (req, res) => {
                 eps, arl, pensiones,
                 'formulario' as origen
             FROM formularios
-            WHERE wix_id = $1 OR ($1 ~ '^[0-9]+$' AND id = $1::integer)
-        `, [id]);
+            WHERE (wix_id = $1 OR ($1 ~ '^[0-9]+$' AND id = $1::integer))
+              AND tenant_id = $2
+        `, [id, tId]);
 
         if (formResult.rows.length > 0) {
             return res.json({
@@ -184,6 +191,7 @@ router.put('/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const datos = req.body;
+        const tId = tenantId(req);
 
         console.log('');
         console.log('═══════════════════════════════════════════════════════════');
@@ -193,8 +201,11 @@ router.put('/:id', async (req, res) => {
         console.log('   📊 Campo EPS:', datos.eps);
         console.log('═══════════════════════════════════════════════════════════');
 
-        // Primero verificar si existe en HistoriaClinica
-        const checkHistoria = await pool.query('SELECT "_id" FROM "HistoriaClinica" WHERE "_id" = $1', [id]);
+        // Primero verificar si existe en HistoriaClinica (scoped por tenant)
+        const checkHistoria = await pool.query(
+            'SELECT "_id" FROM "HistoriaClinica" WHERE "_id" = $1 AND tenant_id = $2',
+            [id, tId]
+        );
 
         if (checkHistoria.rows.length > 0) {
             // ========== ACTUALIZAR EN HISTORIA CLINICA ==========
@@ -240,11 +251,12 @@ router.put('/:id', async (req, res) => {
 
             setClauses.push(`"_updatedDate" = NOW()`);
             values.push(id);
+            values.push(tId);
 
             const query = `
                 UPDATE "HistoriaClinica" SET
                     ${setClauses.join(', ')}
-                WHERE "_id" = $${paramIndex}
+                WHERE "_id" = $${paramIndex} AND tenant_id = $${paramIndex + 1}
                 RETURNING *
             `;
 
@@ -273,8 +285,8 @@ router.put('/:id', async (req, res) => {
                 // Actualizar en formularios (buscar por wix_id que es el orden_id)
                 try {
                     const formResult = await pool.query(
-                        'UPDATE formularios SET numero_id = $1 WHERE wix_id = $2 RETURNING id',
-                        [nuevoNumeroId, ordenId]
+                        'UPDATE formularios SET numero_id = $1 WHERE wix_id = $2 AND tenant_id = $3 RETURNING id',
+                        [nuevoNumeroId, ordenId, tId]
                     );
                     if (formResult.rows.length > 0) {
                         console.log('   ✅ formularios actualizado');
@@ -286,8 +298,8 @@ router.put('/:id', async (req, res) => {
                 // Actualizar en audiometrias
                 try {
                     const audioResult = await pool.query(
-                        'UPDATE audiometrias SET numero_id = $1 WHERE orden_id = $2 RETURNING id',
-                        [nuevoNumeroId, ordenId]
+                        'UPDATE audiometrias SET numero_id = $1 WHERE orden_id = $2 AND tenant_id = $3 RETURNING id',
+                        [nuevoNumeroId, ordenId, tId]
                     );
                     if (audioResult.rows.length > 0) {
                         console.log('   ✅ audiometrias actualizado');
@@ -299,8 +311,8 @@ router.put('/:id', async (req, res) => {
                 // Actualizar en pruebasADC
                 try {
                     const adcResult = await pool.query(
-                        'UPDATE "pruebasADC" SET numero_id = $1 WHERE orden_id = $2 RETURNING id',
-                        [nuevoNumeroId, ordenId]
+                        'UPDATE "pruebasADC" SET numero_id = $1 WHERE orden_id = $2 AND tenant_id = $3 RETURNING id',
+                        [nuevoNumeroId, ordenId, tId]
                     );
                     if (adcResult.rows.length > 0) {
                         console.log('   ✅ pruebasADC actualizado');
@@ -312,8 +324,8 @@ router.put('/:id', async (req, res) => {
                 // Actualizar en visiometrias
                 try {
                     const visioResult = await pool.query(
-                        'UPDATE visiometrias SET numero_id = $1 WHERE orden_id = $2 RETURNING id',
-                        [nuevoNumeroId, ordenId]
+                        'UPDATE visiometrias SET numero_id = $1 WHERE orden_id = $2 AND tenant_id = $3 RETURNING id',
+                        [nuevoNumeroId, ordenId, tId]
                     );
                     if (visioResult.rows.length > 0) {
                         console.log('   ✅ visiometrias actualizado');
@@ -325,8 +337,8 @@ router.put('/:id', async (req, res) => {
                 // Actualizar en visiometrias_virtual
                 try {
                     const visioVirtualResult = await pool.query(
-                        'UPDATE visiometrias_virtual SET numero_id = $1 WHERE orden_id = $2 RETURNING id',
-                        [nuevoNumeroId, ordenId]
+                        'UPDATE visiometrias_virtual SET numero_id = $1 WHERE orden_id = $2 AND tenant_id = $3 RETURNING id',
+                        [nuevoNumeroId, ordenId, tId]
                     );
                     if (visioVirtualResult.rows.length > 0) {
                         console.log('   ✅ visiometrias_virtual actualizado');
@@ -383,7 +395,10 @@ router.put('/:id', async (req, res) => {
         }
 
         // ========== SI NO ESTÁ EN HISTORIA CLINICA, BUSCAR EN FORMULARIOS ==========
-        const checkFormulario = await pool.query('SELECT id FROM formularios WHERE id = $1', [id]);
+        const checkFormulario = await pool.query(
+            'SELECT id FROM formularios WHERE id = $1 AND tenant_id = $2',
+            [id, tId]
+        );
 
         if (checkFormulario.rows.length > 0) {
             // Mapeo de campos camelCase a snake_case para formularios
@@ -463,11 +478,12 @@ router.put('/:id', async (req, res) => {
             }
 
             values.push(id);
+            values.push(tId);
 
             const query = `
                 UPDATE formularios SET
                     ${setClauses.join(', ')}
-                WHERE id = $${paramIndex}
+                WHERE id = $${paramIndex} AND tenant_id = $${paramIndex + 1}
                 RETURNING *
             `;
 
@@ -508,7 +524,7 @@ router.patch('/:id/pago', async (req, res) => {
         const { id } = req.params;
 
         // Use repository - 1 line instead of 10
-        const resultado = await HistoriaClinicaRepository.togglePago(id);
+        const resultado = await HistoriaClinicaRepository.togglePago(id, tenantId(req));
 
         if (!resultado) {
             return res.status(404).json({ success: false, message: 'Orden no encontrada' });
@@ -569,7 +585,7 @@ router.delete('/:id', async (req, res) => {
         console.log(`📋 ID: ${id}`);
 
         // Use repository
-        const eliminado = await HistoriaClinicaRepository.delete(id);
+        const eliminado = await HistoriaClinicaRepository.delete(id, '_id', tenantId(req));
 
         if (!eliminado) {
             return res.status(404).json({
