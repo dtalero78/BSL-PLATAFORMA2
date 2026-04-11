@@ -764,7 +764,9 @@
             $('pageTitle').textContent = 'Crear IPS';
             $('pageSubtitle').textContent = 'Dar de alta una nueva IPS en la plataforma multi-tenant';
             $('editingBanner').classList.remove('visible');
-            $('btnSubmitText').textContent = 'Crear IPS';
+            // btnSubmitText puede no existir aquí si venimos del submit (finally restaura después)
+            const btnSubmitText = document.getElementById('btnSubmitText');
+            if (btnSubmitText) btnSubmitText.textContent = 'Crear IPS';
             $('btnCancelarEdicion').style.display = 'none';
 
             $('alertContainer').innerHTML = '';

@@ -44,7 +44,9 @@ app.use((req, res, next) => {
 
 app.use(bodyParser.json({ limit: '25mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '25mb' }));
-app.use(express.static('public'));
+// index: false → no auto-servir public/index.html (formulario del paciente) en "/".
+// El handler GET / más abajo se encarga de servir login.html.
+app.use(express.static('public', { index: false }));
 
 // ========== MULTI-TENANT ==========
 // Resuelve el tenant por hostname y lo monta en req.tenant.
