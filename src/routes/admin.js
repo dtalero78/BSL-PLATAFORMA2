@@ -1003,7 +1003,7 @@ router.post('/whatsapp/conversaciones/:id/mensajes', authMiddleware, requireAdmi
 
         // Enviar mensaje via Twilio (texto libre para conversaciones)
         // NOTA: sendWhatsAppFreeText() ya guarda el mensaje automaticamente via guardarMensajeSaliente()
-        const twilioResult = await sendWhatsAppFreeText(numeroCliente, contenido);
+        const twilioResult = await sendWhatsAppFreeText(numeroCliente, contenido, tenantId(req));
 
         if (!twilioResult.success) {
             return res.status(500).json({
@@ -1025,7 +1025,8 @@ router.post('/whatsapp/conversaciones/:id/mensajes', authMiddleware, requireAdmi
                 contenido: contenido,
                 direccion: 'saliente',
                 fecha_envio: new Date().toISOString(),
-                sid_twilio: twilioResult.sid
+                sid_twilio: twilioResult.sid,
+                tenant_id: tenantId(req)
             });
         }
 
@@ -1156,7 +1157,8 @@ router.post('/whatsapp/conversaciones/:id/media', authMiddleware, requireAdmin, 
             file.buffer,
             file.mimetype,
             file.originalname,
-            contenido || ''
+            contenido || '',
+            tIdMedia
         );
 
         if (!twilioResult.success) {
@@ -1209,7 +1211,8 @@ router.post('/whatsapp/conversaciones/:id/media', authMiddleware, requireAdmin, 
                 direccion: 'saliente',
                 fecha_envio: new Date().toISOString(),
                 sid_twilio: twilioResult.sid,
-                tipo_mensaje: tipoMensaje
+                tipo_mensaje: tipoMensaje,
+                tenant_id: tIdMedia
             });
         }
 

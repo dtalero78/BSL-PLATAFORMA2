@@ -1,17 +1,39 @@
 // ========== SERVER-SENT EVENTS (SSE) ==========
-// Clientes conectados para notificaciones en tiempo real
+// Clientes conectados para notificaciones en tiempo real.
+// Multi-tenant: cada cliente se asocia a un tenant y solo recibe eventos
+// de su propio tenant (ver CLAUDE.md Multi-Tenant Architecture).
 let sseClients = [];
 
-// Función para notificar a todos los clientes SSE
-function notificarNuevaOrden(orden) {
-    const data = JSON.stringify({ type: 'nueva-orden', orden });
+/**
+ * Notifica a los clientes SSE de un tenant específico.
+ * @param {Object} orden - Datos de la orden
+ * @param {string} tenantId - Tenant al que pertenece la orden. Si se omite, emite a todos
+ *                            (modo legacy; usar solo cuando no hay tenant disponible).
+ */
+function notificarNuevaOrden(orden, tenantId = null) {
+    const data = JSON.stringify({ type: 'nueva-orden', orden, tenant_id: tenantId });
+    let enviados = 0;
+
     sseClients.forEach(client => {
-        client.res.write(`data: ${data}\n\n`);
+        // Solo enviar a clientes del mismo tenant.
+        // Si el evento no tiene tenantId (legacy), emite a todos como fallback.
+        if (!tenantId || client.tenantId === tenantId) {
+            try {
+                client.res.write(`data: ${data}\n\n`);
+                enviados++;
+            } catch (err) {
+                // Cliente desconectado — se removerá en el próximo cleanup
+            }
+        }
     });
-    console.log(`📡 Notificación SSE enviada a ${sseClients.length} clientes`);
+
+    console.log(`📡 Notificación SSE enviada a ${enviados}/${sseClients.length} clientes (tenant: ${tenantId || 'ALL'})`);
 }
 
-// Agregar un cliente SSE
+/**
+ * Agrega un cliente SSE. Debe incluir tenantId para que reciba solo
+ * eventos de su tenant.
+ */
 function addSSEClient(client) {
     sseClients.push(client);
 }

@@ -14,12 +14,13 @@ const twilioClient = twilio(
 
 // Funcion para enviar mensajes de WhatsApp via Twilio con Content Template
 // Usado para notificaciones automaticas pre-aprobadas
-async function sendWhatsAppMessage(toNumber, messageBody, variables = {}, templateSid = null) {
+// Multi-tenant: tenantId se propaga a guardarMensajeSaliente (default 'bsl').
+async function sendWhatsAppMessage(toNumber, messageBody, variables = {}, templateSid = null, tenantId = 'bsl') {
     try {
         // Si NO se proporciona templateSid y SI hay messageBody, usar texto libre
         if (!templateSid && !process.env.TWILIO_CONTENT_TEMPLATE_SID && messageBody) {
             console.log('[MSG] Enviando mensaje de texto libre (no template)');
-            return await sendWhatsAppFreeText(toNumber, messageBody);
+            return await sendWhatsAppFreeText(toNumber, messageBody, tenantId);
         }
 
         // Si se proporciona templateSid o hay uno por defecto, usar template
@@ -95,7 +96,7 @@ async function sendWhatsAppMessage(toNumber, messageBody, variables = {}, templa
             }
         }
 
-        await guardarMensajeSaliente(numeroNormalizado, contenidoTemplate, message.sid, 'template');
+        await guardarMensajeSaliente(numeroNormalizado, contenidoTemplate, message.sid, 'template', null, null, null, tenantId);
 
         return { success: true, sid: message.sid, status: message.status };
     } catch (err) {
@@ -107,7 +108,8 @@ async function sendWhatsAppMessage(toNumber, messageBody, variables = {}, templa
 // Funcion para enviar mensajes de texto libre via Twilio WhatsApp
 // Usado para conversaciones del panel de administracion
 // IMPORTANTE: Solo funciona dentro de las 24 horas despues de que el cliente envie un mensaje
-async function sendWhatsAppFreeText(toNumber, messageBody) {
+// Multi-tenant: tenantId se propaga a guardarMensajeSaliente (default 'bsl').
+async function sendWhatsAppFreeText(toNumber, messageBody, tenantId = 'bsl') {
     try {
         // Formatear numero: si empieza con 57, agregar whatsapp:+, si no, agregar whatsapp:+57
         let formattedNumber = toNumber;
@@ -139,7 +141,7 @@ async function sendWhatsAppFreeText(toNumber, messageBody) {
         // Guardar mensaje en base de datos automaticamente
         // Usar helper para normalizar con formato +57XXXXXXXXXX
         const numeroNormalizado = normalizarTelefonoConPrefijo57(toNumber);
-        await guardarMensajeSaliente(numeroNormalizado, messageBody, message.sid, 'text');
+        await guardarMensajeSaliente(numeroNormalizado, messageBody, message.sid, 'text', null, null, null, tenantId);
 
         return { success: true, sid: message.sid, status: message.status };
     } catch (err) {
@@ -149,7 +151,9 @@ async function sendWhatsAppFreeText(toNumber, messageBody) {
 }
 
 // Enviar WhatsApp con archivo multimedia via Twilio
-async function sendWhatsAppMedia(toNumber, mediaBuffer, mediaType, fileName, caption = '') {
+// Multi-tenant: tenantId (default 'bsl'). No llama a guardarMensajeSaliente,
+// el caller (rutas) es responsable de guardar el mensaje con el tenant correcto.
+async function sendWhatsAppMedia(toNumber, mediaBuffer, mediaType, fileName, caption = '', tenantId = 'bsl') {
     try {
         // Formatear numero
         let formattedNumber = toNumber;
@@ -188,31 +192,36 @@ async function sendWhatsAppMedia(toNumber, mediaBuffer, mediaType, fileName, cap
 }
 
 // Helper: Guardar mensaje saliente en base de datos y emitir evento WebSocket
-async function guardarMensajeSaliente(numeroCliente, contenido, twilioSid, tipoMensaje = 'text', mediaUrl = null, mediaType = null, nombrePaciente = null) {
+// Multi-tenant: todas las queries filtran por tenantId (ver CLAUDE.md).
+// El mismo celular puede tener conversaciones en tenants distintos sin mezclarse.
+async function guardarMensajeSaliente(numeroCliente, contenido, twilioSid, tipoMensaje = 'text', mediaUrl = null, mediaType = null, nombrePaciente = null, tenantId = 'bsl') {
     try {
         // Normalizar número usando helper centralizado (formato: +57XXXXXXXXXX con +)
         const numeroNormalizado = normalizarTelefonoConPrefijo57(numeroCliente);
 
-        // Buscar conversación - primero con formato normalizado (+), luego sin + (conversaciones viejas)
+        // Buscar conversación scoped por tenant
         let conversacion = await pool.query(`
-            SELECT id FROM conversaciones_whatsapp WHERE celular = $1
-        `, [numeroNormalizado]);
+            SELECT id FROM conversaciones_whatsapp WHERE celular = $1 AND tenant_id = $2
+        `, [numeroNormalizado, tenantId]);
 
         // Si no se encuentra con +, buscar sin + (conversaciones antiguas) y migrar formato
         if (conversacion.rows.length === 0 && numeroNormalizado.startsWith('+')) {
             const numeroSinMas = numeroNormalizado.substring(1);
             conversacion = await pool.query(`
-                SELECT id FROM conversaciones_whatsapp WHERE celular = $1
-            `, [numeroSinMas]);
+                SELECT id FROM conversaciones_whatsapp WHERE celular = $1 AND tenant_id = $2
+            `, [numeroSinMas, tenantId]);
             if (conversacion.rows.length > 0) {
-                await pool.query(`UPDATE conversaciones_whatsapp SET celular = $1 WHERE id = $2`, [numeroNormalizado, conversacion.rows[0].id]);
+                await pool.query(
+                    `UPDATE conversaciones_whatsapp SET celular = $1 WHERE id = $2 AND tenant_id = $3`,
+                    [numeroNormalizado, conversacion.rows[0].id, tenantId]
+                );
             }
         }
 
         let conversacionId;
 
         if (conversacion.rows.length === 0) {
-            // Crear nueva conversacion
+            // Crear nueva conversacion (con tenant_id explícito)
             const nombre = nombrePaciente || 'Cliente WhatsApp';
             const nuevaConv = await pool.query(`
                 INSERT INTO conversaciones_whatsapp (
@@ -221,32 +230,33 @@ async function guardarMensajeSaliente(numeroCliente, contenido, twilioSid, tipoM
                     estado_actual,
                     fecha_inicio,
                     fecha_ultima_actividad,
-                    bot_activo
+                    bot_activo,
+                    tenant_id
                 )
-                VALUES ($1, $2, 'activa', NOW(), NOW(), false)
+                VALUES ($1, $2, 'activa', NOW(), NOW(), false, $3)
                 RETURNING id
-            `, [numeroNormalizado, nombre]);
+            `, [numeroNormalizado, nombre, tenantId]);
 
             conversacionId = nuevaConv.rows[0].id;
-            console.log(`[DB] Conversacion creada: ${conversacionId} para ${numeroNormalizado}`);
+            console.log(`[DB] Conversacion creada: ${conversacionId} para ${numeroNormalizado} (tenant: ${tenantId})`);
         } else {
             conversacionId = conversacion.rows[0].id;
 
-            // Actualizar ultima actividad
+            // Actualizar ultima actividad (scoped por tenant)
             await pool.query(`
                 UPDATE conversaciones_whatsapp
                 SET fecha_ultima_actividad = NOW()
-                WHERE id = $1
-            `, [conversacionId]);
+                WHERE id = $1 AND tenant_id = $2
+            `, [conversacionId, tenantId]);
         }
 
-        // Verificar si el mensaje ya existe
+        // Verificar si el mensaje ya existe (scoped por tenant)
         const mensajeExiste = await pool.query(`
-            SELECT id FROM mensajes_whatsapp WHERE sid_twilio = $1
-        `, [twilioSid]);
+            SELECT id FROM mensajes_whatsapp WHERE sid_twilio = $1 AND tenant_id = $2
+        `, [twilioSid, tenantId]);
 
         if (mensajeExiste.rows.length === 0) {
-            // Guardar mensaje saliente solo si no existe
+            // Guardar mensaje saliente solo si no existe (con tenant_id)
             await pool.query(`
                 INSERT INTO mensajes_whatsapp (
                     conversacion_id,
@@ -256,24 +266,26 @@ async function guardarMensajeSaliente(numeroCliente, contenido, twilioSid, tipoM
                     tipo_mensaje,
                     media_url,
                     media_type,
-                    timestamp
+                    timestamp,
+                    tenant_id
                 )
-                VALUES ($1, $2, 'saliente', $3, $4, $5, $6, NOW())
+                VALUES ($1, $2, 'saliente', $3, $4, $5, $6, NOW(), $7)
             `, [
                 conversacionId,
                 contenido,
                 twilioSid,
                 tipoMensaje,
                 mediaUrl ? JSON.stringify([mediaUrl]) : null,
-                mediaType ? JSON.stringify([mediaType]) : null
+                mediaType ? JSON.stringify([mediaType]) : null,
+                tenantId
             ]);
 
-            console.log(`[OK] Mensaje guardado en conversacion ${conversacionId} (SID: ${twilioSid})`);
+            console.log(`[OK] Mensaje guardado en conversacion ${conversacionId} (SID: ${twilioSid}, tenant: ${tenantId})`);
         } else {
             console.log(`[INFO] Mensaje ${twilioSid} ya existe, omitiendo duplicado`);
         }
 
-        // Emitir evento WebSocket para actualizacion en tiempo real
+        // Emitir evento WebSocket para actualizacion en tiempo real (con tenant_id para routing)
         if (global.emitWhatsAppEvent) {
             global.emitWhatsAppEvent('nuevo_mensaje', {
                 conversacion_id: conversacionId,
@@ -282,7 +294,8 @@ async function guardarMensajeSaliente(numeroCliente, contenido, twilioSid, tipoM
                 direccion: 'saliente',
                 fecha_envio: new Date().toISOString(),
                 sid_twilio: twilioSid,
-                tipo_mensaje: tipoMensaje
+                tipo_mensaje: tipoMensaje,
+                tenant_id: tenantId
             });
         }
 

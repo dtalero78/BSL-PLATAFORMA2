@@ -234,13 +234,14 @@ router.post('/enviar-link-prueba', async (req, res) => {
             "3": nombreEmpresa
         };
 
-        // Enviar mensaje por WhatsApp usando template de Twilio
+        // Enviar mensaje por WhatsApp usando template de Twilio (scoped por tenant)
         console.log(`📨 [ENVIAR-LINK] Enviando template ${nombrePrueba} (${templateSid}) a ${telefonoCompleto}`);
         const resultWhatsApp = await sendWhatsAppMessage(
             telefonoCompleto,
             null, // No hay mensaje de texto libre
             variables,
-            templateSid
+            templateSid,
+            tenantId(req)
         );
 
         if (!resultWhatsApp.success) {
@@ -267,7 +268,8 @@ router.post('/enviar-link-prueba', async (req, res) => {
                 'template', // tipo de mensaje
                 null, // sin mediaUrl
                 null, // sin mediaType
-                nombreCompleto // nombre del paciente
+                nombreCompleto, // nombre del paciente
+                tenantId(req) // tenant scope
             );
 
             console.log(`Mensaje guardado en conversacion para ${telefonoCompleto}`);
@@ -348,7 +350,7 @@ router.post('/enviar-certificado-whatsapp', authMiddleware, requireAdmin, async 
         const mensaje = `Hola ${primerNombre}, puedes solicitar tu certificado médico aquí:\n\n${link}\n\n_BSL - Salud Ocupacional_`;
 
         // Enviar mensaje por WhatsApp
-        const twilioResult = await sendWhatsAppFreeText(numeroCliente, mensaje);
+        const twilioResult = await sendWhatsAppFreeText(numeroCliente, mensaje, tenantId(req));
 
         if (!twilioResult.success) {
             return res.status(500).json({

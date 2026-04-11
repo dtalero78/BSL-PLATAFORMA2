@@ -476,22 +476,22 @@ async function esUsuarioNuevo(numeroCelular) {
             numeroLimpio = '57' + numeroLimpio;
         }
 
-        const enHistoria = await pool.query(`
-            SELECT "numeroId" FROM "HistoriaClinica"
-            WHERE celular LIKE '%${numeroLimpio.slice(-10)}%'
-            LIMIT 1
-        `);
+        // Fix: parameterizar LIKE en vez de template literal (evita SQL injection)
+        const celularSufijo = '%' + numeroLimpio.slice(-10) + '%';
+        const enHistoria = await pool.query(
+            `SELECT "numeroId" FROM "HistoriaClinica" WHERE celular LIKE $1 LIMIT 1`,
+            [celularSufijo]
+        );
 
         if (enHistoria.rows.length > 0) {
             console.log('📋 Usuario encontrado en HistoriaClinica');
             return false;
         }
 
-        const enFormularios = await pool.query(`
-            SELECT id FROM formularios
-            WHERE celular LIKE '%${numeroLimpio.slice(-10)}%'
-            LIMIT 1
-        `);
+        const enFormularios = await pool.query(
+            `SELECT id FROM formularios WHERE celular LIKE $1 LIMIT 1`,
+            [celularSufijo]
+        );
 
         if (enFormularios.rows.length > 0) {
             console.log('📋 Usuario encontrado en formularios');

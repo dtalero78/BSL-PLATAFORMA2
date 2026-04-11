@@ -16,8 +16,9 @@ const {
     guardarParConEmbeddingRAG
 } = require('../services/bot');
 
-// Payment service: payment flow processing
+// Payment service: payment flow processing (BSL-only, flow de Alegra)
 const { procesarFlujoPagos } = require('../services/payment');
+const { isBsl } = require('../helpers/tenant');
 
 // WhatsApp service: Twilio message sending
 const { sendWhatsAppFreeText } = require('../services/whatsapp');
@@ -116,13 +117,15 @@ router.post('/webhook', async (req, res) => {
             `, [conversacionId, tId]);
         }
 
-        // PROCESAR FLUJO DE VALIDACION DE PAGOS SI HAY IMAGENES
-        if (numMedia > 0) {
+        // PROCESAR FLUJO DE VALIDACION DE PAGOS SI HAY IMAGENES (BSL-only)
+        // Multi-tenant: el flow de Alegra es BSL-específico. Otras IPS tendrán
+        // sus propios flujos de pagos cuando los necesiten.
+        if (numMedia > 0 && isBsl(req)) {
             const mainMediaType = mediaTypes[0];
 
             // Solo procesar imagenes para el flujo de pagos
             if (mainMediaType && mainMediaType.startsWith('image/')) {
-                console.log('📸 Imagen detectada - activando flujo de validación de pagos');
+                console.log('📸 Imagen detectada - activando flujo de validación de pagos (BSL)');
 
                 // Procesar flujo de pagos (maneja clasificacion y respuestas)
                 try {
@@ -194,8 +197,8 @@ router.post('/webhook', async (req, res) => {
             });
         }
 
-        // PROCESAR TEXTO SI ESTA EN FLUJO DE PAGOS (esperando documento)
-        if (Body && numMedia === 0) {
+        // PROCESAR TEXTO SI ESTA EN FLUJO DE PAGOS (BSL-only: flow de Alegra)
+        if (Body && numMedia === 0 && isBsl(req)) {
             const estadoPagoData = estadoPagos.get(From);
 
             // Verificar si hay estado activo Y no ha expirado (2 minutos)
@@ -209,7 +212,7 @@ router.post('/webhook', async (req, res) => {
                     console.log(`⏰ Estado de pago expirado para ${From} (${Math.round(tiempoTranscurrido/1000)}s) - limpiando`);
                 } else {
                     // Estado valido - procesar como pago
-                    console.log('📝 Usuario envió texto en flujo de pagos - procesando documento');
+                    console.log('📝 Usuario envió texto en flujo de pagos - procesando documento (BSL)');
 
                     try {
                         await procesarFlujoPagos(req.body, From);
@@ -302,7 +305,7 @@ router.post('/webhook', async (req, res) => {
 
                     // Enviar respuesta por Twilio
                     const respuestaFinal = respuestaBot.replace('...transfiriendo con asesor', '').trim() || 'Un momento por favor, te atenderá un asesor.';
-                    await sendWhatsAppFreeText(numeroCliente, respuestaFinal);
+                    await sendWhatsAppFreeText(numeroCliente, respuestaFinal, tId);
                     // NOTA: sendWhatsAppFreeText ya guarda el mensaje via guardarMensajeSaliente()
 
                     // Emitir evento WebSocket para la respuesta del bot
@@ -594,7 +597,8 @@ router.post('/enviar-manual', async (req, res) => {
             telefonoNormalizado,
             null,
             variables,
-            templateSid
+            templateSid,
+            tId
         );
 
         if (!resultado.success) {

@@ -63,10 +63,13 @@ app.get('/api/events', (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.write('data: {"type":"connected"}\n\n');
 
-    const clientId = Date.now();
-    const newClient = { id: clientId, res };
+    // Multi-tenant: asociar cada cliente SSE al tenant resuelto por hostname.
+    // Así notificarNuevaOrden(orden, tenantId) solo envía a clientes del mismo tenant.
+    const tenantId = (req.tenant && req.tenant.id) || 'bsl';
+    const clientId = Date.now() + Math.random();
+    const newClient = { id: clientId, tenantId, res };
     addSSEClient(newClient);
-    console.log(`📡 Cliente SSE conectado: ${clientId}`);
+    console.log(`📡 Cliente SSE conectado: ${clientId} (tenant: ${tenantId})`);
 
     req.on('close', () => {
         removeSSEClient(clientId);
@@ -254,18 +257,52 @@ async function crearReglasEnrutamientoPorDefecto() {
 }
 crearReglasEnrutamientoPorDefecto();
 
-// ========== SOCKET.IO ==========
-io.on('connection', (socket) => {
-    console.log('🔌 Cliente Socket.IO conectado:', socket.id);
-    socket.on('disconnect', () => {
-        console.log('🔌 Cliente Socket.IO desconectado:', socket.id);
-    });
+// ========== SOCKET.IO (Multi-tenant rooms) ==========
+// Cada cliente se une a una room "tenant:X" basada en el hostname de su
+// handshake. Los emits deben ir a io.to('tenant:X') para no leakear eventos
+// entre tenants. Ver CLAUDE.md sección "Multi-Tenant Architecture".
+const { resolveTenant } = require('./src/middleware/tenant');
+
+io.on('connection', async (socket) => {
+    try {
+        // Resuelve el tenant del cliente por hostname del handshake
+        const hostname = (socket.handshake.headers.host || '').split(':')[0];
+        const tenant = await resolveTenant({ hostname });
+        const tenantId = (tenant && tenant.id) || 'bsl';
+
+        socket.data.tenantId = tenantId;
+        socket.join('tenant:' + tenantId);
+
+        console.log(`🔌 Cliente Socket.IO conectado: ${socket.id} (tenant: ${tenantId}, host: ${hostname})`);
+
+        socket.on('disconnect', () => {
+            console.log(`🔌 Cliente Socket.IO desconectado: ${socket.id} (tenant: ${tenantId})`);
+        });
+    } catch (err) {
+        console.error('Error en handshake Socket.IO:', err.message);
+        // Fallback: joinear a room bsl para no bloquear conexión
+        socket.data.tenantId = 'bsl';
+        socket.join('tenant:bsl');
+    }
 });
 
-// Función global para emitir eventos de WhatsApp (usada por services/whatsapp.js y routes)
+/**
+ * Emite evento WebSocket solo a clientes del tenant indicado en data.tenant_id.
+ * Los payloads de eventos ya incluyen tenant_id desde Sprint 4 wave 4.
+ * Si no hay tenant_id (legacy), emite global con warning.
+ */
 global.emitWhatsAppEvent = function(eventType, data) {
-    io.emit(eventType, data);
-    console.log(`📡 Evento WebSocket enviado: ${eventType}`, data);
+    const tenantId = data && data.tenant_id;
+    if (tenantId) {
+        io.to('tenant:' + tenantId).emit(eventType, data);
+        console.log(`📡 Evento WS [${eventType}] → tenant:${tenantId}`);
+    } else {
+        // Fallback legacy: evento sin tenant_id, emite a todos.
+        // Idealmente nunca debería pasar — significa que un caller viejo
+        // no agregó tenant_id al payload. Log de warning para detectar.
+        console.warn(`⚠️  [WS] Evento ${eventType} sin tenant_id, emit global`);
+        io.emit(eventType, data);
+    }
 };
 
 // ========== START SERVER ==========

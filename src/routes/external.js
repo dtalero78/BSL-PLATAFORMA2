@@ -192,13 +192,13 @@ router.post('/ordenes', apiKeyAuth, async (req, res) => {
             console.error('[EXTERNAL] Wix excepcion:', wixError.message);
         }
 
-        // Notificar SSE
+        // Notificar SSE (scoped por tenant)
         notificarNuevaOrden({
             _id: wixId,
             numeroId,
             primerNombre,
             primerApellido
-        });
+        }, tId);
 
         res.status(201).json({
             success: true,

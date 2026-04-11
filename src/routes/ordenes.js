@@ -800,14 +800,14 @@ router.post('/', async (req, res) => {
         console.log('===================================================================');
         console.log('');
 
-        // Notificar a clientes SSE sobre la nueva orden
+        // Notificar a clientes SSE sobre la nueva orden (scoped por tenant)
         notificarNuevaOrden({
             _id: wixId,
             numeroId,
             primerNombre,
             primerApellido,
             medico: req.body.medico
-        });
+        }, tenantId(req));
 
         res.json({
             success: true,
