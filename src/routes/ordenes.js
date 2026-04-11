@@ -2294,14 +2294,11 @@ router.get('/', authMiddleware, async (req, res) => {
         query += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
         params.push(parseInt(limit), parseInt(offset));
 
-        const result = await pool.query(query, params);
-
-        // Obtener el total para paginación
+        // Preparar query de COUNT en paralelo (no depende del resultado de la principal).
         let countQuery = `SELECT COUNT(*) FROM "HistoriaClinica" WHERE tenant_id = $1`;
         const countParams = [tIdList];
         let countParamIndex = 2;
 
-        // Aplicar el mismo filtro de empresas excluidas al count
         if (req.usuario.rol === 'empleado' && req.usuario.empresas_excluidas && req.usuario.empresas_excluidas.length > 0) {
             countQuery += ` AND "codEmpresa" NOT IN (${req.usuario.empresas_excluidas.map((_, i) => `$${countParamIndex + i}`).join(', ')})`;
             countParams.push(...req.usuario.empresas_excluidas);
@@ -2315,7 +2312,6 @@ router.get('/', authMiddleware, async (req, res) => {
         }
 
         if (buscar) {
-            // Usar índice GIN pg_trgm para búsqueda optimizada
             countQuery += ` AND (
                 COALESCE("numeroId", '') || ' ' ||
                 COALESCE("primerNombre", '') || ' ' ||
@@ -2327,14 +2323,16 @@ router.get('/', authMiddleware, async (req, res) => {
             countParams.push(`%${buscar}%`);
         }
 
-        const countResult = await pool.query(countQuery, countParams);
-        const total = parseInt(countResult.rows[0].count);
+        // Ejecutar main + count + stats en paralelo (ahorra ~30-80ms vs secuencial).
+        // Las 3 queries son independientes; Postgres las procesa concurrentemente en
+        // distintos clientes del pool.
+        const [result, countResult, stats] = await Promise.all([
+            pool.query(query, params),
+            pool.query(countQuery, countParams),
+            codEmpresa ? HistoriaClinicaRepository.getStatsHoy(codEmpresa, tIdList) : Promise.resolve(null)
+        ]);
 
-        // Si se filtra por empresa, calcular estadísticas - use repository
-        let stats = null;
-        if (codEmpresa) {
-            stats = await HistoriaClinicaRepository.getStatsHoy(codEmpresa, tIdList);
-        }
+        const total = parseInt(countResult.rows[0].count);
 
         res.json({
             success: true,
