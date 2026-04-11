@@ -1847,6 +1847,14 @@
             usuarioActual = await Auth.protegerPagina(['admin']);
             if (!usuarioActual) return;
 
+            // Multi-tenant: solo super-admins (BSL) pueden ver panel-admin
+            // Admins de otros tenants se redirigen a ordenes.html
+            const tenantUsuario = usuarioActual.tenant_id || 'bsl';
+            if (tenantUsuario !== 'bsl') {
+                window.location.href = '/ordenes.html';
+                return;
+            }
+
             // Actualizar nombre en topbar (con retry por si aún no está cargado)
             const updateTopbar = () => {
                 if (typeof window.updateTopbarUserName === 'function') {

@@ -208,6 +208,9 @@ const Auth = {
 
     /**
      * Redirigir según rol del usuario
+     * Multi-tenant: solo super-admins (BSL) van a panel-admin.html.
+     * Los admins de otros tenants (ipsVip, etc.) van directo a ordenes.html
+     * porque panel-admin.html tiene accesos cross-tenant exclusivos del super-admin.
      */
     redirigirSegunRol(rol) {
         // Verificar si hay un parámetro redirect en la URL
@@ -222,10 +225,17 @@ const Auth = {
 
         // Redirección normal según rol
         const user = this.getUser();
-        if (rol === 'admin' && user && user.email === 'danieltalero78@gmail.com') {
+        const esSuperAdmin = (rol === 'admin' || rol === 'ADMIN') && user && (user.tenant_id || 'bsl') === 'bsl';
+
+        if (esSuperAdmin && user.email === 'danieltalero78@gmail.com') {
+            // Hack histórico: BSL owner va directo a ordenes.html
             window.location.href = '/ordenes.html';
-        } else if (rol === 'admin') {
+        } else if (esSuperAdmin) {
+            // Otros super-admins BSL van al panel admin
             window.location.href = '/panel-admin.html';
+        } else if (rol === 'admin' || rol === 'ADMIN') {
+            // Admins de otros tenants van a ordenes (no tienen acceso a panel-admin)
+            window.location.href = '/ordenes.html';
         } else if (rol === 'usuario_ips') {
             window.location.href = '/ordenes.html';
         } else {
