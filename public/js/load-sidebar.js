@@ -194,9 +194,10 @@ window.aplicarBrandingTenant = function() {
                         });
                     }
 
-                    // super-admin-only: visible solo para admins del tenant 'bsl'
-                    const esSuperAdmin = esAdmin && (usuario.tenant_id || 'bsl') === 'bsl';
-                    if (esSuperAdmin) {
+                    // super-admin-only: visible solo para admins del tenant 'bsl'.
+                    // Usa Auth.esSuperAdmin() que combina user.tenant_id con hostname
+                    // para evitar escalación por sesiones viejas sin tenant_id.
+                    if (window.Auth.esSuperAdmin && window.Auth.esSuperAdmin()) {
                         const superAdminElements = document.querySelectorAll('.super-admin-only');
                         superAdminElements.forEach(el => {
                             el.style.display = 'block';

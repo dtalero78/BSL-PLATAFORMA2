@@ -207,6 +207,28 @@ const Auth = {
     },
 
     /**
+     * Determina si el usuario actual es super-admin (admin del tenant BSL).
+     * Si el user no tiene tenant_id (sesión vieja antes del branding multi-tenant),
+     * usa el hostname para determinarlo — NO asume bsl como fallback, porque eso
+     * escalaría privilegios de admins de otros tenants.
+     */
+    esSuperAdmin() {
+        const user = this.getUser();
+        if (!user) return false;
+        if (user.rol !== 'admin' && user.rol !== 'ADMIN') return false;
+
+        // Si el user tiene tenant_id, usarlo (fuente de verdad)
+        if (user.tenant_id) return user.tenant_id === 'bsl';
+
+        // Fallback: hostname actual. Solo bsl-plataforma.com / localhost son BSL.
+        const host = window.location.hostname;
+        return host === 'bsl-plataforma.com' ||
+               host === 'www.bsl-plataforma.com' ||
+               host === 'localhost' ||
+               host === '127.0.0.1';
+    },
+
+    /**
      * Redirigir según rol del usuario
      * Multi-tenant: solo super-admins (BSL) van a panel-admin.html.
      * Los admins de otros tenants (ipsVip, etc.) van directo a ordenes.html
@@ -225,12 +247,12 @@ const Auth = {
 
         // Redirección normal según rol
         const user = this.getUser();
-        const esSuperAdmin = (rol === 'admin' || rol === 'ADMIN') && user && (user.tenant_id || 'bsl') === 'bsl';
+        const esSuper = this.esSuperAdmin();
 
-        if (esSuperAdmin && user.email === 'danieltalero78@gmail.com') {
+        if (esSuper && user && user.email === 'danieltalero78@gmail.com') {
             // Hack histórico: BSL owner va directo a ordenes.html
             window.location.href = '/ordenes.html';
-        } else if (esSuperAdmin) {
+        } else if (esSuper) {
             // Otros super-admins BSL van al panel admin
             window.location.href = '/panel-admin.html';
         } else if (rol === 'admin' || rol === 'ADMIN') {

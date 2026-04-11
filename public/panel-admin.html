@@ -1847,10 +1847,11 @@
             usuarioActual = await Auth.protegerPagina(['admin']);
             if (!usuarioActual) return;
 
-            // Multi-tenant: solo super-admins (BSL) pueden ver panel-admin
-            // Admins de otros tenants se redirigen a ordenes.html
-            const tenantUsuario = usuarioActual.tenant_id || 'bsl';
-            if (tenantUsuario !== 'bsl') {
+            // Multi-tenant: solo super-admins (BSL) pueden ver panel-admin.
+            // Admins de otros tenants se redirigen a ordenes.html.
+            // Usa Auth.esSuperAdmin() que combina user.tenant_id con hostname
+            // para evitar escalación de privilegios por sesiones viejas sin tenant_id.
+            if (!Auth.esSuperAdmin()) {
                 window.location.href = '/ordenes.html';
                 return;
             }

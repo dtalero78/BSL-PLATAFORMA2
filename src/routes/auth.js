@@ -312,7 +312,8 @@ router.post('/verificar-token', async (req, res) => {
                 nombreCompleto: usuario.nombre_completo,
                 rol: usuario.rol,
                 codEmpresa: usuario.cod_empresa,
-                numeroDocumento: usuario.numero_documento
+                numeroDocumento: usuario.numero_documento,
+                tenant_id: tId
             }
         });
 
