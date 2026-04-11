@@ -114,6 +114,16 @@ if (req.tenant.id === 'bsl') {
 
 Kubernetes was evaluated and rejected: DO App Platform already provides multi-domain SSL, auto-deploy, rollback, and scaling. K8s would strip those away in exchange for flexibility we don't need. Revisit only if: (a) 20+ tenants with physical DB isolation required, (b) regionalization, or (c) dedicated DevOps team.
 
+### Auditoría de seguridad / multi-tenant
+
+Antes de hacer cambios amplios o como revisión periódica, correr:
+
+```bash
+node scripts/audit-multitenant.js
+```
+
+Reporta candidatos en 4 categorías: queries sin `tenant_id`, rutas sin `authMiddleware`, template literals en SQL (posible injection), `io.emit` sin room filter. Ver [AUDIT.md](AUDIT.md) para el checklist semántico completo, falsos positivos esperados, e historial de rondas de bug hunt. **Cuando encuentres un bug nuevo que el script debería haber atrapado pero no lo hizo, amplía el script** — ese es el mecanismo para que la cobertura crezca con el tiempo.
+
 ## Architecture Overview
 
 ### Dual-Database System
