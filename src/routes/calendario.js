@@ -613,8 +613,9 @@ router.get('/medicos-por-modalidad', async (req, res) => {
 
 // ==================== CRUD EXAMENES ====================
 
-// GET - Listar todos los exámenes
-router.get('/examenes', authMiddleware, async (req, res) => {
+// GET - Listar todos los exámenes (catálogo público por tenant, usado en múltiples
+// páginas internas para poblar formularios. Filtrado por tenant vía hostname).
+router.get('/examenes', async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT id, nombre, activo, created_at
@@ -629,8 +630,8 @@ router.get('/examenes', authMiddleware, async (req, res) => {
     }
 });
 
-// GET - Obtener un examen por ID
-router.get('/examenes/:id', authMiddleware, async (req, res) => {
+// GET - Obtener un examen por ID (catálogo público por tenant)
+router.get('/examenes/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const result = await pool.query(`

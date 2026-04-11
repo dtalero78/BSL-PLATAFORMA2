@@ -74,6 +74,11 @@ const PUBLIC_ROUTE_WHITELIST = [
     { file: 'src/routes/certificados.js', path: '*' },
     // Descarga empresas (pública por diseño — token en URL)
     { file: 'src/routes/empresas.js', path: '/descarga' },
+    // Catálogo de exámenes: GET público, usado en 6+ páginas internas para poblar
+    // formularios (empresas, ordenes, nueva-orden, calendario, panel-empresas).
+    // Filtrado por tenant vía hostname. Mutaciones (POST/PUT/DELETE) sí requieren auth.
+    { file: 'src/routes/calendario.js', path: '/examenes', methods: ['GET'] },
+    { file: 'src/routes/calendario.js', path: '/examenes/:id', methods: ['GET'] },
 ];
 
 // ========== UTILIDADES ==========
@@ -158,9 +163,10 @@ function checkRoutes(file, source) {
         const rest = m[3];
         const line = source.slice(0, m.index).split('\n').length;
 
-        // Whitelist
+        // Whitelist — file + path + opcionalmente método HTTP
         const whitelisted = PUBLIC_ROUTE_WHITELIST.some(w => {
             if (w.file !== rel) return false;
+            if (w.methods && !w.methods.includes(method)) return false;
             if (w.path === '*') return true;
             return routePath === w.path || routePath.startsWith(w.path);
         });

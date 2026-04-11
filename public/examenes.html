@@ -739,14 +739,14 @@
                     // Actualizar
                     response = await fetch(`/api/examenes/${examenEditando.id}`, {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 'Content-Type': 'application/json', ...Auth.getAuthHeaders() },
                         body: JSON.stringify({ nombre, activo })
                     });
                 } else {
                     // Crear nuevo
                     response = await fetch('/api/examenes', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 'Content-Type': 'application/json', ...Auth.getAuthHeaders() },
                         body: JSON.stringify({ nombre })
                     });
                 }
@@ -757,7 +757,7 @@
                     cerrarModal();
                     cargarExamenes();
                 } else {
-                    alert(result.error || 'Error al guardar');
+                    alert(result.error || result.message || 'Error al guardar');
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -772,14 +772,15 @@
 
             try {
                 const response = await fetch(`/api/examenes/${id}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    headers: Auth.getAuthHeaders()
                 });
 
                 if (response.ok) {
                     cargarExamenes();
                 } else {
                     const result = await response.json();
-                    alert(result.error || 'Error al eliminar');
+                    alert(result.error || result.message || 'Error al eliminar');
                 }
             } catch (error) {
                 console.error('Error:', error);
