@@ -343,6 +343,41 @@
             background: #FEE2E2;
             color: #991B1B;
         }
+        .tenant-actions { display: flex; gap: 6px; }
+        .btn-icon {
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 6px;
+            background: #F3F4F6;
+            color: #374151;
+            border: 1px solid #E5E7EB;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.15s;
+        }
+        .btn-icon:hover { background: #E5E7EB; }
+        .btn-icon i { width: 14px; height: 14px; }
+        .form-group input:disabled {
+            background: #F3F4F6;
+            color: #6B7280;
+            cursor: not-allowed;
+        }
+        .editing-banner {
+            padding: 12px 16px;
+            background: #EFF6FF;
+            border: 1px solid #BFDBFE;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            color: #1E40AF;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        .editing-banner.visible { display: flex; }
+        .editing-banner strong { font-weight: 600; }
     </style>
 </head>
 <body>
@@ -353,12 +388,17 @@
         <main class="main-content">
             <div class="page-header">
                 <div>
-                    <h1 class="page-title">Crear IPS</h1>
-                    <div class="page-subtitle">Dar de alta una nueva IPS en la plataforma multi-tenant</div>
+                    <h1 class="page-title" id="pageTitle">Crear IPS</h1>
+                    <div class="page-subtitle" id="pageSubtitle">Dar de alta una nueva IPS en la plataforma multi-tenant</div>
                 </div>
             </div>
 
             <div id="alertContainer"></div>
+
+            <div class="editing-banner" id="editingBanner">
+                <i data-feather="edit-3"></i>
+                <span>Editando IPS <strong id="editingTenantName"></strong>. Los cambios se aplicarán al guardar.</span>
+            </div>
 
             <form id="formCrearIps" enctype="multipart/form-data">
                 <!-- Datos del tenant -->
@@ -459,8 +499,8 @@
                     </div>
                 </div>
 
-                <!-- Admin inicial -->
-                <div class="card">
+                <!-- Admin inicial (solo se usa al crear; se oculta en modo edición) -->
+                <div class="card" id="adminCard">
                     <h3 class="card-title">Usuario administrador inicial</h3>
                     <div class="form-grid">
                         <div class="form-group">
@@ -480,9 +520,12 @@
                 </div>
 
                 <div class="actions-bar">
-                    <a href="/ordenes.html" class="btn btn-secondary">Cancelar</a>
+                    <a href="/ordenes.html" class="btn btn-secondary">Volver</a>
+                    <button type="button" class="btn btn-secondary" id="btnCancelarEdicion" onclick="cancelarEdicion()" style="display:none">
+                        <i data-feather="x"></i> Cancelar edición
+                    </button>
                     <button type="submit" class="btn btn-primary" id="btnSubmit">
-                        <i data-feather="check"></i> Crear IPS
+                        <i data-feather="check"></i> <span id="btnSubmitText">Crear IPS</span>
                     </button>
                 </div>
             </form>
@@ -501,6 +544,13 @@
     <script src="/js/load-sidebar.js"></script>
     <script src="/js/load-topbar.js"></script>
     <script>
+        // Estado global: null = modo crear, string = modo editar (id del tenant)
+        let editingTenantId = null;
+
+        // Helpers
+        const $ = (id) => document.getElementById(id);
+        const getToken = () => window.Auth ? window.Auth.getToken() : localStorage.getItem('bsl_auth_token');
+
         // Inicializar feather-icons después de cargar sidebar/topbar
         document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => { if (window.feather) feather.replace(); }, 100);
@@ -508,9 +558,9 @@
         });
 
         // Preview del logo
-        const logoInput = document.getElementById('logoInput');
-        const logoPreview = document.getElementById('logoPreview');
-        const btnQuitarLogo = document.getElementById('btnQuitarLogo');
+        const logoInput = $('logoInput');
+        const logoPreview = $('logoPreview');
+        const btnQuitarLogo = $('btnQuitarLogo');
 
         logoInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -538,7 +588,7 @@
         }
 
         function mostrarAlerta(mensaje, tipo = 'error') {
-            const container = document.getElementById('alertContainer');
+            const container = $('alertContainer');
             container.innerHTML = `<div class="alert alert-${tipo}">${mensaje}</div>`;
             window.scrollTo({ top: 0, behavior: 'smooth' });
             if (tipo === 'success') {
@@ -546,71 +596,172 @@
             }
         }
 
-        // Submit form
-        document.getElementById('formCrearIps').addEventListener('submit', async (e) => {
+        // ========== MODO EDITAR ==========
+        async function editarTenant(id) {
+            try {
+                const response = await fetch(`/api/tenants/${id}`, {
+                    headers: { 'Authorization': `Bearer ${getToken()}` }
+                });
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || 'Error obteniendo tenant');
+                }
+
+                const t = result.tenant;
+
+                // Entrar en modo edición
+                editingTenantId = t.id;
+
+                // Llenar el form
+                const form = $('formCrearIps');
+                form.id.value = t.id;
+                form.id.disabled = true; // ID no se puede cambiar
+                form.nombre.value = t.nombre;
+                form.hostnames.value = (t.hostnames || []).join(', ');
+
+                // Checkboxes de módulos
+                const modulosActivos = t.config?.modulos_activos || [];
+                form.querySelectorAll('input[name="modulos"]').forEach(cb => {
+                    cb.checked = modulosActivos.includes(cb.value);
+                });
+
+                // Logo existente
+                if (t.config?.logo_url) {
+                    logoPreview.innerHTML = `<img src="${t.config.logo_url}?t=${Date.now()}" alt="Logo actual" />`;
+                    btnQuitarLogo.style.display = 'inline-flex';
+                } else {
+                    quitarLogo();
+                }
+                logoInput.value = ''; // Forzar re-upload si quiere cambiar
+
+                // Ocultar card de admin (no se edita aquí)
+                $('adminCard').style.display = 'none';
+                form.admin_email.required = false;
+                form.admin_password.required = false;
+                form.admin_nombre.required = false;
+
+                // Actualizar UI: título, banner, botones
+                $('pageTitle').textContent = 'Editar IPS';
+                $('pageSubtitle').textContent = 'Modifica los datos, el logo o los módulos habilitados';
+                $('editingTenantName').textContent = `${t.nombre} (${t.id})`;
+                $('editingBanner').classList.add('visible');
+                $('btnSubmitText').textContent = 'Actualizar IPS';
+                $('btnCancelarEdicion').style.display = 'inline-flex';
+
+                mostrarAlerta(``, 'success'); // limpiar alertas previas
+                $('alertContainer').innerHTML = '';
+
+                if (window.feather) feather.replace();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } catch (err) {
+                mostrarAlerta(err.message || 'Error cargando tenant para editar', 'error');
+            }
+        }
+
+        function cancelarEdicion() {
+            editingTenantId = null;
+            const form = $('formCrearIps');
+            form.reset();
+            form.id.disabled = false;
+            quitarLogo();
+
+            // Restaurar card de admin
+            $('adminCard').style.display = 'block';
+            form.admin_email.required = true;
+            form.admin_password.required = true;
+            form.admin_nombre.required = true;
+
+            // Restaurar UI
+            $('pageTitle').textContent = 'Crear IPS';
+            $('pageSubtitle').textContent = 'Dar de alta una nueva IPS en la plataforma multi-tenant';
+            $('editingBanner').classList.remove('visible');
+            $('btnSubmitText').textContent = 'Crear IPS';
+            $('btnCancelarEdicion').style.display = 'none';
+
+            $('alertContainer').innerHTML = '';
+        }
+
+        // ========== SUBMIT FORM (crear o editar) ==========
+        $('formCrearIps').addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const form = e.target;
-            const btnSubmit = document.getElementById('btnSubmit');
+            const btnSubmit = $('btnSubmit');
+            const esEdicion = !!editingTenantId;
+
             btnSubmit.disabled = true;
-            btnSubmit.innerHTML = '<i data-feather="loader"></i> Creando...';
+            btnSubmit.innerHTML = `<i data-feather="loader"></i> ${esEdicion ? 'Actualizando' : 'Creando'}...`;
             if (window.feather) feather.replace();
 
             try {
-                // Construir FormData para soportar el archivo
                 const formData = new FormData();
-                formData.append('id', form.id.value.trim());
                 formData.append('nombre', form.nombre.value.trim());
                 formData.append('hostnames', form.hostnames.value.trim());
-                formData.append('admin_email', form.admin_email.value.trim());
-                formData.append('admin_password', form.admin_password.value);
-                formData.append('admin_nombre', form.admin_nombre.value.trim());
 
-                // Módulos seleccionados
                 const modulosSeleccionados = Array.from(form.querySelectorAll('input[name="modulos"]:checked'))
                     .map(cb => cb.value);
                 formData.append('modulos', JSON.stringify(modulosSeleccionados));
 
-                // Logo
+                // Logo (solo si hay uno nuevo seleccionado)
                 if (logoInput.files[0]) {
                     formData.append('logo', logoInput.files[0]);
                 }
 
-                const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('bsl_auth_token');
-                const response = await fetch('/api/tenants', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
+                let response, url, method;
+
+                if (esEdicion) {
+                    url = `/api/tenants/${editingTenantId}`;
+                    method = 'PUT';
+                } else {
+                    // Modo crear: incluir id y datos de admin
+                    formData.append('id', form.id.value.trim());
+                    formData.append('admin_email', form.admin_email.value.trim());
+                    formData.append('admin_password', form.admin_password.value);
+                    formData.append('admin_nombre', form.admin_nombre.value.trim());
+                    url = '/api/tenants';
+                    method = 'POST';
+                }
+
+                response = await fetch(url, {
+                    method,
+                    headers: { 'Authorization': `Bearer ${getToken()}` },
                     body: formData
                 });
 
                 const result = await response.json();
 
                 if (!response.ok || !result.success) {
-                    throw new Error(result.message || 'Error al crear la IPS');
+                    throw new Error(result.message || `Error al ${esEdicion ? 'actualizar' : 'crear'} la IPS`);
                 }
 
-                mostrarAlerta(`IPS "${result.tenant.nombre}" creada exitosamente. Admin: ${result.admin.email}`, 'success');
-                form.reset();
-                quitarLogo();
+                if (esEdicion) {
+                    mostrarAlerta(`IPS "${result.tenant.nombre}" actualizada exitosamente`, 'success');
+                    cancelarEdicion();
+                } else {
+                    mostrarAlerta(`IPS "${result.tenant.nombre}" creada exitosamente. Admin: ${result.admin.email}`, 'success');
+                    form.reset();
+                    quitarLogo();
+                }
                 cargarTenants();
             } catch (err) {
-                mostrarAlerta(err.message || 'Error al crear la IPS', 'error');
+                mostrarAlerta(err.message || 'Error al guardar la IPS', 'error');
             } finally {
                 btnSubmit.disabled = false;
-                btnSubmit.innerHTML = '<i data-feather="check"></i> Crear IPS';
+                btnSubmit.innerHTML = `<i data-feather="check"></i> <span id="btnSubmitText">${esEdicion ? 'Actualizar IPS' : 'Crear IPS'}</span>`;
                 if (window.feather) feather.replace();
             }
         });
 
+        // ========== LISTA DE TENANTS ==========
         async function cargarTenants() {
             try {
-                const token = window.Auth ? window.Auth.getToken() : localStorage.getItem('bsl_auth_token');
                 const response = await fetch('/api/tenants', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers: { 'Authorization': `Bearer ${getToken()}` }
                 });
 
                 const result = await response.json();
-                const container = document.getElementById('tenantsListContainer');
+                const container = $('tenantsListContainer');
 
                 if (!response.ok || !result.success) {
                     container.innerHTML = `<div style="color: #DC2626;">Error cargando tenants</div>`;
@@ -625,6 +776,7 @@
                 container.innerHTML = result.tenants.map(t => {
                     const logoUrl = t.config?.logo_url;
                     const modulos = t.config?.modulos_activos?.length || 0;
+                    const esEditable = t.id !== 'bsl'; // BSL no se edita desde aquí
                     return `
                         <div class="tenant-item">
                             <div class="tenant-logo">
@@ -644,13 +796,19 @@
                             <div class="tenant-status ${t.activo ? 'active' : 'inactive'}">
                                 ${t.activo ? 'Activo' : 'Inactivo'}
                             </div>
+                            <div class="tenant-actions">
+                                ${esEditable
+                                    ? `<button class="btn-icon" onclick="editarTenant('${t.id}')"><i data-feather="edit-2"></i> Editar</button>`
+                                    : `<span style="font-size:11px;color:#9CA3AF;padding:0 10px">tenant raíz</span>`
+                                }
+                            </div>
                         </div>
                     `;
                 }).join('');
 
                 if (window.feather) feather.replace();
             } catch (err) {
-                document.getElementById('tenantsListContainer').innerHTML =
+                $('tenantsListContainer').innerHTML =
                     `<div style="color: #DC2626;">Error: ${err.message}</div>`;
             }
         }
